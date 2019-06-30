@@ -6,7 +6,7 @@ solution 'llae'
 	language 'c++'
 	objdir 'build' 
 	location 'build'
-	cppdialect "C++11"
+	cppdialect "C++14"
 
 	
 	configuration{ 'debug'}

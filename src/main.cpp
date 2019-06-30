@@ -36,20 +36,20 @@ int main(int argc,char** argv) {
 
 	
 	static const luaL_Reg loadedlibs[] = {
-        {"llae.crypto", luaopen_llae_crypto},
-        {"llae.json", luaopen_llae_json},
-        {"llae",luaopen_llae},
-        {NULL, NULL}
-    };
+      {"llae.crypto", luaopen_llae_crypto},
+      {"llae.json", luaopen_llae_json},
+      {"llae",luaopen_llae},
+      {NULL, NULL}
+  };
     
-    const luaL_Reg *lib;
-    /* call open functions from 'loadedlibs' and set results to global table */
-    for (lib = loadedlibs; lib->func; lib++) {
-        luaL_requiref(L, lib->name, lib->func, 1);
-        lua_pop(L, 1);  /* remove lib */
-    }
+  const luaL_Reg *lib;
+  /* call open functions from 'loadedlibs' and set results to global table */
+  for (lib = loadedlibs; lib->func; lib++) {
+      luaL_requiref(L, lib->name, lib->func, 1);
+      lua_pop(L, 1);  /* remove lib */
+  }
 
-    llae_register_modules(L);
+  llae_register_modules(L);
 
 	std::string file = argv[1];
 	createargtable(L,argv,argc,1);
@@ -64,9 +64,9 @@ int main(int argc,char** argv) {
 
 	lua_close(L);
 
-  	uv_print_all_handles(uv_default_loop(), stderr);
+	uv_print_all_handles(uv_default_loop(), stderr);
 
-  	uv_loop_close(uv_default_loop());
+	uv_loop_close(uv_default_loop());
 
 	return 0;
 }

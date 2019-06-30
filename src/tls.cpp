@@ -215,7 +215,8 @@ void TLS::stream_alloc_cb(size_t suggested_size, uv_buf_t* buf) {
 }
 void TLS::stream_read_cb(ssize_t nread, const uv_buf_t* buf) {
 	//std::cout << "stream_read_cb: " << nread << std::endl;
-	MutexLock l(m_read_mutex);
+	std::lock_guard<std::mutex> l(m_read_mutex);
+
 	if (nread>0) {
 		m_readed_buf.push_back(read_buffer());
 		read_buffer& b(m_readed_buf.back());
@@ -227,12 +228,7 @@ void TLS::stream_read_cb(ssize_t nread, const uv_buf_t* buf) {
 		std::cout << "error: " << uv_strerror(nread) << std::endl;
 		release_stream();
 	}
-	m_read_cond.signal();
-	// if (m_work) {
-	// 	if (m_work->resume_on_read(llae_get_vm(m_stream->get_stream()),this)) {
-	// 		m_work.reset();
-	// 	}
-	// }
+	m_read_cond.notify_one();
 }
 
 int TLS::start_read() {
@@ -251,14 +247,14 @@ void TLS::read_buffer::put(void* d,size_t size) {
 	this->size = size;
 }
 int TLS::bio_eof() {
-	MutexLock l(m_read_mutex);
+	std::lock_guard<std::mutex> l(m_read_mutex);
 	int ret = (!m_stream && m_readed_buf.empty()) ? 1: 0;
 	std::cout << "bio_eof: " << ret << std::endl;
 	return ret;
 }
 int TLS::bio_read(char *buf, int size) {
 	//std::cout << "TLS::read " << size << std::endl;
-	MutexLock l(m_read_mutex);
+	std::unique_lock<std::mutex> l(m_read_mutex);
 	
 	while (m_readed_buf.empty()) {
 		if (!m_start_read_async) {
@@ -266,7 +262,7 @@ int TLS::bio_read(char *buf, int size) {
 		}
 		BIO_set_retry_read(m_stream_bio);
 		m_start_read_async->async_send();
-		m_read_cond.wait(m_read_mutex);
+		m_read_cond.wait(l);
 	}
 	int nread = 0;
 	while(size > 0) {
@@ -347,7 +343,7 @@ void TLS::read(lua_State* L) {
 	}
 }
 void TLS::close(lua_State* L) {
-	MutexLock l(m_read_mutex);
+	std::lock_guard<std::mutex> l(m_read_mutex);
 	release_stream();
 }
 

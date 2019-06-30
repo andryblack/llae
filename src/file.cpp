@@ -496,7 +496,7 @@ void File::on_release() {
 		delete this;
 	} else {
 		uv_file f = m_file;
-		FileCloseReq* close = new FileCloseReq(this);
+		FileCloseReq* close = new FileCloseReq(Ref<File>(this));
 		int r = close->close(m_loop,f);
 		if (r<0) {
 			std::cerr << "failed close file " <<  uv_strerror(r) << std::endl;

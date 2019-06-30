@@ -9,9 +9,8 @@
 #include <list>
 #include <openssl/ssl.h>
 #include "work.h"
-#include "mutex.h"
 #include "async.h"
-#include "condition.h"
+#include <mutex>
 
 class TLSCtx : public RefCounter {
 private:
@@ -66,8 +65,8 @@ private:
 	};
 	Ref<StartReadAsync> m_start_read_async;
 
-	Mutex m_read_mutex;
-	Condition m_read_cond;
+	std::mutex m_read_mutex;
+	std::condition_variable m_read_cond;
 
 	struct read_buffer {
 		std::vector<char> data;

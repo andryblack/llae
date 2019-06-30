@@ -37,22 +37,12 @@ public:
 		lua_check_result(L,res,func);
 		lua_pop(L,1);
 	}
-	template <class A0>
-	void callv(lua_State* L,const char* func,A0 a0) {
+	template <typename ...Args>
+	void callv(lua_State* L,const char* func,Args ... args) {
 		lua_pushcfunction(L,lua_error_handler);
 		push(L);
-		luabind::S<A0>::push(L,a0);
-		int res = lua_pcall(L,1,0,-3);
-		lua_check_result(L,res,func);
-		lua_pop(L,1);
-	}
-	template <class A0,class A1>
-	void callv(lua_State* L,const char* func,A0 a0,A1 a1) {
-		lua_pushcfunction(L,lua_error_handler);
-		push(L);
-		luabind::S<A0>::push(L,a0);
-		luabind::S<A1>::push(L,a1);
-		int res = lua_pcall(L,2,0,-4);
+		luabind::push(L,args...);
+		int res = lua_pcall(L, sizeof...(args),0,-3);
 		lua_check_result(L,res,func);
 		lua_pop(L,1);
 	}
@@ -68,39 +58,13 @@ public:
 	}
 	void assign(lua_State* L) { LuaHolder::assign_check(L,LUA_TTHREAD); }
 	void assign(lua_State* L,const luabind::thread& f);
-	bool resumev(lua_State* L,const char* func) {
+	template <typename ...Args>
+	bool resumev(lua_State* L,const char* func,Args ... args) {
 		push(L);
 		lua_State* t = lua_tothread(L,-1);
-		//int tt = lua_gettop(t);
-		int r = lua_resume(t,L,0);
-		if (r != LUA_YIELD) {
-			lua_check_resume_result(t,r,func);
-		}
-		lua_pop(L,1);
-		return r == LUA_YIELD;
-	}
-	template <class A0>
-	bool resumev(lua_State* L,const char* func,A0 a0) {
-		push(L);
-		lua_State* t = lua_tothread(L,-1);
-		luabind::S<A0>::push(L,a0);
-		lua_xmove(L,t,1);
-		int r = lua_resume(t,L,1);
-		if (r != LUA_YIELD) {
-			lua_check_resume_result(t,r,func);
-		}
-		lua_pop(L,1);
-		return r == LUA_YIELD;
-	}
-	template <class A0,class A1>
-	bool resumev(lua_State* L,const char* func,A0 a0,A1 a1) {
-		push(L);
-		lua_State* t = lua_tothread(L,-1);
-		//int tt = lua_gettop(t);
-		luabind::S<A0>::push(L,a0);
-		luabind::S<A1>::push(L,a1);
-		lua_xmove(L,t,2);
-		int r = lua_resume(t,L,2);
+		int dummy[] = {(luabind::S<Args>::push(L,args),0)...};
+		lua_xmove(L,t,sizeof...(Args));
+		int r = lua_resume(t,L,sizeof...(Args));
 		if (r != LUA_YIELD) {
 			lua_check_resume_result(t,r,func);
 		}

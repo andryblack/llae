@@ -9,6 +9,8 @@ extern "C" {
 #include <cstdint>
 #include "ref_counter.h"
 
+#include  <utility>
+
 namespace luabind {
 
 	static void check_type(lua_State* L,int idx,int type) {
@@ -153,175 +155,83 @@ namespace luabind {
 	template <class T>
 	struct S<Ref<T> > :  S<const Ref<T>&> {};
 
-	template <class T,class A0,class A1,class A2,class R=void>
-	struct func3 {
-		typedef R (T::*Func)(lua_State*,A0,A1,A2);
-		static int fv(lua_State* L) {
-			Func func = *reinterpret_cast<Func*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			(ref->*func)(L,S<A0>::get(L,2),S<A1>::get(L,3),S<A2>::get(L,4));
-			return 0;
-		} 
+	template <class T,class R, typename ...Args>
+	struct functions_impl{
+		template <int ...Is> struct expand_t {
+			typedef R (T::*LFunc)(lua_State*,Args...);
+			typedef R (T::*Func)(Args...);
+		
+			static int lf(lua_State* L) {
+				LFunc func = *reinterpret_cast<LFunc*>(lua_touserdata(L, lua_upvalueindex(1)));
+				T* ref = Ref<T>::get_ptr(L,1);
+				S<R>::push(L,(ref->*func)(L,S<Args>::get(L,2+Is)...));
+				return 1;
+			} 
+			static int f(lua_State* L) {
+				Func func = *reinterpret_cast<Func*>(lua_touserdata(L, lua_upvalueindex(1)));
+				T* ref = Ref<T>::get_ptr(L,1);
+				S<R>::push(L,(ref->*func)(S<Args>::get(L,2+Is)...));
+				return 1;
+			} 
+		};
+		template <int ...Is>
+		static expand_t<Is...> expand(std::integer_sequence<int,Is...>) {
+			return expand_t<Is...>();
+		}
 	};
-	template <class T,class A0,class A1,class R=void>
-	struct func2 {
-		typedef R (T::*Func)(lua_State*,A0,A1);
-		typedef R (T::*FuncF)(A0,A1);
-		static int fv(lua_State* L) {
-			Func func = *reinterpret_cast<Func*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			(ref->*func)(L,S<A0>::get(L,2),S<A1>::get(L,3));
-			return 0;
-		} 
-		static int ffv(lua_State* L) {
-			FuncF func = *reinterpret_cast<FuncF*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			(ref->*func)(S<A0>::get(L,2),S<A1>::get(L,3));
-			return 0;
-		} 
-		static int fr(lua_State* L) {
-			Func func = *reinterpret_cast<Func*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			S<R>::push(L,(ref->*func)(L,S<A0>::get(L,2),S<A1>::get(L,3)));
-			return 1;
-		} 
-		static int ffr(lua_State* L) {
-			FuncF func = *reinterpret_cast<FuncF*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			S<R>::push(L,(ref->*func)(S<A0>::get(L,2),S<A1>::get(L,3)));
-			return 1;
-		} 
+	template <class T,typename ...Args>
+	struct functions_impl<T,void,Args...> {
+		template <int ...Is> struct expand_t {
+			typedef void (T::*LFunc)(lua_State*,Args...);
+			typedef void (T::*Func)(Args...);
+		
+			static int lf(lua_State* L) {
+				LFunc func = *reinterpret_cast<LFunc*>(lua_touserdata(L, lua_upvalueindex(1)));
+				T* ref = Ref<T>::get_ptr(L,1);
+				(ref->*func)(L,S<Args>::get(L,2+Is)...);
+				return 0;
+			} 
+			static int f(lua_State* L) {
+				Func func = *reinterpret_cast<Func*>(lua_touserdata(L, lua_upvalueindex(1)));
+				T* ref = Ref<T>::get_ptr(L,1);
+				(ref->*func)(S<Args>::get(L,2+Is)...);
+				return 0;
+			} 
+		};
+		template <int ...Is>
+		static expand_t<Is...> expand(std::integer_sequence<int,Is...>) {
+			return expand_t<Is...>();
+		}
 	};
-	template <class T,class A0,class R=void>
-	struct func1 {
-		typedef R (T::*Func)(lua_State*,A0);
-		static int fv(lua_State* L) {
-			Func func = *reinterpret_cast<Func*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			(ref->*func)(L,S<A0>::get(L,2));
-			return 0;
-		} 
-		static int fr(lua_State* L) {
-			Func func = *reinterpret_cast<Func*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			S<R>::push(L,(ref->*func)(L,S<A0>::get(L,2)));
-			return 1;
-		} 
-	};
-	template <class T,class R=void>
-	struct func0 {
-		typedef R (T::*Func)(lua_State*);
-		typedef R (T::*FuncF)();
-		typedef R (T::*FuncC)()const;
-		static int fv(lua_State* L) {
-			Func func = *reinterpret_cast<Func*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			(ref->*func)(L);
-			return 0;
-		} 
-		static int ffv(lua_State* L) {
-			FuncF func = *reinterpret_cast<FuncF*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			(ref->*func)();
-			return 0;
-		} 
-		static int fr(lua_State* L) {
-			Func func = *reinterpret_cast<Func*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			S<R>::push(L,(ref->*func)(L));
-			return 1;
-		} 
-		static int ffc(lua_State* L) {
-			FuncC func = *reinterpret_cast<FuncC*>(lua_touserdata(L, lua_upvalueindex(1)));
-			T* ref = Ref<T>::get_ptr(L,1);
-			S<R>::push(L,(ref->*func)());
-			return 1;
-		} 
-	};
-	template <class T,class A0,class A1,class A2>
-	static inline void bind(lua_State* L, const char* name, void(T::*func)(lua_State* L,A0,A1,A2)) {
-		typedef func3<T,A0,A1,A2> func_t;
-		typedef typename func_t::Func Func;
+	template <class T,class R,typename ...Args>
+	using functions = decltype(functions_impl<T,R,Args...>::expand(std::make_integer_sequence<int,sizeof...(Args)>()));
+
+	template <class T,class R,typename ...Args>
+	static inline void bind(lua_State* L, const char* name, R(T::*func)(lua_State* L,Args...)) {
+		typedef functions<T,R,Args...> functions_t;
+		typedef typename functions_t::LFunc Func;
 		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::fv,1);
+		lua_pushcclosure(L,&functions_t::lf,1);
 		lua_setfield(L,-2,name);
 	}
-	template <class T,class A0,class A1>
-	static inline void bind(lua_State* L, const char* name, void(T::*func)(lua_State* L,A0,A1)) {
-		typedef func2<T,A0,A1> func_t;
-		typedef typename func_t::Func Func;
+	template <class T,class R,typename ...Args>
+	static inline void bind(lua_State* L, const char* name, R(T::*func)(Args...)) {
+		typedef functions<T,R,Args...> functions_t;
+		typedef typename functions_t::Func Func;
 		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::fv,1);
-		lua_setfield(L,-2,name);
-	}
-	template <class T,class A0,class A1>
-	static inline void bind(lua_State* L, const char* name, void(T::*func)(A0,A1)) {
-		typedef func2<T,A0,A1> func_t;
-		typedef typename func_t::FuncF Func;
-		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::ffv,1);
-		lua_setfield(L,-2,name);
-	}
-	template <class T,class A0,class A1,class R>
-	static inline void bind(lua_State* L, const char* name, R(T::*func)(lua_State* L,A0,A1)) {
-		typedef func2<T,A0,A1,R> func_t;
-		typedef typename func_t::Func Func;
-		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::fr,1);
-		lua_setfield(L,-2,name);
-	}
-	template <class T,class A0>
-	static inline void bind(lua_State* L, const char* name, void(T::*func)(lua_State* L,A0)) {
-		typedef func1<T,A0> func_t;
-		typedef typename func_t::Func Func;
-		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::fv,1);
-		lua_setfield(L,-2,name);
-	}
-	template <class T,class A0,class R >
-	static inline void bind(lua_State* L, const char* name, R(T::*func)(lua_State* L,A0)) {
-		typedef func1<T,A0,R> func_t;
-		typedef typename func_t::Func Func;
-		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::fr,1);
-		lua_setfield(L,-2,name);
-	}
-	template <class T>
-	static inline void bind(lua_State* L, const char* name, void(T::*func)(lua_State* L)) {
-		typedef func0<T> func_t;
-		typedef typename func_t::Func Func;
-		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::fv,1);
-		lua_setfield(L,-2,name);
-	}
-	template <class T,class R>
-	static inline void bind(lua_State* L, const char* name, R(T::*func)(lua_State* L)) {
-		typedef func0<T,R> func_t;
-		typedef typename func_t::Func Func;
-		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::fr,1);
-		lua_setfield(L,-2,name);
-	}
-	template <class T>
-	static inline void bind(lua_State* L, const char* name, void(T::*func)()) {
-		typedef func0<T> func_t;
-		typedef typename func_t::FuncF Func;
-		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::ffv,1);
+		lua_pushcclosure(L,&functions_t::f,1);
 		lua_setfield(L,-2,name);
 	}
 	
-	template <class T,class R>
-	static inline void bind(lua_State* L, const char* name, R(T::*func)()const) {
-		typedef func0<T,R> func_t;
-		typedef typename func_t::FuncC Func;
-		*reinterpret_cast<Func*>(lua_newuserdata(L,sizeof(Func))) = func;
-		lua_pushcclosure(L,&func_t::ffc,1);
-		lua_setfield(L,-2,name);
-	}
 	static inline void bind(lua_State* L, const char* name, lua_CFunction func) {
 		lua_pushcclosure(L,func,0);
 		lua_setfield(L,-2,name);
+	}
+
+	template <typename ...Args>
+	static inline void push(lua_State* L,Args ... rest) {
+		int dummy[] = { (S<Args>::push(L,rest),0)... };
+		(void)dummy;
 	}
 }
 

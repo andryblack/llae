@@ -11,10 +11,10 @@ extern "C" {
 
 class RefCounter {
 private:
-	static size_t m_num_objects;
-	size_t m_refs;
-	RefCounter(const RefCounter&);
-	RefCounter& operator = (const RefCounter&);
+	static std::size_t m_num_objects;
+	std::size_t m_refs;
+	RefCounter(const RefCounter&) = delete;
+	RefCounter& operator = (const RefCounter&) = delete;
 public:
 	RefCounter();
 	virtual ~RefCounter();
@@ -32,12 +32,12 @@ private:
 	void release() {
 		if (m_ptr) {
 			m_ptr->remove_ref();
-			m_ptr = 0;
+			m_ptr = nullptr;
 		}
 	}
 public:
-	Ref() : m_ptr(0) {}
-	Ref(T* ptr) : m_ptr(ptr) {
+	Ref() : m_ptr(nullptr) {}
+	explicit Ref(T* ptr) : m_ptr(ptr) {
 		if (m_ptr) m_ptr->add_ref();
 	}
 	~Ref() {
@@ -48,6 +48,9 @@ public:
 
 	Ref(const Ref& other) : m_ptr(other.get()) {
 		if (m_ptr) m_ptr->add_ref();
+	}
+	Ref( Ref&& other) : m_ptr(other.get()) {
+		other.m_ptr = nullptr;
 	}
 	Ref& operator = (const Ref& other) {
 		if (other.get()!=m_ptr) {
