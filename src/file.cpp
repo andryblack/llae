@@ -541,6 +541,21 @@ void File::lbind(lua_State* L) {
 	lua_pop(L,1);
 }
 
+
+extern "C" int luaopen_llae_file(lua_State* L) {
+    
+    luaL_Reg reg[] = {
+        { "stat", File::stat },
+        { "open", File::open },
+        { "mkdir", File::mkdir },
+        { "scandir", File::scandir },
+        { NULL, NULL }
+    };
+    lua_newtable(L);
+    luaL_setfuncs(L, reg, 0);
+    return 1;
+}
+
 // FileSendReq::FileSendReq(const StreamRef& stream) : m_stream(stream) {
 // 	m_uv_buf.base = m_buf;
 // 	m_uv_buf.len = BUFFER_SIZE;

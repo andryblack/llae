@@ -116,7 +116,7 @@ extern "C" int luaopen_llae(lua_State* L) {
         { "newTCPServer", &TCPServer::lnew },
         { "newTCPConnection", &TCPConnection::lnew },
         { "newTimer", &Timer::lnew },
-        { "newThread", &Idle::lnew },
+        { "newIdle", &Idle::lnew },
         { "getaddrinfo", &GetAddrInfoLuaThreadReq::lua_getaddrinfo },
         { "newTLSCtx", &TLSCtx::lnew },
         { "newTLS",&TLS::lnew },
@@ -124,15 +124,5 @@ extern "C" int luaopen_llae(lua_State* L) {
     };
     lua_newtable(L);
     luaL_setfuncs(L, reg, 0);
-    lua_newtable(L);
-    luaL_Reg freg[] = {
-        { "stat", File::stat },
-        { "open", File::open },
-        { "mkdir", File::mkdir },
-        { "scandir", File::scandir },
-        { NULL, NULL }
-    };
-    luaL_setfuncs(L, freg, 0);
-    lua_setfield(L,-2,"file");
     return 1;
 }

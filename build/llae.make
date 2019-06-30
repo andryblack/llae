@@ -24,11 +24,11 @@ ifeq ($(config),debug)
   TARGET = $(TARGETDIR)/libllae.a
   OBJDIR = debug/llae
   DEFINES +=
-  INCLUDES += -I../../../../sdk/brew/Cellar/yajl/2.1.0/include
+  INCLUDES += -I../../../../sdk/brew/Cellar/yajl/2.1.0/include -I../src
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g -I/Users/andry/sdk/brew/include/lua -I/Users/andry/sdk/brew/Cellar/libuv/1.20.3/include -I/Users/andry/sdk/brew/Cellar/yajl/2.1.0/include/yajl -I/Users/andry/sdk/brew/Cellar/openssl/1.0.2p/include
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g -std=c++11 -I/Users/andry/sdk/brew/include/lua -I/Users/andry/sdk/brew/Cellar/libuv/1.20.3/include -I/Users/andry/sdk/brew/Cellar/yajl/2.1.0/include/yajl -I/Users/andry/sdk/brew/Cellar/openssl/1.0.2p/include
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -g -I/Users/andry/sdk/brew/include/lua -I/Users/andry/sdk/brew/Cellar/libuv/1.20.3/include -I/Users/andry/sdk/brew/Cellar/yajl/2.1.0/include/yajl -I/Users/andry/sdk/brew/Cellar/openssl/1.0.2s/include
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -g -std=c++14 -I/Users/andry/sdk/brew/include/lua -I/Users/andry/sdk/brew/Cellar/libuv/1.20.3/include -I/Users/andry/sdk/brew/Cellar/yajl/2.1.0/include/yajl -I/Users/andry/sdk/brew/Cellar/openssl/1.0.2s/include
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
@@ -59,11 +59,11 @@ ifeq ($(config),release)
   TARGET = $(TARGETDIR)/libllae.a
   OBJDIR = release/llae
   DEFINES +=
-  INCLUDES += -I../../../../sdk/brew/Cellar/yajl/2.1.0/include
+  INCLUDES += -I../../../../sdk/brew/Cellar/yajl/2.1.0/include -I../src
   FORCE_INCLUDE +=
   ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
-  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -I/Users/andry/sdk/brew/include/lua -I/Users/andry/sdk/brew/Cellar/libuv/1.20.3/include -I/Users/andry/sdk/brew/Cellar/yajl/2.1.0/include/yajl -I/Users/andry/sdk/brew/Cellar/openssl/1.0.2p/include
-  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -std=c++11 -I/Users/andry/sdk/brew/include/lua -I/Users/andry/sdk/brew/Cellar/libuv/1.20.3/include -I/Users/andry/sdk/brew/Cellar/yajl/2.1.0/include/yajl -I/Users/andry/sdk/brew/Cellar/openssl/1.0.2p/include
+  ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -O2 -I/Users/andry/sdk/brew/include/lua -I/Users/andry/sdk/brew/Cellar/libuv/1.20.3/include -I/Users/andry/sdk/brew/Cellar/yajl/2.1.0/include/yajl -I/Users/andry/sdk/brew/Cellar/openssl/1.0.2s/include
+  ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -O2 -std=c++14 -I/Users/andry/sdk/brew/include/lua -I/Users/andry/sdk/brew/Cellar/libuv/1.20.3/include -I/Users/andry/sdk/brew/Cellar/yajl/2.1.0/include/yajl -I/Users/andry/sdk/brew/Cellar/openssl/1.0.2s/include
   ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
   LIBS +=
   LDDEPS +=
@@ -93,14 +93,16 @@ OBJECTS := \
 	$(OBJDIR)/idle.o \
 	$(OBJDIR)/llae.o \
 	$(OBJDIR)/lua_holder.o \
+	$(OBJDIR)/lua_state.o \
+	$(OBJDIR)/lua_value.o \
 	$(OBJDIR)/luayajl.o \
-	$(OBJDIR)/main.o \
 	$(OBJDIR)/ref_counter.o \
 	$(OBJDIR)/stream.o \
 	$(OBJDIR)/tcp_connection.o \
 	$(OBJDIR)/tcp_server.o \
 	$(OBJDIR)/timer.o \
 	$(OBJDIR)/tls.o \
+	$(OBJDIR)/llae1.o \
 	$(OBJDIR)/uv_handle_holder.o \
 	$(OBJDIR)/uv_req_holder.o \
 	$(OBJDIR)/work.o \
@@ -198,10 +200,13 @@ $(OBJDIR)/llae.o: ../src/llae.cpp
 $(OBJDIR)/lua_holder.o: ../src/lua_holder.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/luayajl.o: ../src/luayajl.cpp
+$(OBJDIR)/lua_state.o: ../src/lua_state.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
-$(OBJDIR)/main.o: ../src/main.cpp
+$(OBJDIR)/lua_value.o: ../src/lua_value.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/luayajl.o: ../src/luayajl.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ref_counter.o: ../src/ref_counter.cpp
@@ -220,6 +225,9 @@ $(OBJDIR)/timer.o: ../src/timer.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/tls.o: ../src/tls.cpp
+	@echo $(notdir $<)
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/llae1.o: ../src/tools/llae.cpp
 	@echo $(notdir $<)
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/uv_handle_holder.o: ../src/uv_handle_holder.cpp
