@@ -6,6 +6,7 @@
 extern "C" int luaopen_llae_crypto(lua_State* L);
 extern "C" int luaopen_llae_json(lua_State* L);
 extern "C" int luaopen_llae(lua_State* L);
+extern "C" int luaopen_llae_file(lua_State* L);
 
 static void createargtable (lua_State *L, char **argv, int argc, int script) {
   if (script == argc) script = 0;  /* no script name? */
@@ -39,6 +40,7 @@ int main(int argc,char** argv) {
       {"llae.crypto", luaopen_llae_crypto},
       {"llae.json", luaopen_llae_json},
       {"llae",luaopen_llae},
+      {"llae.file",luaopen_llae_file},
       {NULL, NULL}
   };
     

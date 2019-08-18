@@ -86,7 +86,14 @@ public:
 	~FileCloseReq();
 	int close(uv_loop_t* loop,uv_file f);
 };
+typedef Ref<FileCloseReq> FileCloseReqRef;
 
+
+class FileCopyThreadReq : public FSLuaThreadReq {
+public:
+	int copyfile(lua_State* L,const char* path, const char* newpath, int flags, const luabind::thread& f); 
+};
+typedef Ref<FileCopyThreadReq> FileCopyThreadReqRef;
 
 class FSReadPipeReq;
 
@@ -96,8 +103,6 @@ private:
 	int64_t m_pos;
 	int64_t m_size;
 protected:
-	LuaFunction m_cb;
-protected:
 	static const size_t BUFFER_SIZE = 1024*128; 
 	virtual uv_buf_t* alloc_buffer() = 0;
 public:
@@ -106,7 +111,8 @@ public:
 	const FileRef& get_file() const { return m_file; }
 	void on_read(FSReadPipeReq& req);
 	int start_read(uv_loop_t* loop);
-	virtual int on_data(uv_loop_t* loop,int64_t size);
+	virtual int on_data(uv_loop_t* loop,int64_t size) = 0;
+	virtual void on_complete(lua_State* L,const char* err) = 0;
 	virtual void on_read_end(uv_loop_t* loop);
 };
 typedef Ref<FSReadPipe> FSReadPipeRef;
@@ -123,6 +129,13 @@ public:
 };
 typedef Ref<FSReadPipeReq> FSReadPipeReqRef;
 
+class FileOpenThreadReq : public FSLuaThreadReq {
+public:
+	int open(lua_State* L,const char* path,int flags,int mode,const luabind::thread& f);
+	virtual void on_result(lua_State* L,const char* err);
+};
+typedef Ref<FileOpenThreadReq> FileOpenThreadReqRef;
+
 class FileOpenReq : public FSLuaReq {
 public:
 	int open(lua_State* L,const char* path,int flags,int mode,const luabind::function& f);
@@ -133,19 +146,39 @@ typedef Ref<FileOpenReq> FileOpenReqRef;
 class Stream;
 typedef Ref<Stream> StreamRef;
 
-class FileSendPipe : public FSReadPipe {
+class FileSendPipeBase : public FSReadPipe {
 private:
 	StreamRef m_stream;
 	MemWriteReqRef m_write;
-protected:
 	virtual uv_buf_t* alloc_buffer();
+public:
+	explicit FileSendPipeBase(const FileRef& ref,const StreamRef& stream);
+	~FileSendPipeBase();
+	virtual int on_data(uv_loop_t* loop,int64_t size);
+};
+
+class FileSendPipe : public FileSendPipeBase {
+private:
+	LuaFunction m_cb;
 public:
 	explicit FileSendPipe(const FileRef& ref,const StreamRef& stream);
 	~FileSendPipe();
 	int send(lua_State* L,const luabind::function& f);
-	virtual int on_data(uv_loop_t* loop,int64_t size);
+	virtual void on_complete(lua_State* L,const char* err) override final;
 };
 typedef Ref<FileSendPipe> FileSendPipeRef;
+
+class FileSendPipeThread : public FileSendPipeBase {
+private:
+	LuaThread m_cb;
+public:
+	explicit FileSendPipeThread(const FileRef& ref,const StreamRef& stream);
+	~FileSendPipeThread();
+	int send(lua_State* L,const luabind::thread& f);
+	virtual void on_complete(lua_State* L,const char* err) override final;
+};
+typedef Ref<FileSendPipeThread> FileSendPipeThreadRef;
+	
 
 class File : public RefCounter {
 	uv_file m_file;
@@ -158,7 +191,7 @@ public:
 
 	void push(lua_State* L);
 
-	void send(lua_State* L,const StreamRef& stream, const luabind::function& f);
+	void send(lua_State* L,const StreamRef& stream);
 
 	static void lbind(lua_State* L);
 
@@ -166,6 +199,7 @@ public:
 	static int stat(lua_State* L);
 	static int mkdir(lua_State* L);
 	static int scandir(lua_State* L);
+	static int copyfile(lua_State* L);
 };
 
 #endif /*__LLAE_FILE_H_INCLUDED__*/

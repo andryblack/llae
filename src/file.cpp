@@ -322,20 +322,10 @@ FSReadPipe::FSReadPipe(const FileRef& file,int64_t offset,int64_t size)
 	: m_file(file),m_pos(offset),m_size(size) {
 }
 
-int FSReadPipe::on_data(uv_loop_t* loop,int64_t size) {
-	// lua_State* L = llae_get_vm(loop);
-	// if (L && m_cb) {
-	// 	m_cb.callv(L,"FSReadPipe::on_data",luabind::lnil(),get_buf());	
-	// }
-	return 0;
-}
 
 void FSReadPipe::on_read_end(uv_loop_t* loop) {
 	lua_State* L = llae_get_vm(loop);
-	if (L && m_cb) {
-		m_cb.callv(L,"FSReadPipe::on_read_end",luabind::lnil());	
-		m_cb.reset(L);
-	}
+	on_complete(L,0);
 }
 
 void FSReadPipe::on_read(FSReadPipeReq& req) {
@@ -343,10 +333,7 @@ void FSReadPipe::on_read(FSReadPipeReq& req) {
 	//std::cout << "FSReadPipe::on_read " << r->result << std::endl;
 	if (r->result < 0) {
 		lua_State* L = llae_get_vm(r->loop);
-		if (L && m_cb) {
-			m_cb.callv(L,"FSReadPipe::on_read",uv_strerror(r->result));	
-			m_cb.reset(L);
-		}
+		on_complete(L,uv_strerror(r->result));
 		remove_ref();
 		return;
 	}
@@ -363,10 +350,7 @@ void FSReadPipe::on_read(FSReadPipeReq& req) {
 	int dr = on_data(r->loop,size);
 	if ( dr < 0) {
 		lua_State* L = llae_get_vm(r->loop);
-		if (L && m_cb) {
-			m_cb.callv(L,"FSReadPipe::on_read",uv_strerror(dr));	
-			m_cb.reset(L);
-		}
+		on_complete(L,uv_strerror(dr));
 		remove_ref();
 		return;
 	}
@@ -388,10 +372,7 @@ void FSReadPipe::on_read(FSReadPipeReq& req) {
 	int rr = rreq->read(r->loop,m_pos,buf);
 	if (rr < 0) {
 		lua_State* L = llae_get_vm(r->loop);
-		if (L && m_cb) {
-			m_cb.callv(L,"FSReadPipe::on_read",uv_strerror(rr));
-			m_cb.reset(L);
-		}
+		on_complete(L,uv_strerror(rr));
 		remove_ref();
 	}
 	
@@ -449,18 +430,58 @@ void FileOpenReq::on_result(lua_State* L,const char* err) {
 }
 
 
+int FileOpenThreadReq::open(lua_State* L,const char* path,int flags,int mode,const luabind::thread& f) {
+	m_cb.assign(L,f);
+	int r = uv_fs_open(llae_get_loop(L),&m_req,path,flags,mode,&FSReq::fs_req_cb);
+	if (r < 0) {
+		m_cb.reset(L);
+		return r;
+	}
+	add_ref();
+	return r;
+}
 
-FileSendPipe::FileSendPipe(const FileRef& file,const StreamRef& stream) : FSReadPipe(file,-1,0),m_stream(stream) {
+void FileOpenThreadReq::on_result(lua_State* L,const char* err) {
+	if (err) {
+		FSLuaThreadReq::on_result(L,err);
+		return;
+	}
+	FileRef file(new File(m_req.result,m_req.loop));
+	m_cb.resumev(L,"FileOpenThreadReq::on_result",file);
+}
+
+
+
+FileSendPipeBase::FileSendPipeBase(const FileRef& file,const StreamRef& stream) : FSReadPipe(file,-1,0),m_stream(stream) {
 	//std::cout << "FileSendPipe::FileSendPipe" << std::endl;
 }
 
-FileSendPipe::~FileSendPipe() {
+FileSendPipeBase::~FileSendPipeBase() {
 	//std::cout << "FileSendPipe::~FileSendPipe" << std::endl;
 }
 
-uv_buf_t* FileSendPipe::alloc_buffer() {
+uv_buf_t* FileSendPipeBase::alloc_buffer() {
 	m_write = MemWriteReqRef(new MemWriteReq());
 	return m_write->alloc(BUFFER_SIZE);
+}
+
+int FileSendPipeBase::on_data(uv_loop_t* loop,int64_t size) {
+	if (m_write) {
+		m_write->resize(size);
+		int res = m_write->write(m_stream->get_stream());
+		if (res < 0) {
+			return res;
+		}
+	}
+	return 0;
+}
+
+FileSendPipe::FileSendPipe(const FileRef& file,const StreamRef& stream) : FileSendPipeBase(file,stream) {
+
+}
+
+FileSendPipe::~FileSendPipe() {
+
 }
 
 int FileSendPipe::send(lua_State* L,const luabind::function& f) {
@@ -474,17 +495,77 @@ int FileSendPipe::send(lua_State* L,const luabind::function& f) {
 	return r;
 }
 
-int FileSendPipe::on_data(uv_loop_t* loop,int64_t size) {
-	if (m_write) {
-		m_write->resize(size);
-		int res = m_write->write(m_stream->get_stream());
+void FileSendPipe::on_complete(lua_State* L,const char* err) {
+	if (err) {
+		m_cb.callv(L,"FileSendPipe::on_result",err);
+		return;
+	}
+	m_cb.callv(L,"FileSendPipe::on_result",luabind::lnil());
+}
+
+FileSendPipeThread::FileSendPipeThread(const FileRef& file,const StreamRef& stream) : FileSendPipeBase(file,stream) {
+
+}
+
+FileSendPipeThread::~FileSendPipeThread() {
+
+}
+
+int FileSendPipeThread::send(lua_State* L,const luabind::thread& f) {
+	m_cb.assign(L,f);
+	int r = start_read(llae_get_loop(L));
+	if (r < 0) {
+		m_cb.reset(L);
+		return r;
+	}
+	add_ref();
+	return r;
+}
+
+void FileSendPipeThread::on_complete(lua_State* L,const char* err) {
+	//std::cout << "FileSendPipeThread::on_complete " << (err?err:"") << std::endl;
+	
+	if (err) {
+		m_cb.resumev(L,"FileSendPipeThread::on_result",err);
+		return;
+	}
+	m_cb.resumev(L,"FileSendPipeThread::on_result",luabind::lnil());
+}
+
+
+int FileCopyThreadReq::copyfile(lua_State* L,const char* path, const char* newpath, int flags, const luabind::thread& f) {
+	m_cb.assign(L,f);
+	int r = uv_fs_copyfile(llae_get_loop(L),&m_req,path,newpath,flags,&FSReq::fs_req_cb);
+	if (r < 0) {
+		m_cb.reset(L);
+	} else {
+		add_ref();
+	}
+	return r;
+}
+
+int File::copyfile(lua_State* L) {
+	const char* path = luaL_checkstring(L,1);
+	const char* path_new = luaL_checkstring(L,2);
+	int flags = luaL_optinteger(L,3,0);
+
+	if (lua_isyieldable(L)) {
+		// async thread
+		lua_pushthread(L);
+		luabind::thread th = luabind::S<luabind::thread>::get(L,-1);
+		FileCopyThreadReqRef req(new FileCopyThreadReq());
+		int res = req->copyfile(L,path,path_new,flags,th);
 		if (res < 0) {
-			return res;
+			lua_pushnil(L);
+			lua_pushstring(L,uv_strerror(res));
+			return 2;
 		}
+		lua_yield(L,0);
+	} else {
+		luaL_error(L,"sync File::copyfile not supported");
 	}
 	return 0;
 }
-
 
 File::File(uv_file f,uv_loop_t* loop) : m_file(f),m_loop(loop) {
 
@@ -496,7 +577,7 @@ void File::on_release() {
 		delete this;
 	} else {
 		uv_file f = m_file;
-		FileCloseReq* close = new FileCloseReq(Ref<File>(this));
+		FileCloseReqRef close( new FileCloseReq(Ref<File>(this)));
 		int r = close->close(m_loop,f);
 		if (r<0) {
 			std::cerr << "failed close file " <<  uv_strerror(r) << std::endl;
@@ -516,19 +597,43 @@ void File::push(lua_State* L) {
 
 int File::open(lua_State* L) {
 	const char* path = luaL_checkstring(L,1);
-	luabind::function f = luabind::S<luabind::function>::get(L,2);
 	int flags = luaL_optinteger(L,3,0);
 	int mode = luaL_optinteger(L,4,UV_FS_O_RDONLY);
-	FileOpenReqRef req(new FileOpenReq());
-	int res = req->open(L,path,flags,mode,f);
-	lua_llae_handle_error(L,"File::open",res);
+	if (lua_isfunction(L,2)) {
+		luabind::function f = luabind::S<luabind::function>::get(L,2);
+		FileOpenReqRef req(new FileOpenReq());
+		int res = req->open(L,path,flags,mode,f);
+		lua_llae_handle_error(L,"File::open",res);
+	} else if (lua_isyieldable(L)) {
+		lua_pushthread(L);
+		luabind::thread th = luabind::S<luabind::thread>::get(L,-1);
+		FileOpenThreadReqRef req(new FileOpenThreadReq());
+		int res = req->open(L,path,flags,mode,th);
+		lua_llae_handle_error(L,"File::open",res);
+		lua_yield(L,0);
+	} else {
+		luaL_error(L,"sync File::open unsupported");
+	}
 	return 0;
 }
 
-void File::send(lua_State* L,const StreamRef& stream, const luabind::function& f) {
-	FileSendPipeRef pipe(new FileSendPipe( FileRef(this) , stream ));
-	int res = pipe->send(L,f);
-	lua_llae_handle_error(L,"File::send",res);
+void File::send(lua_State* L,const StreamRef& stream) {
+	if (lua_isfunction(L,3)) {
+		luabind::function f = luabind::S<luabind::function>::get(L,3);
+		FileSendPipeRef pipe(new FileSendPipe( FileRef(this) , stream ));
+		int res = pipe->send(L,f);
+		lua_llae_handle_error(L,"File::send",res);
+	} else if (lua_isyieldable(L)) {
+		lua_pushthread(L);
+		luabind::thread th = luabind::S<luabind::thread>::get(L,-1);
+		FileSendPipeThreadRef pipe(new FileSendPipeThread( FileRef(this) , stream ));
+		int res = pipe->send(L,th);
+		lua_llae_handle_error(L,"File::send",res);
+		lua_yield(L,0);
+	} else {
+		luaL_error(L,"sync File::send unsupported");
+	}
+	
 }
 
 void File::lbind(lua_State* L) {
@@ -549,6 +654,7 @@ extern "C" int luaopen_llae_file(lua_State* L) {
         { "open", File::open },
         { "mkdir", File::mkdir },
         { "scandir", File::scandir },
+        { "copyfile", File::copyfile },
         { NULL, NULL }
     };
     lua_newtable(L);
