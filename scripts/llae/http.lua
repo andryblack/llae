@@ -1,5 +1,6 @@
 local llae = require 'llae'
 local url = require 'net.url'
+local file = require 'llae.file'
 
 local http = {}
 
@@ -243,7 +244,7 @@ do
 		end
 	end
 
-	local function flush_data( self )
+	function response:flush(  )
 		check_flush_headers(self)
 		--print('write data')
 		if self._data and next(self._data) then
@@ -290,8 +291,7 @@ do
 			assert(self._data,'already finished')
 			table.insert(self._data,data)
 		end
-		
-		flush_data(self)
+		self:flush()
 		if not self._keep_alive then
 			--print('shutdown')
 			self._client:shutdown()
@@ -300,6 +300,64 @@ do
 
 	function response:get_connection(  )
 		return self._client
+	end
+
+	local months_s = {
+		"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" 
+	}
+	local months = {}
+	for i,n in ipairs(months_s) do
+		months[n]=i
+	end
+	local function send_404(resp,path,e) 
+		resp:status(404)
+		resp:write(e)
+		resp:write(path)
+		resp:finish()
+	end
+
+	function response:send_static_file( path )
+		local stat,e = file.stat(path)
+		if not stat then
+			send_404(self,path,e)
+		else
+			local req = self._req
+			--print('access file ',path,stat.mtim.sec)
+			local last = req:get_header('If-Modified-Since')
+			if last then
+				--print('If-Modified-Since:',last)
+				local dn,d,mn,y,h,m,s = string.match(last,'^(...), (%d%d) (...) (%d%d%d%d) (%d%d):(%d%d):(%d%d) GMT$')
+				if dn then
+					local last_time = os.time{
+						year = tonumber(y),
+						month = months[mn],
+						day = tonumber(d),
+						hour = tonumber(h),
+						min = tonumber(m),
+						sec = tonumber(s)
+					}
+					--print('If-Modified-Since:',last_time)
+					if last_time >= stat.mtim.sec then
+						self:status(304)
+						self:finish()
+						return
+					end
+				end
+			end
+			local f,e = file.open(path)
+			if not f then
+				print('faled open',path,e)
+				send_404(self,path,e)
+			else
+				--print('opened',path)
+				self:set_header('Content-Length',stat.size)
+				self:set_header('Last-Modified',os.date('%a, %d %b %Y %H:%M:%S GMT',stat.mtim.sec))
+				self:set_header('Cache-Control','public,max-age=0')
+				self:flush()
+				f:send(self._client)
+				self:finish()
+			end
+		end
 	end
 
 	local server = {}
@@ -369,68 +427,10 @@ do
 		-- self._cb( req , resp )
 	end
 
-	local function send_404(resp,path,e) 
-		resp:status(404)
-		resp:write(e)
-		resp:write(path)
-		resp:finish()
-	end
 
-	local months_s = {
-		"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" 
-	}
-	local months = {}
-	for i,n in ipairs(months_s) do
-		months[n]=i
-	end
-
+	
 	function server:send_static_file( req, resp, path )
-		llae.file.stat(path,function(stat,e)
-			if e then
-				--print('failed stat',path,e)
-				send_404(resp,path,e)
-			else
-				--print('access file ',path,stat.mtim.sec)
-				local last = req:get_header('If-Modified-Since')
-				if last then
-					--print('If-Modified-Since:',last)
-					local dn,d,mn,y,h,m,s = string.match(last,'^(...), (%d%d) (...) (%d%d%d%d) (%d%d):(%d%d):(%d%d) GMT$')
-					if dn then
-						local last_time = os.time{
-							year = tonumber(y),
-							month = months[mn],
-							day = tonumber(d),
-							hour = tonumber(h),
-							min = tonumber(m),
-							sec = tonumber(s)
-						}
-						--print('If-Modified-Since:',last_time)
-						if last_time >= stat.mtim.sec then
-							resp:status(304)
-							resp:finish()
-							return
-						end
-					end
-				end
-				llae.file.open(path,function(f,e)
-					if e then
-						print('faled open',path,e)
-						send_404(resp,path,e)
-					else
-						--print('opened',path)
-						resp:set_header('Content-Length',stat.size)
-						resp:set_header('Last-Modified',os.date('%a, %d %b %Y %H:%M:%S GMT',stat.mtim.sec))
-						resp:set_header('Cache-Control','public,max-age=0')
-						flush_data(resp)
-						f:send(resp._client,function(e)
-							resp:finish()
-						end)
-						--resp:send_file(f)
-						--f:send(resp)
-					end
-				end)
-			end
-		end)
+		resp:send_static_file(path)
 	end
 
 	http.server = server
