@@ -20,7 +20,8 @@ function install:exec( args )
 		path.mkdir(install_dir)
 
 		path.mkdir(path.join(install_dir,'bin'))
-		path.mkdir(path.join(install_dir,'bin'))
+		path.mkdir(path.join(install_dir,'modules'))
+		path.mkdir(path.join(install_dir,'scripts'))
 
 	end)
 

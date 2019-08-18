@@ -13,5 +13,6 @@ end
 
 register('install')
 register('bootstrap')
+register('help')
 
 return commands
