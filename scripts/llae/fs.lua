@@ -1,4 +1,4 @@
-local file = require 'llae.file'
+local uv = require 'uv'
 
 local fs = {}
 
@@ -20,6 +20,10 @@ end
 
 function fs.open( p )
 	return file.open(p)
+end
+
+function fs.home(  )
+	return '$HOME'
 end
 
 return fs

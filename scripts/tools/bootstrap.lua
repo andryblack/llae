@@ -2,12 +2,12 @@ local tool = require 'tool'
 local class = require  'llae.class'
 local utils = require 'llae.utils'
 local path = require 'llae.path'
-local llae = require 'llae'
 local fs = require 'llae.fs'
+
 
 local install = class(tool)
 install.descr = 'bootstrap llae installation'
-local default_dir = path.join(llae.get_home(),'.llae') 
+local default_dir = path.join(fs.home(),'.llae') 
 
 function install:exec( args )
 	print('bootstrap:',args)

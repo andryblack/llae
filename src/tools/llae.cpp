@@ -7,10 +7,12 @@
 #include "uv/loop.h"
 
 extern "C" int luaopen_llae_crypto(lua_State* L);
-extern "C" int luaopen_llae_json(lua_State* L);
-extern "C" int luaopen_llae(lua_State* L);
+
 extern "C" int luaopen_llae_file(lua_State* L);
 
+int luaopen_json(lua_State* L);
+int luaopen_uv(lua_State* L);
+int luaopen_llae(lua_State* L);
 
 
 static void createargtable (lua::state& lua, char **argv, int argc) {
@@ -27,10 +29,13 @@ static const struct {
 		const char* name;
 		lua_CFunction func;
 } embedded_libs [] = {
-  {"llae.crypto", luaopen_llae_crypto},
-  {"llae.json", luaopen_llae_json},
-  {"llae",luaopen_llae},
-  {"llae.file",luaopen_llae_file},
+  //{"llae.crypto", luaopen_llae_crypto},
+  //{"llae.json", luaopen_llae_json},
+  //{"llae",luaopen_llae},
+  //{"llae.file",luaopen_llae_file},
+	{"uv",		luaopen_uv},
+	{"json",	luaopen_json},
+	{"llae",	luaopen_llae},
   {NULL, NULL}
 };
 

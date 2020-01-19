@@ -33,8 +33,18 @@ function _M.lib(  )
 		
 
 		files {
-			path.join(_M.root,'clean','**.cpp'),
-			path.join(_M.root,'clean','**.h')
+			path.join(_M.root,'src','common','**.cpp'),
+			path.join(_M.root,'src','common','**.h'),
+			path.join(_M.root,'src','lua','**.cpp'),
+			path.join(_M.root,'src','lua','**.h'),
+			path.join(_M.root,'src','meta','**.cpp'),
+			path.join(_M.root,'src','meta','**.h'),
+			path.join(_M.root,'src','uv','**.cpp'),
+			path.join(_M.root,'src','uv','**.h'),
+			path.join(_M.root,'src','json','**.cpp'),
+			path.join(_M.root,'src','json','**.h'),
+			path.join(_M.root,'src','*.cpp'),
+			path.join(_M.root,'src','*.h'),
 		}
 
 end
@@ -47,7 +57,7 @@ function _M.compile(  )
 		pkgconfig('openssl','cflags'),	
 	}
 	includedirs{
-		path.join(_M.root ,'clean') 
+		path.join(_M.root ,'src') 
 	}
 end
 

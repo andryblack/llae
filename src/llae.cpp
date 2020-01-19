@@ -1,4 +1,74 @@
 #include "llae.h"
+
+namespace llae {
+
+    app::app() {
+        *static_cast<app**>(lua_getextraspace(m_lua.native())) = this;
+        uv_loop_set_data(m_loop.native(),this);
+        m_lua.open_libs();
+    }
+
+    app::~app() {
+        //m_loop.stop();
+        //m_lua.close();
+    }
+
+    app& app::get(lua_State* L) {
+        return **static_cast<app**>(lua_getextraspace(L));
+    }
+
+    app& app::get(uv_loop_t* l) {
+        return *static_cast<app*>(uv_loop_get_data(l));
+    }
+
+    void app::run() {
+        int v = m_loop.run(UV_RUN_DEFAULT);
+        if (v != 0) {
+            /* todo */
+        }
+    }
+}
+
+static int lua_llae_run(lua_State* L) {
+    llae::app::get(L).run();
+    // uv_loop_t* loop = llae_get_loop(L);
+    // int v = uv_run(loop,UV_RUN_DEFAULT);
+    // if (v != 0) {
+    //     lua_gc(L,LUA_GCCOLLECT,0);
+    //     uv_run(loop,UV_RUN_NOWAIT);
+    //     uv_run(loop,UV_RUN_NOWAIT);
+    // }
+    return 0;
+}
+
+
+
+int luaopen_llae(lua_State* L) {
+    lua::state s(L);
+    luaL_Reg reg[] = {
+        { "run", lua_llae_run },
+        /* { "set_handler", lua_llae_set_handler }, */
+        // { "sleep", &Timer::sleep },
+        // 
+        // { "dump", lua_llae_dump },
+        // { "get_exepath", lua_llae_get_exepath },
+        // { "get_cwd", lua_llae_get_cwd },
+        // { "get_home", lua_llae_get_home },
+        // { "newTCPServer", &TCPServer::lnew },
+        // { "newTCPConnection", &TCPConnection::lnew },
+        // { "newTimer", &Timer::lnew },
+        // { "newIdle", &Idle::lnew },
+        // { "getaddrinfo", &GetAddrInfoLuaThreadReq::lua_getaddrinfo },
+        // { "newTLSCtx", &TLSCtx::lnew },
+        // { "newTLS",&TLS::lnew },
+        { NULL, NULL }
+    };
+    lua_newtable(L);
+    luaL_setfuncs(L, reg, 0);
+    return 1;
+}
+
+/*
 #include "tcp_server.h"
 #include "tcp_connection.h"
 #include "timer.h"
@@ -19,16 +89,7 @@ static void* uv_loop_set_data(uv_loop_t* loop, void* data) {
 }
 #endif
 
-static int lua_llae_run(lua_State* L) {
-	uv_loop_t* loop = llae_get_loop(L);
-	int v = uv_run(loop,UV_RUN_DEFAULT);
-    if (v != 0) {
-        lua_gc(L,LUA_GCCOLLECT,0);
-        uv_run(loop,UV_RUN_NOWAIT);
-        uv_run(loop,UV_RUN_NOWAIT);
-    }
-	return 0;
-}
+
 
 static void dump_walk_cb(uv_handle_t* handle,void* arg) {
     std::cout << "handle: " << uv_handle_type_name(handle->type) << "\t" << uv_is_closing(handle) << "\t" << uv_is_active(handle) << std::endl;
@@ -47,20 +108,8 @@ static void stop_cb(uv_async_t* ) {
     uv_close(reinterpret_cast<uv_handle_t*>(&stop_async),0);
 }
 
-static void uv_stop_laction (int i) {
-  signal(i, SIG_DFL); 
-  if (action_loop) {
-    uv_async_init(action_loop,&stop_async,&stop_cb);
-    uv_async_send(&stop_async);
-    action_loop = 0;
-  }
-}
 
-static int lua_llae_set_handler(lua_State* L) {
-    action_loop = llae_get_loop(L);
-    signal(SIGINT, uv_stop_laction);
-    return 0;
-}
+
 
 static int lua_llae_get_exepath(lua_State* L) {
     size_t size = LUAL_BUFFERSIZE;
@@ -126,3 +175,4 @@ extern "C" int luaopen_llae(lua_State* L) {
     luaL_setfuncs(L, reg, 0);
     return 1;
 }
+*/
