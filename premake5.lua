@@ -19,11 +19,6 @@ solution 'llae'
 
 	llae.lib()
 
-	project 'llae-run'
-		kind 'ConsoleApp'
-		targetdir 'bin'
-		llae.exe()
-
 	project 'llae-tool'
 		kind 'ConsoleApp'
 		targetdir 'bin'
