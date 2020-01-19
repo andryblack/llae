@@ -4,6 +4,10 @@
 #include <cstdio>
 #include <cstdlib>
 
+#include "meta/info.h"
+
+META_INFO(Stream,void)
+
 WriteReqBase::WriteReqBase() {
 	attach();
 }

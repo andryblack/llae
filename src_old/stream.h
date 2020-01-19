@@ -78,7 +78,6 @@ public:
 };
 typedef Ref<ShootdownReq> ShootdownReqPtr;
 
-class Stream;
 class ReadRequest : public RefCounter {
 public:
 	virtual void on_alloc(Stream* s,size_t suggested_size, uv_buf_t* buf);

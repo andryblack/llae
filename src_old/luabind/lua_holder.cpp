@@ -2,40 +2,7 @@
 #include <cassert>
 #include <iostream>
 
-LuaHolder::LuaHolder() : m_ref(LUA_NOREF) {
-
-}
-
-LuaHolder::~LuaHolder() {
-	assert(m_ref == LUA_NOREF);
-}
-
-void LuaHolder::assign(lua_State* L) {
-	if (m_ref != LUA_NOREF) {
-		reset(L);
-	}
-	m_ref = luaL_ref(L,LUA_REGISTRYINDEX);
-}
-
-void LuaHolder::assign_check(lua_State* L,int t) {
-	if (m_ref != LUA_NOREF) {
-		reset(L);
-	}
-	if (lua_type(L,-1)!=t) {
-		luaL_error(L,"%s expected",lua_typename(L, t));
-	}
-	m_ref = luaL_ref(L,LUA_REGISTRYINDEX);
-}
-
-void LuaHolder::reset(lua_State* L) {
-	luaL_unref(L,LUA_REGISTRYINDEX,m_ref);
-	m_ref = LUA_NOREF;
-}
-
-void LuaHolder::push(lua_State* L) {
-	lua_geti(L,LUA_REGISTRYINDEX,m_ref);
-}
-
+/*
 void LuaFunction::assign(lua_State* L,const luabind::function& f) {
 	f.push(L);
 	LuaHolder::assign_check(L,LUA_TFUNCTION);
@@ -114,3 +81,4 @@ void LuaThread::starti(lua_State* L, const luabind::function& f, const char* fun
 		lua_error(L);
 	}
 }
+*/

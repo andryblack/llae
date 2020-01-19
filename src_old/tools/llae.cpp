@@ -1,18 +1,19 @@
 #include <iostream>
 #include <string>
 
-#include "../llae.h"
-#include "../lua_state.h"
-#include "../lua_value.h"
+#include "lua/state.h"
+#include "lua/embedded.h"
+#include "lua/value.h"
+#include "uv/loop.h"
 
 extern "C" int luaopen_llae_crypto(lua_State* L);
 extern "C" int luaopen_llae_json(lua_State* L);
 extern "C" int luaopen_llae(lua_State* L);
 extern "C" int luaopen_llae_file(lua_State* L);
 
-int attach_embedded_scripts(Lua::StateRef& lua);
 
-static void createargtable (Lua::StateRef& lua, char **argv, int argc) {
+
+static void createargtable (lua::state& lua, char **argv, int argc) {
   int narg = argc - 1;  /* number of positive indices */
 	lua.createtable(narg,1);
 	for (int i = 0; i < argc; i++) {
@@ -22,37 +23,35 @@ static void createargtable (Lua::StateRef& lua, char **argv, int argc) {
   	lua.setglobal("args");
 }
 
+static const struct {
+		const char* name;
+		lua_CFunction func;
+} embedded_libs [] = {
+  {"llae.crypto", luaopen_llae_crypto},
+  {"llae.json", luaopen_llae_json},
+  {"llae",luaopen_llae},
+  {"llae.file",luaopen_llae_file},
+  {NULL, NULL}
+};
 
 int main(int argc,char** argv) {
 
-	Lua::State lua;
+	lua::main_state lua;
 
 	lua.open_libs();
 
-	static const struct RegLib{
-		const char* name;
-		lua_CFunction func;
-	} loadedlibs [] = {
-      {"llae.crypto", luaopen_llae_crypto},
-      {"llae.json", luaopen_llae_json},
-      {"llae",luaopen_llae},
-      {"llae.file",luaopen_llae_file},
-      {NULL, NULL}
-  	};
-    
-	const RegLib *lib;
 	/* call open functions from 'loadedlibs' and set results to global table */
-	for (lib = loadedlibs; lib->func; lib++) {
+	for (const auto *lib = embedded_libs; lib->func; lib++) {
 		lua.require(lib->name,lib->func);
 	}
 
-	attach_embedded_scripts(lua);
+	lua::attach_embedded_scripts(lua);
 
 	createargtable(lua,argv,argc);
 
-	Lua::Status status = lua.dostring("(require 'main')(args);");
-	if (status != Lua::Status::OK) {
-		Lua::StackValue err(lua,-1);
+	lua::status status = lua.dostring("(require 'main')(args);");
+	if (status != lua::status::ok) {
+		lua::value err(lua,-1);
 		if (err.is_string()) {
 			std::cout << err.tostring() << std::endl;
 		} else {
@@ -62,7 +61,7 @@ int main(int argc,char** argv) {
 
 	lua.close();
 
-	uv_loop_close(uv_default_loop());
+	//uv_loop_close(uv_default_loop());
 
 	return 0;
 }
