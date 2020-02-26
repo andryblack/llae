@@ -22,5 +22,5 @@ solution 'llae'
 	project 'llae-run'
 		kind 'ConsoleApp'
 		targetdir 'bin'
-		llae.link()
+		llae.exe()
 	

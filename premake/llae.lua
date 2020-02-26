@@ -39,9 +39,20 @@ function _M.lib(  )
 			path.join(_M.root,'src','**.cpp'),
 			path.join(_M.root,'src','**.h')
 		}
+
+		excludes {
+			path.join(_M.root,'src','main.cpp'),
+		}
 end
 
-function _M.link(  )
+function _M.exe( )
+	buildoptions{ 
+		pkgconfig('lua-5.3','cflags'),
+		pkgconfig('libuv','cflags'),
+	}
+	files {
+		path.join(_M.root,'src','main.cpp'),
+	}
 	linkoptions { 
 		pkgconfig('lua-5.3','libs'),
 		pkgconfig('libuv','libs'),
