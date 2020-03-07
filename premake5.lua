@@ -23,14 +23,10 @@ solution 'llae'
 		kind 'ConsoleApp'
 		targetdir 'bin'
 		targetname 'llae'
-		llae.compile()
 		llae.embed({
 			{ 'scripts/llae/*.lua', 'scripts' },
 			{ 'scripts/net/*.lua', 'scripts' },
 			{ 'scripts/tools/*.lua', 'scripts/tools' }
 			})
-		files {
-			'src/tools/llae.cpp'
-		}
-		llae.link()
+		llae.exe()
 	

@@ -12,8 +12,14 @@ namespace uv {
 		virtual uv_handle_t* get_handle() = 0;
 	private:
 		static void close_cb(uv_handle_t* handle);
+		static void close_destroy_cb(uv_handle_t* handle);
+		void destroy() override;
 	protected:
+		handle();
 		void attach();
+		virtual ~handle() override;
+	public:
+		void close();
 	};
 
 }

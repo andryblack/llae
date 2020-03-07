@@ -25,7 +25,7 @@ namespace lua {
 		bool is_userdata() const { return get_type() == value_type::userdata; }
 		bool is_thread() const 	{ return get_type() == value_type::thread; }
 		bool is_lightuserdata() const { return get_type() == value_type::lightuserdata; }
-
+		
 		const char* tostring() const { return m_state.tostring(m_idx);}
 		void push() const {
 			m_state.pushvalue(m_idx);

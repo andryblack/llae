@@ -4,7 +4,7 @@ commands.list = {}
 commands.map = {}
 
 local function register( modname )
-	print('register',modname)
+	--print('register',modname)
 	local mod = require( modname )
 	mod.name = modname
 	table.insert(commands.list, mod )
@@ -14,5 +14,6 @@ end
 register('install')
 register('bootstrap')
 register('help')
+register('run')
 
 return commands

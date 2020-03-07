@@ -12,6 +12,7 @@ namespace common {
                 m_ptr = nullptr;
             }
         }
+        template<class U> friend class intrusive_ptr;
     public:
         intrusive_ptr() : m_ptr(nullptr) {}
         template <class U>
@@ -23,14 +24,16 @@ namespace common {
         }
 
         T* get() const { return m_ptr; }
-
-        intrusive_ptr(const intrusive_ptr& other) : m_ptr(other.get()) {
+        template <class U>
+        intrusive_ptr(const intrusive_ptr<U>& other) : m_ptr(other.get()) {
             if (m_ptr) m_ptr->add_ref();
         }
-        intrusive_ptr( intrusive_ptr&& other) : m_ptr(other.get()) {
+        template <class U>
+        intrusive_ptr( intrusive_ptr<U>&& other) : m_ptr(other.get()) {
             other.m_ptr = nullptr;
         }
-        intrusive_ptr& operator = (const intrusive_ptr& other) {
+        template <class U>
+        intrusive_ptr& operator = (const intrusive_ptr<U>& other) {
             if (other.get()!=m_ptr) {
                 release();
                 m_ptr = other.get();
@@ -38,12 +41,13 @@ namespace common {
             }
             return *this;
         }
-        intrusive_ptr& operator = ( intrusive_ptr&& other) {
+        template <class U>
+        intrusive_ptr& operator = ( intrusive_ptr<U>&& other) {
             if (other.get()!=m_ptr) {
                 release();
                 m_ptr = other.get();
-                other->m_ptr = nullptr;
             }
+            other->m_ptr = nullptr;
             return *this;
         }
 

@@ -1,11 +1,29 @@
-#include "llae.h"
+#include "app.h"
+#include "lua/value.h"
+#include "meta/object.h"
+#include "lua/bind.h"
+#include <iostream>
 
 namespace llae {
 
-    app::app() {
+    static int at_panic(lua_State* L) {
+        std::cout << "PANIC: ";
+        lua::state l(L);
+        lua::value err(l,-1);
+        if (err.is_string()) {
+            std::cout << err.tostring() << std::endl;
+        } else {
+            std::cout << "unknown" << std::endl;
+        }
+        return 0;
+    }
+
+    app::app() : m_loop(uv_default_loop()) {
         *static_cast<app**>(lua_getextraspace(m_lua.native())) = this;
         uv_loop_set_data(m_loop.native(),this);
         m_lua.open_libs();
+        lua_atpanic(lua().native(),&at_panic);
+        lua::bind::object<meta::object>::register_metatable(lua());
     }
 
     app::~app() {
@@ -26,27 +44,49 @@ namespace llae {
         if (v != 0) {
             /* todo */
         }
+        m_lua.close();
     }
-}
 
-static int lua_llae_run(lua_State* L) {
-    llae::app::get(L).run();
-    // uv_loop_t* loop = llae_get_loop(L);
-    // int v = uv_run(loop,UV_RUN_DEFAULT);
-    // if (v != 0) {
-    //     lua_gc(L,LUA_GCCOLLECT,0);
-    //     uv_run(loop,UV_RUN_NOWAIT);
-    //     uv_run(loop,UV_RUN_NOWAIT);
-    // }
-    return 0;
-}
+    void app::show_error(lua::state& l,lua::status e) {
+        switch(e) {
+            case lua::status::yield:
+                std::cout << "YIELD:\t";
+                break;
+            case lua::status::errun:
+                std::cout << "ERRRUN:\t";
+                break;
+            case lua::status::errsyntax:
+                std::cout << "ERRSYNTAX:\t";
+                break;
+            case lua::status::errmem:
+                std::cout << "ERRMEM:\t";
+                break;
+            case lua::status::errgcmm:
+                std::cout << "ERRGCMM:\t";
+                break;
+            case lua::status::errerr:
+                std::cout << "ERRERR:\t";
+                break;
+            default:
+                std::cout << "UNKNOWN:\t";
+                break;
+        };
+        lua::value err(l,-1);
+        if (err.is_string()) {
+            std::cout << err.tostring() << std::endl;
+        } else {
+            std::cout << "unknown" << std::endl;
+        }
+    }
 
+    
+}
 
 
 int luaopen_llae(lua_State* L) {
     lua::state s(L);
     luaL_Reg reg[] = {
-        { "run", lua_llae_run },
+        //{ "run", lua_llae_run },
         /* { "set_handler", lua_llae_set_handler }, */
         // { "sleep", &Timer::sleep },
         // 

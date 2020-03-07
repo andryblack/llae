@@ -2,10 +2,9 @@
 local uv = require 'uv'
 local utils = require 'llae.utils'
 
-
 local commands = require 'commands'
 
-local function main( args )
+return function( args )
 
 	local cmdargs = utils.parse_args(args)
 	local scripts = cmdargs.scripts
@@ -13,7 +12,7 @@ local function main( args )
 		print('use scripts at',scripts)
 		table.remove(package.searchers,1)
 		local store_packages = {
-			'uv','json',
+			'json','llae','uv'
 		}
 		local store = { }
 		for _,v in ipairs(store_packages) do
@@ -38,12 +37,5 @@ local function main( args )
 	end
 	cmd:exec( cmdargs )
 
-	
-	--l:run()
-	llae.set_handler()
-	llae.run()
-
 end
-
-return main
 

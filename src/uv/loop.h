@@ -10,11 +10,11 @@ namespace uv {
 	class loop : public meta::object {
 		META_OBJECT
 	private:
-		uv_loop_t m_loop;
+		uv_loop_t* m_loop;
 	public:
-		explicit loop();
+		explicit loop(uv_loop_t* l);
 		~loop();
-		uv_loop_t* native() { return &m_loop; }
+		uv_loop_t* native() { return m_loop; }
 		int run(uv_run_mode mode);
 		bool is_alive() const;
 		uint64_t now() const;

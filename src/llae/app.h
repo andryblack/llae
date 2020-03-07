@@ -13,10 +13,11 @@ namespace llae {
 		app();
 		~app();
 
-		lua::state& get_lua() { return m_lua; }
-		uv::loop& get_loop() { return m_loop; }
+		lua::state& lua() { return m_lua; }
+		uv::loop& loop() { return m_loop; }
 
 		void run();
+		static void show_error(lua::state& l,lua::status e);
 		
 		static app& get(lua_State* L);
 		static app& get(uv_loop_t* l);

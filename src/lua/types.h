@@ -31,6 +31,10 @@ namespace lua {
 		errerr = LUA_ERRERR,
 	};
 
+	struct multiret {
+		int val;
+	};
+
 }
 
 #endif /*_LLAE_LUA_TYPES_H_ICNLUDED_*/

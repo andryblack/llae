@@ -4,9 +4,9 @@ package.path = package.path .. ';scripts/?.lua'
 
 local llae = require 'llae'
 local http = require 'llae.http'
-local json = require 'llae.json'
+local json = require 'json'
 
-http.createServer(function (req, res)
+assert(http.createServer(function (req, res)
   --print('received request')
   local body = [[
 <html>
@@ -19,12 +19,6 @@ Hello world! ]] ..os.time().. '\n'.. json.encode({
   ]]
   res:set_header("Content-Type", "text/html")
   res:finish(body)
-end):listen(1337, '127.0.0.1')
+end):listen(1337, '127.0.0.1'))
 
 print('Server running at http://127.0.0.1:1337/')
-llae.set_handler()
-llae.run()
-
-print('Terminating server')
-
-llae.dump()

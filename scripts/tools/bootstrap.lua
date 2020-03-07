@@ -3,6 +3,7 @@ local class = require  'llae.class'
 local utils = require 'llae.utils'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
+local uv = require 'uv'
 
 
 local install = class(tool)
@@ -24,10 +25,12 @@ function install:exec( args )
 		fs.mkdir(path.join(install_dir,'modules'))
 		fs.mkdir(path.join(install_dir,'scripts'))
 
-		local src = llae.get_exepath()
+		local src = assert(uv.exepath())
 		local fn = path.basename(src)
 
-		fs.copy(src,path.join(install_dir,'bin',fn))
+		assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
+
+		print('done')
 	end)
 
 end

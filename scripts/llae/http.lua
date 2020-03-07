@@ -1,6 +1,7 @@
 local llae = require 'llae'
 local url = require 'net.url'
-local file = require 'llae.file'
+local fs = require 'llae.fs'
+local uv = require 'uv'
 
 local http = {}
 
@@ -317,7 +318,7 @@ do
 	end
 
 	function response:send_static_file( path )
-		local stat,e = file.stat(path)
+		local stat,e = fs.stat(path)
 		if not stat then
 			send_404(self,path,e)
 		else
@@ -344,7 +345,7 @@ do
 					end
 				end
 			end
-			local f,e = file.open(path)
+			local f,e = fs.open(path)
 			if not f then
 				print('faled open',path,e)
 				send_404(self,path,e)
@@ -372,15 +373,16 @@ do
 
 	function server.new( cb )
 		local r = {}
-		r._server = llae.newTCPServer()
+		r._server = uv.tcp_server:new()
 		r._backlog = server.defaults.backlog
 		r._cb = cb
 		return setmetatable(r,server_mt)
 	end
 
 	function server:listen( port, addr )
-		self._server:bind(addr,port)
-		self._server:listen(self._backlog,function(err)
+		local res,err = self._server:bind(addr,port)
+		if not res then return nil,err end
+		return self._server:listen(self._backlog,function(err)
 			self:on_connection(err)
 		end)
 	end
@@ -407,7 +409,7 @@ do
 
 	function server:on_connection( err )
 		assert(not err, err)
-		local client = llae.newTCPConnection()
+		local client = uv.tcp_connection:new()
 		self._server:accept(client)
 		local connection_thread = coroutine.create(read_function)
 		local res,err = coroutine.resume(connection_thread,client,function(req) 

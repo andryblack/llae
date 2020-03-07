@@ -5,9 +5,9 @@
 #include "lua/embedded.h"
 #include "lua/value.h"
 #include "uv/loop.h"
+#include "llae/app.h"
 
 extern "C" int luaopen_llae_crypto(lua_State* L);
-
 extern "C" int luaopen_llae_file(lua_State* L);
 
 int luaopen_json(lua_State* L);
@@ -16,13 +16,12 @@ int luaopen_llae(lua_State* L);
 
 
 static void createargtable (lua::state& lua, char **argv, int argc) {
-  int narg = argc - 1;  /* number of positive indices */
+  	int narg = argc - 1;  /* number of positive indices */
 	lua.createtable(narg,1);
 	for (int i = 0; i < argc; i++) {
     	lua.pushstring(argv[i]);
     	lua.rawseti(-2, i);
   	}
-  	lua.setglobal("args");
 }
 
 static const struct {
@@ -41,32 +40,36 @@ static const struct {
 
 int main(int argc,char** argv) {
 
-	lua::main_state lua;
+	{
+		llae::app app{};
 
-	lua.open_libs();
+		lua::state& L(app.lua());
 
-	/* call open functions from 'loadedlibs' and set results to global table */
-	for (const auto *lib = embedded_libs; lib->func; lib++) {
-		lua.require(lib->name,lib->func);
-	}
-
-	lua::attach_embedded_scripts(lua);
-
-	createargtable(lua,argv,argc);
-
-	lua::status status = lua.dostring("(require 'main')(args);");
-	if (status != lua::status::ok) {
-		lua::value err(lua,-1);
-		if (err.is_string()) {
-			std::cout << err.tostring() << std::endl;
-		} else {
-			std::cout << "failed run main" << std::endl;
+		/* call open functions from 'loadedlibs' and set results to global table */
+		for (const auto *lib = embedded_libs; lib->func; lib++) {
+			L.require(lib->name,lib->func);
 		}
+
+		lua::attach_embedded_scripts(L);
+		L.getglobal("require");
+		L.pushstring("main");
+		auto err = L.pcall(1,1,0);
+		if (err != lua::status::ok) {
+			app.show_error(L,err);
+		} else if (!lua::value(L,-1).is_function()) {
+			std::cout << "main dnt return function" << std::endl;
+		} else {
+			createargtable(L,argv,argc);
+			err = L.pcall(1,0,0);
+			if (err != lua::status::ok) {
+				app.show_error(L,err);
+			} else {
+				app.run();
+			}
+		}	
 	}
 
-	lua.close();
-
-	//uv_loop_close(uv_default_loop());
+	uv_loop_close(uv_default_loop());
 
 	return 0;
 }

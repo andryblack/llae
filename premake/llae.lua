@@ -18,6 +18,16 @@ _M.root = './'
 _M.pkgconfig = pkgconfig
 _M.pkgconfig_var = pkgconfig
 
+local extlibs = { 'lua-5.3', 'libuv', 'yajl', 'openssl' }
+local components = { 'common','lua','meta','uv','json','llae' }
+
+local function pkgconfig_components(flag)
+	local r = {}
+	for _,v in ipairs(extlibs) do
+		table.insert(r,pkgconfig(v,flag))
+	end
+	return r
+end
 
 function _M.lib(  )
 	project 'llae'
@@ -31,31 +41,17 @@ function _M.lib(  )
 
 		_M.compile()
 		
-
-		files {
-			path.join(_M.root,'src','common','**.cpp'),
-			path.join(_M.root,'src','common','**.h'),
-			path.join(_M.root,'src','lua','**.cpp'),
-			path.join(_M.root,'src','lua','**.h'),
-			path.join(_M.root,'src','meta','**.cpp'),
-			path.join(_M.root,'src','meta','**.h'),
-			path.join(_M.root,'src','uv','**.cpp'),
-			path.join(_M.root,'src','uv','**.h'),
-			path.join(_M.root,'src','json','**.cpp'),
-			path.join(_M.root,'src','json','**.h'),
-			path.join(_M.root,'src','*.cpp'),
-			path.join(_M.root,'src','*.h'),
-		}
+		local fls = {}
+		for _,c in ipairs(components) do
+			table.insert(fls,path.join(_M.root,'src',c,'*.cpp'))
+			table.insert(fls,path.join(_M.root,'src',c,'*.h'))
+		end
+		files(fls)
 
 end
 
 function _M.compile(  )
-	buildoptions{ 
-		pkgconfig('lua-5.3','cflags'),
-		pkgconfig('libuv','cflags'),
-		pkgconfig('yajl','cflags'),
-		pkgconfig('openssl','cflags'),	
-	}
+	buildoptions(pkgconfig_components('cflags'))
 	includedirs{
 		path.join(_M.root ,'src') 
 	}
@@ -70,12 +66,7 @@ function _M.exe(  )
 end
 
 function _M.link(  )
-	linkoptions { 
-		pkgconfig('lua-5.3','libs'),
-		pkgconfig('libuv','libs'),
-		pkgconfig('yajl','libs'),
-		pkgconfig('openssl','libs'),
-	}
+	linkoptions(pkgconfig_components('libs'))
 	links {
 		'llae'
 	}
