@@ -27,6 +27,20 @@ namespace uv {
 		int write(uv_stream_t* s);
 	};
 
+	class shutdown_req : public req {
+		META_OBJECT
+	private:
+		uv_shutdown_t m_shutdown;
+		lua::ref m_cont;
+	protected:
+		static void shutdown_cb(uv_shutdown_t* req, int status);
+		void on_shutdown(int status);
+	public:
+		shutdown_req(lua::ref&& cont);
+		~shutdown_req();
+		int shutdown(uv_stream_t* s);
+	};
+
 	class stream : public handle {
 		META_OBJECT
 	private:
@@ -34,6 +48,7 @@ namespace uv {
 	protected:
 		explicit stream();
 		virtual ~stream() override;
+		virtual void on_closed() override;
 	private:
 		static void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
 		static void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
@@ -44,6 +59,8 @@ namespace uv {
 		static void lbind(lua::state& l);
 		lua::multiret read(lua::state& l);
 		lua::multiret write(lua::state& l);
+		lua::multiret shutdown(lua::state& l);
+		void close();
 	};
 	typedef common::intrusive_ptr<stream> stream_ptr;
 

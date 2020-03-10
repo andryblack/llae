@@ -16,7 +16,6 @@ namespace uv {
 		attach();
 	}
 	tcp_connection::~tcp_connection() {
-
 	}
 
 	int tcp_connection::lnew(lua_State* L) {

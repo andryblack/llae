@@ -16,6 +16,7 @@ namespace uv {
 		~loop();
 		uv_loop_t* native() { return m_loop; }
 		int run(uv_run_mode mode);
+		void stop();
 		bool is_alive() const;
 		uint64_t now() const;
 

@@ -5,6 +5,7 @@
 #include "lua/embedded.h"
 #include "lua/value.h"
 #include "uv/loop.h"
+#include "uv/handle.h"
 #include "llae/app.h"
 
 extern "C" int luaopen_llae_crypto(lua_State* L);
@@ -38,10 +39,12 @@ static const struct {
   {NULL, NULL}
 };
 
-int main(int argc,char** argv) {
 
-	{
-		llae::app app{};
+
+int main(int argc,char** argv) {
+	auto loop = uv_default_loop();
+    {
+		llae::app app{loop};
 
 		lua::state& L(app.lua());
 
@@ -69,7 +72,11 @@ int main(int argc,char** argv) {
 		}	
 	}
 
-	uv_loop_close(uv_default_loop());
+	while (uv_loop_close(loop) == UV_EBUSY) {
+		uv_sleep(100);
+	}
+
+	std::cout << "meta objects: " << meta::object::get_total_count() << std::endl;
 
 	return 0;
 }

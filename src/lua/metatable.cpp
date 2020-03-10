@@ -1,6 +1,15 @@
 #include "metatable.h"
+#include "stack.h"
 
 namespace lua {
+
+	static int metaobject_destroy(lua_State* L) {
+		auto hdr = static_cast<object_holder_t*>(state(L).touserdata(1));
+		if (hdr) {
+			hdr->~object_holder_t();
+		}
+		return 0;
+	}
 
 	void create_metatable(state& s,const meta::info_t* info) {
 		if (!s.newmetatable(info->name)) {
@@ -16,6 +25,8 @@ namespace lua {
 		}
 		s.pushvalue(-1);
 		s.setfield(-2,"__index");
+		s.pushcclosure(&metaobject_destroy,0);
+		s.setfield(-2,"__gc");
 	}
 
 	void set_metatable(state& s,const meta::info_t* info) {

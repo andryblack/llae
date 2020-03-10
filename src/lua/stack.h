@@ -6,7 +6,7 @@
 #include "meta/object.h"
 #include "metatable.h"
 #include "common/intrusive_ptr.h"
-#include <new>
+
 
 namespace lua {
 
@@ -23,19 +23,6 @@ namespace lua {
 		}
 	};
 
-	struct object_holder_t {
-		common::intrusive_ptr<meta::object> hold;
-
-		const meta::info_t* info() const { return hold->get_object_info(); }
-		template <class T>
-		common::intrusive_ptr<T> get_intrusive() const {
-			return common::intrusive_ptr<T>(meta::cast<T>(hold.get()));
-		}
-		template <class T>
-		T* get_raw() const {
-			return meta::cast<T>(hold.get());
-		}
-	};
 
 	template <>
 	struct stack<int> {
@@ -59,10 +46,15 @@ namespace lua {
 				s.pushnil();
 				return;
 			}
-			void* data = s.newuserdata(sizeof(object_holder_t));
-			const meta::info_t* info = v->get_object_info();
-			new (data) object_holder_t{ std::move(v) };
-			set_metatable(s,info);
+			push_meta_object(s,std::move(v));
+		}
+	};
+	template <class T>
+	struct stack<T*> {
+		static T* get(state& s,int idx) { 
+			auto hdr = static_cast<object_holder_t*>(s.touserdata(idx));
+			if (!hdr) return nullptr;
+			return hdr->get_raw<T>();
 		}
 	};
 	template <class T>

@@ -22,4 +22,7 @@ namespace uv {
 		return uv_now(m_loop);
 	}
 
+	void loop::stop() {
+		uv_stop(m_loop);
+	}
 }

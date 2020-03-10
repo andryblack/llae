@@ -8,6 +8,24 @@ namespace uv {
 
 	signal::signal(loop& l) {
 		int res = uv_signal_init(l.native(),&m_sig);
+		if (res >= 0) {
+			attach();
+		}
+	}
+
+	signal::~signal() {
+	}
+
+	void signal::signal_cb(uv_signal_t* sig, int signum) {
+		signal* self = static_cast<signal*>(uv_handle_get_data(reinterpret_cast<uv_handle_t*>(sig)));
+		if (self && self->m_cb) {
+			self->m_cb();
+		}
+	}
+
+	void signal::start_oneshot(int signum,std::function<void()>&& f) {
+		m_cb = std::move(f);
+		uv_signal_start_oneshot(&m_sig,&signal::signal_cb, signum);
 	}
 
 }

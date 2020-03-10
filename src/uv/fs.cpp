@@ -54,22 +54,24 @@ namespace uv {
 			l.pushstring("mkdir is async");
 			return 2;
 		}
-		auto path = l.checkstring(1);
-		int mode = l.optinteger(2,0755);
-		llae::app& app(llae::app::get(l));
-		lua::ref cont;
-		l.pushthread();
-		cont.set(l);
-		common::intrusive_ptr<fs> req{new fs_status(std::move(cont))};
-		req->add_ref();
-		int r = uv_fs_mkdir(app.loop().native(),
-			req->fs_req(),path,mode,&fs::fs_cb);
-		if (r < 0) {
-			req->remove_ref();
-			l.pushnil();
-			uv::push_error(l,r);
-			return 2;
-		} 
+		{
+			auto path = l.checkstring(1);
+			int mode = l.optinteger(2,0755);
+			llae::app& app(llae::app::get(l));
+			lua::ref cont;
+			l.pushthread();
+			cont.set(l);
+			common::intrusive_ptr<fs> req{new fs_status(std::move(cont))};
+			req->add_ref();
+			int r = uv_fs_mkdir(app.loop().native(),
+				req->fs_req(),path,mode,&fs::fs_cb);
+			if (r < 0) {
+				req->remove_ref();
+				l.pushnil();
+				uv::push_error(l,r);
+				return 2;
+			} 
+		}
 		l.yield(0);
 		return 0;
 	}
@@ -81,23 +83,25 @@ namespace uv {
 			l.pushstring("copyfile is async");
 			return 2;
 		}
-		auto path = l.checkstring(1);
-		auto new_path = l.checkstring(2);
-		auto flags = l.optinteger(3,0);
-		llae::app& app(llae::app::get(l));
-		lua::ref cont;
-		l.pushthread();
-		cont.set(l);
-		common::intrusive_ptr<fs> req{new fs_status(std::move(cont))};
-		int r = uv_fs_copyfile(app.loop().native(),
-			req->fs_req(),path,new_path,flags,&fs::fs_cb);
-		if (r < 0) {
-			req->remove_ref();
-			l.pushnil();
-			uv::push_error(l,r);
-			return 2;
-		} 
-		req->add_ref();
+		{
+			auto path = l.checkstring(1);
+			auto new_path = l.checkstring(2);
+			auto flags = l.optinteger(3,0);
+			llae::app& app(llae::app::get(l));
+			lua::ref cont;
+			l.pushthread();
+			cont.set(l);
+			common::intrusive_ptr<fs> req{new fs_status(std::move(cont))};
+			req->add_ref();
+			int r = uv_fs_copyfile(app.loop().native(),
+				req->fs_req(),path,new_path,flags,&fs::fs_cb);
+			if (r < 0) {
+				req->remove_ref();
+				l.pushnil();
+				uv::push_error(l,r);
+				return 2;
+			} 
+		}
 		l.yield(0);
 		return 0;
 	}

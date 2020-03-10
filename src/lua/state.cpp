@@ -1,6 +1,4 @@
 #include "lua/state.h"
-
-
 #include <memory>
 
 namespace lua {

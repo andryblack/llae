@@ -21,6 +21,7 @@ namespace uv {
 		explicit tcp_server(lua::state& l);
 		virtual ~tcp_server() override;
 		virtual void on_connection(int st);
+		virtual void on_closed() override;
 	public:
 		static int lnew(lua_State* L);
 		static void lbind(lua::state& l);

@@ -46,7 +46,7 @@ namespace lua {
 		};
 		
 		template <class T,typename ... Args>
-		struct helper<void,T,Args...> {
+		struct helper<void,T,state&,Args...> {
 			typedef void (T::*func_t)(state&,Args ... args);
 			template <size_t... Is>
 			static void apply(state&l,T* obj,func_t func,const indices<Is...>) {
@@ -55,17 +55,36 @@ namespace lua {
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				auto obj = stack<common::intrusive_ptr<T> >::get(l,1);
+				auto obj = stack<T*>::get(l,1);
 				if (!obj) {
 					l.argerror(1,T::get_class_info()->name);
 				}
-				apply(l,obj.get(),*f,build_indices<sizeof...(Args)>());
+				apply(l,obj,*f,build_indices<sizeof...(Args)>());
 				return 0;
 			}
 		};
 
 		template <class T,typename ... Args>
-		struct helper<multiret,T,Args...> {
+		struct helper<void,T,Args...> {
+			typedef void (T::*func_t)(Args ... args);
+			template <size_t... Is>
+			static void apply(state&l,T* obj,func_t func,const indices<Is...>) {
+				(obj->*func)(stack<Args>::get(l,2+Is)...);
+			}
+			static int function(lua_State* L) {
+				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				auto obj = stack<T*>::get(l,1);
+				if (!obj) {
+					l.argerror(1,T::get_class_info()->name);
+				}
+				apply(l,obj,*f,build_indices<sizeof...(Args)>());
+				return 0;
+			}
+		};
+
+		template <class T,typename ... Args>
+		struct helper<multiret,T,state&,Args...> {
 			typedef multiret (T::*func_t)(state&,Args ... args);
 			template <size_t... Is>
 			static multiret apply(state&l,T* obj,func_t func,const indices<Is...>) {
@@ -74,11 +93,11 @@ namespace lua {
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				auto obj = stack<common::intrusive_ptr<T> >::get(l,1);
+				auto obj = stack<T*>::get(l,1);
 				if (!obj) {
 					l.argerror(1,T::get_class_info()->name);
 				}
-				auto r = apply(l,obj.get(),*f,build_indices<sizeof...(Args)>());
+				auto r = apply(l,obj,*f,build_indices<sizeof...(Args)>());
 				return r.val;
 			}
 		};
@@ -89,6 +108,16 @@ namespace lua {
 		}
 		template <class R,class T,typename ... Args>
 		static void function(state& s,const char* name,R (T::*func)(state& l,Args ... args)) {
+			typedef helper<R,T,state&,Args...> hpr;
+			typedef typename hpr::func_t func_t; 
+			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
+			*func_data = func;
+			s.pushcclosure(hpr::function,1);
+			s.setfield(-2,name);
+		}
+
+		template <class R,class T,typename ... Args>
+		static void function(state& s,const char* name,R (T::*func)(Args ... args)) {
 			typedef helper<R,T,Args...> hpr;
 			typedef typename hpr::func_t func_t; 
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
@@ -96,6 +125,7 @@ namespace lua {
 			s.pushcclosure(hpr::function,1);
 			s.setfield(-2,name);
 		}
+
 
 		template <class T>
 		struct object {

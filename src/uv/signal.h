@@ -2,6 +2,7 @@
 #define __LLAE_UV_SIGNAL_H_INCLUDED__
 
 #include "handle.h"
+#include <functional>
 
 namespace uv {
 
@@ -14,8 +15,11 @@ namespace uv {
 	private:
 		uv_signal_t m_sig;
 		static void signal_cb(uv_signal_t* sig, int signum);
+		std::function<void()> m_cb;
 	public:
 		signal(loop& l);
+		~signal();
+		void start_oneshot(int signum,std::function<void()>&& f);
 	};
 
 }

@@ -7,4 +7,6 @@ namespace meta {
         "meta::object", nullptr
     };
     const info_t* object::get_class_info() { return &object_info; }
+
+    size_t object::m_count = 0;
 }

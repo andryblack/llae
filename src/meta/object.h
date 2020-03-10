@@ -8,7 +8,17 @@
 namespace meta {
 
 	class object : public common::ref_counter_base {
+    private:
+        static size_t m_count;
+    protected:
+        object() {
+            ++m_count;
+        }
+        virtual ~object() {
+            --m_count;
+        }
     public:
+        static size_t get_total_count() { return m_count; }
         static const info_t* get_class_info();
         virtual const info_t* get_object_info() const { return get_class_info(); }
   	};

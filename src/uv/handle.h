@@ -18,6 +18,7 @@ namespace uv {
 		handle();
 		void attach();
 		virtual ~handle() override;
+		virtual void on_closed() {}
 	public:
 		void close();
 	};

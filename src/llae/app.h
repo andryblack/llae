@@ -3,20 +3,24 @@
 
 #include "lua/state.h"
 #include "uv/loop.h"
+#include "uv/signal.h"
+#include "common/intrusive_ptr.h"
 
 namespace llae {
 
 	class app {
 		lua::main_state m_lua;
 		uv::loop 	m_loop;
+		common::intrusive_ptr<uv::signal> m_stop_sig;
 	public:
-		app();
+		explicit app(uv_loop_t* l);
 		~app();
 
 		lua::state& lua() { return m_lua; }
 		uv::loop& loop() { return m_loop; }
 
 		void run();
+		void stop();
 		static void show_error(lua::state& l,lua::status e);
 		
 		static app& get(lua_State* L);
