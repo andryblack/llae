@@ -4,7 +4,7 @@ META_OBJECT_INFO(uv::handle,meta::object)
 
 namespace uv {
 
-	static int handle_destoyed_mark = 0xdeadbeef;
+	//static int handle_destoyed_mark = 0xdeadbeef;
 
 	handle::handle() {
 	}

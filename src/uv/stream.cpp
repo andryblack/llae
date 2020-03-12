@@ -3,14 +3,14 @@
 #include "lua/bind.h"
 #include "llae/app.h"
 #include "luv.h"
+#include "fs.h"
+#include "write_file_pipe.h"
 
 META_OBJECT_INFO(uv::stream,uv::handle)
-META_OBJECT_INFO(uv::write_req,uv::req)
-META_OBJECT_INFO(uv::shutdown_req,uv::req)
 
 namespace uv {
 
-	write_req::write_req(lua::ref&& cont) : m_cont(std::move(cont)) {
+	write_req::write_req(stream_ptr&& s,lua::ref&& cont) : m_stream(std::move(s)),m_cont(std::move(cont)) {
 		attach(reinterpret_cast<uv_req_t*>(&m_write));
 	}
 	write_req::~write_req() {
@@ -72,12 +72,20 @@ namespace uv {
 		}
 	}
 
-	int write_req::write(uv_stream_t* s) {
-		return uv_write(&m_write,s,m_bufs.data(),m_bufs.size(),&write_req::write_cb);
+	int write_req::write() {
+		add_ref();
+		int r = uv_write(&m_write,m_stream->get_stream(),m_bufs.data(),m_bufs.size(),&write_req::write_cb);
+		if (r < 0) {
+			remove_ref();
+		}
+		return r;
 	}
 
 
-	shutdown_req::shutdown_req(lua::ref&& cont) : m_cont(std::move(cont)) {
+
+	
+
+	shutdown_req::shutdown_req(stream_ptr&& s,lua::ref&& cont) : m_stream(std::move(s)), m_cont(std::move(cont)) {
 		attach(reinterpret_cast<uv_req_t*>(&m_shutdown));
 	}
 	shutdown_req::~shutdown_req() {
@@ -112,8 +120,13 @@ namespace uv {
 		}
 	}
 
-	int shutdown_req::shutdown(uv_stream_t* s) {
-		return uv_shutdown(&m_shutdown,s,&shutdown_req::shutdown_cb);
+	int shutdown_req::shutdown() {
+		add_ref();
+		int r = uv_shutdown(&m_shutdown,m_stream->get_stream(),&shutdown_req::shutdown_cb);
+		if (r < 0) {
+			remove_ref();
+		}
+		return r;
 	}
 
 	stream::stream() {
@@ -131,11 +144,14 @@ namespace uv {
 		buf->len = suggested_size;
 	}
 	void stream::read_cb(uv_stream_t* s, ssize_t nread, const uv_buf_t* buf) {
-		static_cast<stream*>(s->data)->on_read(nread,buf);
+		stream* self = static_cast<stream*>(s->data);
+		if (self->on_read(nread,buf)) {
+			self->remove_ref();
+		}
 		::free(buf->base);
 	}
 
-	void stream::on_read(ssize_t nread, const uv_buf_t* buf) {
+	bool stream::on_read(ssize_t nread, const uv_buf_t* buf) {
 		auto& l = llae::app::get(get_stream()->loop).lua();
 		if (nread != 0) {
 			uv_read_stop(get_stream());
@@ -154,7 +170,7 @@ namespace uv {
 				toth.pushnil();
 				uv::push_error(toth,nread);
 			} else { // == 0
-				return;
+				return false;
 			}
 			lua::ref ref(std::move(m_read_cont));
 			auto s = toth.resume(l,2);
@@ -163,7 +179,7 @@ namespace uv {
 			}
 			ref.reset(l);
 		}
-		remove_ref();
+		return true;
 	}
 
 	lua::multiret stream::read(lua::state& l) {
@@ -205,15 +221,42 @@ namespace uv {
 			lua::ref write_cont;
 			write_cont.set(l);
 
-			common::intrusive_ptr<write_req> req{new write_req(std::move(write_cont))};
+			common::intrusive_ptr<write_req> req{new write_req(stream_ptr(this),std::move(write_cont))};
 		
 			l.pushvalue(2);
 			req->put(l);
 
-			req->add_ref();
-			int r = req->write(get_stream());
+			int r = req->write();
 			if (r < 0) {
-				req->remove_ref();
+				l.pushnil();
+				uv::push_error(l,r);
+				return {2};
+			} 
+		}
+		l.yield(0);
+		return {0};
+	}
+
+	lua::multiret stream::send(lua::state& l) {
+		if (!l.isyieldable()) {
+			l.pushnil();
+			l.pushstring("stream::send is async");
+			return {2};
+		}
+		{
+			auto f = lua::stack<common::intrusive_ptr<file> >::get(l,2);
+			if (!f) {
+				l.argerror(2,"uv::file expected");
+			}
+			l.pushthread();
+			lua::ref write_cont;
+			write_cont.set(l);
+
+			common::intrusive_ptr<write_file_pipe> req{new write_file_pipe(stream_ptr(this),
+				std::move(f),std::move(write_cont))};
+			
+			int r = req->start();
+			if (r < 0) {
 				l.pushnil();
 				uv::push_error(l,r);
 				return {2};
@@ -235,12 +278,10 @@ namespace uv {
 			lua::ref shutdown_cont;
 			shutdown_cont.set(l);
 		
-			common::intrusive_ptr<shutdown_req> req{new shutdown_req(std::move(shutdown_cont))};
+			common::intrusive_ptr<shutdown_req> req{new shutdown_req(stream_ptr(this),std::move(shutdown_cont))};
 		
-			req->add_ref();
-			int r = req->shutdown(get_stream());
+			int r = req->shutdown();
 			if (r < 0) {
-				req->remove_ref();
 				l.pushnil();
 				uv::push_error(l,r);
 				return {2};
@@ -257,6 +298,7 @@ namespace uv {
 	void stream::lbind(lua::state& l) {
 		lua::bind::function(l,"read",&stream::read);
 		lua::bind::function(l,"write",&stream::write);
+		lua::bind::function(l,"send",&stream::send);
 		lua::bind::function(l,"shutdown",&stream::shutdown);
 		lua::bind::function(l,"close",&stream::close);
 	}

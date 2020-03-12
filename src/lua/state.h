@@ -42,6 +42,7 @@ namespace lua {
 		void rawgeti(int tidx,int idx) { lua_rawgeti(m_L,tidx,idx); }
 		size_t rawlen(int idx) { return lua_rawlen(m_L,idx); }
 		void setfield(int index, const char *k) { lua_setfield(m_L,index,k); }
+		void seti(int index, lua_Integer n) { lua_seti(m_L,index,n); }
 		void setglobal(const char* name) { lua_setglobal(m_L,name); }
 		value_type getglobal(const char* name) { return static_cast<value_type>(lua_getglobal(m_L,name)); }
 		value_type getfield(int tidx,const char* name) { return static_cast<value_type>(lua_getfield(m_L,tidx,name)); }
@@ -87,6 +88,7 @@ namespace lua {
 		bool newmetatable(const char* name) { return luaL_newmetatable(m_L,name); }
 		value_type getmetatable(const char* name) { return static_cast<value_type>(luaL_getmetatable(m_L,name));}
 		void setmetatable(int idx) { lua_setmetatable(m_L,idx); }
+		void checkstack(int size) {lua_checkstack(m_L,size); }
 	};
 
 	class main_state : public state {

@@ -61,9 +61,3 @@ Not found ]] .. p .. [[
 end):listen(1337, '127.0.0.1')
 
 print('Server running at http://127.0.0.1:1337/')
-llae.set_handler()
-llae.run()
-
-print('Terminating server')
-
-llae.dump()

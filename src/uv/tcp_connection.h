@@ -20,7 +20,6 @@ namespace uv {
 	public:
 		static int lnew(lua_State* L);
 		static void lbind(lua::state& l);
-
 	};
 
 }

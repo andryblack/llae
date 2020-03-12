@@ -73,7 +73,10 @@ int main(int argc,char** argv) {
 	}
 
 	while (uv_loop_close(loop) == UV_EBUSY) {
-		uv_sleep(100);
+		while(uv_run(loop,UV_RUN_NOWAIT)) {
+            uv_sleep(100);
+        }
+        uv_sleep(100);
 	}
 
 	std::cout << "meta objects: " << meta::object::get_total_count() << std::endl;

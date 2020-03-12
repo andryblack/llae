@@ -62,12 +62,12 @@ namespace common {
         }
         template <class U>
         void reset(U* ptr) {
+            if (ptr) ptr->add_ref();
             release();
             m_ptr = ptr;
-            if (m_ptr) m_ptr->add_ref();
         }
-        T* operator -> () const { return get(); }
-        T & operator*() const { return *get(); }
+        T* operator -> () const { assert(m_ptr); return get(); }
+        T & operator*() const { assert(m_ptr); return *get(); }
         
     };
 }

@@ -1,8 +1,6 @@
 #include "req.h"
 
 
-META_OBJECT_INFO(uv::req,meta::object)
-
 
 namespace uv {
 

@@ -49,6 +49,7 @@ namespace uv {
 	void tcp_server::on_connection(int st) {
 		if (m_conn_cb.valid()) {
 			auto& l = llae::app::get(m_tcp.loop).lua();
+			l.checkstack(2);
 			m_conn_cb.push(l);
 
 			if (st < 0) {

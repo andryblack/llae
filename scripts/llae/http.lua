@@ -355,7 +355,7 @@ do
 				self:set_header('Last-Modified',os.date('%a, %d %b %Y %H:%M:%S GMT',stat.mtim.sec))
 				self:set_header('Cache-Control','public,max-age=0')
 				self:flush()
-				f:send(self._client)
+				self._client:send(f)
 				self:finish()
 			end
 		end

@@ -5,25 +5,46 @@
 #include "loop.h"
 #include "lua/state.h"
 #include "lua/ref.h"
+#include "common/intrusive_ptr.h"
 
 namespace uv {
 
-	class fs : public req {
-		META_OBJECT
+	class fs_req : public req {
 	private:
 		uv_fs_t	m_fs;
-		lua::ref m_cont;
 	protected:
-		uv_fs_t* fs_req() { return &m_fs; }
-		static void fs_cb(uv_fs_t* req);
-		static fs* get(uv_fs_t* req);
+		static fs_req* get(uv_fs_t* req);
 	protected:
-		fs(lua::ref&& cont);
-		~fs();
-		virtual int on_cb(lua::state& l) = 0;
+		fs_req();
+		~fs_req();
+		virtual void on_cb() = 0;
 	public:
+		uv_fs_t* get() { return &m_fs; }
+		static void fs_cb(uv_fs_t* req);
+	};
+
+	class file : public meta::object {
+		META_OBJECT
+	private:
+		uv_file m_file;
+		uv_loop_t* m_loop;
+		virtual void destroy() override final;
+	public:
+		explicit file(uv_file f,uv_loop_t* l);
+		uv_file get() const { return m_file; }
+		static void lbind(lua::state& l);
+		lua::multiret close(lua::state& l);
+	};
+	typedef common::intrusive_ptr<file> file_ptr;
+
+	
+	struct fs {
 		static int mkdir(lua_State* L);
 		static int copyfile(lua_State* L);
+		static int stat(lua_State* L);
+		static int scandir(lua_State* L);
+		static int open(lua_State* L);
+		static void lbind(lua::state& l);
 	};
 }
 

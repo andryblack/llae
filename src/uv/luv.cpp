@@ -51,9 +51,6 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::object<uv::tcp_connection>::get_metatable(l);
 	l.setfield(-2,"tcp_connection");
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
-	l.createtable();
-	lua::bind::function(l,"mkdir",&uv::fs::mkdir);
-	lua::bind::function(l,"copyfile",&uv::fs::copyfile);
-	l.setfield(-2,"fs");
+	uv::fs::lbind(l);
 	return 1;
 }

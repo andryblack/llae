@@ -16,7 +16,7 @@ namespace llae {
         } else {
             std::cout << "unknown" << std::endl;
         }
-        app::get(L).loop().stop();
+        app::get(L).stop();
         return 0;
     }
 
@@ -46,7 +46,8 @@ namespace llae {
     static void stop_walk_cb(uv_handle_t* handle,void* arg) {
         if (uv_is_active(handle)) {
             if (handle->data) {
-                static_cast<uv::handle*>(handle->data)->close();
+                uv::handle* h = static_cast<uv::handle*>(handle->data);
+                h->close();
             }
         }
     }

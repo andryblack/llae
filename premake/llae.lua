@@ -36,7 +36,7 @@ function _M.lib(  )
 		targetdir 'lib'
 		
 		if os.istarget('macosx') then
-			includedirs(pkgconfig_var('yajl','prefix')..'/include')
+			sysincludedirs(pkgconfig_var('yajl','prefix')..'/include')
 		end
 
 		_M.compile()
