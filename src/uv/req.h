@@ -9,6 +9,8 @@ namespace uv {
 	class req : public common::ref_counter_base {
 	protected:
 		void attach(uv_req_t* r);
+		req();
+		~req();
 	};
 
 }

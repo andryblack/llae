@@ -19,8 +19,10 @@ namespace uv {
 		virtual ~tcp_connection() override;
 	public:
 		static int lnew(lua_State* L);
+		lua::multiret connect(lua::state& l);
 		static void lbind(lua::state& l);
 	};
+	typedef common::intrusive_ptr<tcp_connection> tcp_connection_ptr;
 
 }
 

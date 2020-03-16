@@ -11,7 +11,7 @@ namespace uv {
 		if (e<0) error(l,e);
 	}
 	void push_error(lua::state& s,int r);
-
+	void print_error(int r);
 }
 
 #endif /*__LLAE_UV_LUV_H_INCLUDED__*/

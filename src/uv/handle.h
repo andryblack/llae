@@ -21,6 +21,7 @@ namespace uv {
 		virtual void on_closed() {}
 	public:
 		void close();
+		void unref();
 	};
 
 }

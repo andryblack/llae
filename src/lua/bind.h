@@ -101,6 +101,21 @@ namespace lua {
 				return r.val;
 			}
 		};
+
+		template <typename ... Args>
+		struct helper<multiret,void,state&,Args...> {
+			typedef multiret (*func_t)(state&,Args ... args);
+			template <size_t... Is>
+			static multiret apply(state&l,func_t func,const indices<Is...>) {
+				return (*func)(l,stack<Args>::get(l,1+Is)...);
+			}
+			static int function(lua_State* L) {
+				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				auto r = apply(l,*f,build_indices<sizeof...(Args)>());
+				return r.val;
+			}
+		};
 		
 		static void function(state& s,const char* name,int (*func)(lua_State*)) {
 			s.pushcclosure(func,0);
@@ -119,6 +134,16 @@ namespace lua {
 		template <class R,class T,typename ... Args>
 		static void function(state& s,const char* name,R (T::*func)(Args ... args)) {
 			typedef helper<R,T,Args...> hpr;
+			typedef typename hpr::func_t func_t; 
+			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
+			*func_data = func;
+			s.pushcclosure(hpr::function,1);
+			s.setfield(-2,name);
+		}
+
+		template <class R,typename ... Args>
+		static void function(state& s,const char* name,R (*func)(state&l,Args ... args)) {
+			typedef helper<R,void,state&,Args...> hpr;
 			typedef typename hpr::func_t func_t; 
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
 			*func_data = func;

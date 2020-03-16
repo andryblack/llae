@@ -19,7 +19,8 @@ namespace uv {
 	public:
 		signal(loop& l);
 		~signal();
-		void start_oneshot(int signum,std::function<void()>&& f);
+		int start(int signum,std::function<void()>&& f);
+		int start_oneshot(int signum,std::function<void()>&& f);
 	};
 
 }

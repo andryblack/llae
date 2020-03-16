@@ -10,6 +10,8 @@ namespace uv {
 		int res = uv_signal_init(l.native(),&m_sig);
 		if (res >= 0) {
 			attach();
+		} else {
+
 		}
 	}
 
@@ -23,9 +25,14 @@ namespace uv {
 		}
 	}
 
-	void signal::start_oneshot(int signum,std::function<void()>&& f) {
+	int signal::start_oneshot(int signum,std::function<void()>&& f) {
 		m_cb = std::move(f);
-		uv_signal_start_oneshot(&m_sig,&signal::signal_cb, signum);
+		return uv_signal_start_oneshot(&m_sig,&signal::signal_cb, signum);
+	}
+
+	int signal::start(int signum,std::function<void()>&& f) {
+		m_cb = std::move(f);
+		return uv_signal_start(&m_sig,&signal::signal_cb, signum);
 	}
 
 }

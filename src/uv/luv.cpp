@@ -6,6 +6,8 @@
 #include "tcp_server.h"
 #include "stream.h"
 #include "tcp_connection.h"
+#include "dns.h"
+#include <iostream>
 
 namespace uv {
 	
@@ -20,6 +22,11 @@ namespace uv {
         const char* err = uv_strerror_r(e, uv_error_buf, sizeof(uv_error_buf));
         if (!err) err = "unknown";
         l.pushstring(err);
+    }
+    void print_error(int e) {
+        const char* err = uv_strerror_r(e, uv_error_buf, sizeof(uv_error_buf));
+        if (!err) err = "unknown";
+        std::cout << "ERR: " << err << std::endl;
     }
 }
 
@@ -51,6 +58,7 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::object<uv::tcp_connection>::get_metatable(l);
 	l.setfield(-2,"tcp_connection");
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
+	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);
 	uv::fs::lbind(l);
 	return 1;
 }

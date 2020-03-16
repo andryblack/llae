@@ -10,6 +10,45 @@ META_OBJECT_INFO(uv::tcp_connection,uv::stream)
 
 namespace uv {
 
+	class connect_req : public req {
+	private:
+		uv_connect_t m_req;
+		tcp_connection_ptr m_conn;
+		lua::ref m_cont;
+	public:
+		connect_req(tcp_connection_ptr&& con,lua::ref&& cont) : m_conn(std::move(con)),m_cont(std::move(cont)) {
+			attach(reinterpret_cast<uv_req_t*>(get()));
+		}
+		uv_connect_t* get() { return &m_req; }
+		static void connect_cb(uv_connect_t* req, int status) {
+			auto self = static_cast<connect_req*>(req->data);
+			self->on_end(status);
+			self->remove_ref();
+		}
+		void on_end(int status) {
+			auto& l = llae::app::get(m_conn->get_handle()->loop).lua();
+			l.checkstack(2);
+			m_cont.push(l);
+			auto toth = l.tothread(-1);
+			toth.checkstack(3);
+			int nargs;
+			if (status < 0) {
+				toth.pushnil();
+				uv::push_error(toth,status);
+				nargs = 2;
+			} else {
+				l.pushboolean(true);
+				nargs = 1;
+			}
+			auto s = toth.resume(l,nargs);
+			if (s != lua::status::ok && s != lua::status::yield) {
+				llae::app::show_error(toth,s);
+			}
+			l.pop(1);// thread
+			m_cont.reset(l);
+		}
+	};
+
 	tcp_connection::tcp_connection(lua::state& l) {
 		int r = uv_tcp_init(llae::app::get(l).loop().native(),&m_tcp);
 		check_error(l,r);
@@ -24,7 +63,44 @@ namespace uv {
 		lua::push(l,std::move(connection));
 		return 1;
 	}
+
+	lua::multiret tcp_connection::connect(lua::state& l) {
+		if (!l.isyieldable()) {
+			l.pushnil();
+			l.pushstring("tcp_connection::connect is async");
+			return {2};
+		}
+		
+		{
+			const char* host = l.checkstring(2);
+			int port = l.checkinteger(3);
+			struct sockaddr_storage addr;
+			if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
+		      	uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
+		    	l.error("invalid IP address or port [%s:%d]", host, port);
+		   	}
+
+			l.pushthread();
+			lua::ref connect_cont;
+			connect_cont.set(l);
+		
+			common::intrusive_ptr<connect_req> req{new connect_req(tcp_connection_ptr(this),
+				std::move(connect_cont))};
+			req->add_ref();
+			int r = uv_tcp_connect(req->get(),&m_tcp,(struct sockaddr *)&addr,&connect_req::connect_cb);
+			if (r < 0) {
+				req->remove_ref();
+				l.pushnil();
+				uv::push_error(l,r);
+				return {2};
+			}
+		} 
+		l.yield(0);
+		return {0};
+	}
+
 	void tcp_connection::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&tcp_connection::lnew);
+		lua::bind::function(l,"connect",&tcp_connection::connect);
 	}
 }

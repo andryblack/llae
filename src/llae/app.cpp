@@ -28,18 +28,21 @@ namespace llae {
         lua::bind::object<meta::object>::register_metatable(lua());
         m_stop_sig.reset( new uv::signal(loop()) );
         m_stop_sig->start_oneshot(SIGINT,[this]() {
-            this->stop();
+             this->stop();
         });
+        m_stop_sig->unref();
     }
 
     app::~app() {
     }
 
     app& app::get(lua_State* L) {
+        assert(L);
         return **static_cast<app**>(lua_getextraspace(L));
     }
 
     app& app::get(uv_loop_t* l) {
+        assert(l);
         return *static_cast<app*>(uv_loop_get_data(l));
     }
 
@@ -53,6 +56,7 @@ namespace llae {
     }
     void app::run() {
         int v = m_loop.run(UV_RUN_DEFAULT);
+        //std::cout << "app::run end " << v << std::endl;
         if (v != 0) {
             while(uv_run(loop().native(),UV_RUN_NOWAIT)) {
                 uv_sleep(100);
@@ -64,6 +68,7 @@ namespace llae {
     }
 
     void app::stop() {
+        //uv_print_all_handles(uv_default_loop(), stderr);
         m_loop.stop();
         m_stop_sig.reset();
     }

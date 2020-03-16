@@ -3,24 +3,26 @@ package.path = package.path .. ';scripts/?.lua'
 
 local llae = require 'llae'
 local http = require 'llae.http'
-local json = require 'llae.json'
-
+local json = require 'json'
+local uv = require 'uv'
 
 local th = coroutine.create(function()
-	local info = assert(llae.getaddrinfo('sandboxgames.ru'))
+	local info = assert(uv.getaddrinfo('google.com'))
 
 	print(json.encode(info))
 
 	local req = http.createRequest{
 		method = 'GET',
-		url = 'https://sandboxgames.ru/',
+		url = 'http://google.com/',
 	}
 
 	local resp = assert(req:exec())
 	if resp:get_code() ~= 200 then
+		resp:close()
 		error(resp:get_message())
 	end
 	print(resp:read_body())
+	print('finished request')
 
 end)
 
@@ -30,9 +32,3 @@ if not res then
 	error(err)
 end
 
-llae.set_handler()
-llae.run()
-
-print('Terminating client')
-
-llae.dump()

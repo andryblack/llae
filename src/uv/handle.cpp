@@ -1,4 +1,5 @@
 #include "handle.h"
+//#include <iostream>
 
 META_OBJECT_INFO(uv::handle,meta::object)
 
@@ -17,12 +18,14 @@ namespace uv {
 	}
 
 	void handle::close_destroy_cb(uv_handle_t* h) {
+		//std::cout << "handle closed for destroy << " << h << std::endl;
 		handle* self = static_cast<handle*>(uv_handle_get_data(h));
 		uv_handle_set_data(h,nullptr);
 		delete self;
 	}
 
 	void handle::close_cb(uv_handle_t* h) {
+		//std::cout << "handle closed << " << h << std::endl;
 		handle* self = static_cast<handle*>(uv_handle_get_data(h));
 		if (self) {
 			self->on_closed();
@@ -44,5 +47,9 @@ namespace uv {
 			add_ref();
 			uv_close(get_handle(),&handle::close_cb);
 		}
+	}
+
+	void handle::unref() {
+		uv_unref(get_handle());
 	}
 }

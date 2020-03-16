@@ -546,7 +546,7 @@ do -- client
 	end
 
 	function response:on_closed(  )
-		if self._headers.Connection and
+		if not self._headers.Connection or
 			self._headers.Connection == 'close' then
 			self:close_connection()
 		end
@@ -554,9 +554,17 @@ do -- client
 
 	function response:close_connection( )
 		if self._connection then
+			print('close_connection')
 			self._connection:close()
 			self._connection = nil
 		end
+	end
+
+	function response:close(  )
+		if self._connection then
+			self._connection:shutdown()
+		end
+		self:close_connection()
 	end
 
 	function parser:load( client )
@@ -608,16 +616,16 @@ do -- client
 
 
 	function request:exec(  )
-		self._connection = llae.newTCPConnection()
+		self._connection = uv.tcp_connection:new()
 		local err = nil
 		--print('resolve',self._url.host)
-		self._ip_list,err = llae.getaddrinfo(self._url.host)
+		self._ip_list,err = uv.getaddrinfo(self._url.host)
 		if not self._ip_list then
 			return nil,err
 		end
 		local ip = nil
 		for _,v in ipairs(self._ip_list) do
-			if v.addr then
+			if v.addr and v.socktype=='tcp' then
 				ip = v.addr
 				break
 			end
@@ -633,13 +641,16 @@ do -- client
 		end
 
 		self._headers['Content-Length'] = #self._body
+		if not self._headers['Connection'] then
+			self._headers['Connection'] = 'close'
+		end
 
 		local headers = {}
 		for k,v in pairs(self._headers) do
 			table.insert(headers,k..': ' .. v)
 		end
 
-		if self._url.scheme then
+		if self._url.scheme == 'https' then
 			self._tcp = self._connection
 			self._tls = llae.newTLS(http.get_tls_ctx(),self._connection)
 			self._connection = self._tls
