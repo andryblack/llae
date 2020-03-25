@@ -1,43 +1,56 @@
 
 local _M = {}
 
-local pkgconfig = function(module,var)
-	local res,status = os.outputof("pkg-config " .. module .. " --" .. var)
-	assert(status==0,"not found package " .. module .. " var " .. var)
-	return res
-end
-
-local pkgconfig_var = function(module,var)
-	local res,status = os.outputof("pkg-config " .. module .. " --variable=" .. var)
-	assert(status==0,"not found package " .. module .. " var " .. var)
-	return res
-end
-
 _M.root = './'
 
-_M.pkgconfig = pkgconfig
-_M.pkgconfig_var = pkgconfig
-
-local extlibs = { 'lua-5.3', 'libuv', 'yajl', 'openssl' }
 local components = { 'common','lua','meta','uv','json','llae' }
 
-local function pkgconfig_components(flag)
-	local r = {}
-	for _,v in ipairs(extlibs) do
-		table.insert(r,pkgconfig(v,flag))
+local extlibs = {
+	require 'lua',
+	require 'yajl',
+	require 'libuv',
+	require 'mbedtls',
+}
+
+function _M.extract_zip( zip_file, extlibs_folder )
+	assert(zip.extract(zip_file, extlibs_folder))
+end
+
+function _M.extract_tar_gz( zip_file, extlibs_folder )
+	local cmd = 'tar -xzf ' .. zip_file .. ' -C ' .. extlibs_folder
+	assert(os.execute(cmd))
+end
+
+function _M.download(  )
+	local extlibs_folder = path.join(_M.root,'build','extlibs')
+	os.mkdir(extlibs_folder)
+	for _,ext in ipairs(extlibs) do
+		if ext.url then
+			local zip_file = path.join(_M.root,'build','extlibs',ext.name..'-'..ext.version) .. '.' .. ext.archive 
+			if not os.isfile(zip_file) then
+				local res,code = http.download(ext.url,
+					zip_file,
+					{})
+				if res ~= 'OK' then
+					error('failed download ' .. ext.name .. ' ' .. res)
+				end
+			end
+			_M['extract_'..string.gsub(ext.archive,'%.','_')](zip_file,extlibs_folder)
+		end
 	end
-	return r
+end
+
+function _M.dependencies(  )
+	for _,ext in ipairs(extlibs) do
+		ext.lib(_M.root)
+	end
 end
 
 function _M.lib(  )
-	project 'llae'
+	project 'llae-lib'
 		kind 'StaticLib'
 		location 'build'
 		targetdir 'lib'
-		
-		if os.istarget('macosx') then
-			sysincludedirs(pkgconfig_var('yajl','prefix')..'/include')
-		end
 
 		_M.compile()
 		
@@ -51,9 +64,9 @@ function _M.lib(  )
 end
 
 function _M.compile(  )
-	buildoptions(pkgconfig_components('cflags'))
 	includedirs{
-		path.join(_M.root ,'src') 
+		path.join(_M.root, 'build','include'),
+		path.join(_M.root, 'src') 
 	}
 end
 
@@ -66,9 +79,11 @@ function _M.exe(  )
 end
 
 function _M.link(  )
-	linkoptions(pkgconfig_components('libs'))
+	for _,ext in ipairs(extlibs) do
+		ext.link()
+	end
 	links {
-		'llae'
+		'llae-lib'
 	}
 end
 
