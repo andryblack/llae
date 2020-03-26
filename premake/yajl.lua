@@ -25,7 +25,7 @@ function _M.lib( root )
 		kind 'StaticLib'
 		location 'build'
 		targetdir 'lib'
-		includedirs {'build/include'}
+		sysincludedirs {'build/include'}
 		
 		local fls = {
 			path.join(_M.root,'src','yajl.c'),

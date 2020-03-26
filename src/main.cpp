@@ -13,6 +13,7 @@ extern "C" int luaopen_llae_file(lua_State* L);
 
 int luaopen_json(lua_State* L);
 int luaopen_uv(lua_State* L);
+int luaopen_ssl(lua_State* L);
 int luaopen_llae(lua_State* L);
 
 
@@ -34,6 +35,7 @@ static const struct {
   //{"llae",luaopen_llae},
   //{"llae.file",luaopen_llae_file},
 	{"uv",		luaopen_uv},
+	{"ssl",		luaopen_ssl},
 	{"json",	luaopen_json},
 	{"llae",	luaopen_llae},
   {NULL, NULL}

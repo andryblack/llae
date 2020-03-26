@@ -13,7 +13,7 @@ local th = coroutine.create(function()
 
 	local req = http.createRequest{
 		method = 'GET',
-		url = 'http://google.com/',
+		url = 'https://google.com/',
 	}
 
 	local resp = assert(req:exec())

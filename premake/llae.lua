@@ -3,7 +3,7 @@ local _M = {}
 
 _M.root = './'
 
-local components = { 'common','lua','meta','uv','json','llae' }
+local components = { 'common','lua','meta','uv','json','llae','ssl' }
 
 local extlibs = {
 	require 'lua',
@@ -64,8 +64,10 @@ function _M.lib(  )
 end
 
 function _M.compile(  )
-	includedirs{
+	sysincludedirs {
 		path.join(_M.root, 'build','include'),
+	}
+	includedirs{
 		path.join(_M.root, 'src') 
 	}
 end

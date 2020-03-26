@@ -24,6 +24,7 @@ namespace common {
 			++m_counter;
 		}
 		void remove_ref() {
+            assert(m_counter > 0);
 			if (m_counter.fetch_sub(1) == 1) {
 				destroy();
 			}

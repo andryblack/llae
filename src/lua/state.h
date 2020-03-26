@@ -34,6 +34,8 @@ namespace lua {
 		void pushinteger(lua_Integer val) { lua_pushinteger(m_L,val); }
 		void pushstring(const char* str) { lua_pushstring(m_L,str); }
 		void pushlstring(const char* str,size_t len) { lua_pushlstring(m_L,str,len); }
+		template<class ... Types>
+		void pushfstring(const char *fmt, Types ... args) { lua_pushfstring(m_L,fmt,args...); }
 		void pushcclosure(lua_CFunction func,int nup) { lua_pushcclosure(m_L,func,nup); }
 		void pushlightuserdata(void *p) { lua_pushlightuserdata(m_L,p); }
 		void pushnil() { lua_pushnil(m_L); }

@@ -28,8 +28,14 @@ namespace common {
         intrusive_ptr(const intrusive_ptr<U>& other) : m_ptr(other.get()) {
             if (m_ptr) m_ptr->add_ref();
         }
+        intrusive_ptr(const intrusive_ptr& other) : m_ptr(other.get()) {
+            if (m_ptr) m_ptr->add_ref();
+        }
         template <class U>
         intrusive_ptr( intrusive_ptr<U>&& other) : m_ptr(other.get()) {
+            other.m_ptr = nullptr;
+        }
+        intrusive_ptr( intrusive_ptr&& other) : m_ptr(other.get()) {
             other.m_ptr = nullptr;
         }
         template <class U>

@@ -2,6 +2,7 @@ local llae = require 'llae'
 local url = require 'net.url'
 local fs = require 'llae.fs'
 local uv = require 'uv'
+local ssl = require 'ssl'
 
 local http = {}
 
@@ -439,13 +440,6 @@ do
 
 end
 
-function http.get_tls_ctx(  )
-	if not http._tls_ctx then
-		http._tls_ctx = llae.newTLSCtx()
-	end
-	return http._tls_ctx
-end
-
 do -- client
 
 	local parser = { read = http_parser.read , parse_header = http_parser.parse_header }
@@ -652,10 +646,17 @@ do -- client
 
 		if self._url.scheme == 'https' then
 			self._tcp = self._connection
-			self._tls = llae.newTLS(http.get_tls_ctx(),self._connection)
-			self._connection = self._tls
-
-			local res,err = self._tls:handshake()
+			self._ssl = ssl.connection:new(self._connection)
+			self._connection = self._ssl
+			local res,err = self._ssl:configure()
+			if not res then
+				return res,err
+			end
+			res,err = self._ssl:set_host(self._url.host)
+			if not res then
+				return res,err
+			end
+			res,err = self._ssl:handshake()
 			if not res then
 				return res,err
 			end
