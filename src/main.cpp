@@ -78,6 +78,7 @@ int main(int argc,char** argv) {
 		while(uv_run(loop,UV_RUN_NOWAIT)) {
             uv_sleep(100);
         }
+        uv_print_all_handles(loop, stderr);
         uv_sleep(100);
 	}
 

@@ -7,6 +7,14 @@ local ssl = require 'ssl'
 local http = {}
 
 
+function http.get_ssl_ctx() 
+	if not http._ssl_ctx then
+		http._ssl_ctx = ssl.ctx:new()
+		assert(http._ssl_ctx:init())
+	end
+	return http._ssl_ctx
+end
+
 local http_parser = {}
 
 local max_method_len = 1024
@@ -646,7 +654,7 @@ do -- client
 
 		if self._url.scheme == 'https' then
 			self._tcp = self._connection
-			self._ssl = ssl.connection:new(self._connection)
+			self._ssl = ssl.connection:new( http.get_ssl_ctx(), self._connection)
 			self._connection = self._ssl
 			local res,err = self._ssl:configure()
 			if not res then

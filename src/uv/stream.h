@@ -6,6 +6,7 @@
 #include "common/intrusive_ptr.h"
 #include "lua/ref.h"
 #include "req.h"
+#include "buffer.h"
 #include <vector>
 
 namespace uv {
@@ -13,14 +14,12 @@ namespace uv {
 	class stream;
 	typedef common::intrusive_ptr<stream> stream_ptr;
 
-
 	class write_req : public req {
 	private:
 		uv_write_t	m_write;
 		stream_ptr  m_stream;
 		lua::ref m_cont;
-		std::vector<uv_buf_t> m_bufs;
-		std::vector<lua::ref> m_refs;
+        write_buffers m_buffers;
 	protected:
 		static void write_cb(uv_write_t* req, int status);
 		void on_write(int status);
@@ -45,10 +44,19 @@ namespace uv {
 		int shutdown();
 	};
 
+   
+    class stream_read_consumer : public meta::object {
+    public:
+        virtual bool on_read(stream* s,ssize_t nread, const buffer_ptr&& buffer) = 0;
+        virtual void on_stream_closed(stream* s) {}
+    };
+    typedef common::intrusive_ptr<stream_read_consumer> stream_read_consumer_ptr;
+
 	class stream : public handle {
 		META_OBJECT
 	private:
-		lua::ref m_read_cont;
+        stream_read_consumer_ptr m_read_consumer;
+		
 	protected:
 		explicit stream();
 		virtual ~stream() override;
@@ -57,7 +65,7 @@ namespace uv {
 		static void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
 		static void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 	protected:
-		bool on_read(ssize_t nread, const uv_buf_t* buf);
+		bool on_read(ssize_t nread, const buffer_ptr&& buffer);
 	public:
 		virtual uv_stream_t* get_stream() = 0;
 		static void lbind(lua::state& l);
@@ -65,6 +73,8 @@ namespace uv {
 		lua::multiret write(lua::state& l);
 		lua::multiret shutdown(lua::state& l);
 		lua::multiret send(lua::state& l);
+        int start_read( const stream_read_consumer_ptr& consumer );
+        void stop_read();
 		void close();
 	};
 

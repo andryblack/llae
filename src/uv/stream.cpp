@@ -5,10 +5,13 @@
 #include "luv.h"
 #include "fs.h"
 #include "write_file_pipe.h"
+#include <iostream>
 
 META_OBJECT_INFO(uv::stream,uv::handle)
 
 namespace uv {
+
+    
 
 	write_req::write_req(stream_ptr&& s,lua::ref&& cont) : m_stream(std::move(s)),m_cont(std::move(cont)) {
 		attach(reinterpret_cast<uv_req_t*>(&m_write));
@@ -24,9 +27,7 @@ namespace uv {
 
 	void write_req::on_write(int status) {
 		auto& l = llae::app::get(m_write.handle->loop).lua();
-		for (auto& r:m_refs) {
-			r.reset(l);
-		}
+        m_buffers.reset(l);
 		if (m_cont.valid()) {
 			m_cont.push(l);
 			auto toth = l.tothread(-1);
@@ -49,32 +50,14 @@ namespace uv {
 	}
 
 	void write_req::put(lua::state& l) {
-		auto t = l.get_type(-1);
-		if (t == lua::value_type::table) {
-			size_t tl = l.rawlen(-1);
-			m_bufs.reserve(tl);
-			m_refs.reserve(tl);
-			for (size_t j=0;j<tl;++j) {
-				l.rawgeti(-1,j+1);
-				size_t size;
-				const char* val = l.tolstring(-1,size);
-				m_refs.emplace_back();
-				m_refs.back().set(l);
-				m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
-			}
-			l.pop(1);
-		} else {
-			size_t size;
-			const char* val = l.tolstring(-1,size);
-			m_refs.emplace_back();
-			m_refs.back().set(l);
-			m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
-		}
+        m_buffers.put(l);
 	}
 
 	int write_req::write() {
 		add_ref();
-		int r = uv_write(&m_write,m_stream->get_stream(),m_bufs.data(),m_bufs.size(),&write_req::write_cb);
+		int r = uv_write(&m_write,m_stream->get_stream(),
+                         m_buffers.get_buffers().data(),
+                         m_buffers.get_buffers().size(),&write_req::write_cb);
 		if (r < 0) {
 			remove_ref();
 		}
@@ -136,51 +119,90 @@ namespace uv {
 	}
 
 	void stream::on_closed() {
-		m_read_cont.reset(llae::app::get(get_stream()->loop).lua());
+        if (m_read_consumer) {
+            m_read_consumer->on_stream_closed(this);
+            m_read_consumer.reset();
+        }
+        handle::on_closed();
 	}
 
 	void stream::alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-		buf->base = static_cast<char*>(::malloc(suggested_size));
-		buf->len = suggested_size;
+        auto b = buffer::alloc(suggested_size);
+        buf->base = static_cast<char*>(b->get_base());
+        buf->len = b->get_len();
+        b->add_ref();
 	}
 	void stream::read_cb(uv_stream_t* s, ssize_t nread, const uv_buf_t* buf) {
 		stream* self = static_cast<stream*>(s->data);
-		if (self->on_read(nread,buf)) {
+        auto b = buffer::get(buf->base);
+        if (self->on_read(nread,buffer_ptr(b))) {
+            std::cout << "stream read_cb remove_ref" << std::endl;
+            self->stop_read();
 			self->remove_ref();
 		}
-		::free(buf->base);
+        if (b) {
+            b->remove_ref();
+        }
 	}
 
-	bool stream::on_read(ssize_t nread, const uv_buf_t* buf) {
-		auto& l = llae::app::get(get_stream()->loop).lua();
-		if (nread != 0) {
-			uv_read_stop(get_stream());
-		}
-		if (m_read_cont.valid()) {
-			m_read_cont.push(l);
-			auto toth = l.tothread(-1);
-			l.pop(1);// thread
-			if (nread > 0) {
-				toth.pushlstring(buf->base,buf->len);
-				toth.pushnil();
-			} else if (nread == UV_EOF) {
-				toth.pushnil();
-				toth.pushnil();
-			} else if (nread < 0) {
-				toth.pushnil();
-				uv::push_error(toth,nread);
-			} else { // == 0
-				return false;
-			}
-			lua::ref ref(std::move(m_read_cont));
-			auto s = toth.resume(l,2);
-			if (s != lua::status::ok && s != lua::status::yield) {
-				llae::app::show_error(toth,s);
-			}
-			ref.reset(l);
-		}
-		return true;
-	}
+    class lua_read_consumer : public stream_read_consumer {
+    private:
+        lua::ref m_read_cont;
+    public:
+        lua_read_consumer(lua::ref && cont) : m_read_cont(std::move(cont)) {}
+        virtual bool on_read(stream* s,
+                             ssize_t nread,
+                             const buffer_ptr&& buffer) override final {
+            auto& l = llae::app::get(s->get_stream()->loop).lua();
+            if (nread != 0) {
+                s->stop_read();
+            }
+            if (m_read_cont.valid()) {
+                m_read_cont.push(l);
+                auto toth = l.tothread(-1);
+                l.pop(1);// thread
+                if (nread > 0) {
+                    toth.pushlstring(static_cast<const char*>(buffer->get_base()),buffer->get_len());
+                    toth.pushnil();
+                } else if (nread == UV_EOF) {
+                    toth.pushnil();
+                    toth.pushnil();
+                } else if (nread < 0) {
+                    toth.pushnil();
+                    uv::push_error(toth,nread);
+                } else { // == 0
+                    return false;
+                }
+                lua::ref ref(std::move(m_read_cont));
+                auto s = toth.resume(l,2);
+                if (s != lua::status::ok && s != lua::status::yield) {
+                    llae::app::show_error(toth,s);
+                }
+                ref.reset(l);
+            }
+            return true;
+        }
+        void on_stream_closed(stream* s) override final {
+            m_read_cont.reset(llae::app::get(s->get_stream()->loop).lua());
+        }
+    };
+
+	bool stream::on_read(ssize_t nread, const buffer_ptr&& buffer) {
+        if (m_read_consumer) {
+            bool res = m_read_consumer->on_read(this,
+                                                nread, std::move(buffer));
+            if (res) {
+                m_read_consumer.reset();
+            }
+            return res;
+        }
+        return true;
+    }
+        
+    void stream::stop_read() {
+        uv_read_stop(get_stream());
+        m_read_consumer.reset();
+    }
 
 	lua::multiret stream::read(lua::state& l) {
 		if (!l.isyieldable()) {
@@ -188,27 +210,44 @@ namespace uv {
 			l.pushstring("stream::read is async");
 			return {2};
 		}
-		if (m_read_cont.valid()) {
+		if (m_read_consumer) {
 			l.pushnil();
 			l.pushstring("stream::read already read");
 			return {2};
 		}
 		{
 			l.pushthread();
-			m_read_cont.set(l);
+            lua::ref read_cont;
+			read_cont.set(l);
 
-			add_ref();
-			int res = uv_read_start(get_stream(), &stream::alloc_cb, &stream::read_cb);
-			if (res < 0) {
-				l.pushnil();
-				uv::push_error(l,res);
-				remove_ref();
-				return {2};
-			}
+            common::intrusive_ptr<lua_read_consumer> consume(new lua_read_consumer(std::move(read_cont)));
+            int res = start_read(consume);
+            if (res < 0) {
+                l.pushnil();
+                uv::push_error(l,res);
+                return {2};
+            }
+			
 		}
 		l.yield(0);
 		return {0};
 	}
+
+    int stream::start_read( const stream_read_consumer_ptr& consumer ) {
+        if (m_read_consumer) {
+            return -1;
+        }
+        m_read_consumer = consumer;
+        std::cout << "stream start_read add_ref" << std::endl;
+        add_ref();
+        int res = uv_read_start(get_stream(), &stream::alloc_cb, &stream::read_cb);
+        if (res < 0) {
+            m_read_consumer.reset();
+            std::cout << "stream start_read error remove_ref" << std::endl;
+            remove_ref();
+        }
+        return res;
+    }
 
 	lua::multiret stream::write(lua::state& l) {
 		if (!l.isyieldable()) {
@@ -216,7 +255,7 @@ namespace uv {
 			l.pushstring("stream::write is async");
 			return {2};
 		}
-		{
+        {
 			l.pushthread();
 			lua::ref write_cont;
 			write_cont.set(l);

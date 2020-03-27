@@ -47,8 +47,24 @@ namespace common {
             }
             return *this;
         }
+        intrusive_ptr& operator = (const intrusive_ptr& other) {
+            if (other.get()!=m_ptr) {
+                release();
+                m_ptr = other.get();
+                if (m_ptr) m_ptr->add_ref();
+            }
+            return *this;
+        }
         template <class U>
         intrusive_ptr& operator = ( intrusive_ptr<U>&& other) {
+            if (other.get()!=m_ptr) {
+                release();
+                m_ptr = other.get();
+            }
+            other->m_ptr = nullptr;
+            return *this;
+        }
+        intrusive_ptr& operator = ( intrusive_ptr&& other) {
             if (other.get()!=m_ptr) {
                 release();
                 m_ptr = other.get();

@@ -91,6 +91,8 @@ namespace lua {
 		value_type getmetatable(const char* name) { return static_cast<value_type>(luaL_getmetatable(m_L,name));}
 		void setmetatable(int idx) { lua_setmetatable(m_L,idx); }
 		void checkstack(int size) {lua_checkstack(m_L,size); }
+        char* buffinitsize(luaL_Buffer& b,size_t sz) { return luaL_buffinitsize(m_L,&b,sz); }
+        void pushresultsize(luaL_Buffer& b,size_t sz) { luaL_pushresultsize(&b,sz); }
 	};
 
 	class main_state : public state {

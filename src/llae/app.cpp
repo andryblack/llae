@@ -35,6 +35,7 @@ namespace llae {
     }
 
     app::~app() {
+        stop();
     }
 
     app& app::get(lua_State* L) {
