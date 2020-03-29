@@ -11,8 +11,7 @@ META_OBJECT_INFO(ssl::connection,meta::object)
 namespace ssl {
 
 	connection::connection( const ctx_ptr& ctx, const uv::stream_ptr& stream ) : m_ctx(ctx), m_stream(stream) {
-        mbedtls_debug_set_threshold(100);
-		mbedtls_ssl_init( &m_ssl );
+        mbedtls_ssl_init( &m_ssl );
 		mbedtls_ssl_config_init( &m_conf );
 		m_write_req.data = this;
 		m_write_buf = uv_buf_init(m_write_data_buf,CONN_BUFFER_SIZE);
@@ -138,19 +137,19 @@ namespace ssl {
 	void connection::on_write_complete(int status) {
 		m_write_active = false;
 		if (status < 0 && m_uv_error == 0) {
-            std::cout << "on_write_complete error " << status << std::endl;
+            //std::cout << "on_write_complete error " << status << std::endl;
 			m_uv_error = status;
 		}
 		do_continue();
 	}
 
 	bool connection::do_handshake() {
-        std::cout << "do_handshake " << std::endl;
+        //std::cout << "do_handshake " << std::endl;
         
 		m_state = S_HANDSHAKE;
 		int ret = mbedtls_ssl_handshake( &m_ssl );
         if (ret == 0) {
-            std::cout << "do_handshake S_CONNECTED" << std::endl;
+            //std::cout << "do_handshake S_CONNECTED" << std::endl;
             m_state = S_CONNECTED;
         } else if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
 			m_ssl_error = ret;
@@ -162,12 +161,12 @@ namespace ssl {
 	}
 
     bool connection::do_write() {
-        std::cout << "do_write " << m_write_buffers.get_write_size() << std::endl;
+        //std::cout << "do_write " << m_write_buffers.get_write_size() << std::endl;
         
         m_state = S_WRITE;
         auto& l = llae::app::get(m_stream->get_stream()->loop).lua();
         while (!m_write_buffers.empty()) {
-            std::cout << "mbedtls_ssl_write " << m_write_buffers.get_write_size() << std::endl;
+            //std::cout << "mbedtls_ssl_write " << m_write_buffers.get_write_size() << std::endl;
             int ret = mbedtls_ssl_write( &m_ssl, m_write_buffers.get_write_ptr(), m_write_buffers.get_write_size());
             if (ret > 0) {
                 m_write_buffers.consume(l,ret);
@@ -177,18 +176,46 @@ namespace ssl {
                 m_write_buffers.reset(l);
                 m_ssl_error = ret;
                 m_stream->stop_read();
-                std::cout << "mbedtls_ssl_write failed: " << ret << std::endl;
+                //std::cout << "mbedtls_ssl_write failed: " << ret << std::endl;
                 return false;
             }
             return true;
         }
-        std::cout << "do_write S_CONNECTED" << std::endl;
+        //std::cout << "do_write S_CONNECTED" << std::endl;
         m_state = S_CONNECTED;
         return true;
     }
 
+    bool connection::do_read(lua::state& l) {
+        //std::cout << "do_read " << std::endl;
+        
+        m_state = S_READ;
+        unsigned char* data = reinterpret_cast<unsigned char*>(m_read_data_buf);
+        int r = mbedtls_ssl_read(&m_ssl, data, CONN_BUFFER_SIZE);
+        if (r >= 0) {
+            m_state = S_CONNECTED;
+            //std::cout << "do_read end, has data " << r << std::endl;
+            if (r) {
+                l.pushlstring(m_read_data_buf, r);
+            } else {
+                l.pushnil();
+            }
+            l.pushnil();
+            return true;
+        } else if (r != MBEDTLS_ERR_SSL_WANT_READ && r!= MBEDTLS_ERR_SSL_WANT_WRITE) {
+            m_stream->stop_read();
+            m_ssl_error = r;
+            l.pushnil();
+            push_error(l);
+            return true;
+        }
+        //std::cout << "do_read continue" << std::endl;
+        /* need read */
+        return false;
+    }
+
 	void connection::finish_status() {
-        std::cout << "finish_status " << m_uv_error << " / " << m_ssl_error << std::endl;
+        //std::cout << "finish_status " << m_uv_error << " / " << m_ssl_error << std::endl;
 		auto& l = llae::app::get(m_stream->get_stream()->loop).lua();
         if (m_cont.valid()) {
 			m_cont.push(l);
@@ -210,14 +237,14 @@ namespace ssl {
 			}
 			l.pop(1);// thread
         } else {
-            std::cout << "finish_status without cont" << std::endl;
+            //std::cout << "finish_status without cont" << std::endl;
         }
 		remove_ref();
 	}
 
 	void connection::do_continue() {
 		if (m_state == S_HANDSHAKE) {
-            std::cout << "do_continue S_HANDSHAKE" << std::endl;
+            //std::cout << "do_continue S_HANDSHAKE" << std::endl;
 			if (m_uv_error || m_ssl_error || !do_handshake()) {
 				finish_status();
 			} else if (m_state == S_CONNECTED) {
@@ -227,7 +254,7 @@ namespace ssl {
 				return;
 			}
 		} else if (m_state == S_WRITE) {
-            std::cout << "do_continue S_WRITE" << std::endl;
+            //std::cout << "do_continue S_WRITE" << std::endl;
             if (m_uv_error || m_ssl_error || !do_write()) {
                 finish_status();
             } else if (m_state == S_CONNECTED) {
@@ -235,6 +262,27 @@ namespace ssl {
             } else {
                 // continue write
                 return;
+            }
+        } else if (m_state == S_READ) {
+            //std::cout << "do_continue S_READ" << std::endl;
+            if (m_uv_error || m_ssl_error) {
+                finish_status();
+            } else {
+                auto& l = llae::app::get(m_stream->get_stream()->loop).lua();
+                m_cont.push(l);
+                auto toth = l.tothread(-1);
+                if (do_read(toth)) {
+                    m_cont.reset(l);
+                    auto s = toth.resume(l,2);
+                    if (s != lua::status::ok && s != lua::status::yield) {
+                        llae::app::show_error(toth,s);
+                        m_stream->stop_read();
+                    }
+                    l.pop(1);// thread
+                    remove_ref();
+                } else {
+                    l.pop(1);// thread
+                }
             }
         }
 	}
@@ -262,15 +310,15 @@ namespace ssl {
 	}
 
     bool connection::on_read(uv::stream* s,ssize_t nread, const uv::buffer_ptr&& buffer) {
-        std::cout << "on_read " << nread << std::endl;
+        //std::cout << "on_read " << nread << std::endl;
         if (nread > 0) {
             m_readed_data.push_back({size_t(nread),0,std::move(buffer)});
             do_continue();
         } else if (nread == UV_EOF) {
-            m_state = S_UV_EOF;
+            m_read_state = RS_EOF;
             do_continue();
         } else if (nread < 0) {
-            std::cout << "on_read error " << nread << std::endl;
+            //std::cout << "on_read error " << nread << std::endl;
             m_uv_error = nread;
         }
         return is_error();
@@ -282,10 +330,10 @@ namespace ssl {
 
 	int connection::ssl_recv( unsigned char *buf,
                                 size_t len) {
-        std::cout << "ssl_recv " << len << std::endl;
-        if (!m_read_started) {
-            m_read_started = true;
-            std::cout << "start read " << std::endl;
+        //std::cout << "ssl_recv " << len << std::endl;
+        if (m_read_state == RS_NONE) {
+            m_read_state = RS_ACTIVE;
+            //std::cout << "start read " << std::endl;
             int r = m_stream->start_read(uv::stream_read_consumer_ptr(this));
             if (r < 0) {
                 return MBEDTLS_ERR_SSL_WANT_READ;
@@ -299,6 +347,9 @@ namespace ssl {
             return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
         }
         if (m_readed_data.empty()) {
+            if (m_read_state == RS_EOF) {
+                return 0;
+            }
             return MBEDTLS_ERR_SSL_WANT_READ;
         }
         int readed = 0;
@@ -309,7 +360,7 @@ namespace ssl {
             if (rsize > len) {
                 rsize = len;
             }
-            std::cout << "ssl_recv readed " << rsize << std::endl;
+            //std::cout << "ssl_recv readed " << rsize << std::endl;
             ::memcpy(buf, static_cast<const unsigned char*>(d.data->get_base())+d.readded, rsize);
             buf += rsize;
             len -= rsize;
@@ -389,35 +440,24 @@ namespace ssl {
             return {2};
         }
         {
-            luaL_Buffer b;
-            unsigned char* data = reinterpret_cast<unsigned char*>(l.buffinitsize(b,CONN_BUFFER_SIZE));
             
-            int r = mbedtls_ssl_read(&m_ssl, data, CONN_BUFFER_SIZE);
-            if (r > 0) {
-                l.pushresultsize(b,r);
-                l.pushnil();
+            
+            if (do_read(l)) {
                 return {2};
             }
-            if (r != MBEDTLS_ERR_SSL_WANT_READ && r!= MBEDTLS_ERR_SSL_WANT_WRITE) {
-                m_ssl_error = r;
-                l.pushnil();
-                push_error(l);
-                return {2};
-            }
+            add_ref();
             l.pushthread();
             m_cont.set(l);
-
-            add_ref();
-            if (!do_read()) {
-                m_cont.reset(l);
-                l.pushnil();
-                push_error(l);
-                remove_ref();
-                return {2};
-            }
         }
         l.yield(0);
         return {0};
+    }
+
+    lua::multiret connection::close(lua::state& l) {
+        mbedtls_ssl_close_notify(&m_ssl);
+        m_stream->close();
+        l.pushboolean(true);
+        return {1};
     }
 
 	void connection::lbind(lua::state& l) {
@@ -427,5 +467,6 @@ namespace ssl {
 		lua::bind::function(l,"handshake",&connection::handshake);
         lua::bind::function(l,"write",&connection::write);
         lua::bind::function(l,"read",&connection::read);
+        lua::bind::function(l,"close",&connection::close);
 	}
 }

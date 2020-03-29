@@ -35,6 +35,7 @@ namespace ssl {
 		uv_write_t m_write_req;
 		static const size_t CONN_BUFFER_SIZE = 1024 * 16;
 		char m_write_data_buf[CONN_BUFFER_SIZE];
+        char m_read_data_buf[CONN_BUFFER_SIZE];
 		uv_buf_t m_write_buf;
 		static void write_cb(uv_write_t* req, int status);
 		void on_write_complete(int status);
@@ -53,10 +54,15 @@ namespace ssl {
 		lua::ref m_cont;
 		bool do_handshake();
         bool do_write();
-        bool do_read();
+        bool do_read(lua::state& l);
 		void finish_status();
 		void push_error(lua::state& l);
-        bool m_read_started = false;
+        enum {
+            RS_NONE,
+            RS_ACTIVE,
+            RS_EOF,
+            RS_ERROR
+        } m_read_state = RS_NONE;
         
         struct readed_data {
             size_t size;
@@ -99,6 +105,7 @@ namespace ssl {
 		lua::multiret handshake(lua::state& l);
         lua::multiret write(lua::state& l);
         lua::multiret read(lua::state& l);
+        lua::multiret close(lua::state& l);
 	};
 
 }

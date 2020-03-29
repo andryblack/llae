@@ -1,6 +1,7 @@
 #include "ctx.h"
 #include "lua/stack.h"
 #include "lua/bind.h"
+#include <mbedtls/debug.h>
 
 META_OBJECT_INFO(ssl::ctx,meta::object)
 
@@ -11,6 +12,7 @@ namespace ssl {
 	ctx::ctx() {
 		mbedtls_entropy_init( &m_entropy );
 		mbedtls_ctr_drbg_init( &m_ctr_drbg );
+        //mbedtls_debug_set_threshold(1);
 	}
 
 	ctx::~ctx() {

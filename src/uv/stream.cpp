@@ -136,7 +136,7 @@ namespace uv {
 		stream* self = static_cast<stream*>(s->data);
         auto b = buffer::get(buf->base);
         if (self->on_read(nread,buffer_ptr(b))) {
-            std::cout << "stream read_cb remove_ref" << std::endl;
+            //std::cout << "stream read_cb remove_ref" << std::endl;
             self->stop_read();
 			self->remove_ref();
 		}
@@ -238,12 +238,12 @@ namespace uv {
             return -1;
         }
         m_read_consumer = consumer;
-        std::cout << "stream start_read add_ref" << std::endl;
+        //std::cout << "stream start_read add_ref" << std::endl;
         add_ref();
         int res = uv_read_start(get_stream(), &stream::alloc_cb, &stream::read_cb);
         if (res < 0) {
             m_read_consumer.reset();
-            std::cout << "stream start_read error remove_ref" << std::endl;
+            //std::cout << "stream start_read error remove_ref" << std::endl;
             remove_ref();
         }
         return res;
