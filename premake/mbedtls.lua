@@ -14,9 +14,9 @@ local comment = {
 	['MBEDTLS_NO_UDBL_DIVISION'] = true,
 	['MBEDTLS_NET_C'] = true
 }
-local function process_config( file_path )
+local function process_config( src_path, dst_path )
 	local data = {}
-	for line in io.lines(file_path) do 
+	for line in io.lines(src_path) do 
 		--print('process line',line)
 		local d,o = string.match(line,'^//#define ([A-Z_]+)(.*)$')
 		if d then
@@ -33,20 +33,25 @@ local function process_config( file_path )
 		end
 		table.insert(data,line)
 	end
-	assert(os.writefile_ifnotequal(table.concat(data,'\n'),file_path))
+	assert(os.writefile_ifnotequal(table.concat(data,'\n'),dst_path))
 end
 
 function _M.lib( root )
 	_M.root = path.join(root,'build','extlibs','mbedtls-'.._M.version)
 	os.mkdir(path.join(root,'build','include','mbedtls'))
 	for _,f in ipairs(os.matchfiles(path.join(_M.root,'include','mbedtls','*'))) do
-		local dst = path.join(root,'build','include','mbedtls',path.getname(f))
-		if not os.comparefiles(f,dst) then
-			assert(os.copyfile(f,dst))
+		local n = path.getname(f)
+		if n ~= 'config.h' then
+			local dst = path.join(root,'build','include','mbedtls',n)
+			if not os.comparefiles(f,dst) then
+				assert(os.copyfile(f,dst))
+			end
 		end
 	end
 
-	process_config(path.join(root,'build','include','mbedtls','config.h'))
+	process_config(
+		path.join(_M.root,'include','mbedtls','config.h'),
+		path.join(root,'build','include','mbedtls','config.h'))
 
 	-- for _,f in ipairs{'lua.h','luaconf.h','lauxlib.h','lualib.h'} do
 	-- 	assert(os.copyfile(path.join(_M.root,'src',f),

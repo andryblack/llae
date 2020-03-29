@@ -36,7 +36,7 @@ if _ACTION ~= 'download' then
 			targetdir 'bin'
 			targetname 'llae'
 			llae.embed({
-				{ 'scripts/llae/*.lua', 'scripts' },
+				{ 'scripts/llae/**.lua', 'scripts' },
 				{ 'scripts/net/*.lua', 'scripts' },
 				{ 'scripts/tools/*.lua', 'scripts/tools' }
 				})

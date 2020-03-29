@@ -154,9 +154,6 @@ namespace uv {
                              ssize_t nread,
                              const buffer_ptr&& buffer) override final {
             auto& l = llae::app::get(s->get_stream()->loop).lua();
-            if (nread != 0) {
-                s->stop_read();
-            }
             if (m_read_cont.valid()) {
                 m_read_cont.push(l);
                 auto toth = l.tothread(-1);
@@ -174,11 +171,14 @@ namespace uv {
                     return false;
                 }
                 lua::ref ref(std::move(m_read_cont));
+                s->stop_read();
                 auto s = toth.resume(l,2);
                 if (s != lua::status::ok && s != lua::status::yield) {
                     llae::app::show_error(toth,s);
                 }
                 ref.reset(l);
+            } else {
+                s->stop_read();
             }
             return true;
         }
