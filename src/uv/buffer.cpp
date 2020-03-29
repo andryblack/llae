@@ -27,7 +27,11 @@ namespace uv {
 
     buffer* buffer::get(uv_buf_t* b) {
         if (!b) return nullptr;
-        void* start = reinterpret_cast<char*>(b)-offsetof(buffer,m_buf);
+        // offsetof got warning
+        static const size_t offset = static_cast<char*>(static_cast<void*>(&(static_cast<buffer*>(nullptr))->m_buf))-
+            static_cast<char*>(static_cast<void*>(static_cast<buffer*>(nullptr)));
+        void* start = reinterpret_cast<char*>(b) - offset;
+        //void* start = reinterpret_cast<char*>(b)-offsetof(buffer,m_buf);
         return static_cast<buffer*>(start);
     }
 
