@@ -61,15 +61,33 @@ function _M.lib(  )
 			files {
 				path.join(_M.root,'src','unix','darwin.c'),
 				path.join(_M.root,'src','unix','fsevents.c'),
-            	path.join(_M.root,'src','unix','darwin-proctitle.c'),
-            	path.join(_M.root,'src','unix','random-getentropy.c'),
-            	path.join(_M.root,'src','unix','bsd-ifaddrs.c'),
-            	path.join(_M.root,'src','unix','kqueue.c'),
+            			path.join(_M.root,'src','unix','darwin-proctitle.c'),
+            			path.join(_M.root,'src','unix','random-getentropy.c'),
+            			path.join(_M.root,'src','unix','bsd-ifaddrs.c'),
+            			path.join(_M.root,'src','unix','kqueue.c'),
+			}
+		filter "system:linux"
+			defines {
+				'_POSIX_C_SOURCE=200112',
+				'_GNU_SOURCE',
+			}
+			files {
+				path.join(_M.root,'src','unix','linux-core.c'),
+				path.join(_M.root,'src','unix','linux-inotify.c'),
+				path.join(_M.root,'src','unix','linux-syscalls.c'),
+				path.join(_M.root,'src','unix','linux-syscalls.h'),
+				path.join(_M.root,'src','unix','procfs-exepath.c'),
+				path.join(_M.root,'src','unix','random-getrandom.c'),
+				path.join(_M.root,'src','unix','random-sysctl-linux.c'),
+				path.join(_M.root,'src','unix','sysinfo-loadavg.c'),
 			}
 		filter {}
 end
 
 function _M.link(  )
+	filter "system:linux"
+		links{ 'pthread' }
+	filter {}
 	links{ _M.name }
 end
 

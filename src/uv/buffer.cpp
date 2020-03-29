@@ -1,6 +1,7 @@
 #include "buffer.h"
 #include <new>
 #include <cstddef>
+#include <cstdlib>
 
 META_OBJECT_INFO(uv::buffer,meta::object)
 
@@ -12,7 +13,7 @@ namespace uv {
     }
 
     buffer_ptr buffer::alloc(size_t size) {
-        void* mem = ::malloc(sizeof(buffer)+size);
+        void* mem = std::malloc(sizeof(buffer)+size);
         char* data = static_cast<char*>(mem) + sizeof(buffer);
         buffer* b = new (mem) buffer(data,size);
         return buffer_ptr(b);
@@ -21,7 +22,7 @@ namespace uv {
     void buffer::destroy() {
         void* mem = this;
         this->~buffer();
-        ::free(mem);
+        std::free(mem);
     }
 
     buffer* buffer::get(uv_buf_t* b) {

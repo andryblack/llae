@@ -47,6 +47,9 @@ function _M.lib( root )
 end
 
 function _M.link(  )
+	filter "system:linux"
+		links {'dl'}
+	filter {}	
 	links{ _M.name }
 end
 

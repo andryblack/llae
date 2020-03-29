@@ -81,12 +81,10 @@ function _M.exe(  )
 end
 
 function _M.link(  )
+	links { 'llae-lib' }
 	for _,ext in ipairs(extlibs) do
 		ext.link()
 	end
-	links {
-		'llae-lib'
-	}
 end
 
 function _M.builddir( )
