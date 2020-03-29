@@ -40,6 +40,19 @@ function _M.download(  )
 	end
 end
 
+function _M.solution(  )
+	configurations { 'debug', 'release' }
+	language 'c++'
+	cppdialect "C++11"
+	configuration 'release'
+		optimize 'Speed'
+		symbols 'Off'
+		visibility 'Hidden'
+	configuration 'debug'
+		symbols 'On'
+	configuration {}	
+end
+
 function _M.dependencies(  )
 	for _,ext in ipairs(extlibs) do
 		ext.lib(_M.root)
@@ -77,6 +90,11 @@ function _M.exe(  )
 	files {
 		path.join(_M.root,'src','main.cpp'),
 	}
+	filter {'toolset:gcc or clang'}
+		postbuildcommands{
+			(premake.tools.gcc.gccprefix or '') .. 'strip' .. ' %{cfg.targetdir}/%{cfg.targetname}'
+		}
+	filter{}
 	_M.link()
 end
 

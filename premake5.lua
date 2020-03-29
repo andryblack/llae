@@ -14,11 +14,9 @@ newaction {
 
 if _ACTION ~= 'download' then
 	solution 'llae'
-		configurations { 'debug', 'release' }
-		language 'c++'
 		objdir 'build' 
 		location 'build'
-		cppdialect "C++14"
+		llae.solution()
 
 		
 		configuration{ 'debug'}

@@ -1,3 +1,5 @@
+local utils = require 'utils'
+
 local _M = {
 	name = 'llae-mbedtls',
 	version = '2.16.5',
@@ -14,27 +16,7 @@ local comment = {
 	['MBEDTLS_NO_UDBL_DIVISION'] = true,
 	['MBEDTLS_NET_C'] = true
 }
-local function process_config( src_path, dst_path )
-	local data = {}
-	for line in io.lines(src_path) do 
-		--print('process line',line)
-		local d,o = string.match(line,'^//#define ([A-Z_]+)(.*)$')
-		if d then
-			if uncomment[d] then
-				print('uncomment',d)
-				line = '#define ' .. d .. o
-			end
-		else
-			d,o = string.match(line,'^#define ([A-Z_]+)(.*)$')
-			if d and comment[d] then
-				print('comment',d)
-				line = '//#define ' .. d .. o
-			end
-		end
-		table.insert(data,line)
-	end
-	assert(os.writefile_ifnotequal(table.concat(data,'\n'),dst_path))
-end
+
 
 function _M.lib( root )
 	_M.root = path.join(root,'build','extlibs','mbedtls-'.._M.version)
@@ -49,9 +31,10 @@ function _M.lib( root )
 		end
 	end
 
-	process_config(
+	utils.preprocess(
 		path.join(_M.root,'include','mbedtls','config.h'),
-		path.join(root,'build','include','mbedtls','config.h'))
+		path.join(root,'build','include','mbedtls','config.h'),
+		{uncomment = uncomment, comment = comment })
 
 	-- for _,f in ipairs{'lua.h','luaconf.h','lauxlib.h','lualib.h'} do
 	-- 	assert(os.copyfile(path.join(_M.root,'src',f),

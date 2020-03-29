@@ -1,3 +1,4 @@
+local utils = require 'utils'
 
 local _M = {
 	name = 'llae-libuv',
@@ -9,8 +10,13 @@ local _M = {
 function _M.lib(  )
 	_M.root = path.join(root,'build','extlibs','libuv-'.._M.version)
 	os.mkdir(path.join(root,'build','include','uv'))
-	assert(os.copyfile(path.join(_M.root,'include','uv.h'),
-			path.join(root,'build','include')))
+	
+	utils.preprocess(
+		path.join(_M.root,'include','uv.h'),
+		path.join(root,'build','include','uv.h'),
+		{replace={
+			['UV_EXTERN'] = '',
+		}})
 	for _,f in ipairs(os.matchfiles(path.join(_M.root,'include','uv','*'))) do
 		assert(os.copyfile(f,
 			path.join(root,'build','include','uv',path.getname(f))))
@@ -21,7 +27,7 @@ function _M.lib(  )
 		targetdir 'lib'
 		
 		includedirs {
-			path.join(_M.root,'include'),
+			path.join(root,'build','include'),
 			path.join(_M.root,'src'),
 		}
 		files{
