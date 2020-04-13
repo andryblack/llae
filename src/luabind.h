@@ -58,6 +58,18 @@ namespace luabind {
 		static int get(lua_State* L,int idx) {
 			return lua_tointeger(L,idx);
 		}
+		static void push(lua_State* L,int v) {
+			lua_pushinteger(L,v);
+		}
+	};
+	template <>
+	struct S<unsigned int> {
+		static unsigned int get(lua_State* L,int idx) {
+			return lua_tointeger(L,idx);
+		}
+		static void push(lua_State* L,unsigned int v) {
+			lua_pushinteger(L,v);
+		}
 	};
 	template <>
 	struct S<bool> {
@@ -73,14 +85,17 @@ namespace luabind {
 		static uint64_t get(lua_State* L,int idx) {
 			return lua_tointeger(L,idx);
 		}
+		static void push(lua_State* L,uint64_t idx) {
+			lua_pushinteger(L,idx);
+		}
 	};
 	template <>
-	struct S<lua_Integer> {
-		static lua_Integer get(lua_State* L,int idx) {
+	struct S<int64_t> {
+		static int64_t get(lua_State* L,int idx) {
 			return lua_tointeger(L,idx);
 		}
-		static void push(lua_State* L,lua_Integer v) {
-			lua_pushinteger(L,v);
+		static void push(lua_State* L,int64_t idx) {
+			lua_pushinteger(L,idx);
 		}
 	};
 	template <>
