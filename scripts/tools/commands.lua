@@ -13,6 +13,7 @@ end
 
 register('install')
 register('bootstrap')
+register('init_project')
 register('help')
 register('run')
 

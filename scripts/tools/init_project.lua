@@ -6,17 +6,18 @@ local fs = require 'llae.fs'
 local uv = require 'uv'
 
 
-local install = class(tool)
-install.descr = 'bootstrap llae installation'
-local default_dir = path.join(fs.home(),'.llae') 
+local cmd = class(tool)
+cmd.descr = 'init project'
+cmd.args = {
+	{'','project name', true },
+}
+function cmd:exec( args )
+	print('init:',args)
 
-function install:exec( args )
-	print('bootstrap:',args)
-
-	local install_dir = default_dir
+	local install_dir = path.join(fs.pwd(),args[2]) 
 
 	install_dir = utils.replace_env(install_dir)
-	print('start bootstapping at',install_dir)
+	print('start init project at',install_dir)
 
 	utils.run(function()
 		fs.mkdir(install_dir)
@@ -30,12 +31,9 @@ function install:exec( args )
 
 		assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
 
-		local m = require 'module'
-		m.install_file('modules/premake.lua',install_dir)
-
 		print('done')
 	end)
 
 end
 
-return install
+return cmd

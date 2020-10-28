@@ -58,7 +58,6 @@ namespace ssl {
 			l.pushfstring("mbedtls_ssl_config_defaults failed, code:%d",ret);
 			return {2};
 		}
-		mbedtls_ssl_conf_authmode( &m_conf, MBEDTLS_SSL_VERIFY_NONE );
 		mbedtls_ssl_conf_dbg( &m_conf, &connection::dbg_cb, this );
 
 		ret = m_ctx->configure(&m_conf);

@@ -193,6 +193,63 @@ namespace uv {
 		return 0;
 	}
 
+
+	int fs::rmdir(lua_State* L) {
+		lua::state l(L);
+		if (!l.isyieldable()) {
+			l.pushnil();
+			l.pushstring("rmdir is async");
+			return 2;
+		}
+		{
+			auto path = l.checkstring(1);
+			llae::app& app(llae::app::get(l));
+			lua::ref cont;
+			l.pushthread();
+			cont.set(l);
+			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+			req->add_ref();
+			int r = uv_fs_rmdir(app.loop().native(),
+				req->get(),path,&fs_req::fs_cb);
+			if (r < 0) {
+				req->remove_ref();
+				l.pushnil();
+				uv::push_error(l,r);
+				return 2;
+			} 
+		}
+		l.yield(0);
+		return 0;
+	}
+
+	int fs::unlink(lua_State* L) {
+		lua::state l(L);
+		if (!l.isyieldable()) {
+			l.pushnil();
+			l.pushstring("unlink is async");
+			return 2;
+		}
+		{
+			auto path = l.checkstring(1);
+			llae::app& app(llae::app::get(l));
+			lua::ref cont;
+			l.pushthread();
+			cont.set(l);
+			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+			req->add_ref();
+			int r = uv_fs_unlink(app.loop().native(),
+				req->get(),path,&fs_req::fs_cb);
+			if (r < 0) {
+				req->remove_ref();
+				l.pushnil();
+				uv::push_error(l,r);
+				return 2;
+			} 
+		}
+		l.yield(0);
+		return 0;
+	}
+
 	int fs::copyfile(lua_State* L) {
 		lua::state l(L);
 		if (!l.isyieldable()) {
@@ -368,6 +425,8 @@ namespace uv {
 		l.setfield(-2,"file");
 		l.createtable();
 		lua::bind::function(l,"mkdir",&uv::fs::mkdir);
+		lua::bind::function(l,"rmdir",&uv::fs::rmdir);
+		lua::bind::function(l,"unlink",&uv::fs::unlink);
 		lua::bind::function(l,"copyfile",&uv::fs::copyfile);
 		lua::bind::function(l,"stat",&uv::fs::stat);
 		lua::bind::function(l,"scandir",&uv::fs::scandir);

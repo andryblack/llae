@@ -40,6 +40,8 @@ namespace uv {
 	
 	struct fs {
 		static int mkdir(lua_State* L);
+		static int rmdir(lua_State* L);
+		static int unlink(lua_State* L);
 		static int copyfile(lua_State* L);
 		static int stat(lua_State* L);
 		static int scandir(lua_State* L);

@@ -56,6 +56,7 @@ namespace lua {
 		lua_Integer checkinteger(int idx) const { return luaL_checkinteger(m_L,idx); }
 		const char* tostring(int idx) const { return lua_tostring(m_L,idx); }
 		const char* checkstring(int idx) const { return luaL_checkstring(m_L,idx); }
+		const char* optstring(int idx,const char* d) const { return luaL_optstring(m_L,idx,d); }
 		const char* checklstring(int idx,size_t& size) { return luaL_checklstring(m_L,idx,&size);}
 		const char* tolstring(int idx,size_t& size) { return lua_tolstring(m_L,idx,&size); }
 		void* touserdata(int idx) const { return lua_touserdata(m_L,idx); }

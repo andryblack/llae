@@ -1,5 +1,5 @@
 name = 'premake'
-version = '5.0.0-alpha14'
+version = 'v5.0.0-alpha14'
 
 function install()
 	download_git('https://github.com/premake/premake-core.git',{tag=version})
@@ -15,7 +15,9 @@ if [ "$PLATFORM" = "Linux" ]; then
     PLATFORM=linux
 fi
 
-make -f Bootstrap.mak $PLATFORM
+make -C src -f Bootstrap.mak $PLATFORM
 
 	]]
+
+	install_bin('src/bin/release/premake5')
 end

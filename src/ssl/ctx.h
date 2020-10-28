@@ -16,6 +16,7 @@ namespace ssl {
 	private:
 		mbedtls_entropy_context m_entropy;
 		mbedtls_ctr_drbg_context m_ctr_drbg;
+		mbedtls_x509_crt m_cacert;
 	public:
 		explicit ctx(  );
 		~ctx();
