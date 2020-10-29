@@ -90,7 +90,7 @@ function _M.exe(  )
 	files {
 		path.join(_M.root,'src','main.cpp'),
 	}
-	filter {'toolset:gcc or clang'}
+	filter {'configurations:release','toolset:gcc or clang'}
 		postbuildcommands{
 			(premake.tools.gcc.gccprefix or '') .. 'strip' .. ' %{cfg.targetdir}/%{cfg.targetname}'
 		}

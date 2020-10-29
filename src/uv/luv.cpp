@@ -1,12 +1,13 @@
 #include "loop.h"
 #include "luv.h"
 #include "common/intrusive_ptr.h"
-#include "fs.h"
 #include "lua/bind.h"
 #include "tcp_server.h"
 #include "stream.h"
 #include "tcp_connection.h"
 #include "dns.h"
+#include "fs.h"
+#include "os.h"
 #include <iostream>
 
 namespace uv {
@@ -60,5 +61,6 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
 	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);
 	uv::fs::lbind(l);
+	uv::os::lbind(l);
 	return 1;
 }

@@ -26,8 +26,16 @@ namespace uv {
 			self->remove_ref();
 		}
 		void on_end(int status) {
+            if (llae::app::closed(m_conn->get_handle()->loop)) {
+                m_cont.release();
+                return;
+            }
 			auto& l = llae::app::get(m_conn->get_handle()->loop).lua();
-			l.checkstack(2);
+            if (!l.native()) {
+                m_cont.release();
+                return;
+            }
+            l.checkstack(2);
 			m_cont.push(l);
 			auto toth = l.tothread(-1);
 			toth.checkstack(3);

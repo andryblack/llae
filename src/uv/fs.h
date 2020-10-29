@@ -28,12 +28,15 @@ namespace uv {
 	private:
 		uv_file m_file;
 		uv_loop_t* m_loop;
+		int64_t m_offset = 0;
 		virtual void destroy() override final;
 	public:
 		explicit file(uv_file f,uv_loop_t* l);
 		uv_file get() const { return m_file; }
 		static void lbind(lua::state& l);
 		lua::multiret close(lua::state& l);
+		lua::multiret write(lua::state& l);
+        lua::multiret read(lua::state& l);
 	};
 	typedef common::intrusive_ptr<file> file_ptr;
 

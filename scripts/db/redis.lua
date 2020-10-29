@@ -1,12 +1,13 @@
 local llae = require 'llae'
 local class = require 'llae.class'
 local url = require 'net.url'
+local uv = require 'uv'
 
 local redis = class(nil,'db.redis')
 
 
 function redis:_init( )
-	self._conn = llae.newTCPConnection()
+	self._conn = uv.tcp_connection:new()
 end
 
 function redis:connect( addr , port )

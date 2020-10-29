@@ -3,6 +3,7 @@
 #include "common/intrusive_ptr.h"
 #include "luv.h"
 #include "lua/bind.h"
+#include <vector>
 
 META_OBJECT_INFO(uv::file,meta::object)
 
@@ -31,10 +32,17 @@ namespace uv {
 		lua::ref m_cont;
 	protected:
 		virtual int on_cont(lua::state& l) = 0;
+        virtual void release() {
+            m_cont.release();
+        }
 	public:
 		explicit fs_cont(lua::ref&& cont) : m_cont(std::move(cont)) {}
 		virtual void on_cb() override final {
 			auto& l = llae::app::get(get()->loop).lua();
+            if (!l.native()) {
+                release();
+                return;
+            }
 			l.checkstack(2);
 			m_cont.push(l);
 			auto toth = l.tothread(-1);
@@ -346,8 +354,8 @@ namespace uv {
 		}
 		{
 			auto path = l.checkstring(1);
-			int flags = l.optinteger(2,0);
-			int mode = l.optinteger(3,UV_FS_O_RDONLY);
+			int flags = l.optinteger(2,UV_FS_O_RDONLY);
+			int mode = l.optinteger(3,0644);
 			llae::app& app(llae::app::get(l));
 			lua::ref cont;
 			l.pushthread();
@@ -414,9 +422,145 @@ namespace uv {
 		return {0};
 	}
 
+	class fs_write : public fs_cont {
+	private:
+		common::intrusive_ptr<file> m_file;
+		std::vector<uv_buf_t> m_buffers;
+		std::vector<lua::ref> m_data;
+		int64_t m_size = 0;
+        virtual void release() override {
+            fs_cont::release();
+            for (auto& r:m_data) {
+                r.release();
+            }
+        }
+	public:
+		fs_write(common::intrusive_ptr<file>&& file,lua::ref&& cont) : fs_cont(std::move(cont)),m_file(std::move(file)) {}
+		std::vector<uv_buf_t>& buffers() { return m_buffers; }
+		int64_t size() { return m_size; }
+		int on_cont(lua::state& l) override {
+            for (auto& r:m_data) {
+                r.reset(l);
+            }
+            m_file.reset();
+			auto res = uv_fs_get_result(get());
+			if (res < 0) {
+				l.pushnil();
+				uv::push_error(l,res);
+				return 2;
+			} 
+			
+			l.pushinteger(res);
+			return 1;
+		}
+		void read(lua::state& l) {
+			int n = l.gettop();
+			for (int i=2;i<=n;++i) {
+				size_t s = 0;
+				const char* data = l.checklstring(i,s);
+				if (s) {
+					m_data.emplace_back();
+					l.pushvalue(i);
+					m_data.back().set(l);
+					m_buffers.push_back(uv_buf_init(const_cast<char*>(data),s));
+					m_size += s;
+				}
+			}
+		}
+	};
+
+	lua::multiret file::write(lua::state& l) {
+		if (!l.isyieldable()) {
+			l.pushnil();
+			l.pushstring("write is async");
+			return {2};
+		}
+		{
+			llae::app& app(llae::app::get(l));
+			lua::ref cont;
+			l.pushthread();
+			cont.set(l);
+			common::intrusive_ptr<fs_write> req{new fs_write(common::intrusive_ptr<file>(this),std::move(cont))};
+			req->read(l);
+			req->add_ref();
+			int r = uv_fs_write(app.loop().native(),
+				req->get(),m_file,req->buffers().data(),
+				req->buffers().size(),m_offset,&fs_req::fs_cb);
+			if (r < 0) {
+				req->remove_ref();
+				l.pushnil();
+				uv::push_error(l,r);
+				return {2};
+			} else {
+				m_offset += req->size();
+			}
+		}
+		l.yield(0);
+		return {0};
+	}
+
+    class fs_read : public fs_cont {
+    private:
+        common::intrusive_ptr<file> m_file;
+        uv_buf_t m_buffer;
+        std::vector<char> m_data;
+    public:
+        fs_read(common::intrusive_ptr<file>&& file,lua::ref&& cont) : fs_cont(std::move(cont)),m_file(std::move(file)) {}
+        ~fs_read() {}
+        uv_buf_t& buffer() { return m_buffer; }
+        int64_t size() { return m_data.size(); }
+        int on_cont(lua::state& l) override {
+            auto res = uv_fs_get_result(get());
+            if (res < 0) {
+                m_file.reset();
+                l.pushnil();
+                uv::push_error(l,res);
+                return 2;
+            }
+            m_file.reset();
+            l.pushlstring(m_data.data(), res);
+            return 1;
+        }
+        void alloc(lua::state& l) {
+            m_data.resize(l.checkinteger(2));
+            m_buffer = uv_buf_init(m_data.data(), m_data.size());
+        }
+    };
+
+    lua::multiret file::read(lua::state& l) {
+        if (!l.isyieldable()) {
+            l.pushnil();
+            l.pushstring("write is async");
+            return {2};
+        }
+        {
+            llae::app& app(llae::app::get(l));
+            lua::ref cont;
+            l.pushthread();
+            cont.set(l);
+            common::intrusive_ptr<fs_read> req{new fs_read(common::intrusive_ptr<file>(this),std::move(cont))};
+            req->alloc(l);
+            req->add_ref();
+            int r = uv_fs_read(app.loop().native(),
+                req->get(),m_file,&req->buffer(),1,m_offset,&fs_req::fs_cb);
+            if (r < 0) {
+                req->remove_ref();
+                l.pushnil();
+                uv::push_error(l,r);
+                return {2};
+            } else {
+                m_offset += req->size();
+            }
+        }
+        l.yield(0);
+        return {0};
+    }
+
 
 	void file::lbind(lua::state& l) {
 		lua::bind::function(l,"close",&file::close);
+		lua::bind::function(l,"write",&file::write);
+        lua::bind::function(l,"read",&file::read);
 	}
 
 	void fs::lbind(lua::state& l) {
@@ -424,6 +568,18 @@ namespace uv {
 		lua::bind::object<uv::file>::get_metatable(l);
 		l.setfield(-2,"file");
 		l.createtable();
+		l.pushinteger(UV_FS_O_RDONLY);
+		l.setfield(-2,"O_RDONLY");
+		l.pushinteger(UV_FS_O_RDWR);
+		l.setfield(-2,"O_RDWR");
+		l.pushinteger(UV_FS_O_WRONLY);
+		l.setfield(-2,"O_WRONLY");
+		l.pushinteger(UV_FS_O_CREAT);
+		l.setfield(-2,"O_CREAT");
+		l.pushinteger(UV_FS_O_APPEND);
+		l.setfield(-2,"O_APPEND");
+
+		
 		lua::bind::function(l,"mkdir",&uv::fs::mkdir);
 		lua::bind::function(l,"rmdir",&uv::fs::rmdir);
 		lua::bind::function(l,"unlink",&uv::fs::unlink);

@@ -31,6 +31,12 @@ function cmd:exec( args )
 
 		assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
 
+		local m = require 'module'
+		m.install_file('modules/premake.lua',install_dir)
+		m.install_file('modules/llae.lua',install_dir)
+
+		local proj_f = path.join(install_dir,'llae-project.lua')
+
 		print('done')
 	end)
 

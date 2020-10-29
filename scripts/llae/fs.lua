@@ -4,7 +4,7 @@ local path = require 'llae.path'
 local fs = setmetatable({},{__index=uv.fs})
 
 function fs.home(  )
-	return '${HOME}'
+	return uv.os.homedir()
 end
 
 function fs.pwd(  )

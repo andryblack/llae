@@ -1,6 +1,7 @@
 local path = require 'llae.path'
 local fs = require 'llae.fs'
 local utils = require 'llae.utils'
+local os = require 'llae.os'
 
 local m = {}
 
@@ -32,6 +33,7 @@ function m:shell( text )
 	fs.unlink(script)
 	local f = io.open(script,'w')
 	f:write('#!/bin/sh\n')
+	f:write('LLAE_PROJECT_ROOT=' .. self.root .. '\n')
 	f:write('cd $(dirname $0)\n')
 	f:write(text)
 	f:close()
@@ -68,11 +70,13 @@ end
 
 function _M.install_file( filename, root )
 	local env = _M.loadfile( filename )
+	print('install module',env.name,env.version)
 	env.root = root or utils.replace_env(fs.pwd())
+	os.setenv('LLAE_PROJECT_ROOT',env.root)
 	env.location = path.join(env.root,'build','modules',env.modname or env.name)
 	fs.mkdir(env.location)
 		
-	print('install module',env.name,env.version)
+	
 	env.install()
 end
 

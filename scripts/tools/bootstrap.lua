@@ -8,7 +8,7 @@ local uv = require 'uv'
 
 local install = class(tool)
 install.descr = 'bootstrap llae installation'
-local default_dir = path.join(fs.home(),'.llae') 
+local default_dir = path.join(assert(fs.home()),'.llae') 
 
 function install:exec( args )
 	print('bootstrap:',args)

@@ -41,6 +41,11 @@ static const struct {
   {NULL, NULL}
 };
 
+static int err_handler(lua_State* L) {
+	auto msg = lua_tostring(L,-1);
+	luaL_traceback(L,L,msg,1);
+	return 1;
+}
 
 
 int main(int argc,char** argv) {
@@ -56,31 +61,29 @@ int main(int argc,char** argv) {
 		}
 
 		lua::attach_embedded_scripts(L);
+		L.pushcfunction(&err_handler);
 		L.getglobal("require");
 		L.pushstring("main");
-		auto err = L.pcall(1,1,0);
+		auto err = L.pcall(1,1,-3);
 		if (err != lua::status::ok) {
 			app.show_error(L,err);
 		} else if (!lua::value(L,-1).is_function()) {
 			std::cout << "main dnt return function" << std::endl;
 		} else {
 			createargtable(L,argv,argc);
-			err = L.pcall(1,0,0);
+			err = L.pcall(1,0,-3);
 			if (err != lua::status::ok) {
 				app.show_error(L,err);
 			} else {
 				app.run();
 			}
-		}	
+		}
 	}
 
-	while (uv_loop_close(loop) == UV_EBUSY) {
-		while(uv_run(loop,UV_RUN_NOWAIT)) {
-            uv_sleep(100);
-        }
+    while (uv_loop_close(loop) == UV_EBUSY) {
+        uv_run(loop, UV_RUN_ONCE);
         uv_print_all_handles(loop, stderr);
-        uv_sleep(100);
-	}
+    }
 
 	std::cout << "meta objects: " << meta::object::get_total_count() << std::endl;
 

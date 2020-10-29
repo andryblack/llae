@@ -36,6 +36,7 @@ namespace uv {
 
 	void handle::destroy() {
 		if (!uv_is_closing(get_handle())) {
+            on_closed();
 			uv_close(get_handle(),&handle::close_destroy_cb);
 		} else {
 			meta::object::destroy(); 

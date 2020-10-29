@@ -36,6 +36,9 @@ namespace lua {
 		void push(state& l) {
 			l.pushref(m_ref);
 		}
+        void release() {
+            m_ref = LUA_NOREF;
+        }
 	};
 
 }

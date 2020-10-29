@@ -23,6 +23,7 @@ namespace llae {
 		void stop();
 		static void show_error(lua::state& l,lua::status e);
 		
+        static bool closed(uv_loop_t* l);
 		static app& get(lua_State* L);
 		static app& get(uv_loop_t* l);
 		static app& get(lua::state& s) { return get(s.native()); }

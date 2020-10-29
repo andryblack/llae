@@ -29,13 +29,13 @@ namespace llae {
         lua::bind::object<meta::object>::register_metatable(lua());
         m_stop_sig.reset( new uv::signal(loop()) );
         m_stop_sig->start_oneshot(SIGINT,[this]() {
-             this->stop();
+            this->loop().stop();
         });
         m_stop_sig->unref();
     }
 
     app::~app() {
-        stop();
+        uv_loop_set_data(m_loop.native(),nullptr);
     }
 
     app& app::get(lua_State* L) {
@@ -43,36 +43,40 @@ namespace llae {
         return **static_cast<app**>(lua_getextraspace(L));
     }
 
+    bool app::closed(uv_loop_t* l) {
+        return uv_loop_get_data(l) == nullptr;
+    }
     app& app::get(uv_loop_t* l) {
         assert(l);
+        assert(!closed(l));
         return *static_cast<app*>(uv_loop_get_data(l));
     }
 
     static void stop_walk_cb(uv_handle_t* handle,void* arg) {
-        if (uv_is_active(handle)) {
-            if (handle->data) {
-                uv::handle* h = static_cast<uv::handle*>(handle->data);
-                h->close();
-            }
+        if (handle->data) {
+            uv::handle* h = static_cast<uv::handle*>(handle->data);
+            h->close();
         }
     }
     void app::run() {
         int v = m_loop.run(UV_RUN_DEFAULT);
         //std::cout << "app::run end " << v << std::endl;
+        m_lua.close();
+        m_stop_sig.reset();
+        
         if (v != 0) {
             while(uv_run(loop().native(),UV_RUN_NOWAIT)) {
                 uv_sleep(100);
                 uv_walk(loop().native(),stop_walk_cb,0);
             }
         }
-        m_lua.close();
+        
+       
         return;
     }
 
     void app::stop() {
-        //uv_print_all_handles(uv_default_loop(), stderr);
-        m_loop.stop();
-        m_stop_sig.reset();
+        loop().stop();
     }
 
     void app::show_error(lua::state& l,lua::status e) {

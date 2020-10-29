@@ -37,6 +37,7 @@ namespace lua {
 		template<class ... Types>
 		void pushfstring(const char *fmt, Types ... args) { lua_pushfstring(m_L,fmt,args...); }
 		void pushcclosure(lua_CFunction func,int nup) { lua_pushcclosure(m_L,func,nup); }
+		void pushcfunction(lua_CFunction func) { lua_pushcfunction(m_L,func); }
 		void pushlightuserdata(void *p) { lua_pushlightuserdata(m_L,p); }
 		void pushnil() { lua_pushnil(m_L); }
 		void pushthread() { lua_pushthread(m_L); }

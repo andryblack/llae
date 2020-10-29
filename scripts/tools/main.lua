@@ -35,6 +35,7 @@ return function( args )
 		print( 'unknown command', cmdname )
 		return
 	end
+	
 	cmd:exec( cmdargs )
 
 end
