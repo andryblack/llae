@@ -11,3 +11,8 @@ make -C build config=release
 	]]
 	install_bin('src/bin/llae')
 end
+
+
+dependencies = {
+	'premake'
+}

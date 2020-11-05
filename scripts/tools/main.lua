@@ -12,7 +12,7 @@ return function( args )
 		print('use scripts at',scripts)
 		table.remove(package.searchers,1)
 		local store_packages = {
-			'json','llae','uv'
+			'json','llae','uv','ssl'
 		}
 		local store = { }
 		for _,v in ipairs(store_packages) do

@@ -28,9 +28,13 @@ namespace lua {
 			m_ref = l.ref();
 		}
 		void reset(state& l) {
-			if (valid()) {
-				l.unref(m_ref);
-				m_ref = LUA_NOREF;
+			if (!l.native()) {
+				release();
+			} else {
+				if (valid()) {
+					l.unref(m_ref);
+					m_ref = LUA_NOREF;
+				}
 			}
 		}
 		void push(state& l) {

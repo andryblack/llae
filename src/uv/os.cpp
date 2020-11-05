@@ -14,11 +14,10 @@ namespace uv {
 		if (r == UV_ENOBUFS) {
             std::unique_ptr<char[]> data(new char[size]);
 			r = uv_os_homedir(data.get(),&size);
-            lua_pushlstring(L,data.get(),size);
-			if (r>=0) {
+            if (r>=0) {
+            	lua_pushlstring(L,data.get(),size);
 				return 1;
 			}
-			l.pop(1);
 		}
 		l.pushnil();
 		uv::push_error(l,r);
@@ -32,11 +31,10 @@ namespace uv {
 		if (r == UV_ENOBUFS) {
             std::unique_ptr<char[]> data(new char[size]);
 			r = uv_os_tmpdir(data.get(),&size);
-            lua_pushlstring(L,data.get(),size);
-			if (r>=0) {
+            if (r>=0) {
+            	lua_pushlstring(L,data.get(),size);
 				return 1;
 			}
-			l.pop(1);
 		}
 		l.pushnil();
 		uv::push_error(l,r);
@@ -51,11 +49,10 @@ namespace uv {
 		if (r == UV_ENOBUFS) {
             std::unique_ptr<char[]> data(new char[size]);
 			r = uv_os_getenv(name,data.get(),&size);
-            lua_pushlstring(L,data.get(),size);
-			if (r>=0) {
+            if (r>=0) {
+				lua_pushlstring(L,data.get(),size);
 				return 1;
 			}
-			l.pop(1);
 		}
 		l.pushnil();
 		uv::push_error(l,r);
@@ -94,11 +91,10 @@ namespace uv {
 		if (r == UV_ENOBUFS) {
             std::unique_ptr<char[]> data(new char[size]);
 			r = uv_os_gethostname(data.get(),&size);
-            lua_pushlstring(L,data.get(),size);
-			if (r>=0) {
+            if (r>=0) {
+            	lua_pushlstring(L,data.get(),size);
 				return 1;
 			}
-			l.pop(1);
 		}
 		l.pushnil();
 		uv::push_error(l,r);

@@ -26,6 +26,16 @@ function utils.run( fn )
 	end
 end
 
+function utils.replace_tokens( text, tokens )
+	local res = string.gsub(text,'%$(%b{})',function(str)
+		local env = string.match(str,'^{(.+)}$')
+		if env then
+			return tokens[env]
+		end
+	end)
+	return res
+end
+
 function utils.parse_args( args )
 	local res = {[0]=args[0]}
 	local idx = 1

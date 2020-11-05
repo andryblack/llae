@@ -53,8 +53,11 @@ namespace uv {
 				llae::app::show_error(toth,s);
 			}
 			l.pop(1);// thread
-			m_cont.reset(l);
+            reset(l);
 		}
+        void reset(lua::state& l) {
+            m_cont.reset(l);
+        }
 	};
 
 	class fs_none : public fs_req {
@@ -438,11 +441,15 @@ namespace uv {
 		fs_write(common::intrusive_ptr<file>&& file,lua::ref&& cont) : fs_cont(std::move(cont)),m_file(std::move(file)) {}
 		std::vector<uv_buf_t>& buffers() { return m_buffers; }
 		int64_t size() { return m_size; }
-		int on_cont(lua::state& l) override {
+        void reset(lua::state& l) {
             for (auto& r:m_data) {
                 r.reset(l);
             }
             m_file.reset();
+            fs_cont::reset(l);
+        }
+		int on_cont(lua::state& l) override {
+            reset(l);
 			auto res = uv_fs_get_result(get());
 			if (res < 0) {
 				l.pushnil();
@@ -487,6 +494,7 @@ namespace uv {
 				req->get(),m_file,req->buffers().data(),
 				req->buffers().size(),m_offset,&fs_req::fs_cb);
 			if (r < 0) {
+                req->reset(l);
 				req->remove_ref();
 				l.pushnil();
 				uv::push_error(l,r);

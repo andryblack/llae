@@ -30,6 +30,19 @@ namespace lua {
 		return 1;
 	}
 
+	static int get_embedded(lua_State* L) {
+		const char *name = luaL_checkstring(L, 1);
+		const embedded_script* s = embedded_script::scripts;
+		while (s->name) {
+			if (strcmp(s->name,name)==0){
+				lua_pushlstring(L,(const char*)s->content, s->size);
+				return 1;
+			}
+			++s;
+		}
+		return 0;
+	}
+
 
 	void attach_embedded_scripts(lua::state& lua) {
 		lua.getglobal("table");
@@ -41,6 +54,11 @@ namespace lua {
 		lua.pushinteger(1);
 		lua.pushcclosure(embedded_searcher,0);
 		lua.call(3,0);
+
+		lua.getglobal("package");
+		lua.pushcfunction(&get_embedded);
+		lua.setfield(-2,"get_embedded");
+		lua.pop(1);
 	}
 
 }

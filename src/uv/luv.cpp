@@ -45,6 +45,37 @@ static int lua_uv_exepath(lua_State* L) {
 	return 1;
 }
 
+static int lua_uv_cwd(lua_State* L) {
+	lua::state l(L);
+	size_t size = 1;
+	char dummy;
+	auto r = uv_cwd(&dummy,&size);
+	if (r == UV_ENOBUFS) {
+        std::unique_ptr<char[]> data(new char[size]);
+		r = uv_cwd(data.get(),&size);
+        if (r>=0) {
+			lua_pushlstring(L,data.get(),size);
+			return 1;
+		}
+	}
+	l.pushnil();
+	uv::push_error(l,r);
+	return 2;
+}
+
+static int lua_uv_chdir(lua_State* L) {
+	lua::state l(L);
+	const char* dir = l.checkstring(1);
+	auto r = uv_chdir(dir);
+	if (r>0) {
+		l.pushboolean(true);
+		return 1;
+	}
+	l.pushnil();
+	uv::push_error(l,r);
+	return 2;
+}
+
 int luaopen_uv(lua_State* L) {
 	lua::state l(L);
 
@@ -60,6 +91,8 @@ int luaopen_uv(lua_State* L) {
 	l.setfield(-2,"tcp_connection");
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
 	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);
+	lua::bind::function(l,"cwd",&lua_uv_cwd);
+	lua::bind::function(l,"chdir",&lua_uv_chdir);
 	uv::fs::lbind(l);
 	uv::os::lbind(l);
 	return 1;

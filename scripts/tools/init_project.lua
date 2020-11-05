@@ -14,7 +14,8 @@ cmd.args = {
 function cmd:exec( args )
 	print('init:',args)
 
-	local install_dir = path.join(fs.pwd(),args[2]) 
+	local proj_name = args[2]
+	local install_dir = path.join(fs.pwd(),proj_name) 
 
 	install_dir = utils.replace_env(install_dir)
 	print('start init project at',install_dir)
@@ -25,18 +26,27 @@ function cmd:exec( args )
 		fs.mkdir(path.join(install_dir,'bin'))
 		fs.mkdir(path.join(install_dir,'modules'))
 		fs.mkdir(path.join(install_dir,'scripts'))
+		fs.mkdir(path.join(install_dir,'build'))
 
 		local src = assert(uv.exepath())
 		local fn = path.basename(src)
 
 		assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
 
-		local m = require 'module'
-		m.install_file('modules/premake.lua',install_dir)
-		m.install_file('modules/llae.lua',install_dir)
+		fs.write_file(path.join(install_dir,'.gitignore'),[[
+/bin/
+/build/
+]])
 
-		local proj_f = path.join(install_dir,'llae-project.lua')
-
+fs.write_file(path.join(install_dir,'llae-project.lua'),utils.replace_tokens([[
+-- project ${proj_name}
+project '${proj_name}'
+-- @modules@
+module 'llae'
+]],{
+		proj_name = proj_name,
+}))
+		
 		print('done')
 	end)
 

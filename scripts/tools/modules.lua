@@ -23,8 +23,8 @@ function m:download_git(url,config)
 	local dst = path.join(self.location,'src')
 	fs.rmdir_r(dst)
 	local tag = config.tag or config.branch or 'master'
-	local cmd = 'git clone -v --depth 1 --branch ' .. tag .. ' --single-branch ' .. url .. ' ' .. dst
-	exec_cmd(cmd)
+	local cmd = 'git clone --depth 1 --branch ' .. tag .. ' --single-branch ' .. url .. ' ' .. dst
+	exec_cmd(cmd .. ' > ' .. path.join(self.location,'download_git_log.txt'))
 end
 
 function m:shell( text )
@@ -37,8 +37,8 @@ function m:shell( text )
 	f:write('cd $(dirname $0)\n')
 	f:write(text)
 	f:close()
-	local cmd = '/bin/sh "' .. script .. '"'
-	exec_cmd(cmd)
+	local cmd = '/bin/sh "' .. script .. '"' 
+	exec_cmd(cmd .. ' > ' .. path.join(self.location,'shell_script_log.txt'))
 end
 
 function m:install_bin( fn )
@@ -62,22 +62,62 @@ function _M.create_env(  )
 	return env
 end
 
+function _M.check_module( env, name )
+	local res,err = pcall(function()
+		if not env.name then
+			error('need name')
+		end
+		if type(env.install) ~= 'function' then
+			error('need install function')
+		end
+	end)
+	if not res then
+		error(err .. ' at ' .. name)
+	end
+end
+
 function _M.loadfile( filename )
 	local env = _M.create_env()
 	assert(loadfile(filename,'bt',env))()
+	_M.check_module(env,'file:' .. filename)
 	return env
 end
 
-function _M.install_file( filename, root )
-	local env = _M.loadfile( filename )
+function _M.install( env )
+	
 	print('install module',env.name,env.version)
 	env.root = root or utils.replace_env(fs.pwd())
 	os.setenv('LLAE_PROJECT_ROOT',env.root)
-	env.location = path.join(env.root,'build','modules',env.modname or env.name)
+	env.location = path.join(env.root,'build','modules', env.name)
 	fs.mkdir(env.location)
 		
 	
 	env.install()
+end
+
+function _M.install_file( filename, root )
+	local env = _M.loadfile( filename )
+	_M.install(env)
+	local dst = path.join(root,'modules',env.name)
+	if dst ~= filename then
+		assert(fs.copyfile(filename,dst))
+	end
+end
+
+function _M.get( root, modname )
+	local fn = path.join(root,'modules',modname)
+	if fs.isfile(fn) then
+		return _M.loadfile(fn)
+	end
+	local embedded = package.get_embedded('modules.' .. modname)
+	if not embedded or type(embedded)~='string' then
+		error('not found module ' .. modname)
+	end
+	--print('embedded module:',embedded)
+	local env = _M.create_env()
+	assert(load(embedded,'embedded-module-' .. modname,'tb',env))()
+	_M.check_module(env,'embedded:'..modname)
+	return env
 end
 
 return _M

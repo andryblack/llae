@@ -1,0 +1,12 @@
+<html>
+<head>
+</head>
+<body>
+	<h1><%= title %></h1>
+	<ul><% for i=1,10 do %>
+		<li><%= i %>. item</li>
+	<% end %></ul>
+	<%do end%>
+	<%=os.date()%>
+</body>
+</html>

@@ -10,6 +10,11 @@ local install = class(tool)
 install.descr = 'bootstrap llae installation'
 local default_dir = path.join(assert(fs.home()),'.llae') 
 
+local embedded_modules = {
+	'llae',
+	'premake'
+}
+
 function install:exec( args )
 	print('bootstrap:',args)
 
@@ -30,8 +35,10 @@ function install:exec( args )
 
 		assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
 
-		local m = require 'module'
-		m.install_file('modules/premake.lua',install_dir)
+		-- for _,v in ipairs(embedded_modules) do
+		-- 	local cont = assert(package.get_embedded('modules.'..v),'not found embedded module ' .. v)
+		-- 	fs.write_file(path.join(install_dir,'modules',v..'.lua'),cont)
+		-- end
 
 		print('done')
 	end)
