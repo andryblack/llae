@@ -29,4 +29,14 @@ function _M.preprocess( src_file, dst_file, config )
 	assert(os.writefile_ifnotequal(table.concat(data,'\n'),dst_file))
 end
 
+function _M.install_header( src, dst_fn )
+	local dst = path.join('include',dst_fn)
+	if not os.comparefiles(src,dst) then
+		os.mkdir(path.getdirectory(dst))
+	
+		print('install',src,'->',dst)
+		assert(os.copyfile(src,dst))
+	end
+end
+
 return _M

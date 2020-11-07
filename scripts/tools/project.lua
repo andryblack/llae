@@ -1,6 +1,8 @@
 local class = require 'llae.class'
 local modules = require 'modules'
 local fs = require 'llae.fs'
+local template = require 'llae.template'
+local path = require 'llae.path'
 
 local Project = class(nil,'Project')
 
@@ -25,6 +27,9 @@ function Project:_init( env , root)
 	self._root = root
 end
 
+function Project:name(  )
+	return self._env.project
+end
 function Project:add_module( name )
 	if self._modules[name] then
 		return
@@ -51,9 +56,30 @@ function Project:load_modules(  )
 end
 function Project:install_modules(  )
 	self:load_modules()
+	fs.mkdir(path.join('build','modules'))
+	fs.mkdir(path.join('build','premake'))
 	for _,m in ipairs(self._modules_list) do
 		modules.install(m)
 	end
+end
+
+function Project:foreach_module( )
+	return ipairs(self._modules_list)
+end
+
+function Project:write_premake( )
+	self:load_modules()
+	local template_source_filename = path.join(path.dirname(fs.exepath()),'..','data','premake5-template.lua')
+	local filename = path.join(self._root,'build','premake5.lua')
+	fs.unlink(filename)
+	local f = fs.open(filename,fs.O_WRONLY|fs.O_CREAT)
+	f:write(template.render_file(template_source_filename,{
+		escape = tostring,
+		project=self,
+		template = template,
+		path = path
+	}))
+	f:close()
 end
 
 local function create_env( )

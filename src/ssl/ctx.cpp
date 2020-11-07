@@ -14,7 +14,7 @@ namespace ssl {
 		mbedtls_entropy_init( &m_entropy );
 		mbedtls_ctr_drbg_init( &m_ctr_drbg );
 		mbedtls_x509_crt_init( &m_cacert );
-        //mbedtls_debug_set_threshold(1);
+        //mbedtls_debug_set_threshold(3);
 	}
 
 	ctx::~ctx() {

@@ -50,6 +50,10 @@ function response:get_message(  )
 	return self._message
 end
 
+function response:get_header( name )
+	return self._headers[name]
+end
+
 function response:read(  )
 	if self._length and self._length <= 0 then
 		self:on_closed()
@@ -99,7 +103,7 @@ end
 
 function response:close_connection( )
 	if self._connection then
-		print('close_connection')
+		--print('close_connection')
 		self._connection:close()
 		self._connection = nil
 	end
@@ -192,6 +196,9 @@ function request:exec(  )
 	end
 
 	local headers = {}
+	if not self._headers['Host'] then
+		table.insert(headers,'Host: ' .. self._url.host)
+	end
 	for k,v in pairs(self._headers) do
 		table.insert(headers,k..': ' .. v)
 	end
@@ -213,7 +220,10 @@ function request:exec(  )
 			return res,err
 		end
 	end
-
+	-- print(self._method .. ' ' .. (self._url.path or '/') .. ' HTTP/' .. self._version .. '\r\n',
+	-- 	table.concat(headers,'\r\n'),
+	-- 	'\r\n\r\n', 
+	-- 	self._body)
 	self._connection:write{
 		self._method .. ' ' .. (self._url.path or '/') .. ' HTTP/' .. self._version .. '\r\n',
 		table.concat(headers,'\r\n'),
@@ -221,7 +231,19 @@ function request:exec(  )
 		self._body
 	}
 	local p = parser.new()
-	return p:load(self._connection) 
+	while true do
+		local resp,err = p:load(self._connection) 
+		if resp then
+			if resp:get_code() == 302 then
+				resp:close()
+				local redirect_url = resp:get_header('Location')
+				--print('redirect to',redirect_url)
+				self._url = url.parse(redirect_url)
+				return self:exec()
+			end
+		end
+		return resp,err
+	end
 end
 
 return request

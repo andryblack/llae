@@ -10,6 +10,9 @@ namespace lua {
 
 	struct object_holder_t {
 		common::intrusive_ptr<meta::object> hold;
+        ~object_holder_t() {
+            hold.reset();
+        }
 
 		const meta::info_t* info() const { return hold->get_object_info(); }
 		template <class T>

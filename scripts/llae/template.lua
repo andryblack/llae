@@ -19,11 +19,16 @@ local function escape(str)
     return tostring(str)
 end
 
-function template:_init(  )
+function template:_init( options )
 	self._name = 'template'
 	self._env = {
 		escape = escape
 	}
+	if options and options.env then
+		for k,v in pairs(options.env) do
+			self._env[k]=v
+		end
+	end
 end
 
 function template:load( filename )
@@ -33,6 +38,7 @@ function template:load( filename )
 end
 
 function template:parse( data )
+	assert(type(data)=='string')
 	local st = 1
 	local chunks = {
 		'_ctx = ... or {}; local _res = {}; local _ti = table.insert;',
@@ -116,7 +122,7 @@ local _M = {
 }
 
 function _M.compile( str, options )
-	local t = template.new()
+	local t = template.new(options)
 	return t:parse(str)
 end
 

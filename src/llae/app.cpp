@@ -62,6 +62,9 @@ namespace llae {
         int v = m_loop.run(UV_RUN_DEFAULT);
         //std::cout << "app::run end " << v << std::endl;
         m_lua.close();
+        if (m_stop_sig) {
+            m_stop_sig->close();
+        }
         m_stop_sig.reset();
         
         if (v != 0) {

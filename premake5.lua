@@ -37,7 +37,6 @@ if _ACTION ~= 'download' then
 				{ 'scripts/llae/**.lua', 'scripts' },
 				{ 'scripts/net/*.lua', 'scripts' },
 				{ 'scripts/tools/*.lua', 'scripts/tools' },
-				{ 'modules/*.lua' }
 				})
 			llae.exe()
 end

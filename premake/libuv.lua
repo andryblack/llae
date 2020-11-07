@@ -7,27 +7,25 @@ local _M = {
 	archive = 'tar.gz',
 }
 
-function _M.lib(  )
+function _M.lib( root )
 	_M.root = path.join(root,'build','extlibs','libuv-'.._M.version)
-	os.mkdir(path.join(root,'build','include','uv'))
 	
 	utils.preprocess(
 		path.join(_M.root,'include','uv.h'),
-		path.join(root,'build','include','uv.h'),
+		path.join('include','uv.h'),
 		{replace={
 			['UV_EXTERN'] = '',
 		}})
 	for _,f in ipairs(os.matchfiles(path.join(_M.root,'include','uv','*'))) do
-		assert(os.copyfile(f,
-			path.join(root,'build','include','uv',path.getname(f))))
+		utils.install_header(f,path.join('uv',path.getname(f)))
 	end
 	project(_M.name)
 		kind 'StaticLib'
-		location 'build'
 		targetdir 'lib'
+		location 'project'
 		
 		includedirs {
-			path.join(root,'build','include'),
+			path.join('include'),
 			path.join(_M.root,'src'),
 		}
 		files{

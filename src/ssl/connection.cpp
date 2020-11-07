@@ -15,6 +15,7 @@ namespace ssl {
 		mbedtls_ssl_config_init( &m_conf );
 		m_write_req.data = this;
 		m_write_buf = uv_buf_init(m_write_data_buf,CONN_BUFFER_SIZE);
+        //std::cout << "ssl::connection::connection" << std::endl;
 	}
 
 	connection::~connection() {
@@ -23,6 +24,7 @@ namespace ssl {
         if (m_stream) {
             m_stream->close();
         }
+        //std::cout << "ssl::connection::~connection" << std::endl;
 	}
 
 	void connection::dbg_cb(void *vctx, int level,
@@ -120,6 +122,7 @@ namespace ssl {
 			l.pushthread();
 			m_cont.set(l);
 
+            //std::cout << "begin handshake" << std::endl;
 			add_ref();
 			if (!do_handshake()) {
 				m_cont.reset(l);
@@ -459,6 +462,10 @@ namespace ssl {
         return {1};
     }
 
+    lua::multiret connection::shutdown(lua::state& l) {
+        return m_stream->shutdown(l);
+    }
+
 	void connection::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&connection::lnew);
 		lua::bind::function(l,"configure",&connection::configure);
@@ -467,5 +474,6 @@ namespace ssl {
         lua::bind::function(l,"write",&connection::write);
         lua::bind::function(l,"read",&connection::read);
         lua::bind::function(l,"close",&connection::close);
+        lua::bind::function(l,"shutdown",&connection::shutdown);
 	}
 }

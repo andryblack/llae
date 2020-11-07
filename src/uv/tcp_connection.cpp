@@ -4,6 +4,7 @@
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
 #include "lua/bind.h"
+#include <iostream>
 
 META_OBJECT_INFO(uv::tcp_connection,uv::stream)
 
@@ -61,8 +62,10 @@ namespace uv {
 		int r = uv_tcp_init(llae::app::get(l).loop().native(),&m_tcp);
 		check_error(l,r);
 		attach();
+        //std::cout << "tcp_connection::tcp_connection" << std::endl;
 	}
 	tcp_connection::~tcp_connection() {
+        //std::cout << "tcp_connection::~tcp_connection" << std::endl;
 	}
 
 	int tcp_connection::lnew(lua_State* L) {

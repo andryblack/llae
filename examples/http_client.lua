@@ -14,6 +14,9 @@ local th = coroutine.create(function()
 	local req = http.createRequest{
 		method = 'GET',
 		url = 'https://google.com/',
+		headers = {
+			['Accept'] = '*/*'
+		}
 	}
 
 	local resp = assert(req:exec())

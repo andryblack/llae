@@ -27,11 +27,12 @@ namespace uv {
 	void handle::close_cb(uv_handle_t* h) {
 		//std::cout << "handle closed << " << h << std::endl;
 		handle* self = static_cast<handle*>(uv_handle_get_data(h));
+        uv_handle_set_data(h,nullptr);
 		if (self) {
 			self->on_closed();
 			self->remove_ref();
 		}
-		uv_handle_set_data(h,nullptr);
+		
 	}
 
 	void handle::destroy() {

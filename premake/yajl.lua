@@ -1,4 +1,4 @@
-
+local utils = require 'utils'
 local _M = {
 	name = 'llae-yajl',
 	revision = '66cb08c',
@@ -13,19 +13,16 @@ local components = {
 
 function _M.lib( root )
 	_M.root = path.join(root,'build','extlibs','lloyd-yajl-'.._M.revision)
-	os.mkdir(path.join(root,'build','include','yajl'))
 	for _,f in ipairs{'yajl_common.h','yajl_gen.h','yajl_parse.h','yajl_tree.h'} do
 		local src = path.join(_M.root,'src','api',f)
-		local dst = path.join(root,'build','include','yajl',f)
-		if not os.comparefiles(src,dst) then
-			assert(os.copyfile(src,dst))
-		end
+		utils.install_header(src,path.join('yajl',f))
 	end
 	project(_M.name)
 		kind 'StaticLib'
-		location 'build'
 		targetdir 'lib'
-		sysincludedirs {'build/include'}
+		location 'project'
+		
+		sysincludedirs {'include'}
 		
 		local fls = {
 			path.join(_M.root,'src','yajl.c'),

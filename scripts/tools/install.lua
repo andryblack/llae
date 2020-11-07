@@ -30,6 +30,7 @@ function install:exec( args )
 	end
 	utils.run(function()
 		prj:install_modules()
+		prj:write_premake()
 	end)
 end
 

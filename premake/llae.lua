@@ -62,8 +62,8 @@ end
 function _M.lib(  )
 	project 'llae-lib'
 		kind 'StaticLib'
-		location 'build'
 		targetdir 'lib'
+		location 'project'
 
 		_M.compile()
 		
@@ -145,7 +145,7 @@ function _M.embed( patterns )
 		for _,f in ipairs(files) do
 			local dst_name = baseDir and path.getrelative(baseDir, f) or f
 			buffered.writeln(result, "/* " .. dst_name .. " */")
-			local id_name = dst_name:gsub('[%.%/]','_')
+			local id_name = dst_name:gsub('[%.%/%-]','_')
 			buffered.writeln(result, "static const unsigned char " .. id_name .. '[] = {')
 			local conent = load_file(f)
 			output_script(result,conent)

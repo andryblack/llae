@@ -6,9 +6,11 @@ commands.map = {}
 local function register( modname )
 	--print('register',modname)
 	local mod = require( modname )
-	mod.name = modname
+	if not mod.name then
+		mod.name = modname
+	end
 	table.insert(commands.list, mod )
-	commands.map[modname] = mod
+	commands.map[mod.name] = mod
 end
 
 register('install')

@@ -7,6 +7,7 @@ local uv = require 'uv'
 
 
 local cmd = class(tool)
+cmd.name = 'init'
 cmd.descr = 'init project'
 cmd.args = {
 	{'','project name', true },
@@ -15,40 +16,53 @@ function cmd:exec( args )
 	print('init:',args)
 
 	local proj_name = args[2]
-	local install_dir = path.join(fs.pwd(),proj_name) 
+	if not proj_name then
+		utils.run(function()
+			local Project = require 'project'
+			local prj,err = Project.load('llae-project.lua')
+			if not prj then
+				error('failed loading project file ' .. err)
+			end
+			prj:write_premake()
+		end)
+	else
 
-	install_dir = utils.replace_env(install_dir)
-	print('start init project at',install_dir)
+		local install_dir = path.join(fs.pwd(),proj_name)
 
-	utils.run(function()
-		fs.mkdir(install_dir)
+		install_dir = utils.replace_env(install_dir)
+		print('start init project at',install_dir)
 
-		fs.mkdir(path.join(install_dir,'bin'))
-		fs.mkdir(path.join(install_dir,'modules'))
-		fs.mkdir(path.join(install_dir,'scripts'))
-		fs.mkdir(path.join(install_dir,'build'))
+		utils.run(function()
+			fs.mkdir(install_dir)
 
-		local src = assert(uv.exepath())
-		local fn = path.basename(src)
+			fs.mkdir(path.join(install_dir,'bin'))
+			fs.mkdir(path.join(install_dir,'modules'))
+			fs.mkdir(path.join(install_dir,'scripts'))
+			fs.mkdir(path.join(install_dir,'build'))
+			fs.mkdir(path.join(install_dir,'build','premake'))
 
-		assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
+			local src = assert(uv.exepath())
+			local fn = path.basename(src)
 
-		fs.write_file(path.join(install_dir,'.gitignore'),[[
-/bin/
-/build/
-]])
+			assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
 
-fs.write_file(path.join(install_dir,'llae-project.lua'),utils.replace_tokens([[
--- project ${proj_name}
-project '${proj_name}'
--- @modules@
-module 'llae'
-]],{
-		proj_name = proj_name,
-}))
-		
-		print('done')
-	end)
+			fs.write_file(path.join(install_dir,'.gitignore'),[[
+	/bin/
+	/build/
+	]])
+
+	fs.write_file(path.join(install_dir,'llae-project.lua'),utils.replace_tokens([[
+	-- project ${proj_name}
+	project '${proj_name}'
+	-- @modules@
+	module 'llae'
+	]],{
+			proj_name = proj_name,
+	}))
+			
+			print('done')
+		end)
+	end
 
 end
 

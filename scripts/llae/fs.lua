@@ -6,6 +6,7 @@ local fs = setmetatable({},{__index=uv.fs})
 fs.home = uv.os.homedir
 fs.pwd = uv.cwd
 fs.chdir = uv.chdir
+fs.exepath = uv.exepath
 
 function fs.isfile( fn )
 	local st = fs.stat(fn)

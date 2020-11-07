@@ -106,6 +106,7 @@ namespace ssl {
         lua::multiret write(lua::state& l);
         lua::multiret read(lua::state& l);
         lua::multiret close(lua::state& l);
+        lua::multiret shutdown(lua::state& l);
 	};
 
 }

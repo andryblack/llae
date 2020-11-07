@@ -10,7 +10,9 @@ local _M = {
 local uncomment = {
 	['MBEDTLS_DEPRECATED_REMOVED'] = true,
 	['MBEDTLS_HAVE_SSE2'] = true,
-	['MBEDTLS_PLATFORM_PRINTF_ALT'] = true
+	['MBEDTLS_PLATFORM_PRINTF_ALT'] = true,
+	['MBEDTLS_KEY_EXCHANGE_PSK_ENABLED'] = true,
+	['MBEDTLS_SSL_PROTO_TLS1_2'] = true,
 }
 local comment = {
 	['MBEDTLS_NO_UDBL_DIVISION'] = true,
@@ -24,16 +26,13 @@ function _M.lib( root )
 	for _,f in ipairs(os.matchfiles(path.join(_M.root,'include','mbedtls','*'))) do
 		local n = path.getname(f)
 		if n ~= 'config.h' then
-			local dst = path.join(root,'build','include','mbedtls',n)
-			if not os.comparefiles(f,dst) then
-				assert(os.copyfile(f,dst))
-			end
+			utils.install_header(f,path.join('mbedtls',n))
 		end
 	end
 
 	utils.preprocess(
 		path.join(_M.root,'include','mbedtls','config.h'),
-		path.join(root,'build','include','mbedtls','config.h'),
+		path.join('include','mbedtls','config.h'),
 		{uncomment = uncomment, comment = comment })
 
 	-- for _,f in ipairs{'lua.h','luaconf.h','lauxlib.h','lualib.h'} do
@@ -42,8 +41,9 @@ function _M.lib( root )
 	-- end
 	project(_M.name)
 		kind 'StaticLib'
-		location 'build'
 		targetdir 'lib'
+		location 'project'
+
 		includedirs{
 			path.join(root,'build','include')
 		}
