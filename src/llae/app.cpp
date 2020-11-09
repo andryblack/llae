@@ -112,6 +112,10 @@ namespace llae {
         } else {
             std::cout << "unknown" << std::endl;
         }
+        lua::state& ms(get(l).lua());
+        luaL_traceback(ms.native(),l.native(),NULL,1);
+        std::cout << lua::value(ms,-1).tostring() << std::endl;
+        ms.pop(1);
     }
 
     static int lua_stop(lua_State* L) {

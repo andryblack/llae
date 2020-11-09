@@ -42,7 +42,7 @@ function http_parser:parse_header( client )
 				self._headers[name] = {self._headers[name],value}
 			end
 		else
-			if #self._data > this.max_header_len then
+			if #self._data > self.max_header_len then
 				error('failed parse headers')
 			end
 			return false

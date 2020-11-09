@@ -12,7 +12,7 @@ function _M.lib( root )
 	
 	utils.preprocess(
 		path.join(_M.root,'include','uv.h'),
-		path.join('include','uv.h'),
+		path.join(root,'build','include','uv.h'),
 		{replace={
 			['UV_EXTERN'] = '',
 		}})

@@ -36,5 +36,13 @@ function path.dirname( path )
 	return r
 end
 
+function path.getabsolute( fn )
+	if string.sub(fn,1,1) == '/' then
+		return fn
+	end
+	local fs = require 'llae.fs'
+	return path.join(fs.pwd(),fn)
+end
+
 
 return path

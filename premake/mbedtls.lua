@@ -32,7 +32,7 @@ function _M.lib( root )
 
 	utils.preprocess(
 		path.join(_M.root,'include','mbedtls','config.h'),
-		path.join('include','mbedtls','config.h'),
+		path.join(root,'build','include','mbedtls','config.h'),
 		{uncomment = uncomment, comment = comment })
 
 	-- for _,f in ipairs{'lua.h','luaconf.h','lauxlib.h','lualib.h'} do

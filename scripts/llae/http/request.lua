@@ -51,7 +51,17 @@ function response:get_message(  )
 end
 
 function response:get_header( name )
-	return self._headers[name]
+	local h = self._headers[name]
+	if h then
+		return h
+	end
+	local n = string.lower(name)
+	for hn,hv in pairs(self._headers) do
+		if string.lower(hn) == n then
+			return hv
+		end
+	end
+	return nil
 end
 
 function response:read(  )
@@ -168,7 +178,7 @@ end
 function request:exec(  )
 	self._connection = uv.tcp_connection:new()
 	local err = nil
-	--print('resolve',self._url.host)
+	print('resolve',self._url.host)
 	self._ip_list,err = uv.getaddrinfo(self._url.host)
 	if not self._ip_list then
 		return nil,err
@@ -234,10 +244,10 @@ function request:exec(  )
 	while true do
 		local resp,err = p:load(self._connection) 
 		if resp then
-			if resp:get_code() == 302 then
+			if resp:get_code() == 302 or resp:get_code() == 301 then
 				resp:close()
 				local redirect_url = resp:get_header('Location')
-				--print('redirect to',redirect_url)
+				print('redirect to',redirect_url)
 				self._url = url.parse(redirect_url)
 				return self:exec()
 			end

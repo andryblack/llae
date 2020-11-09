@@ -123,14 +123,19 @@ namespace ssl {
 			m_cont.set(l);
 
             //std::cout << "begin handshake" << std::endl;
-			add_ref();
+            begin_op("HANDSHAKE");
 			if (!do_handshake()) {
 				m_cont.reset(l);
 				l.pushnil();
 				push_error(l);
-				remove_ref();
+                end_op("HANDSHAKE");
 				return {2};
-			}
+            } else if (m_state == S_CONNECTED) {
+                m_cont.reset(l);
+                end_op("HANDSHAKE");
+                l.pushboolean(true);
+                return {1};
+            }
 		}
 		l.yield(0);
 		return {0};
@@ -188,6 +193,23 @@ namespace ssl {
         return true;
     }
 
+    bool connection::do_close() {
+        m_state = S_CLOSE;
+        int ret = mbedtls_ssl_close_notify(&m_ssl);
+        if (ret == 0) {
+            m_state = S_CLOSED;
+            m_stream->stop_read();
+            m_stream->close();
+        }
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+            m_ssl_error = ret;
+            m_stream->stop_read();
+            //std::cout << "mbedtls_ssl_close_notify failed: " << ret << std::endl;
+            return false;
+        }
+        return true;
+    }
+
     bool connection::do_read(lua::state& l) {
         //std::cout << "do_read " << std::endl;
         
@@ -204,6 +226,13 @@ namespace ssl {
             }
             l.pushnil();
             return true;
+        } else if( r == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
+            m_state = S_CLOSED;
+            m_stream->stop_read();
+            m_stream->close();
+            l.pushnil();
+            l.pushnil();
+            return true;
         } else if (r != MBEDTLS_ERR_SSL_WANT_READ && r!= MBEDTLS_ERR_SSL_WANT_WRITE) {
             m_stream->stop_read();
             m_ssl_error = r;
@@ -216,7 +245,7 @@ namespace ssl {
         return false;
     }
 
-	void connection::finish_status() {
+	void connection::finish_status(const char* state) {
         //std::cout << "finish_status " << m_uv_error << " / " << m_ssl_error << std::endl;
 		auto& l = llae::app::get(m_stream->get_stream()->loop).lua();
         if (m_cont.valid()) {
@@ -232,25 +261,28 @@ namespace ssl {
 				toth.pushboolean(true);
 				args = 1;
 			}
+            common::intrusive_ptr<connection> lock(std::move(m_active_op_lock));
+            lock->end_op(state);
 			auto s = toth.resume(l,args);
-			if (s != lua::status::ok && s != lua::status::yield) {
+            if (s != lua::status::ok && s != lua::status::yield) {
 				llae::app::show_error(toth,s);
                 m_stream->stop_read();
 			}
 			l.pop(1);// thread
         } else {
             //std::cout << "finish_status without cont" << std::endl;
+            end_op(state);
         }
-		remove_ref();
+        
 	}
 
 	void connection::do_continue() {
 		if (m_state == S_HANDSHAKE) {
             //std::cout << "do_continue S_HANDSHAKE" << std::endl;
 			if (m_uv_error || m_ssl_error || !do_handshake()) {
-				finish_status();
+				finish_status("HANDSHAKE");
 			} else if (m_state == S_CONNECTED) {
-				finish_status();
+				finish_status("HANDSHAKE");
 			} else {
 				// continue handshake
 				return;
@@ -258,9 +290,9 @@ namespace ssl {
 		} else if (m_state == S_WRITE) {
             //std::cout << "do_continue S_WRITE" << std::endl;
             if (m_uv_error || m_ssl_error || !do_write()) {
-                finish_status();
+                finish_status("WRITE");
             } else if (m_state == S_CONNECTED) {
-                finish_status();
+                finish_status("WRITE");
             } else {
                 // continue write
                 return;
@@ -268,23 +300,34 @@ namespace ssl {
         } else if (m_state == S_READ) {
             //std::cout << "do_continue S_READ" << std::endl;
             if (m_uv_error || m_ssl_error) {
-                finish_status();
+                finish_status("READ");
             } else {
                 auto& l = llae::app::get(m_stream->get_stream()->loop).lua();
                 m_cont.push(l);
                 auto toth = l.tothread(-1);
                 if (do_read(toth)) {
                     m_cont.reset(l);
+                    common::intrusive_ptr<connection> lock(std::move(m_active_op_lock));
+                    lock->end_op("READ");
                     auto s = toth.resume(l,2);
                     if (s != lua::status::ok && s != lua::status::yield) {
                         llae::app::show_error(toth,s);
                         m_stream->stop_read();
                     }
                     l.pop(1);// thread
-                    remove_ref();
                 } else {
                     l.pop(1);// thread
                 }
+            }
+        } else if (m_state == S_CLOSE) {
+            //std::cout << "do_continue S_WRITE" << std::endl;
+            if (m_uv_error || m_ssl_error || !do_close()) {
+                finish_status("CLOSE");
+            } else if (m_state == S_CLOSED) {
+                finish_status("CLOSE");
+            } else {
+                // continue close
+                return;
             }
         }
 	}
@@ -407,12 +450,12 @@ namespace ssl {
             l.pushvalue(2);
             m_write_buffers.put(l);
             
-            add_ref();
+            begin_op("WRITE");
             if (!do_write()) {
                 m_cont.reset(l);
                 l.pushnil();
                 push_error(l);
-                remove_ref();
+                end_op("WRITE");
                 return {2};
             }
             if (m_state == S_CONNECTED) {
@@ -423,6 +466,21 @@ namespace ssl {
         }
         l.yield(0);
         return {0};
+    }
+
+    void connection::begin_op(const char* op) {
+        if (m_active_op) {
+            std::cerr << "begin op with active: " << op << "/" << m_active_op << std::endl;
+        }
+        m_active_op = op;
+        m_active_op_lock.reset(this);
+    }
+    void connection::end_op(const char* op) {
+        if (!m_active_op || strcmp(m_active_op, op)!=0) {
+            std::cerr << "finish status with different op: " << op << "/" << (m_active_op?m_active_op:"null") << std::endl;
+        }
+        m_active_op = nullptr;
+        m_active_op_lock.reset();
     }
 
     lua::multiret connection::read(lua::state& l) {
@@ -442,12 +500,16 @@ namespace ssl {
             return {2};
         }
         {
-            
+            if (m_state != S_CONNECTED) {
+                l.pushnil();
+                l.pushstring("connection::read invalid state");
+                return {2};
+            }
             
             if (do_read(l)) {
                 return {2};
             }
-            add_ref();
+            begin_op("READ");
             l.pushthread();
             m_cont.set(l);
         }
@@ -456,10 +518,48 @@ namespace ssl {
     }
 
     lua::multiret connection::close(lua::state& l) {
-        mbedtls_ssl_close_notify(&m_ssl);
-        m_stream->close();
-        l.pushboolean(true);
-        return {1};
+        if (is_error()) {
+            l.pushnil();
+            l.pushstring("connection::close is error");
+            return {2};
+        }
+        if (!l.isyieldable()) {
+            l.pushnil();
+            l.pushstring("connection::close is async");
+            return {2};
+        }
+        if (m_cont.valid()) {
+            l.pushnil();
+            l.pushstring("connection::close async not completed");
+            return {2};
+        }
+        {
+            if (m_state != S_CONNECTED) {
+                l.pushnil();
+                l.pushstring("connection::close invalid state");
+                return {2};
+            }
+            
+            l.pushthread();
+            m_cont.set(l);
+            
+            begin_op("CLOSE");
+            if (!do_close()) {
+                m_cont.reset(l);
+                l.pushnil();
+                push_error(l);
+                end_op("CLOSE");
+                return {2};
+            }
+            if (m_state == S_CLOSED) {
+                // all writed
+                l.pushboolean(true);
+                return {1};
+            }
+            
+        }
+        l.yield(0);
+        return {0};
     }
 
     lua::multiret connection::shutdown(lua::state& l) {

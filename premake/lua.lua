@@ -25,7 +25,7 @@ function _M.lib( root )
 	end
 	utils.preprocess(
 		path.join(_M.root,'src','luaconf.h'),
-		path.join('include','luaconf.h'),
+		path.join(root,'build','include','luaconf.h'),
 		{replace={
 			['LUA_API'] = '',
 			['LUAI_FUNC'] = ''

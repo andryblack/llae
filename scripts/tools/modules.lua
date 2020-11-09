@@ -21,7 +21,7 @@ end
 
 function m:download_git(url,config)
 	print('download_git',self.name,url)
-	local dst = path.join(self.location,'src')
+	local dst = path.join(self.location,config.dir or 'src')
 	fs.rmdir_r(dst)
 	local tag = config.tag or config.branch or 'master'
 	local cmd = 'git clone --depth 1 --branch ' .. tag .. ' --single-branch ' .. url .. ' ' .. dst
@@ -85,10 +85,35 @@ function m:install_files( files )
 	for to,from in pairs(files) do
 		local src = path.join(self.location,from)
 		local dst = path.join(self.root,to)
+		fs.mkdir(path.dirname(dst))
 		print('install',src,'->',dst)
+		fs.unlink(dst)
 		assert(fs.copyfile(src,dst))
 	end
 end
+
+
+function m:foreach_file( dir )
+	local src = path.join(self.location,dir)
+	local files,err = fs.scandir(src)
+	if not files then
+		error(err)
+	end
+	local idx = 0
+	return function(files)
+		while true do		
+			idx = idx + 1
+			local f = files[idx]
+			if not f then
+				return nil
+			end
+			if f.isfile then
+				return f.name
+			end
+		end
+	end, files
+end
+
 
 function m:preprocess( config )
 	local src_file = path.join(self.location,config.src)
@@ -128,7 +153,7 @@ function _M.create_env(  )
 	local super_env = {}
 	for n,v in pairs(m) do
 		super_env[n] = function(...)
-			v(env,...)
+			return v(env,...)
 		end
 	end
 	setmetatable( env, {__index=setmetatable(super_env,{__index=_G})} )
@@ -162,6 +187,7 @@ function _M.install( env , root )
 	env.root = root or env.root or utils.replace_env(fs.pwd())
 	os.setenv('LLAE_PROJECT_ROOT',env.root)
 	env.location = path.join(env.root,'build','modules', env.name)
+	fs.rmdir_r(env.location)
 	fs.mkdir(env.location)
 		
 	
@@ -171,11 +197,12 @@ end
 function _M.install_file( filename, root )
 	local env = _M.loadfile( filename )
 	_M.install(env)
-	local dst = path.join(root,'modules',env.name .. '.lua')
-	if dst ~= filename then
-		print('install',filename,'->',dst)
+	local dst = path.getabsolute(path.join(root,'modules',env.name .. '.lua'))
+	local src = path.getabsolute(filename)
+	if src ~= dst then
+		print('install',src,'->',dst)
 		fs.unlink(dst)
-		assert(fs.copyfile(filename,dst))
+		assert(fs.copyfile(src,dst))
 	end
 end
 

@@ -49,13 +49,16 @@ namespace ssl {
             S_WRITE,
             S_READ,
             S_UV_EOF,
+            S_CLOSE,
+            S_CLOSED,
 		} m_state = S_NONE;
 		void do_continue();
 		lua::ref m_cont;
 		bool do_handshake();
         bool do_write();
+        bool do_close();
         bool do_read(lua::state& l);
-		void finish_status();
+		void finish_status(const char* state_point);
 		void push_error(lua::state& l);
         enum {
             RS_NONE,
@@ -95,6 +98,10 @@ namespace ssl {
         virtual bool on_read(uv::stream* stream,ssize_t nread,
                              const uv::buffer_ptr&& buffer) override final;
         virtual void on_stream_closed(uv::stream* s) override final;
+        const char* m_active_op = nullptr;
+        void begin_op(const char* op);
+        void end_op(const char* op);
+        common::intrusive_ptr<connection> m_active_op_lock;
 	public:
 		explicit connection( const ctx_ptr& ctx, const uv::stream_ptr& stream );
 		~connection();
