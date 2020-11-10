@@ -37,9 +37,13 @@ function install:exec( args )
 
 		local modules = require 'modules'
 		for _,v in ipairs(embedded_modules) do
-			log.info('install module',v)
 			local m = modules.get(install_dir,v)
 			modules.install(m,install_dir)
+			if m.bootstrap then
+				m.bootstrap{
+					install_root = install_dir
+				}
+			end
 		end
 
 		log.info('done')

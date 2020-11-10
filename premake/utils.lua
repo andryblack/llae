@@ -39,12 +39,5 @@ function _M.install_header( src, dst_fn )
 	end
 end
 
-function _M.load_file(fn)
-	local fname = path.getabsolute(fn)
-	local f = assert(io.open(fname, "rb"))
-	local s = assert(f:read("*all"))
-	f:close()
-	return s
-end
 
 return _M

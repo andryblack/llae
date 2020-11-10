@@ -65,10 +65,11 @@ function m:shell( text )
 	local script = path.join(self.location,'temp.sh')
 	fs.unlink(script)
 	local f = io.open(script,'w')
+	local template = require 'llae.template'
 	f:write('#!/bin/sh\n')
 	f:write('LLAE_PROJECT_ROOT=' .. self.root .. '\n')
 	f:write('cd $(dirname $0)\n')
-	f:write(text)
+	f:write(template.compile(text,{env={escape=tostring}})(self))
 	f:close()
 	local cmd = '/bin/sh "' .. script .. '"' 
 	exec_cmd(cmd .. ' > ' .. path.join(self.location,'shell_script_log.txt'))
@@ -192,7 +193,7 @@ function _M.install( env , root )
 	os.setenv('LLAE_PROJECT_ROOT',env.root)
 	env.location = path.join(env.root,'build','modules', env.name)
 	fs.rmdir_r(env.location)
-	fs.mkdir(env.location)
+	fs.mkdir_r(env.location)
 		
 	
 	env.install()

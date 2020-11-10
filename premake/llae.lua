@@ -1,9 +1,8 @@
 
 local _M = {}
 
-_M.root = './'
+_M.root = _MAIN_SCRIPT_DIR
 
-local utils = require 'utils'
 
 local components = { 'common','lua','meta','uv','json','llae','ssl' }
 
@@ -146,7 +145,7 @@ function _M.embed( patterns , files_content )
 			buffered.writeln(result, "/* " .. dst_name .. " */")
 			local id_name = dst_name:gsub('[%.%/%-]','_')
 			buffered.writeln(result, "static const unsigned char " .. id_name .. '[] = {')
-			local conent = utils.load_file(f)
+			local conent = io.readfile(f)
 			output_script(result,conent)
 			buffered.writeln(result,'};')
 			table.insert(embedded_files,{

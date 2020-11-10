@@ -13,6 +13,11 @@ function fs.isfile( fn )
 	return st and st.isfile
 end
 
+function fs.isdir( fn )
+	local st = fs.stat(fn)
+	return st and st.isdir
+end
+
 function fs.rmdir_r(dir)
 	local files,err = fs.scandir(dir)
 	if not files then
@@ -33,6 +38,25 @@ function fs.rmdir_r(dir)
 		end
 	end
 	return uv.fs.rmdir(dir)
+end
+
+function fs.mkdir_r(dir)
+	local components = {}
+	while not fs.isdir(dir) do
+		local f = path.basename(dir)
+		if not f then
+			break
+		end
+		dir = path.dirname(dir)
+		table.insert(components,1,f)
+	end
+	for _,c in ipairs(components) do
+		dir = path.join(dir,c)
+		local r,e = fs.mkdir(dir)
+		if not r then
+			return r,e
+		end
+	end
 end
 
 local CHUNK_SIZE = 1024*4
