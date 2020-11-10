@@ -56,6 +56,7 @@ function Project:load_modules(  )
 end
 function Project:install_modules(  )
 	self:load_modules()
+	fs.mkdir(path.join('build'))
 	fs.mkdir(path.join('build','modules'))
 	fs.mkdir(path.join('build','premake'))
 	for _,m in ipairs(self._modules_list) do

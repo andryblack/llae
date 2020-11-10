@@ -20,9 +20,7 @@ function _M.lib( root )
 	project(_M.name)
 		kind 'StaticLib'
 		targetdir 'lib'
-		location 'project'
-		
-		sysincludedirs {'include'}
+		location 'build/project'
 		
 		local fls = {
 			path.join(_M.root,'src','yajl.c'),

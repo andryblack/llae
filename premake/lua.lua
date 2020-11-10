@@ -33,8 +33,8 @@ function _M.lib( root )
 	project(_M.name)
 		kind 'StaticLib'
 		targetdir 'lib'
-		location 'project'
-		
+		location 'build/project'
+
 		local fls = {}
 		for _,c in ipairs(components) do
 			table.insert(fls,path.join(_M.root,'src',c..'.c'))

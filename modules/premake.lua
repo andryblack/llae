@@ -2,6 +2,9 @@ name = 'premake'
 version = 'v5.0.0-alpha14'
 
 function install()
+end
+
+function bootstrap()
 	download_git('https://github.com/premake/premake-core.git',{tag=version})
 	shell [[
 

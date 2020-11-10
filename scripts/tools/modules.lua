@@ -3,11 +3,12 @@ local fs = require 'llae.fs'
 local utils = require 'llae.utils'
 local os = require 'llae.os'
 local http = require 'llae.http'
+local log = require 'llae.log'
 
 local m = {}
 
 local function exec_cmd(cmd)
-	print('CMD:',cmd)
+	log.info('CMD:',cmd)
 	
 	local res,status,code = os.execute(cmd)
 	if not res or status ~= 'exit' then
@@ -20,16 +21,16 @@ local function exec_cmd(cmd)
 end
 
 function m:download_git(url,config)
-	print('download_git',self.name,url)
+	log.info('download_git',self.name,url)
 	local dst = path.join(self.location,config.dir or 'src')
 	fs.rmdir_r(dst)
 	local tag = config.tag or config.branch or 'master'
 	local cmd = 'git clone --depth 1 --branch ' .. tag .. ' --single-branch ' .. url .. ' ' .. dst
-	exec_cmd(cmd .. ' > ' .. path.join(self.location,'download_git_log.txt'))
+	exec_cmd(cmd .. ' > ' .. path.join(self.location,'download_git_log.txt') .. ' 2>&1')
 end
 
 function m:download(url,file)
-	print('download',self.name,url)
+	log.info('download',self.name,url)
 	local dst = path.join(self.location,file)
 	fs.unlink(dst)
 
@@ -61,7 +62,6 @@ function m:download(url,file)
 end
 
 function m:shell( text )
-	print( 'shell' )
 	local script = path.join(self.location,'temp.sh')
 	fs.unlink(script)
 	local f = io.open(script,'w')
@@ -77,7 +77,7 @@ end
 function m:install_bin( fn )
 	local src = path.join(self.location,fn)
 	local dst = path.join(self.root,'bin',path.basename(fn))
-	print('install',src,'->',dst)
+	log.info('install',src,'->',dst)
 	assert(fs.copyfile(src,dst))
 end
 
@@ -86,7 +86,7 @@ function m:install_files( files )
 		local src = path.join(self.location,from)
 		local dst = path.join(self.root,to)
 		fs.mkdir(path.dirname(dst))
-		print('install',src,'->',dst)
+		log.info('install',src,'->',dst)
 		fs.unlink(dst)
 		assert(fs.copyfile(src,dst))
 	end
@@ -128,16 +128,13 @@ function m:preprocess( config )
 		local d,o = string.match(line,'^//#define%s+([A-Z_]+)(.*)$')
 		if d then
 			if uncomment[d] then
-				print('uncomment',d)
 				line = '#define ' .. d .. o
 			end
 		else
 			d,o = string.match(line,'^#%s*define%s+([A-Z_]+)(.*)$')
 			if d and comment[d] then
-				print('comment',d)
 				line = '//#define ' .. d .. o
 			elseif d and replace[d] then
-				print('replace',d)
 				line = '#define ' .. d .. ' ' .. replace[d]
 			end
 		end
@@ -181,9 +178,16 @@ function _M.loadfile( filename )
 	return env
 end
 
+function _M.load( data , name)
+	local env = _M.create_env()
+	assert(load(data,name,'bt',env))()
+	_M.check_module(env,'file:' .. filename)
+	return env
+end
+
 function _M.install( env , root )
 	
-	print('install module',env.name,env.version)
+	log.info('install module',env.name,env.version)
 	env.root = root or env.root or utils.replace_env(fs.pwd())
 	os.setenv('LLAE_PROJECT_ROOT',env.root)
 	env.location = path.join(env.root,'build','modules', env.name)
@@ -200,7 +204,7 @@ function _M.install_file( filename, root )
 	local dst = path.getabsolute(path.join(root,'modules',env.name .. '.lua'))
 	local src = path.getabsolute(filename)
 	if src ~= dst then
-		print('install',src,'->',dst)
+		log.info('install',src,'->',dst)
 		fs.unlink(dst)
 		assert(fs.copyfile(src,dst))
 	end
@@ -208,12 +212,29 @@ end
 
 function _M.get( root, modname )
 	local fn = path.join(root,'modules',modname .. '.lua')
+	local mod
 	if fs.isfile(fn) then
-		local mod =  _M.loadfile(fn)
+		mod =  _M.loadfile(fn)
+		mod.source = fn
+	else
+		fn = path.join(path.dirname(fs.exepath()),'..','modules',modname .. '.lua')
+		if fs.isfile(fn) then
+			mod =  _M.loadfile(fn)
+			mod.source = fn
+		else
+			local emb = (require 'embedded_modules')[modname]
+			if emb then
+				mod =  _M.load(emb,'embedded:' .. modname)
+			end
+		end
+	end
+
+	if mod then
 		mod.root = root
 		mod.location = path.join(mod.root,'build','modules', mod.name)
 		return mod
 	end
+	log.error('not found module ' , modname)
 	error('not found module ' .. modname)
 end
 

@@ -52,7 +52,7 @@ solution '<%= project:name() %>'
 
 	project '<%= project:name() %>'
 		kind 'ConsoleApp'
-		targetdir 'bin'
+		targetdir '../bin'
 		location 'project'
 		targetname '<%= project:name() %>'
 
@@ -62,6 +62,6 @@ solution '<%= project:name() %>'
 		<% end %>
 		}
 
-		
+
 		
 

@@ -42,7 +42,7 @@ function _M.lib( root )
 	project(_M.name)
 		kind 'StaticLib'
 		targetdir 'lib'
-		location 'project'
+		location 'build/project'
 
 		includedirs{
 			path.join(root,'build','include')

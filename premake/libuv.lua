@@ -22,10 +22,10 @@ function _M.lib( root )
 	project(_M.name)
 		kind 'StaticLib'
 		targetdir 'lib'
-		location 'project'
+		location 'build/project'
 		
 		includedirs {
-			path.join('include'),
+			path.join(root,'build','include'),
 			path.join(_M.root,'src'),
 		}
 		files{
