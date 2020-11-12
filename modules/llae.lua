@@ -5,6 +5,7 @@ dir = 'llae-src'
 
 function install()
 	download_git('https://github.com/andryblack/llae.git',{branch=version,dir=dir})
+	install_scripts(dir .. '/scripts')
 end
 
 function bootstrap()
@@ -25,6 +26,8 @@ make -C <%= dir %>/build config=release
 	end
 	install_files(all_files)
 end
+
+includedir = dir .. '/src' 
 
 dependencies = {
 	'premake',

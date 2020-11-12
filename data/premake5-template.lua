@@ -56,6 +56,17 @@ solution '<%= project:name() %>'
 		location 'project'
 		targetname '<%= project:name() %>'
 
+		sysincludedirs {
+			'include'
+		}
+		includedirs {
+			<% for _,mod in project:foreach_module() do if mod.includedir then %>
+				'modules/<%=mod.name%>/<%= mod.includedir %>'<% end end %>
+		}
+		files {
+			'src/**.cpp',
+		}
+
 		links {
 		<% for _,mod in project:foreach_module() do %>
 			<% if mod.build_lib then %>"module-<%= mod.name %>",<%end%>

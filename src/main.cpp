@@ -63,7 +63,7 @@ int main(int argc,char** argv) {
 		lua::attach_embedded_scripts(L);
 		L.pushcfunction(&err_handler);
 		L.getglobal("require");
-		L.pushstring("main");
+		L.pushstring("_main");
 		auto err = L.pcall(1,1,-3);
 		if (err != lua::status::ok) {
 			app.show_error(L,err);

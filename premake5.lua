@@ -50,7 +50,7 @@ if _ACTION ~= 'download' then
 			llae.embed({
 					{ 'scripts/llae/**.lua', 'scripts' },
 					{ 'scripts/net/*.lua', 'scripts' },
-					{ 'scripts/tools/*.lua', 'scripts/tools' },
+					{ 'tools/*.lua', 'tools' },
 				},{
 					['embedded_modules.lua'] = table.concat(embedded_modules,'\n')
 				})

@@ -23,7 +23,7 @@ function cmd:exec( args )
 			if not prj then
 				error('failed loading project file ' .. err)
 			end
-			prj:write_premake()
+			prj:write_generated()
 		end)
 	else
 

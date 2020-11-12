@@ -7,9 +7,9 @@ local commands = require 'commands'
 return function( args )
 
 	local cmdargs = utils.parse_args(args)
-	local scripts = cmdargs.scripts
-	if scripts then
-		print('use scripts at',scripts)
+	local root = cmdargs.root
+	if root then
+		print('use scripts at',root)
 		table.remove(package.searchers,1)
 		local store_packages = {
 			'json','llae','uv','ssl'
@@ -22,7 +22,7 @@ return function( args )
 		for k,v in pairs(store) do
 			package.loaded[k]=v
 		end
-		package.path = scripts .. '/?.lua;' .. scripts .. '/tools/?.lua'
+		package.path = root .. '/scripts/?.lua;' .. root .. '/tools/?.lua'
 		commands = require 'commands'
 		
 	end

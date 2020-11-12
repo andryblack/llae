@@ -3,6 +3,7 @@ local modules = require 'modules'
 local fs = require 'llae.fs'
 local template = require 'llae.template'
 local path = require 'llae.path'
+local log = require 'llae.log'
 
 local Project = class(nil,'Project')
 
@@ -36,6 +37,7 @@ function Project:add_module( name )
 	end
 	local m = modules.get(self._root,name)
 	self._modules[name] = m
+	m._project = self
 	if m.dependencies then
 		for _,v in ipairs(m.dependencies) do
 			self:add_module(v)
@@ -56,6 +58,7 @@ function Project:load_modules(  )
 end
 function Project:install_modules(  )
 	self:load_modules()
+	self._scripts = {}
 	fs.mkdir(path.join('build'))
 	fs.mkdir(path.join('build','modules'))
 	fs.mkdir(path.join('build','premake'))
@@ -64,12 +67,24 @@ function Project:install_modules(  )
 	end
 end
 
+function Project:check_script( file , m )
+	if self._scripts[file] then
+		log.error('reqrite script',file,'from module',m.name)
+		log.error('already installed by module',self._scripts[file].name)
+		error('script rewrite: ' .. file)
+	end
+	self._scripts[file] = m
+end
+
 function Project:foreach_module( )
 	return ipairs(self._modules_list)
 end
 
-function Project:write_premake( )
-	self:load_modules()
+function Project:get_module( name )
+	return self._modules[name]
+end
+
+function Project:write_premake(  )
 	local template_source_filename = path.join(path.dirname(fs.exepath()),'..','data','premake5-template.lua')
 	local filename = path.join(self._root,'build','premake5.lua')
 	fs.unlink(filename)
@@ -81,6 +96,38 @@ function Project:write_premake( )
 		path = path
 	}))
 	f:close()
+end
+
+function Project:write_embedded( )
+	local template_source_filename = path.join(path.dirname(fs.exepath()),'..','data','embedded-template.cpp')
+	local filename = path.join(self._root,'build','src','embedded.cpp')
+	fs.mkdir_r(path.dirname(filename))
+	fs.unlink(filename)
+	local f = fs.open(filename,fs.O_WRONLY|fs.O_CREAT)
+	f:write(template.render_file(template_source_filename,{
+		escape = tostring,
+		project=self,
+		template = template,
+		path = path,
+		scripts = {
+			{
+				name = '_main',
+				content = template.render_file(path.join(path.dirname(fs.exepath()),'..','data','main-template.lua'),{
+
+				})
+			}, {
+				name = 'llae.utils',
+				content = fs.load_file(path.join(path.dirname(fs.exepath()),'..','scripts','llae/utils.lua'))
+			}
+		}
+	}))
+	f:close()
+end
+
+function Project:write_generated( )
+	self:load_modules()
+	self:write_premake()
+	self:write_embedded()
 end
 
 local function create_env( )

@@ -79,7 +79,7 @@ end
 function m:install_bin( fn )
 	local src = path.join(self.location,fn)
 	local dst = path.join(self.root,'bin',path.basename(fn))
-	log.info('install',src,'->',dst)
+	log.debug('install',src,'->',dst)
 	assert(fs.copyfile(src,dst))
 end
 
@@ -88,7 +88,24 @@ function m:install_files( files )
 		local src = path.join(self.location,from)
 		local dst = path.join(self.root,to)
 		fs.mkdir(path.dirname(dst))
-		log.info('install',src,'->',dst)
+		log.debug('install',src,'->',dst)
+		fs.unlink(dst)
+		assert(fs.copyfile(src,dst))
+	end
+end
+
+function m:install_scripts( dir )
+	local src = path.join(self.location,dir)
+	local files,err = fs.scanfiles_r(src)
+	if not files then
+		error(err)
+	end
+	for _,f in ipairs(files) do
+		self._project:check_script(f,self)
+		local src = path.join(self.location,dir,f)
+		local dst = path.join(self.root,'build','scripts',f)
+		fs.mkdir_r(path.dirname(dst))
+		log.debug('install',src,'->',dst)
 		fs.unlink(dst)
 		assert(fs.copyfile(src,dst))
 	end

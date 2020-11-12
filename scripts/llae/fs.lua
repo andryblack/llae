@@ -40,6 +40,30 @@ function fs.rmdir_r(dir)
 	return uv.fs.rmdir(dir)
 end
 
+local scanfiles_r
+scanfiles_r = function(res,dir,r)
+	local f,e = fs.scandir(dir)
+	if not f then
+		return f,e
+	end
+	for _,v in ipairs(f) do
+		if v.isfile then
+			table.insert(res,r..v.name)
+		elseif v.isdir then
+			local ff,ee = scanfiles_r(res,dir .. '/' .. v.name, r..v.name .. '/')
+			if not ff then
+				return f,ee
+			end
+		end
+	end
+	return res
+end
+
+function fs.scanfiles_r( dir )
+	local res = {}
+	return scanfiles_r(res,dir,'')
+end
+
 function fs.mkdir_r(dir)
 	local components = {}
 	while not fs.isdir(dir) do
