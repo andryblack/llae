@@ -29,6 +29,7 @@ function install:exec( args )
 		fs.mkdir(path.join(install_dir,'bin'))
 		fs.mkdir(path.join(install_dir,'modules'))
 		fs.mkdir(path.join(install_dir,'scripts'))
+		fs.mkdir(path.join(install_dir,'data'))
 
 		local src = assert(uv.exepath())
 		local fn = path.basename(src)

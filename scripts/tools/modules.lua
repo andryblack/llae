@@ -68,6 +68,7 @@ function m:shell( text )
 	local template = require 'llae.template'
 	f:write('#!/bin/sh\n')
 	f:write('LLAE_PROJECT_ROOT=' .. self.root .. '\n')
+	f:write('PATH=$LLAE_PROJECT_ROOT/bin:$PATH' .. '\n')
 	f:write('cd $(dirname $0)\n')
 	f:write(template.compile(text,{env={escape=tostring}})(self))
 	f:close()

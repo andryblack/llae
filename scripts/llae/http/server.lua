@@ -171,7 +171,7 @@ local function check_flush_headers( self )
 	end
 end
 
-function response:flush(  )
+function response:_flush(  )
 	check_flush_headers(self)
 	--print('write data')
 	if self._data and next(self._data) then
@@ -194,8 +194,10 @@ function response:send_reply( code , msg)
 	end
 end
 
-function response:status( code )
+function response:status( code , status )
 	self._code = code
+	self._status = status
+	return self
 end
 
 function response:write( data )
@@ -218,11 +220,15 @@ function response:finish( data )
 		assert(self._data,'already finished')
 		table.insert(self._data,data)
 	end
-	self:flush()
+	self:_flush()
 	if not self._keep_alive then
 		--print('shutdown')
 		self._client:shutdown()
 	end
+end
+
+function response:is_finished(  )
+	return not self._data
 end
 
 function response:get_connection(  )
@@ -280,7 +286,7 @@ function response:send_static_file( path )
 			self:set_header('Content-Length',stat.size)
 			self:set_header('Last-Modified',os.date('%a, %d %b %Y %H:%M:%S GMT',stat.mtim.sec))
 			self:set_header('Cache-Control','public,max-age=0')
-			self:flush()
+			self:_flush()
 			self._client:send(f)
 			self:finish()
 		end

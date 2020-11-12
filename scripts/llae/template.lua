@@ -1,7 +1,7 @@
 local class = require 'llae.class'
 local fs = require 'llae.fs'
 
-local template = class(nil,template)
+local template = class(nil,'template')
 
 local html_escape = {
     ["&"] = "&amp;",
@@ -44,6 +44,7 @@ function template:parse( data )
 		'_ctx = ... or {}; local _res = {}; local _ti = table.insert;',
 		'local _p = function(ch) _ti(_res,ch) end;',
 		'local _escape = escape;',
+		'local _s = function(ch) _p(tostring(ch)) end;',
 		'local _e = function(ch) _p(_escape(ch)) end;',
 	}
 	local widx = #chunks + 1
@@ -75,6 +76,11 @@ function template:parse( data )
 				local val = ssub(data,s+3,e-1)
 			
 				chunks[widx] = '_e(' .. val .. ');'
+				widx = widx + 1
+			elseif m == '-' then
+				local val = ssub(data,s+3,e-1)
+			
+				chunks[widx] = '_s(' .. val .. ');'
 				widx = widx + 1
 			else
 				local val = ssub(data,s+2,e-1)
@@ -127,7 +133,7 @@ function _M.compile( str, options )
 end
 
 function _M.load( filename, options )
-	local t = template.new()
+	local t = template.new(options)
 	return t:load(filename)
 end
 

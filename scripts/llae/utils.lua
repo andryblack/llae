@@ -62,5 +62,19 @@ function utils.parse_args( args )
 	return res
 end
 
+function utils.merge( ... )
+	local r = {}
+	local t = table.pack(...)
+	for i=1,t.n do
+		local at = t[i]
+		if at then
+			for kt,kv in pairs(at) do
+				r[kt]=kv
+			end
+		end
+	end
+	return r
+end
+
 
 return utils

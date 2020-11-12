@@ -10,11 +10,20 @@ end
 function bootstrap()
 	shell [[
 
-<%= root %>/bin/premake5$LLAE_EXE --file=<%= dir %>/premake5.lua download
-<%= root %>/bin/premake5$LLAE_EXE --file=<%= dir %>/premake5.lua gmake
-make -C <%= dir %>/build
+premake5$LLAE_EXE --file=<%= dir %>/premake5.lua download
+premake5$LLAE_EXE --file=<%= dir %>/premake5.lua gmake
+make -C <%= dir %>/build config=release
 	
 	]]
+	install_bin(dir .. '/bin/llae')
+	local all_files = {}
+	for fn in foreach_file(dir .. '/data') do
+		all_files['data/' .. fn] = dir .. '/data/' .. fn
+	end
+	for fn in foreach_file(dir .. '/modules') do
+		all_files['modules/' .. fn] = dir .. '/modules/' .. fn
+	end
+	install_files(all_files)
 end
 
 dependencies = {
