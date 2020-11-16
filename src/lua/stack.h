@@ -26,8 +26,13 @@ namespace lua {
 
 	template <>
 	struct stack<int> {
-		int get(state& s,int idx) { return s.tointeger(idx); }
-		void push(state& s,int v) { s.pushinteger(v); }
+		static int get(state& s,int idx) { return s.tointeger(idx); }
+		static void push(state& s,int v) { s.pushinteger(v); }
+	};
+	template <>
+	struct stack<long> {
+		static long get(state& s,int idx) { return s.tointeger(idx); }
+		static void push(state& s,long v) { s.pushinteger(v); }
 	};
 	template <>
 	struct stack<const char*> {

@@ -8,10 +8,34 @@ namespace lua {
 
 	namespace bind {
 
+		template <std::size_t... Is>
+	    struct indices {};
+	 
+	    template <std::size_t N, std::size_t... Is>
+	    struct build_indices
+	      : build_indices<N-1, N-1, Is...> {};
+	 
+	    template <std::size_t... Is>
+	    struct build_indices<0, Is...> : indices<Is...> {};
 
-
-		template <typename Res,typename T,typename ... Args>
-		struct helper;
+		template <typename R,typename T,typename ... Args>
+		struct helper {
+			typedef R (T::*func_t)(Args ... args);
+			template <size_t... Is>
+			static R apply(state&l,T* obj,func_t func,const indices<Is...>) {
+				return (obj->*func)(stack<Args>::get(l,2+Is)...);
+			}
+			static int function(lua_State* L) {
+				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				auto obj = stack<T*>::get(l,1);
+				if (!obj) {
+					l.argerror(1,T::get_class_info()->name);
+				}
+				stack<R>::push(l,apply(l,obj,*f,build_indices<sizeof...(Args)>()));
+				return 1;
+			}
+		};
 
 
 		template <>
@@ -25,15 +49,6 @@ namespace lua {
 			}
 		};
 
-		template <std::size_t... Is>
-	    struct indices {};
-	 
-	    template <std::size_t N, std::size_t... Is>
-	    struct build_indices
-	      : build_indices<N-1, N-1, Is...> {};
-	 
-	    template <std::size_t... Is>
-	    struct build_indices<0, Is...> : indices<Is...> {};
 
 		template <typename ... Args>
 		struct helper<void,void,Args...> {
@@ -102,6 +117,25 @@ namespace lua {
 			}
 		};
 
+		template <class R,class T,typename ... Args>
+		struct helper<R,T,state&,Args...> {
+			typedef R (T::*func_t)(state&,Args ... args);
+			template <size_t... Is>
+			static R apply(state&l,T* obj,func_t func,const indices<Is...>) {
+				return (obj->*func)(l,stack<Args>::get(l,2+Is)...);
+			}
+			static int function(lua_State* L) {
+				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				auto obj = stack<T*>::get(l,1);
+				if (!obj) {
+					l.argerror(1,T::get_class_info()->name);
+				}
+				stack<R>::push(l,apply(l,obj,*f,build_indices<sizeof...(Args)>()));
+				return 1;
+			}
+		};
+
 		template <typename ... Args>
 		struct helper<multiret,void,state&,Args...> {
 			typedef multiret (*func_t)(state&,Args ... args);
@@ -114,6 +148,21 @@ namespace lua {
 				state l(L);
 				auto r = apply(l,*f,build_indices<sizeof...(Args)>());
 				return r.val;
+			}
+		};
+
+		template <class R,typename ... Args>
+		struct helper<R,void,state&,Args...> {
+			typedef R (*func_t)(state&,Args ... args);
+			template <size_t... Is>
+			static R apply(state&l,func_t func,const indices<Is...>) {
+				return (*func)(l,stack<Args>::get(l,1+Is)...);
+			}
+			static int function(lua_State* L) {
+				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				stack<R>::push(l,apply(l,*f,build_indices<sizeof...(Args)>()));
+				return 1;
 			}
 		};
 		

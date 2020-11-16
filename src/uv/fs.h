@@ -46,6 +46,7 @@ namespace uv {
 		static int rmdir(lua_State* L);
 		static int unlink(lua_State* L);
 		static int copyfile(lua_State* L);
+		static int rename(lua_State* L);
 		static int stat(lua_State* L);
 		static int scandir(lua_State* L);
 		static int open(lua_State* L);

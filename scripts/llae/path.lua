@@ -36,6 +36,11 @@ function path.dirname( path )
 	return r
 end
 
+function path.extension( path )
+	local i = findlast(path,".",true)
+	return i and string.sub(path,i+1)
+end
+
 function path.getabsolute( fn )
 	if string.sub(fn,1,1) == '/' then
 		return fn

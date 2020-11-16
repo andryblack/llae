@@ -1,12 +1,23 @@
 local uv = require 'uv'
 local fs = require 'llae.fs'
-
+local path = require 'llae.path'
 -- server
 
 local http_parser = require 'llae.http.parser'
 local class = require 'llae.class'
 
 local request = class(nil,'http.server.request')
+
+local default_content_type = {
+	['css'] = 'text/css',
+	['html'] = 'text/html',
+	['js'] = 'text/javascript',
+	['png'] = 'image/png',
+	['svg'] = 'image/svg+xml',
+	['jpeg'] = 'image/jpeg',
+	['jpg'] = 'image/jpeg',
+	['wasm'] ='application/wasm',
+}
 
 
 function request:_init( method, path, headers , version, length)
@@ -182,6 +193,9 @@ end
 
 function response:set_header( header, value )
 	assert(self._headers,'header already sended')
+	if not value then
+		return
+	end
 	table.insert(self._headers,{header,value})
 	self._headers_map[header] = value
 end
@@ -249,10 +263,10 @@ local function send_404(resp,path,e)
 	resp:finish()
 end
 
-function response:send_static_file( path )
-	local stat,e = fs.stat(path)
+function response:send_static_file( fpath , conf )
+	local stat,e = fs.stat(fpath)
 	if not stat then
-		send_404(self,path,e)
+		send_404(self,fpath,e)
 	else
 		local req = self._req
 		--print('access file ',path,stat.mtim.sec)
@@ -277,15 +291,16 @@ function response:send_static_file( path )
 				end
 			end
 		end
-		local f,e = fs.open(path)
+		local f,e = fs.open(fpath)
 		if not f then
-			print('faled open',path,e)
-			send_404(self,path,e)
+			log.error('faled open',fpath,e)
+			send_404(self,fpath,e)
 		else
 			--print('opened',path)
 			self:set_header('Content-Length',stat.size)
 			self:set_header('Last-Modified',os.date('%a, %d %b %Y %H:%M:%S GMT',stat.mtim.sec))
 			self:set_header('Cache-Control','public,max-age=0')
+			self:set_header('Content-Type',(conf and conf.type) or default_content_type[path.extension(fpath)])
 			self:_flush()
 			self._client:send(f)
 			self:finish()

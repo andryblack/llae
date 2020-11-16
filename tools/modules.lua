@@ -94,6 +94,17 @@ function m:install_files( files )
 	end
 end
 
+function m:move_files( files )
+	for to,from in pairs(files) do
+		local src = path.join(self.location,from)
+		local dst = path.join(self.root,to)
+		fs.mkdir(path.dirname(dst))
+		log.debug('install',src,'->',dst)
+		fs.unlink(dst)
+		assert(fs.rename(src,dst))
+	end
+end
+
 function m:install_scripts( dir )
 	local src = path.join(self.location,dir)
 	local files,err = fs.scanfiles_r(src)
@@ -142,6 +153,7 @@ function m:preprocess( config )
 	local uncomment = config.uncomment or {}
 	local comment = config.comment or {}
 	local replace = config.replace or {}
+	local replace_line = config.replace_line or {}
 	for line in io.lines(src_file) do 
 		--print('process line',line)
 		local d,o = string.match(line,'^//#define%s+([A-Z_]+)(.*)$')
@@ -157,9 +169,12 @@ function m:preprocess( config )
 				line = '#define ' .. d .. ' ' .. replace[d]
 			end
 		end
-		table.insert(data,line)
+		table.insert(data,replace_line[line] or line)
 	end
 	fs.write_file(dst_file,table.concat(data,'\n'))
+	if config.remove_src then
+		fs.unlink(src_file)
+	end
 end
 
 local _M = {}

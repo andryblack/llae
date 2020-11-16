@@ -21,7 +21,7 @@ end
 
 function views:get( view )
 	local t = self._cache[view]
-	if t then
+	if t and not self._options.nocache then
 		return t
 	end
 	local fn = path.join(self._root,view .. '.' .. self._ext)

@@ -291,6 +291,35 @@ namespace uv {
 		return 0;
 	}
 
+	int fs::rename(lua_State* L) {
+		lua::state l(L);
+		if (!l.isyieldable()) {
+			l.pushnil();
+			l.pushstring("rename is async");
+			return 2;
+		}
+		{
+			auto path = l.checkstring(1);
+			auto new_path = l.checkstring(2);
+			llae::app& app(llae::app::get(l));
+			lua::ref cont;
+			l.pushthread();
+			cont.set(l);
+			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+			req->add_ref();
+			int r = uv_fs_rename(app.loop().native(),
+				req->get(),path,new_path,&fs_req::fs_cb);
+			if (r < 0) {
+				req->remove_ref();
+				l.pushnil();
+				uv::push_error(l,r);
+				return 2;
+			} 
+		}
+		l.yield(0);
+		return 0;
+	}
+
 	int fs::stat(lua_State* L) {
 		lua::state l(L);
 		if (!l.isyieldable()) {
@@ -592,6 +621,7 @@ namespace uv {
 		lua::bind::function(l,"rmdir",&uv::fs::rmdir);
 		lua::bind::function(l,"unlink",&uv::fs::unlink);
 		lua::bind::function(l,"copyfile",&uv::fs::copyfile);
+		lua::bind::function(l,"rename",&uv::fs::rename);
 		lua::bind::function(l,"stat",&uv::fs::stat);
 		lua::bind::function(l,"scandir",&uv::fs::scandir);
 		lua::bind::function(l,"open",&uv::fs::open);

@@ -11,19 +11,24 @@ function install()
 	shell([[
 tar -xzf ]] .. archive .. [[ || exit 1
 	]])
-	install_files{
+	move_files{
 		['build/include/lua.h'] = 		dir..'/src/lua.h',
 		['build/include/lauxlib.h'] = 	dir..'/src/lauxlib.h',
 		['build/include/lualib.h'] = 	dir..'/src/lualib.h',
-		['build/include/luaconf.h'] = 	dir..'/src/luaconf.h',
 	}
-	-- preprocess{
-	-- 	src = 'lua-'..version .. '/src/luaconf.h',
-	-- 	dst = 'build/include/luaconf.h',
-	-- 	replace={
-	-- 		['LUA_API'] = '',
-	-- 		['LUAI_FUNC'] = ''
-	-- 	}}
+	preprocess{
+		src = dir .. '/src/luaconf.h',
+		dst = 'build/include/luaconf.h',
+		remove_src = true,
+		replace_line = {
+			['/* #define LUA_USE_C89 */'] = [[
+
+#if defined(LUA_EXTRA_CONF)
+#include LUA_EXTRA_CONF
+#endif
+			]]
+		}
+	}
 end
 
 

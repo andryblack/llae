@@ -30,8 +30,10 @@ namespace lua {
 		int gettop() { return lua_gettop(m_L); }
 		void* newuserdata(size_t size) { return lua_newuserdata(m_L,size); }
 		void createtable(int narr=0,int nset=0) { lua_createtable(m_L,narr,nset); }
+		void newtable() { lua_newtable(m_L); }
 		void pushboolean(bool v) { lua_pushboolean(m_L,v?1:0);}
 		void pushinteger(lua_Integer val) { lua_pushinteger(m_L,val); }
+		void pushnumber(lua_Number val) { lua_pushnumber(m_L,val); }
 		void pushstring(const char* str) { lua_pushstring(m_L,str); }
 		void pushlstring(const char* str,size_t len) { lua_pushlstring(m_L,str,len); }
 		template<class ... Types>
@@ -43,15 +45,19 @@ namespace lua {
 		void pushthread() { lua_pushthread(m_L); }
 		void rawseti(int tidx,int idx) { lua_rawseti(m_L,tidx,idx); }
 		void rawgeti(int tidx,int idx) { lua_rawgeti(m_L,tidx,idx); }
+		size_t len(int idx) { return luaL_len(m_L,idx); }
 		size_t rawlen(int idx) { return lua_rawlen(m_L,idx); }
 		void setfield(int index, const char *k) { lua_setfield(m_L,index,k); }
 		void seti(int index, lua_Integer n) { lua_seti(m_L,index,n); }
+		void geti(int index, lua_Integer n) { lua_geti(m_L,index,n); }
 		void setglobal(const char* name) { lua_setglobal(m_L,name); }
 		value_type getglobal(const char* name) { return static_cast<value_type>(lua_getglobal(m_L,name)); }
 		value_type getfield(int tidx,const char* name) { return static_cast<value_type>(lua_getfield(m_L,tidx,name)); }
 		void remove(int idx) { lua_remove(m_L,idx); }
 		bool toboolean(int idx) const { return lua_toboolean(m_L,idx); }
 		lua_Number tonumber(int idx) const { return lua_tonumber(m_L,idx); }
+		lua_Number optnumber(int idx,lua_Number def) const { return luaL_optnumber(m_L,idx,def); }
+		lua_Number checknumber(int idx) const { return luaL_checknumber(m_L,idx); }
 		lua_Integer tointeger(int idx) const { return lua_tointeger(m_L,idx); }
 		lua_Integer optinteger(int idx,lua_Integer d) const { return luaL_optinteger(m_L,idx,d); }
 		lua_Integer checkinteger(int idx) const { return luaL_checkinteger(m_L,idx); }
