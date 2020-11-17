@@ -1,4 +1,7 @@
-local http_parser = {}
+local class = require 'llae.class'
+
+local http_parser = class(require 'llae.http.headers','llae.http.parser')
+
 
 http_parser.max_method_len = 1024
 http_parser.max_header_len = 1024

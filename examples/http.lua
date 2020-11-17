@@ -12,7 +12,9 @@ assert(http.createServer(function (req, res)
 <html>
 <body>
 Hello world! ]] ..os.time().. '\n'.. json.encode({
-	HOME = os.getenv('HOME')
+	HOME = os.getenv('HOME'),
+	PWD = os.getenv('PWD'),
+	HOSTNAME = os.getenv( 'HOSTNAME' ),
 	})..[[
 </body>
 </html>

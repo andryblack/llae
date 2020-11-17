@@ -13,7 +13,7 @@ namespace uv {
 
     
 
-	write_req::write_req(stream_ptr&& s,lua::ref&& cont) : m_stream(std::move(s)),m_cont(std::move(cont)) {
+	write_req::write_req(stream_ptr&& s) : m_stream(std::move(s)) {
 		attach(reinterpret_cast<uv_req_t*>(&m_write));
 	}
 	write_req::~write_req() {
@@ -25,8 +25,22 @@ namespace uv {
 		self->remove_ref();
 	}
 
-	void write_req::on_write(int status) {
-		auto& l = llae::app::get(m_write.handle->loop).lua();
+	int write_req::start_write(const uv_buf_t* buffers,size_t count) {
+		add_ref();
+		int r = uv_write(&m_write,m_stream->get_stream(),
+                         buffers,count,&write_req::write_cb);
+		if (r < 0) {
+			remove_ref();
+		}
+		return r;
+	}
+
+
+	write_lua_req::write_lua_req(stream_ptr&& s,lua::ref&& cont) : write_req(std::move(s)),m_cont(std::move(cont)) {
+	}
+
+	void write_lua_req::on_write(int status) {
+		auto& l = llae::app::get(get_loop()).lua();
         m_buffers.reset(l);
 		if (m_cont.valid()) {
 			m_cont.push(l);
@@ -49,26 +63,34 @@ namespace uv {
 		}
 	}
 
-	void write_req::put(lua::state& l) {
+	void write_lua_req::put(lua::state& l) {
         m_buffers.put(l);
 	}
 
-	int write_req::write() {
-		add_ref();
-		int r = uv_write(&m_write,m_stream->get_stream(),
-                         m_buffers.get_buffers().data(),
-                         m_buffers.get_buffers().size(),&write_req::write_cb);
-		if (r < 0) {
-			remove_ref();
-		}
-		return r;
+	int write_lua_req::write() {
+		return start_write(m_buffers.get_buffers().data(),m_buffers.get_buffers().size());
 	}
 
+	write_buffer_req::write_buffer_req(stream_ptr&& s,buffer_ptr&& b) : write_req(std::move(s)),m_buffer(std::move(b)) {
+	}
+	write_buffer_req::~write_buffer_req() {
+	}
+
+	void write_buffer_req::on_write(int status) {
+		m_buffer.reset();
+		if (status < 0) {
+			print_error(status);
+		}
+	}
+
+	int write_buffer_req::write() {
+		return start_write(m_buffer->get(),1);
+	}
 
 
 	
 
-	shutdown_req::shutdown_req(stream_ptr&& s,lua::ref&& cont) : m_stream(std::move(s)), m_cont(std::move(cont)) {
+	shutdown_req::shutdown_req(stream_ptr&& s) : m_stream(std::move(s)) {
 		attach(reinterpret_cast<uv_req_t*>(&m_shutdown));
 	}
 	shutdown_req::~shutdown_req() {
@@ -80,8 +102,22 @@ namespace uv {
 		self->remove_ref();
 	}
 
-	void shutdown_req::on_shutdown(int status) {
-		auto& l = llae::app::get(m_shutdown.handle->loop).lua();
+	
+
+	int shutdown_req::shutdown() {
+		add_ref();
+		int r = uv_shutdown(&m_shutdown,m_stream->get_stream(),&shutdown_req::shutdown_cb);
+		if (r < 0) {
+			remove_ref();
+		}
+		return r;
+	}
+
+	shutdown_lua_req::shutdown_lua_req(stream_ptr&& s,lua::ref&& cont) : shutdown_req(std::move(s)), m_cont(std::move(cont)) {
+	}
+
+	void shutdown_lua_req::on_shutdown(int status) {
+		auto& l = llae::app::get(get_loop()).lua();
 		if (m_cont.valid()) {
 			m_cont.push(l);
 			auto toth = l.tothread(-1);
@@ -101,15 +137,6 @@ namespace uv {
 			}
 			m_cont.reset(l);
 		}
-	}
-
-	int shutdown_req::shutdown() {
-		add_ref();
-		int r = uv_shutdown(&m_shutdown,m_stream->get_stream(),&shutdown_req::shutdown_cb);
-		if (r < 0) {
-			remove_ref();
-		}
-		return r;
 	}
 
 	stream::stream() {
@@ -260,7 +287,7 @@ namespace uv {
 			lua::ref write_cont;
 			write_cont.set(l);
 
-			common::intrusive_ptr<write_req> req{new write_req(stream_ptr(this),std::move(write_cont))};
+			common::intrusive_ptr<write_lua_req> req{new write_lua_req(stream_ptr(this),std::move(write_cont))};
 		
 			l.pushvalue(2);
 			req->put(l);
@@ -274,6 +301,16 @@ namespace uv {
 		}
 		l.yield(0);
 		return {0};
+	}
+
+	bool stream::write(buffer_ptr&& buf) {
+		common::intrusive_ptr<write_buffer_req> req{new write_buffer_req(stream_ptr(this),std::move(buf))};
+		int r = req->write();
+		if (r < 0) {
+			print_error(r);
+			return false;
+		} 
+		return true;
 	}
 
 	lua::multiret stream::send(lua::state& l) {
@@ -317,7 +354,7 @@ namespace uv {
 			lua::ref shutdown_cont;
 			shutdown_cont.set(l);
 		
-			common::intrusive_ptr<shutdown_req> req{new shutdown_req(stream_ptr(this),std::move(shutdown_cont))};
+			common::intrusive_ptr<shutdown_req> req{new shutdown_lua_req(stream_ptr(this),std::move(shutdown_cont))};
 		
 			int r = req->shutdown();
 			if (r < 0) {

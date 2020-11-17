@@ -19,8 +19,6 @@ namespace uv {
 		void stop();
 		bool is_alive() const;
 		uint64_t now() const;
-
-		static loop* self(uv_loop_t* l) { return static_cast<loop*>(l->data); }
 	};
 
 }

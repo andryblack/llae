@@ -1,12 +1,14 @@
 local uv = require 'uv'
 local fs = require 'llae.fs'
 local path = require 'llae.path'
+local log = require 'llae.log'
+local archive = require 'archive'
 -- server
 
 local http_parser = require 'llae.http.parser'
 local class = require 'llae.class'
 
-local request = class(nil,'http.server.request')
+local request = class(require 'llae.http.headers','http.server.request')
 
 local default_content_type = {
 	['css'] = 'text/css',
@@ -18,6 +20,22 @@ local default_content_type = {
 	['jpg'] = 'image/jpeg',
 	['wasm'] ='application/wasm',
 }
+
+local deflate_encoding = class(nil,'http.server.deflate_encoding')
+deflate_encoding.encoding = 'deflate'
+function deflate_encoding:_init(  )
+	self._stream = archive.new_deflate_read()
+end
+function deflate_encoding:write( ... )
+	return self._stream:write(...)
+end
+function deflate_encoding:read(  )
+	return self._stream:read()
+end
+function deflate_encoding:finish(  )
+	return self._stream:finish()
+end
+
 
 
 function request:_init( method, path, headers , version, length)
@@ -34,10 +52,6 @@ end
 
 function request:get_method( )
 	return self._method
-end
-
-function request:get_header( name )
-	return self._headers[name]
 end
 
 function request:on_closed(  )
@@ -102,7 +116,7 @@ function parser:load( client )
 			error('unexpected end')
 		end
 	end
-	local _length = tonumber(self._headers['Content-Length']) or 0
+	local _length = tonumber(self:get_header('Content-Length') or 0)
 	local req = request.new(self._method,self._path,self._headers,self._ver,_length)
 	if self._data and self._data ~= '' then
 		req._body = self._data
@@ -145,11 +159,40 @@ function response:_init( client , req)
 	self._headers_map = {}
 	self._req = req
 	self._data = {}
+	self._allow_compress = true
 end
 
-local function check_flush_headers( self )
+function response:check_flush_headers( )
 	if self._headers then
 		if not self._dnt_process_headers then
+
+			local accept = self._req:get_header('Accept-Encoding')
+			if self._allow_compress and accept and string.find(accept,'deflate') then
+				self._compress = deflate_encoding.new()
+			end
+
+			if self._compress and not self._headers_map['Content-Encoding'] then
+				self:set_header('Content-Encoding',self._compress.encoding)
+				for _,v in ipairs(self._data) do
+					self._compress:write(v)
+				end
+				self._compress:finish()
+				self._data = {}
+				while true do
+					local ch,er = self._compress:read()
+					if er then
+						error( er )
+					end
+					if ch then
+						table.insert(self._data,ch)
+					else
+						break
+					end
+				end
+			else
+				self._compress = nil
+			end
+
 			--print('write headers')
 			if not self._headers_map['Content-Length'] then
 				local size = 0
@@ -168,22 +211,27 @@ local function check_flush_headers( self )
 				self:set_header('Connection', 'keep-alive')
 				self._keep_alive = true
 			end
+			
+
 		end
 		local r = {
 			'HTTP/' .. (self._version or self._req._version or '1.0') ..
 				' ' .. (self._code or 200) .. ' ' .. (self._status or 'OK')
 		}
 		for _,v in ipairs(self._headers) do
-			table.insert(r,v[1]..': ' .. v[2])
+			if v[2] then
+				table.insert(r,v[1]..': ' .. v[2])
+			end
 		end
-		table.insert(self._data,1,table.concat(r,'\r\n'))
-		table.insert(self._data,2,'\r\n\r\n')
+		
+		local headers_data = table.concat(r,'\r\n') .. '\r\n\r\n'
 		self._headers = nil
+		table.insert(self._data,1,headers_data)
 	end
 end
 
 function response:_flush(  )
-	check_flush_headers(self)
+	self:check_flush_headers()
 	--print('write data')
 	if self._data and next(self._data) then
 		self._client:write(self._data)
@@ -198,6 +246,18 @@ function response:set_header( header, value )
 	end
 	table.insert(self._headers,{header,value})
 	self._headers_map[header] = value
+end
+
+function response:remove_header( header )
+	assert(self._headers,'header already sended')
+	if self._headers_map[header] then 
+		self._headers_map[header] = nil
+		for i,v in ipairs(self._headers) do
+			if v[1] == header then
+				v[2] = nil
+			end
+		end
+	end
 end
 
 function response:send_reply( code , msg)
@@ -229,7 +289,6 @@ function response:dnt_process_headers(  )
 	self._dnt_process_headers = true
 end
 function response:finish( data )
-	
 	if data then
 		assert(self._data,'already finished')
 		table.insert(self._data,data)
@@ -238,6 +297,10 @@ function response:finish( data )
 	if not self._keep_alive then
 		--print('shutdown')
 		self._client:shutdown()
+	else
+		if self._client.flush then
+			self._client:flush()
+		end
 	end
 end
 
@@ -297,6 +360,7 @@ function response:send_static_file( fpath , conf )
 			send_404(self,fpath,e)
 		else
 			--print('opened',path)
+			self._allow_compress = false
 			self:set_header('Content-Length',stat.size)
 			self:set_header('Last-Modified',os.date('%a, %d %b %Y %H:%M:%S GMT',stat.mtim.sec))
 			self:set_header('Cache-Control','public,max-age=0')

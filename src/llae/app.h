@@ -27,6 +27,7 @@ namespace llae {
 		static app& get(lua_State* L);
 		static app& get(uv_loop_t* l);
 		static app& get(lua::state& s) { return get(s.native()); }
+		static app& get(uv::loop& l) { return get(l.native()); }
 	};
 
 }

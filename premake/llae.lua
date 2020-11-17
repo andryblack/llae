@@ -4,13 +4,14 @@ local _M = {}
 _M.root = _MAIN_SCRIPT_DIR
 
 
-local components = { 'common','lua','meta','uv','json','llae','ssl' }
+local components = { 'common','lua','meta','uv','json','llae','ssl','archive' }
 
 local extlibs = {
 	require 'lua',
 	require 'yajl',
 	require 'libuv',
 	require 'mbedtls',
+	require 'zlib'
 }
 
 function _M.extract_zip( zip_file, extlibs_folder )

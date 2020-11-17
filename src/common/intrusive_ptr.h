@@ -32,11 +32,7 @@ namespace common {
             if (m_ptr) m_ptr->add_ref();
         }
         template <class U>
-        intrusive_ptr( intrusive_ptr<U>&& other) : m_ptr(other.get()) {
-            other.m_ptr = nullptr;
-        }
-        intrusive_ptr( intrusive_ptr&& other) : m_ptr(other.get()) {
-            other.m_ptr = nullptr;
+        intrusive_ptr( intrusive_ptr<U>&& other) : m_ptr(other.discard()) {
         }
         template <class U>
         intrusive_ptr& operator = (const intrusive_ptr<U>& other) {
@@ -59,17 +55,8 @@ namespace common {
         intrusive_ptr& operator = ( intrusive_ptr<U>&& other) {
             if (other.get()!=m_ptr) {
                 release();
-                m_ptr = other.get();
+                m_ptr = other.discard();
             }
-            other->m_ptr = nullptr;
-            return *this;
-        }
-        intrusive_ptr& operator = ( intrusive_ptr&& other) {
-            if (other.get()!=m_ptr) {
-                release();
-                m_ptr = other.get();
-            }
-            other->m_ptr = nullptr;
             return *this;
         }
 
@@ -90,7 +77,11 @@ namespace common {
         }
         T* operator -> () const { assert(m_ptr); return get(); }
         T & operator*() const { assert(m_ptr); return *get(); }
-        
+        T* discard() {
+            T* r = m_ptr;
+            m_ptr = nullptr;
+            return r;
+        }
     };
 }
 

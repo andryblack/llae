@@ -18,15 +18,37 @@ namespace uv {
 	private:
 		uv_write_t	m_write;
 		stream_ptr  m_stream;
+	protected:
+		uv_loop_t* get_loop() { return m_write.handle->loop; }
+		static void write_cb(uv_write_t* req, int status);
+		virtual void on_write(int status) = 0;
+		int start_write(const uv_buf_t* buffers,size_t count);
+	public:
+		write_req(stream_ptr&& stream);
+		~write_req();
+	};
+	using write_req_ptr = common::intrusive_ptr<write_req>;
+
+	class write_lua_req : public write_req {
+	private:
 		lua::ref m_cont;
         write_buffers m_buffers;
+    protected:
+    	virtual void on_write(int status) override;
+    public:
+    	write_lua_req(stream_ptr&& stream,lua::ref&& cont);
+    	void put(lua::state& s);
+		int write();
+	};
+
+	class write_buffer_req : public write_req {
+	private:
+		uv::buffer_ptr m_buffer;
 	protected:
-		static void write_cb(uv_write_t* req, int status);
-		void on_write(int status);
+		virtual void on_write(int status) override;
 	public:
-		write_req(stream_ptr&& stream,lua::ref&& cont);
-		~write_req();
-		void put(lua::state& s);
+		explicit write_buffer_req(stream_ptr&& stream,uv::buffer_ptr&& s);
+		~write_buffer_req();
 		int write();
 	};
 
@@ -34,14 +56,23 @@ namespace uv {
 	private:
 		uv_shutdown_t m_shutdown;
 		stream_ptr  m_stream;
-		lua::ref m_cont;
 	protected:
+		uv_loop_t* get_loop() { return m_shutdown.handle->loop; }
 		static void shutdown_cb(uv_shutdown_t* req, int status);
-		void on_shutdown(int status);
+		virtual void on_shutdown(int status) = 0;
 	public:
-		shutdown_req(stream_ptr&& stream,lua::ref&& cont);
+		shutdown_req(stream_ptr&& stream);
 		~shutdown_req();
 		int shutdown();
+	};
+
+	class shutdown_lua_req : public shutdown_req {
+	private:
+		lua::ref m_cont;
+	protected:
+		virtual void on_shutdown(int status) override;
+	public:
+		shutdown_lua_req(stream_ptr&& stream,lua::ref&& cont);
 	};
 
    
@@ -69,6 +100,7 @@ namespace uv {
 	public:
 		virtual uv_stream_t* get_stream() = 0;
 		static void lbind(lua::state& l);
+		bool write(buffer_ptr&& buf);
 		lua::multiret read(lua::state& l);
 		lua::multiret write(lua::state& l);
 		lua::multiret shutdown(lua::state& l);

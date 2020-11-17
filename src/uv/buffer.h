@@ -23,9 +23,11 @@ namespace uv {
         static buffer_ptr alloc(size_t size);
         size_t get_len() const { return m_buf.len; }
         void* get_base() { return m_buf.base; }
+        void set_len(size_t l){m_buf.len=l;}
         const void* get_base() const { return m_buf.base; }
         static buffer* get(uv_buf_t* b);
         static buffer* get(char* base);
+        uv_buf_t* get() { return &m_buf;}
     };
 
     class write_buffers {

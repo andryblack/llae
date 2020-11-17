@@ -32,7 +32,7 @@ function parser:parse_start( client )
 	end
 end
 
-local response = class(nil,'http.request.response')
+local response = class(require 'llae.http.headers','http.request.response')
 
 function response:_init( data )
 	self._headers = data.headers
@@ -50,19 +50,6 @@ function response:get_message(  )
 	return self._message
 end
 
-function response:get_header( name )
-	local h = self._headers[name]
-	if h then
-		return h
-	end
-	local n = string.lower(name)
-	for hn,hv in pairs(self._headers) do
-		if string.lower(hn) == n then
-			return hv
-		end
-	end
-	return nil
-end
 
 function response:read(  )
 	if self._length and self._length <= 0 then
@@ -105,8 +92,9 @@ function response:read_body(  )
 end
 
 function response:on_closed(  )
-	if not self._headers.Connection or
-		self._headers.Connection == 'close' then
+	local connection = self:get_header('Connection')
+	if not connection or
+		connection == 'close' then
 		self:close_connection()
 	end
 end
@@ -144,7 +132,7 @@ function parser:load( client )
 		message = self._message,
 		connection = client
 	}
-	resp._length = tonumber(self._headers['Content-Length']) 
+	resp._length = tonumber(self:get_header('Content-Length')) 
 	if self._data and self._data ~= '' then
 		resp._body = self._data
 		self._data = ''
@@ -201,12 +189,12 @@ function request:exec(  )
 	end
 
 	self._headers['Content-Length'] = #self._body
-	if not self._headers['Connection'] then
+	if not self:get_header('Connection') then
 		self._headers['Connection'] = 'close'
 	end
 
 	local headers = {}
-	if not self._headers['Host'] then
+	if not self:get_header('Host') then
 		table.insert(headers,'Host: ' .. self._url.host)
 	end
 	for k,v in pairs(self._headers) do
