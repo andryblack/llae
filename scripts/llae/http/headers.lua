@@ -2,8 +2,8 @@ local class = require 'llae.class'
 
 local headers = class(nil,'llae.http.headers')
 
-function headers:_init(  )
-	self._headers = {}
+function headers:_init( init )
+	self._headers = init or {}
 end
 
 function headers:get_header( name )
@@ -18,6 +18,17 @@ function headers:get_header( name )
 		end
 	end
 	return nil
+end
+
+function headers:set_header( name , value )
+	local n = string.lower(name)
+	for hn,hv in pairs(self._headers) do
+		if string.lower(hn) == n then
+			self._headers[hn] = value
+			return
+		end
+	end
+	self._headers[name] = value
 end
 
 return headers

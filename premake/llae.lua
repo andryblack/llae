@@ -53,6 +53,11 @@ function _M.solution(  )
 	configuration 'debug'
 		symbols 'On'
 	configuration {}	
+	filter{'system:macosx','gmake'}
+	buildoptions { "-mmacosx-version-min=10.14" }
+   	linkoptions  { "-mmacosx-version-min=10.14" }
+   	filter{}
+
 	sysincludedirs{
 		path.join(_M.root,'build','include')
 	}	
@@ -91,6 +96,10 @@ function _M.compile(  )
 end
 
 function _M.exe(  )
+	xcodebuildsettings{
+   		MACOSX_DEPLOYMENT_TARGET='10.14'
+   	}
+   
 	_M.compile()
 	files {
 		path.join(_M.root,'src','main.cpp'),

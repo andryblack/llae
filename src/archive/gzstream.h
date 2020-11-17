@@ -22,7 +22,9 @@ namespace archive {
 		lua::ref m_write_cont;
 		
 		class compress_work;
+		class compress_buffers;
 		class compress_finish;
+		class write_file_pipe;
 		using compress_work_ptr = common::intrusive_ptr<compress_work>;
 
 		void on_compress_complete(lua::state& l,int status,int z_err);
@@ -45,6 +47,7 @@ namespace archive {
 		bool is_error() const { return m_is_error; }
 		lua::multiret write(lua::state& l);
 		lua::multiret finish(lua::state& l);
+		lua::multiret send(lua::state& l);
 		
 		bool init_deflate(lua::state& l,int argbase);
 		static void lbind(lua::state& l);
@@ -55,11 +58,13 @@ namespace archive {
 		META_OBJECT
 	private:
 		lua::ref m_read_cont;
+		bool m_read_buffer = false;
 	protected:
 		virtual void continue_read(lua::state& l) override;
 	public:
 		zlibcompress_read();
 		lua::multiret read(lua::state& l);
+		lua::multiret read_buffer(lua::state& l);
 		static void lbind(lua::state& l);
 		static lua::multiret new_deflate(lua::state& l);
 	};

@@ -1,6 +1,8 @@
 #ifndef __LAE_COMMON_INTRUSIVE_PTR_H_INCLUDED__
 #define __LAE_COMMON_INTRUSIVE_PTR_H_INCLUDED__
 
+#include <cassert>
+
 namespace common {
 	template <class T>
     class intrusive_ptr {

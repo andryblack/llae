@@ -28,6 +28,7 @@ namespace uv {
         static buffer* get(uv_buf_t* b);
         static buffer* get(char* base);
         uv_buf_t* get() { return &m_buf;}
+        static void lbind(lua::state& l);
     };
 
     class write_buffers {
@@ -35,7 +36,7 @@ namespace uv {
         std::vector<uv_buf_t> m_bufs;
         std::vector<lua::ref> m_refs;
     public:
-        void put(lua::state& s);
+        bool put(lua::state& s);
         void reset(lua::state& l);
         const std::vector<uv_buf_t>& get_buffers() const { return m_bufs; }
         bool empty() const { return m_bufs.empty(); }

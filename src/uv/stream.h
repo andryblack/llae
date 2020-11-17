@@ -37,7 +37,9 @@ namespace uv {
     	virtual void on_write(int status) override;
     public:
     	write_lua_req(stream_ptr&& stream,lua::ref&& cont);
-    	void put(lua::state& s);
+    	bool put(lua::state& s);
+        bool empty() const { return m_buffers.empty(); }
+        void reset(lua::state& s);
 		int write();
 	};
 

@@ -21,12 +21,27 @@ namespace lua {
 		template <typename R,typename T,typename ... Args>
 		struct helper {
 			typedef R (T::*func_t)(Args ... args);
+			typedef R (T::*cfunc_t)(Args ... args) const;
 			template <size_t... Is>
 			static R apply(state&l,T* obj,func_t func,const indices<Is...>) {
 				return (obj->*func)(stack<Args>::get(l,2+Is)...);
 			}
+			template <size_t... Is>
+			static R apply(state&l,const T* obj,cfunc_t func,const indices<Is...>) {
+				return (obj->*func)(stack<Args>::get(l,2+Is)...);
+			}
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				auto obj = stack<T*>::get(l,1);
+				if (!obj) {
+					l.argerror(1,T::get_class_info()->name);
+				}
+				stack<R>::push(l,apply(l,obj,*f,build_indices<sizeof...(Args)>()));
+				return 1;
+			}
+			static int cfunction(lua_State* L) {
+				auto f = static_cast<cfunc_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
 				auto obj = stack<T*>::get(l,1);
 				if (!obj) {
@@ -187,6 +202,16 @@ namespace lua {
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
 			*func_data = func;
 			s.pushcclosure(hpr::function,1);
+			s.setfield(-2,name);
+		}
+
+		template <class R,class T,typename ... Args>
+		static void function(state& s,const char* name,R (T::*func)(Args ... args) const) {
+			typedef helper<R,T,Args...> hpr;
+			typedef typename hpr::cfunc_t func_t; 
+			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
+			*func_data = func;
+			s.pushcclosure(hpr::cfunction,1);
 			s.setfield(-2,name);
 		}
 

@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "lua/bind.h"
 #include <new>
 #include <cstddef>
 #include <cstdlib>
@@ -41,8 +42,11 @@ namespace uv {
         return static_cast<buffer*>(start);
     }
 
+    void buffer::lbind(lua::state& l) {
+        lua::bind::function(l,"get_len",&buffer::get_len);
+    }
 
-    void write_buffers::put(lua::state &l) {
+    bool write_buffers::put(lua::state &l) {
         auto t = l.get_type(-1);
         if (t == lua::value_type::table) {
             size_t tl = l.rawlen(-1);
@@ -50,12 +54,23 @@ namespace uv {
             m_refs.reserve(tl);
             for (size_t j=0;j<tl;++j) {
                 l.rawgeti(-1,j+1);
-                size_t size;
-                const char* val = l.tolstring(-1,size);
-                if (val && size !=0) {
+                auto buf = lua::stack<uv::buffer_ptr>::get(l, -1);
+                if (buf) {
                     m_refs.emplace_back();
                     m_refs.back().set(l);
-                    m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
+                    m_bufs.push_back(*buf->get());
+                } else {
+                    size_t size;
+                    
+                    const char* val = l.tolstring(-1,size);
+                    if (val && size !=0) {
+                        m_refs.emplace_back();
+                        m_refs.back().set(l);
+                        m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
+                    } else {
+                        l.pop(1);
+                        return false;
+                    }
                 }
             }
             l.pop(1);
@@ -66,8 +81,11 @@ namespace uv {
                 m_refs.emplace_back();
                 m_refs.back().set(l);
                 m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
+            } else {
+                return false;
             }
         }
+        return true;
     }
 
     void write_buffers::reset(lua::state &l) {

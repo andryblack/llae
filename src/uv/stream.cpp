@@ -63,8 +63,13 @@ namespace uv {
 		}
 	}
 
-	void write_lua_req::put(lua::state& l) {
-        m_buffers.put(l);
+    void write_lua_req::reset(lua::state& l) {
+        m_buffers.reset(l);
+        m_cont.reset(l);
+    }
+
+	bool write_lua_req::put(lua::state& l) {
+        return m_buffers.put(l);
 	}
 
 	int write_lua_req::write() {
@@ -290,7 +295,17 @@ namespace uv {
 			common::intrusive_ptr<write_lua_req> req{new write_lua_req(stream_ptr(this),std::move(write_cont))};
 		
 			l.pushvalue(2);
-			req->put(l);
+            if (!req->put(l)) {
+                req->reset(l);
+                l.pushnil();
+                l.pushstring("stream::write invalid data");
+                return {2};
+            }
+            if (req->empty()) {
+                req->reset(l);
+                l.pushboolean(true);
+                return {1};
+            }
 
 			int r = req->write();
 			if (r < 0) {
