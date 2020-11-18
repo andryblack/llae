@@ -123,7 +123,8 @@ function m:install_scripts( dir )
 	for _,f in ipairs(files) do
 		self._project:check_script(f,self)
 		local src = path.join(self.location,dir,f)
-		local dst = path.join(self.root,'build','scripts',f)
+		local dst = self.tosystem and path.join(self.root,'scripts',f) or 
+			path.join(self.root,'build','scripts',f)
 		fs.mkdir_r(path.dirname(dst))
 		log.debug('install',src,'->',dst)
 		fs.unlink(dst)
@@ -228,17 +229,17 @@ function _M.load( data , name)
 	return env
 end
 
-function _M.install( env , root )
+function _M.install( env , root , tosystem)
 	
 	log.info('install module',env.name,env.version)
 	env.root = root or env.root or utils.replace_env(fs.pwd())
 	os.setenv('LLAE_PROJECT_ROOT',env.root)
 	env.location = path.join(env.root,'build','modules', env.name)
+	env.tosystem = tosystem
 	fs.rmdir_r(env.location)
 	fs.mkdir_r(env.location)
 		
-	
-	env.install()
+	env.install(tosystem)
 end
 
 function _M.install_file( filename, root )

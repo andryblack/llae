@@ -37,9 +37,12 @@ function install:exec( args )
 		--assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
 
 		local modules = require 'modules'
+		local project = require 'project'
+		local p = project.new()
 		for _,v in ipairs(embedded_modules) do
 			local m = modules.get(install_dir,v)
-			modules.install(m,install_dir)
+			m._project = p
+			modules.install(m,install_dir,true)
 		end
 		for _,v in ipairs(embedded_modules) do
 			local m = modules.get(install_dir,v)

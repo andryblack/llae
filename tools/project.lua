@@ -26,6 +26,7 @@ end
 function Project:_init( env , root)
 	self._env = env
 	self._root = root
+	self._scripts = {}
 end
 
 function Project:name(  )
