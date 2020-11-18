@@ -140,8 +140,7 @@ function parser:load( client )
 	return resp
 end
 
-local request = class(nil,'http.request')
-
+local request = class(require 'llae.http.headers','http.request')
 
 function request.get_ssl_ctx() 
 	if not request._ssl_ctx then
@@ -153,11 +152,11 @@ end
 
 function request:_init( args )
 	assert(args.url,'need url')
+	request.baseclass._init(self,args.headers or {})
 	--print('new request to',args.url)
 	local comp = url.parse(args.url)
 	self._url = comp
 	self._method = args.method or 'GET'
-	self._headers = args.headers or {}
 	self._version = args.version or '1.0'
 	self._body = args.body or ''
 end
@@ -166,7 +165,7 @@ end
 function request:exec(  )
 	self._connection = uv.tcp_connection:new()
 	local err = nil
-	print('resolve',self._url.host)
+	--print('resolve',self._url.host)
 	self._ip_list,err = uv.getaddrinfo(self._url.host)
 	if not self._ip_list then
 		return nil,err
@@ -235,7 +234,7 @@ function request:exec(  )
 			if resp:get_code() == 302 or resp:get_code() == 301 then
 				resp:close()
 				local redirect_url = resp:get_header('Location')
-				print('redirect to',redirect_url)
+				--print('redirect to',redirect_url)
 				self._url = url.parse(redirect_url)
 				return self:exec()
 			end

@@ -35,6 +35,7 @@ dependencies = {
 	'libuv',
 	'yajl',
 	'mbedtls',
+	'zlib'
 }
 
 solution = [[

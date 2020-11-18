@@ -50,9 +50,14 @@ function utils.parse_args( args )
 		if not arg then
 			break
 		end
-		local k,v = string.match(arg,'^%-%-([^%s=]+)=(.+)$')
-		if k then 
-			res[k] = v
+		local opt = string.match(arg,'^%-%-(.+)$')
+		if opt then
+			local k,v = string.match(opt,'^([^%s=]+)=(.+)$')
+			if k then 
+				res[k] = v
+			else
+				res[opt] = true
+			end
 		else
 			res[oidx] = arg
 			oidx = oidx + 1

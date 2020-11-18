@@ -24,7 +24,10 @@ return function( args )
 		end
 		package.path = root .. '/scripts/?.lua;' .. root .. '/tools/?.lua'
 		commands = require 'commands'
-		
+	end
+	if cmdargs.verbose then
+		local log = require 'llae.log'
+		log.set_verbose(true)
 	end
 	local cmdname = cmdargs[1]
 	if not cmdname then

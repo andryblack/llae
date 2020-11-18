@@ -30,7 +30,7 @@ build_lib = {
 		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>
-				<%= format_file(module.dir,'src',f .. '.c') %>,<% end %>
+				<%= format_file(module.dir,f .. '.c') %>,<% end %>
 		}
 		filter {'system:macosx or linux'}
 			defines{'Z_HAVE_UNISTD_H'}

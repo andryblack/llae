@@ -34,6 +34,7 @@ function m:download(url,file)
 	local dst = path.join(self.location,file)
 	fs.unlink(dst)
 
+	
 	local req = http.createRequest{
 		method = 'GET',
 		url = url,
@@ -49,16 +50,24 @@ function m:download(url,file)
 		error(code .. ':' .. resp:get_message())
 	end
 	local f = assert(fs.open(dst,fs.O_WRONLY|fs.O_CREAT))
+	local loaded = 0
+	local total = tonumber(resp:get_header('Content-Length'))
+	--log.debug('total:',total)
+	local p = log.progress()
 	while true do
 		local ch,err = resp:read()
 		if not ch then
 			if err then
 				error(err)
 			end
+			p:close()
 			break
 		end
 		f:write(ch)
+		loaded = loaded + #ch
+		p:update(loaded,total)
 	end
+	f:close()
 end
 
 function m:shell( text )

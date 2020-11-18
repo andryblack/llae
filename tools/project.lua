@@ -87,6 +87,7 @@ end
 function Project:write_premake(  )
 	local template_source_filename = path.join(path.dirname(fs.exepath()),'..','data','premake5-template.lua')
 	local filename = path.join(self._root,'build','premake5.lua')
+	log.info('generate premake5.lua')
 	fs.unlink(filename)
 	local f = fs.open(filename,fs.O_WRONLY|fs.O_CREAT)
 	f:write(template.render_file(template_source_filename,{
@@ -101,6 +102,7 @@ end
 function Project:write_embedded( )
 	local template_source_filename = path.join(path.dirname(fs.exepath()),'..','data','embedded-template.cpp')
 	local filename = path.join(self._root,'build','src','embedded.cpp')
+	log.info('generate embedded.cpp')
 	fs.mkdir_r(path.dirname(filename))
 	fs.unlink(filename)
 	local f = fs.open(filename,fs.O_WRONLY|fs.O_CREAT)

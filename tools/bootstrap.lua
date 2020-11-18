@@ -34,12 +34,15 @@ function install:exec( args )
 		local src = assert(uv.exepath())
 		local fn = path.basename(src)
 
-		assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
+		--assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
 
 		local modules = require 'modules'
 		for _,v in ipairs(embedded_modules) do
 			local m = modules.get(install_dir,v)
 			modules.install(m,install_dir)
+		end
+		for _,v in ipairs(embedded_modules) do
+			local m = modules.get(install_dir,v)
 			if m.bootstrap then
 				m.bootstrap{
 					install_root = install_dir
