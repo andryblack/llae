@@ -44,6 +44,21 @@ namespace lua {
 		static const char* get(state& s,int idx) { return s.tostring(idx); }
 		static void push(state& s,const char* v) { s.pushstring(v); }
 	};
+	template <>
+	struct stack<float> {
+		static float get(state& s,int idx) { return s.tonumber(idx); }
+		static void push(state& s,float v) { s.pushnumber(v); }
+	};
+	template <>
+	struct stack<double> {
+		static double get(state& s,int idx) { return s.tonumber(idx); }
+		static void push(state& s,double v) { s.pushnumber(v); }
+	};
+	template <>
+	struct stack<bool> {
+		static bool get(state& s,int idx) { return s.toboolean(idx); }
+		static void push(state& s,bool v) { s.pushboolean(v); }
+	};
 	template <class T>
 	struct stack<common::intrusive_ptr<T> > {
 		static common::intrusive_ptr<T> get(state& s,int idx) { 
