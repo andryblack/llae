@@ -9,6 +9,7 @@
 #include "fs.h"
 #include "os.h"
 #include <iostream>
+#include <memory>
 
 namespace uv {
 	
