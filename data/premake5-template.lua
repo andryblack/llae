@@ -20,13 +20,13 @@ solution '<%= project:name() %>'
 	-- module <%= mod.name %> / <%= mod.location %>
 		<% local function make_path(components)
 				local t = {
-					"path.join('modules'",
-					"'" .. mod.name .. "'"
+					"modules",
+					mod.name
 				}
 				for _,v in ipairs(components) do
-					table.insert(t,"'" .. v .. "'")
+					table.insert(t, v )
 				end
-				return table.concat(t,',') .. ')'
+				return "'" .. table.concat(t,'/') .. "'"
 			end
 		%>
 		<% if mod.solution then %>
@@ -65,6 +65,9 @@ solution '<%= project:name() %>'
 		}
 		files {
 			'src/**.cpp',
+			<% for _,mod in project:foreach_module() do if mod.projectfiles then %>
+				<% for _,file in ipairs(mod.projectfiles) do %>
+				'modules/<%=mod.name%>/<%= file %>'<% end end end %>
 		}
 
 		links {

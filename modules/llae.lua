@@ -49,8 +49,8 @@ solution = [[
 build_lib = {
 	project = [[
 		files {
-			<%= format_file(module.dir,'src','**.h') %>,
-			<%= format_file(module.dir,'src','**.cpp') %>,
+			<%= format_file(module.dir,'src','*/**.h') %>,
+			<%= format_file(module.dir,'src','*/**.cpp') %>,
 		}
 		sysincludedirs {
 			'include',
@@ -59,4 +59,7 @@ build_lib = {
 			<%= format_file(module.dir,'src') %>
 		}
 	]]
+}
+projectfiles = {
+	dir .. '/src/main.cpp'
 }
