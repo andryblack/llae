@@ -62,3 +62,9 @@ build_lib = {
 		filter {}
 ]]
 }
+
+project_main = [[
+	filter "system:linux"
+		links{ 'dl' }
+	filter {}
+]]
