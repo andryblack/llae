@@ -3,6 +3,7 @@
 #include "lua/bind.h"
 #include <mbedtls/debug.h>
 #include <mbedtls/error.h>
+#include <iostream>
 
 META_OBJECT_INFO(ssl::ctx,meta::object)
 
@@ -42,6 +43,11 @@ namespace ssl {
 		return 0;
    	}
 
+   	void ctx::set_debug_threshold(int v) {
+   		std::cout << "set_debug_threshold: " << v << std::endl;
+   		mbedtls_debug_set_threshold(v);
+   	}
+
 	lua::multiret ctx::init(lua::state& l) {
 		const char* cafile = l.optstring(2,default_cafile);
 		int ret = mbedtls_ctr_drbg_seed( &m_ctr_drbg, mbedtls_entropy_func, &m_entropy,
@@ -74,6 +80,7 @@ namespace ssl {
 	void ctx::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&ctx::lnew);
 		lua::bind::function(l,"init",&ctx::init);
+		lua::bind::function(l,"set_debug_threshold",&ctx::set_debug_threshold);
 	}
 
 }

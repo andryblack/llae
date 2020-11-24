@@ -24,6 +24,7 @@ namespace ssl {
 		static void lbind(lua::state& l);
 		lua::multiret init(lua::state& l);
 		int configure(mbedtls_ssl_config* conf);
+		static void set_debug_threshold(int v);
 	};
 	typedef common::intrusive_ptr<ctx> ctx_ptr;
 

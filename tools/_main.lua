@@ -29,6 +29,10 @@ return function( args )
 		local log = require 'llae.log'
 		log.set_verbose(true)
 	end
+	if cmdargs.ssldebug then
+		local ssl = require 'ssl'
+		ssl.ctx.set_debug_threshold(tonumber(cmdargs.ssldebug))
+	end
 	local cmdname = cmdargs[1]
 	if not cmdname then
 		cmdname = 'help'

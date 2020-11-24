@@ -54,23 +54,43 @@ namespace lua {
 
 
 		template <>
-		struct helper<void,void> {
+		struct helper<void,void,state&> {
 			typedef void (*func_t)(state&);
 			static int function(lua_State* L) {
-				auto f = reinterpret_cast<func_t>(lua_touserdata(L,lua_upvalueindex(1)));
+				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				f(l);
+				(*f)(l);
 				return 0;
 			}
 		};
 
 
 		template <typename ... Args>
-		struct helper<void,void,Args...> {
+		struct helper<void,void,state&,Args...> {
 			typedef void (*func_t)(state&,Args ... args);
+			template <size_t... Is>
+			static void apply(state&l,func_t func,const indices<Is...>) {
+				func(l,stack<Args>::get(l,1+Is)...);
+			}
 			static int function(lua_State* L) {
-				auto f = static_cast<func_t>(lua_touserdata(L,lua_upvalueindex(1)));
-				f(state(L));
+				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				apply(l,*f,build_indices<sizeof...(Args)>());
+				return 0;
+			}
+		};
+
+		template <typename ... Args>
+		struct helper<void,void,Args...> {
+			typedef void (*func_t)(Args ... args);
+			template <size_t... Is>
+			static void apply(state&l,func_t func,const indices<Is...>) {
+				func(stack<Args>::get(l,1+Is)...);
+			}
+			static int function(lua_State* L) {
+				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				apply(l,*f,build_indices<sizeof...(Args)>());
 				return 0;
 			}
 		};
@@ -216,8 +236,8 @@ namespace lua {
 		}
 
 		template <class R,typename ... Args>
-		static void function(state& s,const char* name,R (*func)(state&l,Args ... args)) {
-			typedef helper<R,void,state&,Args...> hpr;
+		static void function(state& s,const char* name,R (*func)(Args ... args)) {
+			typedef helper<R,void,Args...> hpr;
 			typedef typename hpr::func_t func_t; 
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
 			*func_data = func;
