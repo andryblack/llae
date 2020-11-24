@@ -161,8 +161,7 @@ function response:set_version( ver )
 end
 function response:_finish( )
 	if not self._keep_alive then
-		--print('shutdown')
-		self._client:shutdown()
+		self._closed = true
 	else
 		if self._client.flush then
 			self._client:flush()

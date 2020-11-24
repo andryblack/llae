@@ -142,6 +142,7 @@ namespace ssl {
 	}
 
 	void connection::on_write_complete(int status) {
+        //std::cout << "on_write_complete: " << status << std::endl;
 		m_write_active = false;
 		if (status < 0 && m_uv_error == 0) {
             //std::cout << "on_write_complete error " << status << std::endl;
@@ -159,6 +160,7 @@ namespace ssl {
             //std::cout << "do_handshake S_CONNECTED" << std::endl;
             m_state = S_CONNECTED;
         } else if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+            //std::cout << "do_handshake error" << std::endl;
 			m_ssl_error = ret;
             m_stream->stop_read();
 			return false;
@@ -193,13 +195,46 @@ namespace ssl {
         return true;
     }
 
-    bool connection::do_close() {
-        m_state = S_CLOSE;
+    class connection::shutdown_stream_req : public uv::shutdown_req {
+    private:
+        common::intrusive_ptr<connection> m_connection;
+    protected:
+        virtual void on_shutdown(int status) {
+            m_connection->on_shutdown(status);
+            m_connection.reset();
+        }
+    public:
+        shutdown_stream_req(common::intrusive_ptr<connection>&& connection) : uv::shutdown_req(
+            common::intrusive_ptr<uv::stream>(connection->m_stream)),
+            m_connection(connection) {
+
+            };
+    };
+
+    void connection::on_shutdown(int status) {
+        //std::cout << "shutdown stream completed: " << status << std::endl;
+        if (status < 0) {
+            m_uv_error = status;
+        }
+        m_state = S_CLOSED;
+        finish_status("SHUTDOWN");
+    }
+
+    bool connection::do_shutdown() {
+        m_state = S_SHUTDOWN;
         int ret = mbedtls_ssl_close_notify(&m_ssl);
         if (ret == 0) {
-            m_state = S_CLOSED;
+            //std::cout << "shutdown stream" << std::endl;
+            m_state = S_SHUTDOWN_STREAM;
             m_stream->stop_read();
-            m_stream->close();
+            common::intrusive_ptr<shutdown_stream_req> req(new shutdown_stream_req(common::intrusive_ptr<connection>(this)));
+            int st = req->shutdown();
+            if (st<0) {
+                m_uv_error = st;
+                return false;
+            } else {
+               return true;
+            }
         }
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
             m_ssl_error = ret;
@@ -319,12 +354,12 @@ namespace ssl {
                     l.pop(1);// thread
                 }
             }
-        } else if (m_state == S_CLOSE) {
-            //std::cout << "do_continue S_WRITE" << std::endl;
-            if (m_uv_error || m_ssl_error || !do_close()) {
-                finish_status("CLOSE");
+        } else if (m_state == S_SHUTDOWN) {
+            //std::cout << "do_continue S_SHUTDOWN" << std::endl;
+            if (m_uv_error || m_ssl_error || !do_shutdown()) {
+                finish_status("SHUTDOWN");
             } else if (m_state == S_CLOSED) {
-                finish_status("CLOSE");
+                finish_status("SHUTDOWN");
             } else {
                 // continue close
                 return;
@@ -337,6 +372,13 @@ namespace ssl {
 		if (m_write_active) {
 			return MBEDTLS_ERR_SSL_WANT_WRITE;
 		}
+        if (m_state == S_SHUTDOWN_STREAM ||
+            m_state == S_CLOSED) {
+            std::cout << "ssl_send closed" << std::endl;
+            return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+        }
+
+        //std::cout << "ssl_send: " << len << std::endl;
 		
 		size_t count = len;
 		if (count > CONN_BUFFER_SIZE) {
@@ -348,6 +390,7 @@ namespace ssl {
 		m_write_active = true;
 		int r = uv_write(&m_write_req,m_stream->get_stream(),&m_write_buf,1,&connection::write_cb);
 		if (r < 0) {
+            //std::cout << "ssl_send failed" << std::endl;
 			m_write_active = false;
 			return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
 		} 
@@ -363,14 +406,18 @@ namespace ssl {
             m_read_state = RS_EOF;
             do_continue();
         } else if (nread < 0) {
-            //std::cout << "on_read error " << nread << std::endl;
+            m_read_state = RS_ERROR;
+            std::cout << "on_read error " << nread << std::endl;
             m_uv_error = nread;
+            do_continue();
         }
         return is_error();
     }
 
     void connection::on_stream_closed(uv::stream* s) {
         // @todo
+        std::cout << "on_stream_closed" << std::endl;
+        m_state = S_CLOSED;
     }
 
 	int connection::ssl_recv( unsigned char *buf,
@@ -518,37 +565,44 @@ namespace ssl {
     }
 
     lua::multiret connection::close(lua::state& l) {
+        if (m_stream) {
+            m_stream->close();
+        }
+        return {0};
+    }
+
+    lua::multiret connection::shutdown(lua::state& l) {
         if (is_error()) {
             l.pushnil();
-            l.pushstring("connection::close is error");
+            l.pushstring("connection::shutdown is error");
             return {2};
         }
         if (!l.isyieldable()) {
             l.pushnil();
-            l.pushstring("connection::close is async");
+            l.pushstring("connection::shutdown is async");
             return {2};
         }
         if (m_cont.valid()) {
             l.pushnil();
-            l.pushstring("connection::close async not completed");
+            l.pushstring("connection::shutdown async not completed");
             return {2};
         }
         {
             if (m_state != S_CONNECTED) {
                 l.pushnil();
-                l.pushstring("connection::close invalid state");
+                l.pushstring("connection::shutdown invalid state");
                 return {2};
             }
             
             l.pushthread();
             m_cont.set(l);
             
-            begin_op("CLOSE");
-            if (!do_close()) {
+            begin_op("SHUTDOWN");
+            if (!do_shutdown()) {
                 m_cont.reset(l);
                 l.pushnil();
                 push_error(l);
-                end_op("CLOSE");
+                end_op("SHUTDOWN");
                 return {2};
             }
             if (m_state == S_CLOSED) {
@@ -560,10 +614,6 @@ namespace ssl {
         }
         l.yield(0);
         return {0};
-    }
-
-    lua::multiret connection::shutdown(lua::state& l) {
-        return m_stream->shutdown(l);
     }
 
 	void connection::lbind(lua::state& l) {

@@ -57,4 +57,8 @@ function request:read_body( )
 	return table.concat(d)
 end
 
+function request:close(  )
+	self._closed = true
+end
+
 return request

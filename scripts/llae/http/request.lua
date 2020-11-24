@@ -4,6 +4,8 @@ local ssl = require 'ssl'
 
 local http_parser = require 'llae.http.parser'
 local class = require 'llae.class'
+local log = require 'llae.log'
+
 local parser = class(http_parser,'http.request.parser')
 
 function parser:_init( )
@@ -25,7 +27,6 @@ function parser:parse_start( client )
 		self._code = code
 		self._message = message
 		self._data = tail
-		--print('found method',method)
 		return true
 	else
 		error('failed parse method\n' .. line)
@@ -101,16 +102,17 @@ end
 
 function response:close_connection( )
 	if self._connection then
-		--print('close_connection')
+		log.debug('close_connection')
+		local r,err = self._connection:shutdown()
+		if err then
+			log.error('shutdown request failed:',err)
+		end
 		self._connection:close()
 		self._connection = nil
 	end
 end
 
 function response:close(  )
-	if self._connection then
-		self._connection:shutdown()
-	end
 	self:close_connection()
 end
 
@@ -153,7 +155,7 @@ end
 function request:_init( args )
 	assert(args.url,'need url')
 	request.baseclass._init(self,args.headers or {})
-	--print('new request to',args.url)
+	log.debug('new request to',args.url)
 	local comp = url.parse(args.url)
 	self._url = comp
 	self._method = args.method or 'GET'
@@ -165,7 +167,7 @@ end
 function request:exec(  )
 	self._connection = uv.tcp_connection:new()
 	local err = nil
-	--print('resolve',self._url.host)
+	log.debug('resolve',self._url.host)
 	self._ip_list,err = uv.getaddrinfo(self._url.host)
 	if not self._ip_list then
 		return nil,err
@@ -181,11 +183,14 @@ function request:exec(  )
 		return nil,'failed resolve ip for ' .. self._url.host
 	end
 	local port = self._url.port or url.services[self._url.scheme]
-	--print('connect to',ip,port)
+	log.debug('connect to',ip,port)
 	local res,err = self._connection:connect(ip,port)
 	if not res then
+		log.error('failed connect to',ip,port)
+		self._connection:close()
 		return nil,err
 	end
+	log.debug('connected')
 
 	self._headers['Content-Length'] = #self._body
 	if not self:get_header('Connection') then
@@ -201,6 +206,7 @@ function request:exec(  )
 	end
 
 	if self._url.scheme == 'https' then
+		log.debug('open ssl connection')
 		self._tcp = self._connection
 		self._ssl = ssl.connection:new( request.get_ssl_ctx(), self._connection)
 		self._connection = self._ssl
@@ -212,10 +218,12 @@ function request:exec(  )
 		if not res then
 			return res,err
 		end
+		log.debug('handshake')
 		res,err = self._ssl:handshake()
 		if not res then
 			return res,err
 		end
+		log.debug('handshake success')
 	end
 	-- print(self._method .. ' ' .. (self._url.path or '/') .. ' HTTP/' .. self._version .. '\r\n',
 	-- 	table.concat(headers,'\r\n'),
@@ -234,7 +242,7 @@ function request:exec(  )
 			if resp:get_code() == 302 or resp:get_code() == 301 then
 				resp:close()
 				local redirect_url = resp:get_header('Location')
-				--print('redirect to',redirect_url)
+				log.debug('redirect to',redirect_url)
 				self._url = url.parse(redirect_url)
 				return self:exec()
 			end

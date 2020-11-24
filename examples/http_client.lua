@@ -21,10 +21,10 @@ local th = coroutine.create(function()
 
 	local resp = assert(req:exec())
 	if resp:get_code() ~= 200 then
-		resp:close()
 		error(resp:get_message())
 	end
 	print(resp:read_body())
+	resp:close()
 	print('finished request')
 
 end)

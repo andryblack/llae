@@ -8,8 +8,12 @@ META_OBJECT_INFO(ssl::ctx,meta::object)
 namespace ssl {
 
 	static const char *pers = "ssl_client_llae";
+#ifdef __linux__
+	static const char* default_cafile = "/etc/ssl/certs/ca-certificates.crt";
+#else
 	static const char* default_cafile = "/etc/ssl/cert.pem";
-
+#endif
+	
 	ctx::ctx() {
 		mbedtls_entropy_init( &m_entropy );
 		mbedtls_ctr_drbg_init( &m_ctr_drbg );

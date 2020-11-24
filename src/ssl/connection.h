@@ -49,14 +49,15 @@ namespace ssl {
             S_WRITE,
             S_READ,
             S_UV_EOF,
-            S_CLOSE,
+            S_SHUTDOWN,
+            S_SHUTDOWN_STREAM,
             S_CLOSED,
 		} m_state = S_NONE;
 		void do_continue();
 		lua::ref m_cont;
 		bool do_handshake();
         bool do_write();
-        bool do_close();
+        bool do_shutdown();
         bool do_read(lua::state& l);
 		void finish_status(const char* state_point);
 		void push_error(lua::state& l);
@@ -94,6 +95,8 @@ namespace ssl {
                 uv::write_buffers::reset(l);
             }
         } m_write_buffers;
+        class shutdown_stream_req;
+        void on_shutdown(int status);
         
         virtual bool on_read(uv::stream* stream,ssize_t nread,
                              const uv::buffer_ptr&& buffer) override final;
