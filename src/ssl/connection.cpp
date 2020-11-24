@@ -9,6 +9,7 @@
 META_OBJECT_INFO(ssl::connection,meta::object)
 
 namespace ssl {
+    void push_error(lua::state& l,const char* fmt, int error);
 
 	connection::connection( const ctx_ptr& ctx, const uv::stream_ptr& stream ) : m_ctx(ctx), m_stream(stream) {
         mbedtls_ssl_init( &m_ssl );
@@ -57,7 +58,7 @@ namespace ssl {
 		int ret = mbedtls_ssl_config_defaults( &m_conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT );
 		if (ret != 0) {
 			l.pushnil();
-			l.pushfstring("mbedtls_ssl_config_defaults failed, code:%d",ret);
+            ::ssl::push_error(l,"mbedtls_ssl_config_defaults failed, code:%d, %s",ret);
 			return {2};
 		}
 		mbedtls_ssl_conf_dbg( &m_conf, &connection::dbg_cb, this );
@@ -65,14 +66,14 @@ namespace ssl {
 		ret = m_ctx->configure(&m_conf);
 		if (ret != 0) {
 			l.pushnil();
-			l.pushfstring("configure failed, code:%d",ret);
+            ::ssl::push_error(l,"configure failed, code:%d, %s",ret);
 			return {2};
 		}
 
 		ret = mbedtls_ssl_setup( &m_ssl, &m_conf );
 		if (ret != 0) {
 			l.pushnil();
-			l.pushfstring("mbedtls_ssl_setup failed, code:%d",ret);
+            ::ssl::push_error(l,"mbedtls_ssl_setup failed, code:%d, %s",ret);
 			return {2};
 		}
 
@@ -85,7 +86,7 @@ namespace ssl {
 		int ret = mbedtls_ssl_set_hostname( &m_ssl, host );
 		if (ret != 0) {
 			l.pushnil();
-			l.pushfstring("mbedtls_ssl_set_hostname failed, code:%d",ret);
+            ::ssl::push_error(l,"mbedtls_ssl_set_hostname failed, code:%d, %s",ret);
 			return {2};
 		}
 		l.pushboolean(true);
@@ -96,7 +97,7 @@ namespace ssl {
 		if (m_uv_error) {
 			uv::push_error(l,m_uv_error);
 		} else if (m_ssl_error) {
-			l.pushfstring("ssl error %d",m_ssl_error);
+            ::ssl::push_error(l,"ssl error code:%d, %s",m_ssl_error);
 		} else {
 			l.pushstring("unknown");
 		}

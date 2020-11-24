@@ -2,6 +2,7 @@
 #include "lua/stack.h"
 #include "lua/bind.h"
 #include <mbedtls/debug.h>
+#include <mbedtls/error.h>
 
 META_OBJECT_INFO(ssl::ctx,meta::object)
 
@@ -13,7 +14,13 @@ namespace ssl {
 #else
 	static const char* default_cafile = "/etc/ssl/cert.pem";
 #endif
-	
+
+	void push_error(lua::state& l,const char* fmt, int error) {
+		char buffer[128] = {0};
+		mbedtls_strerror(error,buffer,sizeof(buffer));
+		l.pushfstring(fmt,error,buffer);
+	}
+
 	ctx::ctx() {
 		mbedtls_entropy_init( &m_entropy );
 		mbedtls_ctr_drbg_init( &m_ctr_drbg );
@@ -42,13 +49,13 @@ namespace ssl {
                                strlen( pers ) );
 		if (ret != 0) {
 			l.pushnil();
-			l.pushfstring("mbedtls_ctr_drbg_seed failed, code:%d",ret);
+			push_error(l,"mbedtls_ctr_drbg_seed failed, code:%d, %s",ret);
 			return {2};
 		}
 
 		if( ( ret = mbedtls_x509_crt_parse_file( &m_cacert, cafile ) ) != 0 ) {
 		    l.pushnil();
-			l.pushfstring("mbedtls_x509_crt_parse_file failed, code:%d",ret);
+			push_error(l,"mbedtls_x509_crt_parse_file failed, code:%d, %s",ret);
 			return {2};
 		}
 
