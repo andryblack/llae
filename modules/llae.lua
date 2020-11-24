@@ -60,6 +60,9 @@ build_lib = {
 		}
 	]]
 }
-projectfiles = {
-	dir .. '/src/main.cpp'
-}
+
+project_main = [[
+	files {
+		<%= format_file(module.dir,'src/main.cpp') %>
+	}
+]]
