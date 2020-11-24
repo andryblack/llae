@@ -86,3 +86,9 @@ build_lib = {
 	filter {}
 ]]
 }
+
+project_main = [[
+	filter "system:linux"
+		links{ 'pthread' }
+	filter {}
+]]

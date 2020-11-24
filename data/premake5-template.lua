@@ -7,6 +7,11 @@ solution '<%= project:name() %>'
 
 	objdir 'objects' 
 	
+	filter{'system:macosx','gmake'}
+	buildoptions { "-mmacosx-version-min=10.14" }
+   	linkoptions  { "-mmacosx-version-min=10.14" }
+   	filter{}
+
 	configuration{ 'debug'}
 		symbols "On"
 	configuration{ 'release'}
@@ -15,20 +20,21 @@ solution '<%= project:name() %>'
 		visibility 'Hidden'
 	configuration{}
 
+<% local function make_path(mod,...)
+		local t = {
+			"modules",
+			mod.name
+		}
+		for _,v in ipairs(table.pack(...)) do
+			table.insert(t, v )
+		end
+		return "'" .. table.concat(t,'/') .. "'"
+	end
+%>
 
 	<% for _,mod in project:foreach_module() do %>
 	-- module <%= mod.name %> / <%= mod.location %>
-		<% local function make_path(components)
-				local t = {
-					"modules",
-					mod.name
-				}
-				for _,v in ipairs(components) do
-					table.insert(t, v )
-				end
-				return "'" .. table.concat(t,'/') .. "'"
-			end
-		%>
+		
 		<% if mod.solution then %>
 			-- solution
 			<%= template.compile(mod.solution,{env=...})(mod) %>
@@ -42,7 +48,7 @@ solution '<%= project:name() %>'
 				module = mod,
 				lib = mod.build_lib,
 				format_file = function (...)
-					return make_path(table.pack(...))
+					return make_path(mod,...)
 				end  
 			} %>
 		<% end %>
@@ -56,6 +62,10 @@ solution '<%= project:name() %>'
 		location 'project'
 		targetname '<%= project:name() %>'
 
+		xcodebuildsettings{
+   			MACOSX_DEPLOYMENT_TARGET='10.14'
+   		}
+
 		sysincludedirs {
 			'include'
 		}
@@ -63,15 +73,17 @@ solution '<%= project:name() %>'
 			<% for _,mod in project:foreach_module() do if mod.includedir then %>
 				'modules/<%=mod.name%>/<%= mod.includedir %>'<% end end %>
 		}
-		files {
-			'src/**.cpp',
-			<% for _,mod in project:foreach_module() do if mod.projectfiles then %>
-				<% for _,file in ipairs(mod.projectfiles) do %>
-				'modules/<%=mod.name%>/<%= file %>'<% end end end %>
-		}
+		
+		<% for _,mod in project:foreach_module() do if mod.project_main then %>
+				<%= template.compile(mod.project_main,{env=...}){
+					module = mod,
+					format_file = function (...)
+						return make_path(mod,...)
+					end  
+				} %> <% end end %>
 
 		links {
-		<% for _,mod in project:foreach_module() do %>
+		<% for _,mod in project:foreach_module_rev() do %>
 			<% if mod.build_lib then %>"module-<%= mod.name %>",<%end%>
 		<% end %>
 		}

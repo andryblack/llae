@@ -4,6 +4,7 @@ local fs = require 'llae.fs'
 local template = require 'llae.template'
 local path = require 'llae.path'
 local log = require 'llae.log'
+local utils = require 'llae.utils'
 
 local Project = class(nil,'Project')
 
@@ -79,6 +80,10 @@ end
 
 function Project:foreach_module( )
 	return ipairs(self._modules_list)
+end
+
+function Project:foreach_module_rev( )
+	return utils.reversedipairs(self._modules_list)
 end
 
 function Project:get_module( name )
