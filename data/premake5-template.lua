@@ -69,6 +69,10 @@ solution '<%= project:name() %>'
 		sysincludedirs {
 			'include'
 		}
+
+		files {
+			'src/*.cpp',--generated
+		}
 		includedirs {
 			<% for _,mod in project:foreach_module() do if mod.includedir then %>
 				'modules/<%=mod.name%>/<%= mod.includedir %>'<% end end %>
