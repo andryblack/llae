@@ -10,6 +10,8 @@ extern "C" {
 #include <vector>
 #include <cassert>
 #include <string>
+
+static int json_array_marker = 0;
     
 struct parse_context {
     lua_State* L;
@@ -211,36 +213,46 @@ static void do_json_encode_string(lua_State* L,int idx, yajl_gen g) {
 static void do_json_encode_table(lua_State* L,int indx,yajl_gen g) {
     assert(lua_istable(L, indx));
     int count = 0;
-    bool only_integers = true;
+    
     lua_checkstack(L,10);
     lua_pushvalue(L, indx);
-    lua_pushnil(L);
-    
-    while (lua_next(L, -2) != 0) {
-        /* uses 'key' (at index -2) and 'value' (at index -1) */
-        if (lua_isnumber(L, -2)) {
-            lua_Integer i = lua_tointeger(L, -2);
-            lua_Number n = lua_tonumber(L, -2);
-            if ( lua_Number(i) == n ) {
-                ++count;
-                if (count!=i) {
+    bool is_array = false;
+    if (lua_getmetatable(L,-1)) {
+        if (lua_getfield(L,-1,"__json_type")==LUA_TLIGHTUSERDATA) {
+            is_array = lua_touserdata(L,-1) == &json_array_marker;
+        }
+        lua_pop(L,2);
+    }
+
+    bool only_integers = true;
+    if (!is_array) {
+        lua_pushnil(L);
+        while (lua_next(L, -2) != 0) {
+            /* uses 'key' (at index -2) and 'value' (at index -1) */
+            if (lua_isnumber(L, -2)) {
+                lua_Integer i = lua_tointeger(L, -2);
+                lua_Number n = lua_tonumber(L, -2);
+                if ( lua_Number(i) == n ) {
+                    ++count;
+                    if (count!=i) {
+                        only_integers = false;
+                    }
+                } else {
                     only_integers = false;
                 }
             } else {
                 only_integers = false;
             }
-        } else {
-            only_integers = false;
+            
+            if (!only_integers) {
+                lua_pop(L, 2);
+                break;
+            }
+            /* removes 'value'; keeps 'key' for next iteration */
+            lua_pop(L, 1);
         }
-        
-        if (!only_integers) {
-            lua_pop(L, 2);
-            break;
-        }
-        /* removes 'value'; keeps 'key' for next iteration */
-        lua_pop(L, 1);
     }
-    if (only_integers && count!=0) {
+    if ((only_integers && count!=0) || is_array) {
         yajl_gen_array_open(g);
         lua_pushnil(L);
         while (lua_next(L, -2) != 0) {
@@ -439,6 +451,14 @@ static int json_gen_get_buffer(lua_State* L) {
     return luaL_error(L,"json gen failed: %d",status);
 }
 
+static int json_array(lua_State* L) {
+    luaL_checktype(L,1,LUA_TTABLE);
+    lua_getfield(L,LUA_REGISTRYINDEX,"json_array");
+    lua_setmetatable(L,1);
+    lua_pushvalue(L,1);
+    return 1;
+}
+
 int luaopen_json(lua_State* L) {
 
     luaL_Reg reg[] = {
@@ -470,6 +490,14 @@ int luaopen_json(lua_State* L) {
     lua_pushvalue(L,-1);
     lua_setfield(L,-2,"__index");
     lua_setfield(L,-2,"gen");
+
+    luaL_newmetatable(L,"json_array");
+    lua_pushlightuserdata(L,&json_array_marker);
+    lua_setfield(L,-2,"__json_type");
+    lua_pop(L,1);
+    lua_pushcfunction(L,&json_array);
+    lua_setfield(L,-2,"array");
+
     return 1;
 }
 
