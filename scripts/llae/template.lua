@@ -1,5 +1,6 @@
 local class = require 'llae.class'
 local fs = require 'llae.fs'
+local path = require 'llae.path'
 
 local template = class(nil,'template')
 
@@ -31,8 +32,8 @@ function template:_init( options )
 	end
 end
 
-function template:load( filename )
-	self._name = filename
+function template:load( filename , name)
+	self._name = name or path.getrelative(filename)
 	local data = fs.load_file(filename)
 	return self:parse(data)
 end
@@ -134,7 +135,7 @@ end
 
 function _M.load( filename, options )
 	local t = template.new(options)
-	return t:load(filename)
+	return t:load(filename,options and options.name)
 end
 
 function _M.render(str, data, options)
@@ -144,8 +145,8 @@ function _M.render(str, data, options)
 end
 
 function _M.render_file(filename, data, options)
-	local t = template.new()
-	t:load(filename)
+	local t = template.new(options)
+	t:load(filename,options and options.name)
 	return t:render(data)
 end
 

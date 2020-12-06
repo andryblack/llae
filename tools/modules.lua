@@ -98,9 +98,17 @@ function m:install_files( files )
 		local dst = path.join(self.root,to)
 		fs.mkdir(path.dirname(dst))
 		log.debug('install',src,'->',dst)
+		fs.mkdir_r(path.dirname(dst))
 		fs.unlink(dst)
 		assert(fs.copyfile(src,dst))
 	end
+end
+
+function m:write_file( filename , content)
+	local dst = path.join(self.root,filename)
+	fs.mkdir(path.dirname(dst))
+	fs.unlink(dst)
+	fs.write_file(dst,content)
 end
 
 function m:move_files( files )
@@ -164,6 +172,7 @@ function m:preprocess( config )
 	local comment = config.comment or {}
 	local replace = config.replace or {}
 	local replace_line = config.replace_line or {}
+	local insert_before = config.insert_before or {}
 	for line in io.lines(src_file) do 
 		--print('process line',line)
 		local d,o = string.match(line,'^//#define%s+([A-Z_]+)(.*)$')
@@ -178,6 +187,10 @@ function m:preprocess( config )
 			elseif d and replace[d] then
 				line = '#define ' .. d .. ' ' .. replace[d]
 			end
+		end
+		local pre = insert_before[line]
+		if pre then
+			table.insert(data,pre)
 		end
 		table.insert(data,replace_line[line] or line)
 	end
@@ -249,19 +262,27 @@ function _M.install_file( filename, root )
 	local src = path.getabsolute(filename)
 	if src ~= dst then
 		log.info('install',src,'->',dst)
+		fs.mkdir_r(path.dirname(dst))
 		fs.unlink(dst)
 		assert(fs.copyfile(src,dst))
 	end
 end
 
-function _M.get( root, modname )
-	local fn = path.join(root,'modules',modname .. '.lua')
+function _M.get( locations, modname )
 	local mod
-	if fs.isfile(fn) then
-		mod =  _M.loadfile(fn)
-		mod.source = fn
-	else
-		fn = path.join(path.dirname(fs.exepath()),'..','modules',modname .. '.lua')
+	local root
+	for _,v in ipairs(locations) do
+		local fn = path.join(v,modname .. '.lua')
+		if fs.isfile(fn) then
+			mod = _M.loadfile( fn )
+			mod.source = fn
+			break
+		else
+			log.debug('not found module at',fn)
+		end
+	end
+	if not mod then
+		local fn = path.join(path.dirname(fs.exepath()),'..','modules',modname .. '.lua')
 		if fs.isfile(fn) then
 			mod =  _M.loadfile(fn)
 			mod.source = fn
@@ -269,8 +290,6 @@ function _M.get( root, modname )
 	end
 
 	if mod then
-		mod.root = root
-		mod.location = path.join(mod.root,'build','modules', mod.name)
 		return mod
 	end
 	log.error('not found module ' , modname)

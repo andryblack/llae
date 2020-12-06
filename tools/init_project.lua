@@ -11,6 +11,7 @@ cmd.name = 'init'
 cmd.descr = 'init project'
 cmd.args = {
 	{'','project name', true },
+	{'modules','additional modules location', true },
 }
 function cmd:exec( args )
 	print('init:',args)
@@ -22,6 +23,9 @@ function cmd:exec( args )
 			local prj,err = Project.load('llae-project.lua')
 			if not prj then
 				error('failed loading project file ' .. err)
+			end
+			if args.modules then
+				prj:add_modules_location(args.modules)
 			end
 			prj:write_generated()
 		end)

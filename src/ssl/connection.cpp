@@ -31,7 +31,7 @@ namespace ssl {
 	void connection::dbg_cb(void *vctx, int level,
                       const char *file, int line,
                       const char *str) {
-		connection* self = static_cast<connection*>(vctx);
+		//connection* self = static_cast<connection*>(vctx);
 		std::cout << "ssl: " << file << ":" << line << " " << str << std::endl;
 			
 	}

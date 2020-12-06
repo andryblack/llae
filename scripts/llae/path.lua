@@ -49,5 +49,17 @@ function path.getabsolute( fn )
 	return path.join(fs.pwd(),fn)
 end
 
+function path.getrelative( fn )
+	if string.sub(fn,1,1) ~= '/' then
+		return fn
+	end
+	local fs = require 'llae.fs'
+	local pwd = fs.pwd()
+	local prepfn = string.sub(fn,1,#pwd)
+	if prepfn == pwd then
+		return string.sub(fn,#pwd+2) -- '/'
+	end
+	return fn
+end
 
 return path

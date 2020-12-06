@@ -28,16 +28,28 @@ function Project:_init( env , root)
 	self._env = env
 	self._root = root
 	self._scripts = {}
+	self._modules_locations = {}
+	self:add_modules_location(path.join(root,'modules'))
 end
 
 function Project:name(  )
 	return self._env.project
 end
+
+function Project:add_modules_location( loc )
+	log.debug('add modules location',loc)
+	table.insert(self._modules_locations,loc)
+end
 function Project:add_module( name )
 	if self._modules[name] then
 		return
 	end
-	local m = modules.get(self._root,name)
+	local m = modules.get(self._modules_locations,name)
+	
+	m.root = self._root
+	m.location = path.join(self._root,'build','modules', m.name)
+		
+
 	self._modules[name] = m
 	m._project = self
 	if m.dependencies then
@@ -67,6 +79,16 @@ function Project:install_modules(  )
 	for _,m in ipairs(self._modules_list) do
 		modules.install(m)
 	end
+end
+
+function Project:install_module( name )
+	self:load_modules()
+	self._scripts = {}
+	fs.mkdir(path.join('build'))
+	fs.mkdir(path.join('build','modules'))
+	fs.mkdir(path.join('build','premake'))
+	local m = self._modules[name]
+	modules.install(m)
 end
 
 function Project:check_script( file , m )
@@ -106,37 +128,40 @@ function Project:write_premake(  )
 	f:close()
 end
 
-function Project:write_embedded( )
-	local template_source_filename = path.join(path.dirname(fs.exepath()),'..','data','embedded-template.cpp')
-	local filename = path.join(self._root,'build','src','embedded.cpp')
-	log.info('generate embedded.cpp')
-	fs.mkdir_r(path.dirname(filename))
-	fs.unlink(filename)
-	local f = assert(fs.open(filename,fs.O_WRONLY|fs.O_CREAT))
-	f:write(template.render_file(template_source_filename,{
-		escape = tostring,
-		project=self,
-		template = template,
-		path = path,
-		scripts = {
-			{
-				name = '_main',
-				content = template.render_file(path.join(path.dirname(fs.exepath()),'..','data','main-template.lua'),{
-
-				})
-			}, {
-				name = 'llae.utils',
-				content = fs.load_file(path.join(path.dirname(fs.exepath()),'..','scripts','llae/utils.lua'))
-			}
-		}
-	}))
-	f:close()
-end
-
 function Project:write_generated( )
 	self:load_modules()
 	self:write_premake()
-	self:write_embedded()
+	for _,m in ipairs(self._modules_list) do
+		for _,conf in ipairs(m.generate_src or {}) do
+			m.root = self._root 
+			m.location = path.join(m.root,'build','modules', m.name)
+			local template_f
+			if conf.template then
+				local template_source_filename = path.join(m.location,conf.template)
+				template_f = template.load(template_source_filename)
+			else
+				template_f = template.compile(conf.template_content)
+			end
+			local filename = path.join(m.root,conf.filename)
+			log.info('generate',conf.filename)
+			fs.mkdir_r(path.dirname(filename))
+			fs.unlink(filename)
+			local f = assert(fs.open(filename,fs.O_WRONLY|fs.O_CREAT))
+			local ctx = setmetatable( {
+				escape = conf.escape or tostring,
+				project=self,
+				template = template,
+				path = path,
+				conf = conf,
+				fs = fs,
+			},{__index=m})
+			if conf.config then
+				load(conf.config,'generate:config','t',ctx)()
+			end
+			f:write( template_f(ctx) )
+			f:close()
+		end
+	end
 end
 
 local function create_env( )
@@ -169,6 +194,7 @@ function Project.load( )
 		return nil,'need project'
 	end
 
+	log.debug('loaded project at',fs.pwd())
 	return Project.new(env,fs.pwd())
 end
 

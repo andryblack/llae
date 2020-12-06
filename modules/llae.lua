@@ -66,3 +66,20 @@ project_main = [[
 		<%= format_file(module.dir,'src/main.cpp') %>
 	}
 ]]
+
+generate_src = {{
+	template = dir .. '/data/embedded-template.cpp',
+	filename = 'build/src/embedded-scripts.cpp',
+	config = [[
+	scripts = {
+		{
+			name = '_main',
+			content = template.render_file(path.join(location,dir,'data','main-template.lua'),{
+
+			})
+		}, {
+			name = 'llae.utils',
+			content = fs.load_file(path.join(location,dir,'scripts','llae/utils.lua'))
+		}
+	}]]
+}}

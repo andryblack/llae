@@ -19,7 +19,11 @@ namespace uv {
 	}
 
 	void tcp_server::on_closed() {
-		m_conn_cb.reset(llae::app::get(get_stream()->loop).lua());
+        if (llae::app::closed(get_stream()->loop)) {
+            m_conn_cb.release();
+        } else {
+            m_conn_cb.reset(llae::app::get(get_stream()->loop).lua());
+        }
 	}
 
 	lua::multiret tcp_server::bind(lua::state& l) {

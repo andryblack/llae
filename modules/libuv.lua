@@ -15,10 +15,6 @@ tar -xzf ]] .. archive .. [[ || exit 1
 	
 	install_files {
 		['build/include/uv.h'] = dir .. '/include/uv.h', 
-	}
-	
-	install_files {
-		['build/include/uv.h'] = dir .. '/include/uv.h', 
 		['build/include/uv/aix.h'] = dir .. '/include/uv/aix.h',
 		['build/include/uv/bsd.h'] = dir .. '/include/uv/bsd.h',
 		['build/include/uv/darwin.h'] = dir .. '/include/uv/darwin.h',

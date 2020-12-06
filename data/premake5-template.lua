@@ -1,3 +1,12 @@
+<% for _,mod in project:foreach_module() do %>
+<% if mod.premake_setup then %>
+-- module <%= mod.name %> / <%= mod.location %>
+-- premake_setup >>>>>>
+<%= template.compile(mod.premake_setup,{env=...})(mod) %>
+-- premake_setup <<<<<<
+<% end %>
+<% end %>
+
 solution '<%= project:name() %>'
 
 	configurations { 'debug', 'release' }
@@ -8,8 +17,8 @@ solution '<%= project:name() %>'
 	objdir 'objects' 
 	
 	filter{'system:macosx','gmake'}
-	buildoptions { "-mmacosx-version-min=10.14" }
-   	linkoptions  { "-mmacosx-version-min=10.14" }
+		buildoptions { "-mmacosx-version-min=10.14" }
+   		linkoptions  { "-mmacosx-version-min=10.14" }
    	filter{}
 
 	configuration{ 'debug'}
@@ -20,6 +29,13 @@ solution '<%= project:name() %>'
 		visibility 'Hidden'
 	configuration{}
 
+<% for _,mod in project:foreach_module() do %>
+<% if mod.solution then %>
+	-- module <%= mod.name %> / <%= mod.location %>
+	-- solution
+	<%= template.compile(mod.solution,{env=...})(mod) %>
+<% end %>
+<% end %>
 <% local function make_path(mod,...)
 		local t = {
 			"modules",
@@ -35,10 +51,7 @@ solution '<%= project:name() %>'
 	<% for _,mod in project:foreach_module() do %>
 	-- module <%= mod.name %> / <%= mod.location %>
 		
-		<% if mod.solution then %>
-			-- solution
-			<%= template.compile(mod.solution,{env=...})(mod) %>
-		<% end %>
+		
 		<% if mod.build_lib then %>
 			project "module-<%= mod.name %>"
 			kind 'StaticLib'
