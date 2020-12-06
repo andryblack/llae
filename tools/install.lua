@@ -14,7 +14,7 @@ install.args = {
 
 
 function install:exec( args )
-	print('install:',args)
+	log.info('install:',args)
 	local utils = require 'llae.utils'
 	if args.file then
 		log.info('install file:',args.file)

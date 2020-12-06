@@ -18,5 +18,6 @@ register('bootstrap')
 register('init_project')
 register('help')
 register('run')
+register('http_server')
 
 return commands
