@@ -265,11 +265,6 @@ function _M.get( root, modname )
 		if fs.isfile(fn) then
 			mod =  _M.loadfile(fn)
 			mod.source = fn
-		else
-			local emb = (require 'embedded_modules')[modname]
-			if emb then
-				mod =  _M.load(emb,'embedded:' .. modname)
-			end
 		end
 	end
 
