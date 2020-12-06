@@ -47,15 +47,15 @@ function cmd:exec( args )
 			assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))
 
 			fs.write_file(path.join(install_dir,'.gitignore'),[[
-	/bin/
-	/build/
-	]],true)
+/bin/
+/build/
+	]])
 
 	fs.write_file(path.join(install_dir,'llae-project.lua'),utils.replace_tokens([[
-	-- project ${proj_name}
-	project '${proj_name}'
-	-- @modules@
-	module 'llae'
+-- project ${proj_name}
+project '${proj_name}'
+-- @modules@
+module 'llae'
 	]],{
 			proj_name = proj_name,
 	}))
