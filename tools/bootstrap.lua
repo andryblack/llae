@@ -40,12 +40,10 @@ function install:exec( args )
 		local project = require 'project'
 		local p = project.new()
 		for _,v in ipairs(embedded_modules) do
-			local m = modules.get(install_dir,v)
-			m._project = p
-			modules.install(m,install_dir,true)
+			p:add_module(v)
 		end
-		for _,v in ipairs(embedded_modules) do
-			local m = modules.get(install_dir,v)
+		p:install_modules()
+		for _,m in p:foreach_module() do
 			if m.bootstrap then
 				m.bootstrap{
 					install_root = install_dir

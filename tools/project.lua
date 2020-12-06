@@ -29,7 +29,11 @@ function Project:_init( env , root)
 	self._root = root
 	self._scripts = {}
 	self._modules_locations = {}
-	self:add_modules_location(path.join(root,'modules'))
+	self._modules = {}
+	self._modules_list = {}
+	if root then
+		self:add_modules_location(path.join(root,'modules'))
+	end
 end
 
 function Project:name(  )
@@ -47,9 +51,10 @@ function Project:add_module( name )
 	local m = modules.get(self._modules_locations,name)
 	
 	m.root = self._root
-	m.location = path.join(self._root,'build','modules', m.name)
+	if self._root then
+		m.location = path.join(self._root,'build','modules', m.name)
+	end
 		
-
 	self._modules[name] = m
 	m._project = self
 	if m.dependencies then
