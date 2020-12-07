@@ -24,6 +24,13 @@ function Project.env:module( name )
 	table.insert(self.modules,name)
 end
 
+function Project.env:premake( data )
+	if type(data) ~= 'table' then
+		error('premake must be table')
+	end
+	self.premake = data
+end
+
 function Project:_init( env , root)
 	self._env = env
 	self._root = root
@@ -38,6 +45,10 @@ end
 
 function Project:name(  )
 	return self._env.project
+end
+
+function Project:get_premake( )
+	return self._env.premake
 end
 
 function Project:add_modules_location( loc )
@@ -66,7 +77,7 @@ function Project:add_module( name )
 end
 
 function Project:load_modules(  )
-	if self._modules then
+	if next(self._modules) then
 		return
 	end
 	self._modules = {}
@@ -75,25 +86,27 @@ function Project:load_modules(  )
 		self:add_module(n)
 	end
 end
-function Project:install_modules(  )
+function Project:install_modules( tosystem )
 	self:load_modules()
 	self._scripts = {}
-	fs.mkdir(path.join('build'))
-	fs.mkdir(path.join('build','modules'))
-	fs.mkdir(path.join('build','premake'))
+	local root = self._root or fs.pwd()
+	fs.mkdir(path.join(root,'build'))
+	fs.mkdir(path.join(root,'build','modules'))
+	fs.mkdir(path.join(root,'build','premake'))
 	for _,m in ipairs(self._modules_list) do
-		modules.install(m)
+		modules.install(m,root,tosystem)
 	end
 end
 
 function Project:install_module( name )
 	self:load_modules()
 	self._scripts = {}
-	fs.mkdir(path.join('build'))
-	fs.mkdir(path.join('build','modules'))
-	fs.mkdir(path.join('build','premake'))
+	local root = self._root or fs.pwd()
+	fs.mkdir(path.join(root,'build'))
+	fs.mkdir(path.join(root,'build','modules'))
+	fs.mkdir(path.join(root,'build','premake'))
 	local m = self._modules[name]
-	modules.install(m)
+	modules.install(m,root)
 end
 
 function Project:check_script( file , m )
@@ -117,6 +130,7 @@ function Project:get_module( name )
 	return self._modules[name]
 end
 
+
 function Project:write_premake(  )
 	local template_source_filename = path.join(path.dirname(fs.exepath()),'..','data','premake5-template.lua')
 	local filename = path.join(self._root,'build','premake5.lua')
@@ -128,7 +142,7 @@ function Project:write_premake(  )
 		escape = tostring,
 		project=self,
 		template = template,
-		path = path
+		path = path,
 	}))
 	f:close()
 end

@@ -3,8 +3,8 @@ local llae = require 'llae'
 
 
 local http = {
-	server = require 'llae.http.server',
-	request = require 'llae.http.request'
+	server = require 'net.http.server',
+	request = require 'net.http.request'
 }
 
 

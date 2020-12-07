@@ -1,6 +1,6 @@
 local _M = {}
 
-_M._red = '\x1b[0m'
+_M._red = '\x1b[31m'
 _M._white = '\x1b[37m'
 _M._green = '\x1b[32m'
 _M._blue = '\x1b[34m'

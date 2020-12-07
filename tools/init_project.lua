@@ -2,9 +2,9 @@ local tool = require 'tool'
 local class = require  'llae.class'
 local utils = require 'llae.utils'
 local path = require 'llae.path'
+local log = require 'llae.log'
 local fs = require 'llae.fs'
 local uv = require 'uv'
-
 
 local cmd = class(tool)
 cmd.name = 'init'
@@ -14,7 +14,7 @@ cmd.args = {
 	{'modules','additional modules location', true },
 }
 function cmd:exec( args )
-	print('init:',args)
+	log.info('init:',args)
 
 	local proj_name = args[2]
 	if not proj_name then
@@ -34,7 +34,7 @@ function cmd:exec( args )
 		local install_dir = path.join(fs.pwd(),proj_name)
 
 		install_dir = utils.replace_env(install_dir)
-		print('start init project at',install_dir)
+		log.init('start init project at',install_dir)
 
 		utils.run(function()
 			fs.mkdir(install_dir)

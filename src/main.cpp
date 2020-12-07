@@ -7,6 +7,7 @@
 #include "uv/loop.h"
 #include "uv/handle.h"
 #include "llae/app.h"
+#include "llae/diag.h"
 
 extern "C" int luaopen_llae_crypto(lua_State* L);
 extern "C" int luaopen_llae_file(lua_State* L);
@@ -86,7 +87,7 @@ int main(int argc,char** argv) {
         uv_print_all_handles(loop, stderr);
     }
 
-	std::cout << "meta objects: " << meta::object::get_total_count() << std::endl;
+	LLAE_DIAG(std::cout << "meta objects: " << meta::object::get_total_count() << std::endl;)
 
 	return 0;
 }

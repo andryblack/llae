@@ -38,11 +38,11 @@ function install:exec( args )
 
 		local modules = require 'modules'
 		local project = require 'project'
-		local p = project.new()
+		local p = project.new({},install_dir)
 		for _,v in ipairs(embedded_modules) do
 			p:add_module(v)
 		end
-		p:install_modules()
+		p:install_modules(true)
 		for _,m in p:foreach_module() do
 			if m.bootstrap then
 				m.bootstrap{

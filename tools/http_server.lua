@@ -10,7 +10,7 @@ cmd.args = {
 	{'root','root folder'}
 }
 local llae = require 'llae'
-local http = require 'llae.http'
+local http = require 'net.http'
 local log  = require 'llae.log'
 local path = require 'llae.path'
 local fs = require 'llae.fs'

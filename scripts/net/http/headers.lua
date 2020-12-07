@@ -1,6 +1,6 @@
 local class = require 'llae.class'
 
-local headers = class(nil,'llae.http.headers')
+local headers = class(nil,'http.headers')
 
 function headers:_init( init )
 	self._headers = init or {}

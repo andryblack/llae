@@ -2,7 +2,7 @@ local url = require 'net.url'
 local uv = require 'uv'
 local ssl = require 'ssl'
 
-local http_parser = require 'llae.http.parser'
+local http_parser = require 'net.http.parser'
 local class = require 'llae.class'
 local log = require 'llae.log'
 
@@ -33,7 +33,7 @@ function parser:parse_start( client )
 	end
 end
 
-local response = class(require 'llae.http.headers','http.request.response')
+local response = class(require 'net.http.headers','http.request.response')
 
 function response:_init( data )
 	self._headers = data.headers
@@ -142,7 +142,7 @@ function parser:load( client )
 	return resp
 end
 
-local request = class(require 'llae.http.headers','http.request')
+local request = class(require 'net.http.headers','http.request')
 
 function request.get_ssl_ctx() 
 	if not request._ssl_ctx then

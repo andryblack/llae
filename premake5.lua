@@ -35,7 +35,7 @@ if _ACTION ~= 'download' then
 			targetname 'llae'
 			llae.embed({
 					{ 'scripts/llae/**.lua', 'scripts' },
-					{ 'scripts/net/*.lua', 'scripts' },
+					{ 'scripts/net/**.lua', 'scripts' },
 					{ 'tools/*.lua', 'tools' },
 				})
 			llae.exe()

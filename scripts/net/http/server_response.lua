@@ -4,10 +4,10 @@ local fs = require 'llae.fs'
 local archive = require 'archive'
 local log = require 'llae.log'
 local utils = require 'llae.utils'
-local timestamp = require 'llae.http.timestamp'
+local timestamp = require 'net.http.timestamp'
 
 
-local response = class(require 'llae.http.headers','http.server.response')
+local response = class(require 'net.http.headers','http.server.response')
 
 -- mime
 local default_content_type = {

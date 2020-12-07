@@ -2,8 +2,9 @@ local path = require 'llae.path'
 local fs = require 'llae.fs'
 local utils = require 'llae.utils'
 local os = require 'llae.os'
-local http = require 'llae.http'
+local http = require 'net.http'
 local log = require 'llae.log'
+
 
 local m = {}
 
@@ -34,40 +35,53 @@ function m:download(url,file)
 	local dst = path.join(self.location,file)
 	fs.unlink(dst)
 
-	
-	local req = http.createRequest{
-		method = 'GET',
-		url = url,
-		headers = {
-			['Accept'] = '*/*'
-		}
-	}
+	local uri = (require 'net.url').parse(url)
+	if uri.scheme == 'ftp' then
+		local ftp = (require 'net.ftp').new()
+		assert(ftp:connect(uri.host,uri.port))
+		local loaded = 0
+		local p = log.progress()
 
-	local resp = assert(req:exec())
-	local code = resp:get_code()
-	if code ~= 200 then
-		resp:close()
-		error(code .. ':' .. resp:get_message())
-	end
-	local f = assert(fs.open(dst,fs.O_WRONLY|fs.O_CREAT))
-	local loaded = 0
-	local total = tonumber(resp:get_header('Content-Length'))
-	--log.debug('total:',total)
-	local p = log.progress()
-	while true do
-		local ch,err = resp:read()
-		if not ch then
-			if err then
-				error(err)
-			end
-			p:close()
-			break
+		ftp:getfile(uri.path,dst,function(ch,total)
+			loaded = loaded + #ch
+			p:update(loaded,total)
+		end)
+	else
+	
+		local req = http.createRequest{
+			method = 'GET',
+			url = url,
+			headers = {
+				['Accept'] = '*/*'
+			}
+		}
+
+		local resp = assert(req:exec())
+		local code = resp:get_code()
+		if code ~= 200 then
+			resp:close()
+			error(code .. ':' .. resp:get_message())
 		end
-		f:write(ch)
-		loaded = loaded + #ch
-		p:update(loaded,total)
+		local f = assert(fs.open(dst,fs.O_WRONLY|fs.O_CREAT))
+		local loaded = 0
+		local total = tonumber(resp:get_header('Content-Length'))
+		--log.debug('total:',total)
+		local p = log.progress()
+		while true do
+			local ch,err = resp:read()
+			if not ch then
+				if err then
+					error(err)
+				end
+				p:close()
+				break
+			end
+			f:write(ch)
+			loaded = loaded + #ch
+			p:update(loaded,total)
+		end
+		f:close()
 	end
-	f:close()
 end
 
 function m:shell( text )

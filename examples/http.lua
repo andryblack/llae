@@ -3,7 +3,7 @@ package.path = package.path .. ';scripts/?.lua'
 
 
 local llae = require 'llae'
-local http = require 'llae.http'
+local http = require 'net.http'
 local json = require 'json'
 
 assert(http.createServer(function (req, res)

@@ -1,7 +1,7 @@
 
 local class = require 'llae.class'
 
-local parser = class(require 'llae.http.parser','http.server.parser')
+local parser = class(require 'net.http.parser','http.server.parser')
 
 
 function parser:_init( cb  )

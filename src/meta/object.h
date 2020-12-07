@@ -2,6 +2,7 @@
 #define __LLAE_META_OBJECT_H_INCLUDED__
 
 #include "info.h"
+#include "llae/diag.h"
 #include "common/ref_counter.h"
 #include <cassert>
 
@@ -9,16 +10,20 @@ namespace meta {
 
 	class object : public common::ref_counter_base {
     private:
-        static size_t m_count;
+        LLAE_DIAG(static size_t m_count;)
+        LLAE_DIAG(size_t m_object_mark;)
     protected:
         object() {
-            ++m_count;
+            LLAE_DIAG(m_object_mark=0x900dfeed;)
+            LLAE_DIAG(++m_count;)
         }
         virtual ~object() {
-            --m_count;
+            LLAE_CHECK(m_object_mark==0x900dfeed)
+            LLAE_DIAG(m_object_mark=0xfeedbad;)
+            LLAE_DIAG(--m_count;)
         }
     public:
-        static size_t get_total_count() { return m_count; }
+        LLAE_DIAG(static size_t get_total_count() { return m_count; })
         static const info_t* get_class_info();
         virtual const info_t* get_object_info() const { return get_class_info(); }
   	};

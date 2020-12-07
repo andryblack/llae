@@ -7,9 +7,9 @@ local class = require 'llae.class'
 
 local server = class(nil,'http.server')
 
-server.parser = require 'llae.http.server_parser'
-server.request = require 'llae.http.server_request'
-server.response = require 'llae.http.server_response'
+server.parser = require 'net.http.server_parser'
+server.request = require 'net.http.server_request'
+server.response = require 'net.http.server_response'
 
 server.defaults = {
 	backlog = 128

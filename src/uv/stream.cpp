@@ -169,8 +169,7 @@ namespace uv {
         auto b = buffer::get(buf->base);
         if (self->on_read(nread,buffer_ptr(b))) {
             //std::cout << "stream read_cb remove_ref" << std::endl;
-            self->stop_read();
-			self->remove_ref();
+            self->remove_ref();
 		}
         if (b) {
             b->remove_ref();
@@ -191,7 +190,7 @@ namespace uv {
                 auto toth = l.tothread(-1);
                 l.pop(1);// thread
                 if (nread > 0) {
-                    toth.pushlstring(static_cast<const char*>(buffer->get_base()),buffer->get_len());
+                    toth.pushlstring(static_cast<const char*>(buffer->get_base()),nread);
                     toth.pushnil();
                 } else if (nread == UV_EOF) {
                     toth.pushnil();
@@ -221,12 +220,16 @@ namespace uv {
 
 	bool stream::on_read(ssize_t nread, const buffer_ptr&& buffer) {
         if (m_read_consumer) {
-            bool res = m_read_consumer->on_read(this,
+            auto consumer = std::move(m_read_consumer);
+            bool res = consumer->on_read(this,
                                                 nread, std::move(buffer));
-            if (res) {
-                m_read_consumer.reset();
+            if (!res) {
+                m_read_consumer = std::move(consumer);
             }
             return res;
+        } else {
+            LLAE_DIAG(std::cout << "read without consumer" << std::endl;)
+            stop_read();
         }
         return true;
     }

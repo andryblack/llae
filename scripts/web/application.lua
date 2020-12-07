@@ -1,5 +1,5 @@
 local class = require 'llae.class'
-local http = require 'llae.http'
+local http = require 'net.http'
 local log = require 'llae.log'
 
 local router = require 'web.router'
@@ -57,7 +57,7 @@ function web:listen( options )
 	local port = options and options.port or 8080
 	local host = options and options.host or '127.0.0.1'
 	log.info('listen at:','http://'..host..':'..port)
-	self._server:listen(port,host)
+	assert(self._server:listen(port,host))
 end
 
 function web.static( root, options )

@@ -1,6 +1,6 @@
 local class = require 'llae.class'
 
-local request = class(require 'llae.http.headers','http.server.request')
+local request = class(require 'net.http.headers','http.server.request')
 
 
 function request:_init( method, path, headers , version, length)
