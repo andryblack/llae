@@ -151,6 +151,8 @@ namespace uv {
 	}
 
 	void stream::on_closed() {
+		LLAE_DIAG(std::cout << "stream::on_closed" << std::endl;)
+		m_closed = true;
         if (m_read_consumer) {
             m_read_consumer->on_stream_closed(this);
             m_read_consumer.reset();
@@ -214,7 +216,23 @@ namespace uv {
             return true;
         }
         void on_stream_closed(stream* s) override final {
-            m_read_cont.reset(llae::app::get(s->get_stream()->loop).lua());
+        	auto& l = llae::app::get(s->get_stream()->loop).lua();
+            if (!l.native()) {
+                m_read_cont.release();
+            }
+        	if (m_read_cont.valid()) {
+        		m_read_cont.push(l);
+                auto toth = l.tothread(-1);
+                l.pop(1);// thread
+                toth.pushnil();
+                toth.pushnil();
+                lua::ref ref(std::move(m_read_cont));
+                auto s = toth.resume(l,2);
+                if (s != lua::status::ok && s != lua::status::yield) {
+                    llae::app::show_error(toth,s);
+                }
+                ref.reset(l);
+        	}
         }
     };
 
@@ -236,6 +254,9 @@ namespace uv {
         
     void stream::stop_read() {
         uv_read_stop(get_stream());
+        if (m_read_consumer) {
+        	m_read_consumer->on_stop_read(this);
+        }
         m_read_consumer.reset();
     }
 
@@ -248,6 +269,11 @@ namespace uv {
 		if (m_read_consumer) {
 			l.pushnil();
 			l.pushstring("stream::read already read");
+			return {2};
+		}
+		if (m_closed) {
+			l.pushnil();
+			l.pushstring("stream::read closed");
 			return {2};
 		}
 		{
@@ -395,5 +421,6 @@ namespace uv {
 		lua::bind::function(l,"send",&stream::send);
 		lua::bind::function(l,"shutdown",&stream::shutdown);
 		lua::bind::function(l,"close",&stream::close);
+        lua::bind::function(l,"stop_read",&stream::stop_read);
 	}
 }

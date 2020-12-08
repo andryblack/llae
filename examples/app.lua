@@ -1,3 +1,4 @@
+package.path = package.path .. ';scripts/?.lua'
 
 local web = require 'web.application'
 local fs = require 'llae.fs'

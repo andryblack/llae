@@ -31,4 +31,8 @@ function headers:set_header( name , value )
 	self._headers[name] = value
 end
 
+function headers:foreach_header( )
+	return pairs(self._headers)
+end
+
 return headers

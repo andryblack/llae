@@ -217,8 +217,24 @@ namespace ssl {
         if (status < 0) {
             m_uv_error = status;
         }
+        
         m_state = S_CLOSED;
         finish_status("SHUTDOWN");
+        
+        m_stream->close();
+        m_stream.reset();
+    }
+
+    bool connection::do_shutdown_stream() {
+        m_stream->stop_read();
+        common::intrusive_ptr<shutdown_stream_req> req(new shutdown_stream_req(common::intrusive_ptr<connection>(this)));
+        int st = req->shutdown();
+        if (st<0) {
+            m_uv_error = st;
+            return false;
+        } else {
+           return true;
+        }
     }
 
     bool connection::do_shutdown() {
@@ -227,15 +243,10 @@ namespace ssl {
         if (ret == 0) {
             //std::cout << "shutdown stream" << std::endl;
             m_state = S_SHUTDOWN_STREAM;
-            m_stream->stop_read();
-            common::intrusive_ptr<shutdown_stream_req> req(new shutdown_stream_req(common::intrusive_ptr<connection>(this)));
-            int st = req->shutdown();
-            if (st<0) {
-                m_uv_error = st;
-                return false;
-            } else {
-               return true;
+            if (m_write_active) {
+                return true;
             }
+            return do_shutdown_stream();
         }
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
             m_ssl_error = ret;
@@ -365,6 +376,8 @@ namespace ssl {
                 // continue close
                 return;
             }
+        }  else if (m_state == S_SHUTDOWN_STREAM) {
+            do_shutdown_stream();
         }
 	}
 
@@ -417,8 +430,10 @@ namespace ssl {
 
     void connection::on_stream_closed(uv::stream* s) {
         // @todo
-        std::cout << "on_stream_closed" << std::endl;
+        LLAE_DIAG(std::cout << "on_stream_closed" << std::endl;)
         m_state = S_CLOSED;
+        m_read_state = RS_EOF;
+        do_continue();
     }
 
 	int connection::ssl_recv( unsigned char *buf,
@@ -617,6 +632,11 @@ namespace ssl {
         return {0};
     }
 
+    void connection::stop_read() {
+        if (m_stream) {
+            m_stream->stop_read();
+        }
+    }
 	void connection::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&connection::lnew);
 		lua::bind::function(l,"configure",&connection::configure);
@@ -626,5 +646,6 @@ namespace ssl {
         lua::bind::function(l,"read",&connection::read);
         lua::bind::function(l,"close",&connection::close);
         lua::bind::function(l,"shutdown",&connection::shutdown);
+        lua::bind::function(l,"stop_read",&connection::stop_read);
 	}
 }

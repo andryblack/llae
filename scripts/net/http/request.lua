@@ -2,147 +2,14 @@ local url = require 'net.url'
 local uv = require 'uv'
 local ssl = require 'ssl'
 
-local http_parser = require 'net.http.parser'
 local class = require 'llae.class'
 local log = require 'llae.log'
 
-local parser = class(http_parser,'http.request.parser')
-
-function parser:_init( )
-	parser.baseclass._init(self)
-end
-
-
-function parser:parse_start( client )
-	local line,tail = string.match(self._data,'^([^\r\n]*)\r\n(.*)$')
-	if not line then
-		if #self._data > self.max_start_len then
-			error('failed parse method\n' .. self._data)
-		end
-		return false
-	end
-	local ver,code,message = string.match(line,'^HTTP/(%d%.%d)%s(%d+)%s(.+)$')
-	if ver then
-		self._version = ver
-		self._code = code
-		self._message = message
-		self._data = tail
-		return true
-	else
-		error('failed parse method\n' .. line)
-	end
-end
-
-local response = class(require 'net.http.headers','http.request.response')
-
-function response:_init( data )
-	self._headers = data.headers
-	self._version = data.version
-	self._code = data.code
-	self._message = data.message
-	self._connection = data.connection
-end
-
-function response:get_code(  )
-	return self._code
-end
-
-function response:get_message(  )
-	return self._message
-end
-
-
-function response:read(  )
-	if self._length and self._length <= 0 then
-		self:on_closed()
-		self._closed = true
-		return nil
-	end
-	if self._body then
-		local b = self._body
-		if self._length then
-			self._length = self._length - #b
-		end
-		self._body = nil
-		return b
-	end
-	self._body = nil
-	local ch,e = self._connection:read()
-	if ch then
-		if self._length then
-			self._length = self._length - #ch
-		end
-	else
-		self._error = e
-		self:on_closed()
-		self._closed = true
-	end
-	return ch
-end
-
-function response:read_body(  )
-	local d = {}
-	while not self._closed do
-		local ch = self:read()
-		if not ch then
-			break
-		end
-		table.insert(d,ch)
-	end
-	return table.concat(d)
-end
-
-function response:on_closed(  )
-	local connection = self:get_header('Connection')
-	if not connection or
-		connection == 'close' then
-		self:close_connection()
-	end
-end
-
-function response:close_connection( )
-	if self._connection then
-		log.debug('close_connection')
-		local r,err = self._connection:shutdown()
-		if err then
-			log.error('shutdown request failed:',err)
-		end
-		self._connection:close()
-		self._connection = nil
-	end
-end
-
-function response:close(  )
-	self:close_connection()
-end
-
-function parser:load( client )
-	while not self:parse_start(client) do 
-		if not self:read(client) then
-			return nil,'unexpected end'
-		end
-	end
-	while not self:parse_header(client) do 
-		if not self:read(client) then
-			return nil,'unexpected end'
-		end
-	end
-	local resp = response.new{
-		headers = self._headers,
-		version = self._version,
-		code = tonumber(self._code),
-		message = self._message,
-		connection = client
-	}
-	resp._length = tonumber(self:get_header('Content-Length')) 
-	if self._data and self._data ~= '' then
-		resp._body = self._data
-		self._data = ''
-	end
-	return resp
-end
 
 local request = class(require 'net.http.headers','http.request')
+
+request.parser = require 'net.http.request_parser'
+request.response = require 'net.http.request_response'
 
 function request.get_ssl_ctx() 
 	if not request._ssl_ctx then
@@ -201,6 +68,9 @@ function request:exec(  )
 	if not self:get_header('Host') then
 		table.insert(headers,'Host: ' .. self._url.host)
 	end
+	if not self:get_header('Accept-Encoding') then
+		table.insert(headers,'Accept-Encoding: deflate, gzip;q=1.0, *;q=0.5')
+	end
 	for k,v in pairs(self._headers) do
 		table.insert(headers,k..': ' .. v)
 	end
@@ -235,7 +105,7 @@ function request:exec(  )
 		'\r\n\r\n', 
 		self._body
 	}
-	local p = parser.new()
+	local p = self.parser.new(self.response)
 	while true do
 		local resp,err = p:load(self._connection) 
 		if resp then

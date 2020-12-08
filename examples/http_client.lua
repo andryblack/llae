@@ -3,6 +3,7 @@ package.path = package.path .. ';scripts/?.lua'
 
 local llae = require 'llae'
 local http = require 'net.http'
+local log = require 'llae.log'
 local json = require 'json'
 local uv = require 'uv'
 
@@ -13,7 +14,7 @@ local th = coroutine.create(function()
 
 	local req = http.createRequest{
 		method = 'GET',
-		url = 'https://google.com/',
+		url = 'https://github.com/andryblack/llae/blob/master/examples/http_client.lua',
 		headers = {
 			['Accept'] = '*/*'
 		}
@@ -22,6 +23,9 @@ local th = coroutine.create(function()
 	local resp = assert(req:exec())
 	if resp:get_code() ~= 200 then
 		error(resp:get_message())
+	end
+	for n,v in resp:foreach_header() do
+		log.info(n,':',v)
 	end
 	print(resp:read_body())
 	resp:close()

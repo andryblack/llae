@@ -82,6 +82,7 @@ namespace uv {
     public:
         virtual bool on_read(stream* s,ssize_t nread, const buffer_ptr&& buffer) = 0;
         virtual void on_stream_closed(stream* s) {}
+        virtual void on_stop_read(stream* s) {}
     };
     typedef common::intrusive_ptr<stream_read_consumer> stream_read_consumer_ptr;
 
@@ -89,7 +90,7 @@ namespace uv {
 		META_OBJECT
 	private:
         stream_read_consumer_ptr m_read_consumer;
-		
+		bool m_closed = false;
 	protected:
 		explicit stream();
 		virtual ~stream() override;

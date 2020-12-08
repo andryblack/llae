@@ -8,7 +8,7 @@ local _M = {
 
 local components = {
 	'adler32','crc32','deflate','infback','inffast','inflate','inftrees','trees','zutil',
-		'compress','uncompr','gzclose','gzlib','gzread','gzwrite'
+		'compress','uncompr',
 }
 
 function _M.lib( root )

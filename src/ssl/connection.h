@@ -58,6 +58,7 @@ namespace ssl {
 		bool do_handshake();
         bool do_write();
         bool do_shutdown();
+        bool do_shutdown_stream();
         bool do_read(lua::state& l);
 		void finish_status(const char* state_point);
 		void push_error(lua::state& l);
@@ -117,6 +118,7 @@ namespace ssl {
         lua::multiret read(lua::state& l);
         lua::multiret close(lua::state& l);
         lua::multiret shutdown(lua::state& l);
+        void stop_read();
 	};
 
 }
