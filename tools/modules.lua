@@ -52,7 +52,8 @@ function m:download(url,file)
 			method = 'GET',
 			url = url,
 			headers = {
-				['Accept'] = '*/*'
+				['Accept'] = '*/*',
+				['Accept-Encoding'] = 'identity'
 			}
 		}
 

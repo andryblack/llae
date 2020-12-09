@@ -22,7 +22,7 @@ namespace archive { namespace impl {
 
 	void pushzerror(lua::state& l,int z_err);
 	
-	static const size_t COMPRESSED_BLOCK_SIZE = 1024 * 4;
+	static const size_t COMPRESSED_BLOCK_SIZE = 1024 * 16;
 
 	template <class T>
 	class zlibstream : public meta::object {
@@ -65,7 +65,7 @@ namespace archive { namespace impl {
 						if (!z.avail_out) {
 							this->flush_out(z);
 						}
-						int r = T::process(&z,Z_NO_FLUSH);
+						int r = T::process(&z,Z_NO_FLUSH,*this->m_stream);
                         if (r == Z_STREAM_END) {
                             this->m_z_status = r;
                             break;
@@ -75,6 +75,9 @@ namespace archive { namespace impl {
 							return;
 						}
 					}
+                    if (this->m_z_status == Z_STREAM_END) {
+                        break;
+                    }
 				}
 	            if (this->m_out) {
                     this->m_out->set_len(COMPRESSED_BLOCK_SIZE-z.avail_out);
@@ -106,7 +109,7 @@ namespace archive { namespace impl {
 					if (!z.avail_out) {
 						this->flush_out(z);
 					}
-					int r = T::process(&z,Z_FINISH);
+					int r = T::process(&z,Z_FINISH,*this->m_stream);
 					if (r == Z_STREAM_END) {
 	                    if (this->m_out) {
                             this->m_out->set_len(COMPRESSED_BLOCK_SIZE-z.avail_out);
@@ -180,7 +183,7 @@ namespace archive { namespace impl {
 						if (!z.avail_out) {
 							this->flush_out(z);
 						}
-						int r = T::process(&z,Z_NO_FLUSH);
+						int r = T::process(&z,Z_NO_FLUSH,*this->m_stream);
 						if (r != Z_OK && r != Z_BUF_ERROR) {
                             this->m_z_status = r;
 							return;
@@ -191,7 +194,7 @@ namespace archive { namespace impl {
 						if (!z.avail_out) {
 							this->flush_out(z);
 						}
-						int r = T::process(&z,Z_FINISH);
+						int r = T::process(&z,Z_FINISH,*this->m_stream);
 						if (r == Z_STREAM_END) {
 		                    if (this->m_out) {
                                 this->m_out->set_len(COMPRESSED_BLOCK_SIZE-z.avail_out);
@@ -375,22 +378,22 @@ namespace archive { namespace impl {
 		lua::multiret write(lua::state& l) {
 			if (is_error()) {
 	            l.pushnil();
-	            l.pushstring("compress_steam::write is error");
+	            l.pushstring("zlibsteam::write is error");
 	            return {2};
 	        }
 	        if (m_finished) {
 	            l.pushnil();
-	            l.pushstring("compress_steam::write is finished");
+	            l.pushstring("zlibsteam::write is finished");
 	            return {2};
 	        }
 	        if (!l.isyieldable()) {
 	            l.pushnil();
-	            l.pushstring("compress_steam::write is async");
+	            l.pushstring("zlibsteam::write is async");
 	            return {2};
 	        }
 	        if (m_write_cont.valid()) {
 	            l.pushnil();
-	            l.pushstring("compress_steam::write async not completed");
+	            l.pushstring("zlibsteam::write async not completed");
 	            return {2};
 	        }
 	        {
@@ -501,6 +504,9 @@ namespace archive { namespace impl {
         lua::ref m_read_cont;
         bool m_read_buffer = false;
     protected:
+        virtual ~zlibstream_read() {
+            m_read_cont.release();
+        }
         virtual void continue_read(lua::state& l) override {
             if (!m_read_cont.valid()) {
                 return;
@@ -548,12 +554,12 @@ namespace archive { namespace impl {
         lua::multiret read(lua::state& l) {
             if (this->is_error()) {
                 l.pushnil();
-                l.pushstring("compress_steam::read is error");
+                l.pushstring("zlibsteam::read is error");
                 return {2};
             }
             if (m_read_cont.valid()) {
                 l.pushnil();
-                l.pushstring("compress_steam::read async not completed");
+                l.pushstring("zlibsteam::read async not completed");
                 return {2};
             }
             uv::buffer_ptr buf;
@@ -572,9 +578,13 @@ namespace archive { namespace impl {
                 l.pushnil();
                 return {1};
             }
+            if (l.gettop()>1 && l.isboolean(2) && !l.toboolean(2)) {
+                l.pushstring("");
+                return {1};
+            }
             if (!l.isyieldable()) {
                 l.pushnil();
-                l.pushstring("compress_steam::read is async");
+                l.pushstring("zlibsteam::read is async");
                 return {2};
             }
             

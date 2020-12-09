@@ -68,7 +68,7 @@ namespace uv {
                         m_refs.back().set(l);
                         m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
                     } else {
-                        l.pop(1);
+                        l.pop(2);
                         return false;
                     }
                 }

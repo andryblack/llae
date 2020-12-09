@@ -151,7 +151,7 @@ namespace uv {
 	}
 
 	void stream::on_closed() {
-		LLAE_DIAG(std::cout << "stream::on_closed" << std::endl;)
+		//LLAE_DIAG(std::cout << "stream::on_closed" << std::endl;)
 		m_closed = true;
         if (m_read_consumer) {
             m_read_consumer->on_stream_closed(this);

@@ -15,7 +15,25 @@ namespace archive {
 
 
 	zlibuncompress::zlibuncompress() {
+        m_try_raw = false;
   	}
+
+    int zlibuncompress::process(z_stream* z,int flush,impl::zlibstream<zlibuncompress>& s) {
+        auto& self(static_cast<zlibuncompress&>(s));
+        auto origin = z->next_in;
+        int r = inflate(z, flush);
+        if (r == Z_DATA_ERROR && z->total_out==0 && self.m_try_raw) {
+            auto avail_in = z->avail_in + (z->next_in-origin);
+            self.m_try_raw = false;
+            inflateReset(z);
+            r = inflateInit2(z, -MAX_WBITS);
+            z->avail_in = avail_in;
+            z->next_in = origin;
+            if ( r!=Z_OK) return r;
+            r = inflate(z, flush);
+        }
+        return r;
+    }
 
 	int zlibuncompress::init(uv::loop& l,int windowBits) {
 		int r = inflateInit2(&m_z,windowBits);
@@ -40,6 +58,9 @@ namespace archive {
 			impl::pushzerror(l,r);
 			return false;
 		}
+        if (l.gettop()>=argbase && l.isboolean(argbase)) {
+            m_try_raw = l.toboolean(argbase);
+        }
 		return true;
 	}
 	bool zlibuncompress::init_gzinflate(lua::state& l,int argbase) {

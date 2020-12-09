@@ -4,6 +4,7 @@ package.path = package.path .. ';scripts/?.lua'
 local llae = require 'llae'
 local http = require 'net.http'
 local log = require 'llae.log'
+local fs = require 'llae.fs'
 local json = require 'json'
 local uv = require 'uv'
 
@@ -27,7 +28,7 @@ local th = coroutine.create(function()
 	for n,v in resp:foreach_header() do
 		log.info(n,':',v)
 	end
-	print(resp:read_body())
+	print('total body size:', #resp:read_body())
 	resp:close()
 	print('finished request')
 

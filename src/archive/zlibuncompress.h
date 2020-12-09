@@ -13,11 +13,9 @@ namespace archive {
 	class zlibuncompress : public impl::zlibstream<zlibuncompress> {
 		META_OBJECT
 	private:
-	
+        std::atomic<bool> m_try_raw;
 	public:
-        static int process(z_stream* z,int flush) {
-            return inflate(z,flush);
-        }
+        static int process(z_stream* z,int flush,impl::zlibstream<zlibuncompress>&);
 		zlibuncompress();
 		~zlibuncompress();
 		int init(uv::loop& l,int windowBits);

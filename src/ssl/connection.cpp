@@ -430,7 +430,7 @@ namespace ssl {
 
     void connection::on_stream_closed(uv::stream* s) {
         // @todo
-        LLAE_DIAG(std::cout << "on_stream_closed" << std::endl;)
+        //LLAE_DIAG(std::cout << "on_stream_closed" << std::endl;)
         m_state = S_CLOSED;
         m_read_state = RS_EOF;
         do_continue();

@@ -31,6 +31,7 @@ namespace lua {
 		void* newuserdata(size_t size) { return lua_newuserdata(m_L,size); }
 		void createtable(int narr=0,int nset=0) { lua_createtable(m_L,narr,nset); }
 		void newtable() { lua_newtable(m_L); }
+        bool isboolean(int idx) { return lua_isboolean(m_L,idx); }
 		void pushboolean(bool v) { lua_pushboolean(m_L,v?1:0);}
 		void pushinteger(lua_Integer val) { lua_pushinteger(m_L,val); }
 		void pushnumber(lua_Number val) { lua_pushnumber(m_L,val); }
@@ -55,7 +56,7 @@ namespace lua {
 		value_type getfield(int tidx,const char* name) { return static_cast<value_type>(lua_getfield(m_L,tidx,name)); }
 		void remove(int idx) { lua_remove(m_L,idx); }
 		bool toboolean(int idx) const { return lua_toboolean(m_L,idx); }
-		lua_Number tonumber(int idx) const { return lua_tonumber(m_L,idx); }
+        lua_Number tonumber(int idx) const { return lua_tonumber(m_L,idx); }
 		lua_Number optnumber(int idx,lua_Number def) const { return luaL_optnumber(m_L,idx,def); }
 		lua_Number checknumber(int idx) const { return luaL_checknumber(m_L,idx); }
 		lua_Integer tointeger(int idx) const { return lua_tointeger(m_L,idx); }

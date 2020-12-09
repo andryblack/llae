@@ -12,44 +12,36 @@ function response:_init( data  )
 	self._version = data.version
 	self._code = data.code
 	self._message = data.message
+	self._decoder = (require 'net.http.read_decoder').new(self,data.connection,data.tail)
 	self._connection = data.connection
-	self._body = data.tail or ''
-	self._length = tonumber(self:get_header('Content-Length')) 
-	
 
 	local encoding = self:get_header('Content-Encoding')
-	if encoding then
-		if encoding == 'gzip' then
-			self._uncompress = archive.new_gunzip_read()
-			if self._body and self._body ~= '' then
-				local d = self._body
-				self._body = nil
-				self:_write_to_uncompress(d)
-			end
-		end
+	local transfer_encoding = self:get_header('Transfer-Encoding')
+	
+	if transfer_encoding and 
+		transfer_encoding == 'chunked' then
+		self._decoder = (require 'net.http.chunked_decoder').new(self)
 	end
+	if encoding then
+		log.debug('use compression',encoding)
+		for n,v in self:foreach_header() do
+			log.debug('header',n,':',v)
+		end
+		local uncompress
+		if encoding == 'gzip' then
+			uncompress = archive.new_gunzip_read()
+		elseif encoding == 'deflate' then
+			uncompress = archive.new_inflate_read(true)
+			log.debug('deflate encoding',self._length)
+		else
+			error('unsupported encoding ' .. encoding)
+		end
+		self._decoder = (require 'net.http.uncompress_decoder').new(self,uncompress)
+	end
+
 end
 
-function response:_write_to_uncompress( data )
-	if data and data ~= '' then
-		if self._length then
-			self._length = self._length - #data
-			if self._length <= 0 then
-				local ch = data:sub(1,#data+self._length)
-				log.debug('uncompress finish',#data,#ch,self._length)
-				self._uncompress:finish(ch)
-				if self._length < 0 then
-					-- @todo to next requrst
-					--self._body = string:sub(self._length)
-				end
-			else
-				self._uncompress:write(data)
-			end
-		else
-			self._uncompress:write(data)
-		end
-	end
-end
+
 
 function response:get_code(  )
 	return self._code
@@ -64,47 +56,15 @@ function response:read(  )
 	if self._closed then
 		return nil
 	end
-	if self._length and self._length <= 0 then
+	if self._decoder:is_end() then
 		log.debug('stream end')
 		self:on_closed()
 		self._closed = true
 		return nil
 	end
-	if self._body then
-		local b = self._body
-		if self._length then
-			self._length = self._length - #b
-		end
-		self._body = nil
-		return b
-	end
-	self._body = nil
-	local ch,e = self._connection:read()
-	if ch then
-		log.debug('connection readed ',#ch)
-		if self._uncompress then
-			self:_write_to_uncompress(ch)
-			ch,e = self._uncompress:read()
-			if ch then
-				log.debug('uncompress read:',#ch,e)
-			else
-				log.debug('uncompress read end:',e)
-				self._uncompress = nil
-			end
-		else
-			if self._length then
-				self._length = self._length - #ch
-			end
-		end
-	elseif self._uncompress then
-		ch,e = self._uncompress:read()
-		if ch then
-			log.debug('uncompress read:',#ch,e)
-		else
-			log.debug('uncompress read end:',e)
-			self._uncompress = nil
-		end
-	end
+
+	local ch,e = self._decoder:read()
+	
 	if not ch then
 		log.debug('response end')
 		self._error = e

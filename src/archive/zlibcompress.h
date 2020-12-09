@@ -14,7 +14,7 @@ namespace archive {
 	private:
 		
 	public:
-        static int process(z_stream* z,int flush) {
+        static int process(z_stream* z,int flush,impl::zlibstream<zlibcompress>&) {
             return deflate(z,flush);
         }
 		zlibcompress();

@@ -26,7 +26,7 @@ function request:_init( args )
 	local comp = url.parse(args.url)
 	self._url = comp
 	self._method = args.method or 'GET'
-	self._version = args.version or '1.0'
+	self._version = args.version or '1.1'
 	self._body = args.body or ''
 end
 
@@ -69,7 +69,7 @@ function request:exec(  )
 		table.insert(headers,'Host: ' .. self._url.host)
 	end
 	if not self:get_header('Accept-Encoding') then
-		table.insert(headers,'Accept-Encoding: deflate, gzip;q=1.0, *;q=0.5')
+		table.insert(headers,'Accept-Encoding: deflate, gzip')
 	end
 	for k,v in pairs(self._headers) do
 		table.insert(headers,k..': ' .. v)
@@ -99,12 +99,18 @@ function request:exec(  )
 	-- 	table.concat(headers,'\r\n'),
 	-- 	'\r\n\r\n', 
 	-- 	self._body)
-	self._connection:write{
+	local send_data = {
 		self._method .. ' ' .. (self._url.path or '/') .. ' HTTP/' .. self._version .. '\r\n',
 		table.concat(headers,'\r\n'),
 		'\r\n\r\n', 
-		self._body
 	}
+	if self._body and self._body ~= '' then
+		table.insert(send_data,self._body)
+	end
+	local res,err = self._connection:write(send_data)
+	if not res then
+		return res,err
+	end
 	local p = self.parser.new(self.response)
 	while true do
 		local resp,err = p:load(self._connection) 
