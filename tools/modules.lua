@@ -4,6 +4,7 @@ local utils = require 'llae.utils'
 local os = require 'llae.os'
 local http = require 'net.http'
 local log = require 'llae.log'
+local untar = require 'untar'
 
 
 local m = {}
@@ -83,6 +84,13 @@ function m:download(url,file)
 		end
 		f:close()
 	end
+end
+
+function m:unpack_tgz( file , todir )
+	local src = path.join(self.location,file)
+	local dst = todir and path.join(self.location,todir) or self.location
+	log.info('unpack',file)
+	untar.unpack_tgz(src,dst)
 end
 
 function m:shell( text )

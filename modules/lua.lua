@@ -8,9 +8,8 @@ dir = name .. '-' .. version
 function install()
 	download(url,archive)
 
-	shell([[
-tar -xzf ]] .. archive .. [[ || exit 1
-	]])
+	unpack_tgz(archive)
+	
 	move_files{
 		['build/include/lua.h'] = 		dir..'/src/lua.h',
 		['build/include/lauxlib.h'] = 	dir..'/src/lauxlib.h',

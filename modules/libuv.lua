@@ -8,10 +8,7 @@ dir = name .. '-' .. version
 
 function install()
 	download(url,archive)
-
-	shell([[
-tar -xzf ]] .. archive .. [[ || exit 1
-	]])
+	unpack_tgz(archive)
 	
 	install_files {
 		['build/include/uv.h'] = dir .. '/include/uv.h', 

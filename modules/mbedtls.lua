@@ -20,9 +20,7 @@ local comment = {
 function install()
 	download(url,archive)
 
-	shell([[
-tar -xzf ]] .. archive .. [[ || exit 1
-	]])
+	unpack_tgz(archive)
 
 	local includes = {}
 	for fn in foreach_file(dir .. '/include/mbedtls') do

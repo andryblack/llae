@@ -7,10 +7,8 @@ dir = name .. '-' .. version
 
 function install()
 	download(url,archive)
-
-	shell([[
-tar -xzf ]] .. archive .. [[ || exit 1
-	]])
+	unpack_tgz(archive)
+	
 	move_files{
 		['build/include/zlib.h'] = 		dir..'/zlib.h',
 		['build/include/zconf.h'] = 	dir..'/zconf.h',

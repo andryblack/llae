@@ -559,7 +559,7 @@ namespace uv {
             return 1;
         }
         void alloc(lua::state& l) {
-            m_data.resize(l.checkinteger(2));
+            m_data.resize(l.optinteger(2,1024*16));
             m_buffer = uv_buf_init(m_data.data(), m_data.size());
         }
     };

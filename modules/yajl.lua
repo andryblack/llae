@@ -9,9 +9,8 @@ archive = dir ..  '.tar.gz'
 
 function install()
 	download(url,archive)
-
+	unpack_tgz(archive)
 	shell([[
-tar -xzf ]] .. archive .. [[ || exit 1
 mv lloyd-yajl-]] .. revision .. ' ' .. dir .. [[ || exit 1
 	]])
 	install_files{ 
