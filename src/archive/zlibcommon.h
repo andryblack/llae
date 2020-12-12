@@ -157,7 +157,7 @@ namespace archive { namespace impl {
 				if (m_compress_active || m_read_active)
 					return;
                 this->m_stream->on_finish(llae::app::get(l).lua());
-				remove_ref();
+				this->remove_ref();
 			}
 			
 			int start_compress(uv::loop& l) {
@@ -270,10 +270,10 @@ namespace archive { namespace impl {
 				m_fs_req.data = this;
 			}
 			int start(uv::loop& l) {
-				add_ref();
+				this->add_ref();
 				int r = start_read(l);
 				if (r < 0) {
-					remove_ref();
+					this->remove_ref();
 				}
 				return r;
 			}
