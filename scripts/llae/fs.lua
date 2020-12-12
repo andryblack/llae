@@ -40,6 +40,14 @@ function fs.rmdir_r(dir)
 	return uv.fs.rmdir(dir)
 end
 
+function fs.open( filename, mode )
+	local f,er = uv.fs.open(filename,mode)
+	if not f then
+		return nil,'failed open ' .. filename .. ' ' .. tostring(er)
+	end
+	return f,er
+end
+
 local scanfiles_r
 scanfiles_r = function(res,dir,r)
 	local f,e = fs.scandir(dir)

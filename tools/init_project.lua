@@ -12,6 +12,7 @@ cmd.descr = 'init project'
 cmd.args = {
 	{'','project name', true },
 	{'modules','additional modules location', true },
+	{'project-dir','project dir',true},
 }
 function cmd:exec( args )
 	log.info('init:',args)
@@ -20,7 +21,7 @@ function cmd:exec( args )
 	if not proj_name then
 		utils.run(function()
 			local Project = require 'project'
-			local prj,err = Project.load('llae-project.lua')
+			local prj,err = Project.load( args['project-dir'] )
 			if not prj then
 				error('failed loading project file ' .. err)
 			end
@@ -31,7 +32,7 @@ function cmd:exec( args )
 		end)
 	else
 
-		local install_dir = path.join(fs.pwd(),proj_name)
+		local install_dir = args['project-dir'] and path.join(fs.pwd(),args['project-dir']) or path.join(fs.pwd(),proj_name)
 
 		install_dir = utils.replace_env(install_dir)
 		log.init('start init project at',install_dir)

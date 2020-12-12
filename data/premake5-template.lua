@@ -7,6 +7,7 @@
 <% end %>
 <% end %>
 
+
 solution '<%= project:name() %>'
 
 	configurations { 'debug', 'release' }
@@ -48,6 +49,12 @@ solution '<%= project:name() %>'
 	end
 %>
 
+<% if project:get_premake() and project:get_premake().solution then %>
+	-- project premake solution
+	<%= template.compile(project:get_premake().solution,{env=...})() %>
+	----------------------
+<% end %>
+
 	<% for _,mod in project:foreach_module() do %>
 	-- module <%= mod.name %> / <%= mod.location %>
 		
@@ -86,6 +93,9 @@ solution '<%= project:name() %>'
 		files {
 			'src/*.cpp',--generated
 		}
+
+
+
 		includedirs {
 			<% for _,mod in project:foreach_module() do if mod.includedir then %>
 				'modules/<%=mod.name%>/<%= mod.includedir %>'<% end end %>
@@ -101,10 +111,14 @@ solution '<%= project:name() %>'
 
 		links {
 		<% for _,mod in project:foreach_module_rev() do %>
-			<% if mod.build_lib then %>"module-<%= mod.name %>",<%end%>
+			<% if mod.build_lib and not mod.build_lib.noautolink then %>"module-<%= mod.name %>",<%end%>
 		<% end %>
 		}
 
-
+<% if project:get_premake() and project:get_premake().project then %>
+	-- project premake project
+	<%= template.compile(project:get_premake().project,{env=...})() %>
+	------
+<% end %>
 		
 

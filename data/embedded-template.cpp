@@ -16,7 +16,7 @@ local function output_script(data)
 end
 %>
 <% for _,v in ipairs(scripts) do %>
-<% v.data_name = v.name:gsub('[%.%/%-]','_') %>
+<% v.data_name = '_script_' .. v.name:gsub('[%.%/%-]','_') %>
 /* <%= v.name %> */
 static const unsigned char <%= v.data_name %>[] = {
 <%- output_script(v.content) %>

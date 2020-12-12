@@ -168,7 +168,7 @@ function m:foreach_file( dir )
 	local src = path.join(self.location,dir)
 	local files,err = fs.scandir(src)
 	if not files then
-		error(err)
+		error('failed scan dir ' .. src ..' '.. err)
 	end
 	local idx = 0
 	return function(files)
@@ -217,6 +217,7 @@ function m:preprocess( config )
 		end
 		table.insert(data,replace_line[line] or line)
 	end
+	fs.mkdir_r(path.dirname(dst_file))
 	fs.write_file(dst_file,table.concat(data,'\n'))
 	if config.remove_src then
 		fs.unlink(src_file)

@@ -9,6 +9,7 @@ install.descr = 'install module'
 install.args = {
 	{'file','install module from file', true },
 	{'modules','additional modules location', true },
+	{'project-dir','project dir',true},
 	{'','module name',false}
 }
 
@@ -26,7 +27,7 @@ function install:exec( args )
 	end
 	local modname = args[2]
 	local Project = require 'project'
-	local prj,err = Project.load('llae-project.lua')
+	local prj,err = Project.load( args['project-dir'] )
 	if not prj then
 		error('failed loading project file ' .. err)
 	end

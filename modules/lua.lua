@@ -20,12 +20,6 @@ function install()
 		dst = 'build/include/luaconf.h',
 		remove_src = true,
 		replace_line = {
-			['/* #define LUA_USE_C89 */'] = [[
-
-#if defined(LUA_EXTRA_CONF)
-#include LUA_EXTRA_CONF
-#endif
-			]]
 		}
 	}
 end

@@ -30,6 +30,16 @@ function request:_init( args )
 	self._body = args.body or ''
 end
 
+function request:get_path(  )
+	local p = self._url.path or ''
+	if self._url.query then
+		local qstring = tostring(self._url.query)
+		if qstring ~= "" then
+			p = p .. '?' .. qstring
+		end
+	end
+	return p
+end
 
 function request:exec(  )
 	self._connection = uv.tcp_connection:new()
@@ -100,7 +110,7 @@ function request:exec(  )
 	-- 	'\r\n\r\n', 
 	-- 	self._body)
 	local send_data = {
-		self._method .. ' ' .. (self._url.path or '/') .. ' HTTP/' .. self._version .. '\r\n',
+		self._method .. ' ' .. self:get_path() .. ' HTTP/' .. self._version .. '\r\n',
 		table.concat(headers,'\r\n'),
 		'\r\n\r\n', 
 	}

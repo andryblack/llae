@@ -31,6 +31,17 @@ function Project.env:premake( data )
 	self.premake = data
 end
 
+function Project.env:generate_src( data )
+	if type(data) ~= 'table' then
+		error('generate_src must be table')
+	end
+	if not self.generate_src then
+		self.generate_src = { data }
+	else 
+		table.insert(self.generate_src,data)
+	end
+end
+
 function Project:_init( env , root)
 	self._env = env
 	self._root = root
@@ -49,6 +60,10 @@ end
 
 function Project:get_premake( )
 	return self._env.premake
+end
+
+function Project:get_root( )
+	return self._root
 end
 
 function Project:add_modules_location( loc )
@@ -181,6 +196,36 @@ function Project:write_generated( )
 			f:close()
 		end
 	end
+	for _,conf in ipairs(self._env.generate_src or {}) do
+		local template_f
+		if conf.template then
+			local template_source_filename = path.join(self._root,conf.template)
+			template_f = template.load(template_source_filename)
+		else
+			template_f = template.compile(conf.template_content)
+		end
+		local filename = path.join(self._root,conf.filename)
+		log.info('generate',conf.filename)
+		fs.mkdir_r(path.dirname(filename))
+		fs.unlink(filename)
+		local f = assert(fs.open(filename,fs.O_WRONLY|fs.O_CREAT))
+		local ctx = setmetatable({
+			escape = conf.escape or tostring,
+			project=self,
+			template = template,
+			path = path,
+			conf = conf,
+			fs = fs,
+			root = self._root,
+			log = log
+		},{__index=_G})
+		if conf.config then
+			load(conf.config,'generate:config','t',ctx)()
+		end
+		f:write( template_f(ctx) )
+		f:close()
+	end
+
 end
 
 local function create_env( )
@@ -197,9 +242,14 @@ local function create_env( )
 	return setmetatable( global_env, {__index=super_env} ), env
 end
 
-function Project.load( )
+function Project.load( root_dir )
+	if root_dir then
+		root_dir = path.join(fs.pwd(),root_dir)
+	else
+		root_dir = fs.pwd()
+	end
 	local load_env,env = create_env( )
-	local res,err = loadfile('llae-project.lua','bt',load_env)
+	local res,err = loadfile(path.join(root_dir,'llae-project.lua'),'bt',load_env)
 	if not res then
 		return res,err
 	end
@@ -213,8 +263,8 @@ function Project.load( )
 		return nil,'need project'
 	end
 
-	log.debug('loaded project at',fs.pwd())
-	return Project.new(env,fs.pwd())
+	log.debug('loaded project at',root_dir)
+	return Project.new(env,root_dir)
 end
 
 return Project
