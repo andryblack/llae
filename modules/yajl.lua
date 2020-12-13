@@ -38,7 +38,7 @@ build_lib = {
 		'yajl','yajl_gen','yajl_tree',
 	},
 	project = [[
-		includedirs{
+		sysincludedirs{
 			'include'
 		}
 		files {
