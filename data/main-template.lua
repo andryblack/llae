@@ -3,7 +3,11 @@ package.path = 'scripts/?.lua;build/scripts/?.lua'
 -- local uv = require 'uv'
 -- local utils = require 'llae.utils'
 
+app = {}
+
 return function( args )
+
+	app.args = args
 
 	-- local cmdargs = utils.parse_args(args)
 	-- local scripts = cmdargs.scripts
