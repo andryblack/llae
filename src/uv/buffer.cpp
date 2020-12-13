@@ -8,16 +8,9 @@ META_OBJECT_INFO(uv::buffer,meta::object)
 
 namespace uv {
 
-    buffer::buffer(char* data,size_t size) {
-        m_buf.base = data;
-        m_buf.len = size;
-    }
-
-    buffer_ptr buffer::alloc(size_t size) {
-        void* mem = std::malloc(sizeof(buffer)+size);
-        char* data = static_cast<char*>(mem) + sizeof(buffer);
-        buffer* b = new (mem) buffer(data,size);
-        return buffer_ptr(b);
+    buffer::buffer(const buffer_alloc_tag& tag) : m_capacity(tag.size) {
+        m_buf.base = tag.data;
+        m_buf.len = tag.size;
     }
 
     void buffer::destroy() {

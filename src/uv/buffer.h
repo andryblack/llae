@@ -17,11 +17,28 @@ namespace uv {
         META_OBJECT
     private:
         uv_buf_t m_buf;
-        buffer(char* data,size_t size);
-        void destroy() override final;
+        size_t m_capacity;
+    protected:
+        void destroy() override;
+        struct buffer_alloc_tag {
+            char* data;
+            size_t size;
+        };
+        explicit buffer(const buffer_alloc_tag&);
     public:
-        static buffer_ptr alloc(size_t size);
+        static buffer_ptr alloc(size_t size) {
+            return alloc_obj<buffer>(size);
+        }
+        template <class Extend,typename...Args>
+        static common::intrusive_ptr<Extend> alloc_obj(size_t size,Args...args) {
+            void* mem = std::malloc(sizeof(Extend)+size);
+            char* data = static_cast<char*>(mem) + sizeof(Extend);
+            buffer_alloc_tag tag = {data,size};
+            Extend* b = new (mem) Extend(tag,args...);
+            return common::intrusive_ptr<Extend>(b);
+        }
         size_t get_len() const { return m_buf.len; }
+        size_t get_capacity() const { return m_capacity; }
         void* get_base() { return m_buf.base; }
         void set_len(size_t l){m_buf.len=l;}
         const void* get_base() const { return m_buf.base; }
