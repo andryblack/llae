@@ -117,7 +117,17 @@ solution '<%= project:name() %>'
 
 <% if project:get_premake() and project:get_premake().project then %>
 	-- project premake project
-	<%= template.compile(project:get_premake().project,{env=...})() %>
+	<%= template.compile(project:get_premake().project,{env=...}){
+		format_file = function (...)
+			local t = {
+				'..'
+			}
+			for _,v in ipairs(table.pack(...)) do
+				table.insert(t, v )
+			end
+			return "'" .. table.concat(t,'/') .. "'"
+		end  
+	} %>
 	------
 <% end %>
 		

@@ -65,6 +65,9 @@ project_main = [[
 	files {
 		<%= format_file(module.dir,'src/main.cpp') %>
 	}
+	sysincludedirs {
+		<%= format_file(module.dir,'src') %>
+	}
 ]]
 
 generate_src = {{

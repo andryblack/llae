@@ -49,6 +49,10 @@ static int err_handler(lua_State* L) {
 	return 1;
 }
 
+extern "C" 
+__attribute__((weak)) void llae_register_modules(lua_State *L) {
+
+}
 
 int main(int argc,char** argv) {
 	auto loop = uv_default_loop();
@@ -61,6 +65,8 @@ int main(int argc,char** argv) {
 		for (const auto *lib = embedded_libs; lib->func; lib++) {
 			L.require(lib->name,lib->func);
 		}
+
+		llae_register_modules(L.native());
 
 		lua::attach_embedded_scripts(L);
 		L.pushcfunction(&err_handler);
