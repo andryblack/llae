@@ -35,8 +35,37 @@ namespace uv {
         return static_cast<buffer*>(start);
     }
 
+    lua::multiret buffer::sub(lua::state& l) {
+        if (get_len()==0) {
+            l.pushstring("");
+            return {1};
+        }
+        lua_Integer begin = l.optinteger(2,1)-1;
+        lua_Integer end = l.optinteger(3,get_len())-1;
+        if (begin<0){
+            begin = 0;
+        }
+        if (begin >= get_len()) {
+            begin = get_len()-1;
+        }
+        if (end < 0) {
+            end = 0;
+        }
+        if (end >= get_len()) {
+            end = get_len()-1;
+        }
+        if (begin>=end) {
+            l.pushstring("");
+            return {1};
+        }
+        l.pushlstring(m_buf.base+begin,end-begin+1);
+        return {1};
+    }
+
     void buffer::lbind(lua::state& l) {
         lua::bind::function(l,"get_len",&buffer::get_len);
+        lua::bind::function(l,"__len",&buffer::get_len);
+        lua::bind::function(l,"sub",&buffer::sub);
     }
 
     bool write_buffers::put(lua::state &l) {
