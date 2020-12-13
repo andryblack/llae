@@ -62,6 +62,7 @@ namespace lua {
 		lua_Integer tointeger(int idx) const { return lua_tointeger(m_L,idx); }
 		lua_Integer optinteger(int idx,lua_Integer d) const { return luaL_optinteger(m_L,idx,d); }
 		lua_Integer checkinteger(int idx) const { return luaL_checkinteger(m_L,idx); }
+
 		const char* tostring(int idx) const { return lua_tostring(m_L,idx); }
 		const char* checkstring(int idx) const { return luaL_checkstring(m_L,idx); }
 		const char* optstring(int idx,const char* d) const { return luaL_optstring(m_L,idx,d); }
@@ -86,7 +87,7 @@ namespace lua {
 		template<class ... Types>
 		void error(const char *fmt, Types ... args) { luaL_error(m_L,fmt,args...); }
 		void argerror(int arg, const char *extramsg) { luaL_argerror(m_L,arg,extramsg); }
-		bool isyieldable() const { return lua_isyieldable(m_L); }
+		
 		void yield(int nresult) {
 			lua_yield(m_L,nresult);
 		}
@@ -102,6 +103,17 @@ namespace lua {
 		void checkstack(int size) {lua_checkstack(m_L,size); }
         char* buffinitsize(luaL_Buffer& b,size_t sz) { return luaL_buffinitsize(m_L,&b,sz); }
         void pushresultsize(luaL_Buffer& b,size_t sz) { luaL_pushresultsize(&b,sz); }
+
+        bool isnil(int idx) const { return lua_isnil(m_L,idx); }
+        bool isnone(int idx) const { return lua_isnone(m_L,idx); }
+        bool isnoneornil(int idx) const { return lua_isnoneornil(m_L,idx); }
+        bool isnumber(int idx) const { return lua_isnumber(m_L,idx); }
+        bool isstring(int idx) const { return lua_isstring(m_L,idx); }
+        bool istable(int idx) const { return lua_istable(m_L,idx); }
+        bool isthread(int idx) const { return lua_isthread(m_L,idx); }
+        bool isuserdata(int idx) const { return lua_isuserdata(m_L,idx); }
+        
+        bool isyieldable() const { return lua_isyieldable(m_L); }
 	};
 
 	class main_state : public state {
