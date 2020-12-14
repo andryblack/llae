@@ -3,6 +3,7 @@
 #include "common/intrusive_ptr.h"
 #include "luv.h"
 #include "lua/bind.h"
+#include "buffer.h"
 #include <vector>
 
 META_OBJECT_INFO(uv::file,meta::object)
@@ -457,23 +458,18 @@ namespace uv {
 	class fs_write : public fs_cont {
 	private:
 		common::intrusive_ptr<file> m_file;
-		std::vector<uv_buf_t> m_buffers;
-		std::vector<lua::ref> m_data;
+		write_buffers m_buffers;
 		int64_t m_size = 0;
         virtual void release() override {
             fs_cont::release();
-            for (auto& r:m_data) {
-                r.release();
-            }
+            m_buffers.release();
         }
 	public:
 		fs_write(common::intrusive_ptr<file>&& file,lua::ref&& cont) : fs_cont(std::move(cont)),m_file(std::move(file)) {}
-		std::vector<uv_buf_t>& buffers() { return m_buffers; }
+		const std::vector<uv_buf_t>& buffers() const { return m_buffers.get_buffers(); }
 		int64_t size() { return m_size; }
         void reset(lua::state& l) {
-            for (auto& r:m_data) {
-                r.reset(l);
-            }
+            m_buffers.reset(l);
             m_file.reset();
             fs_cont::reset(l);
         }
@@ -492,16 +488,12 @@ namespace uv {
 		void read(lua::state& l) {
 			int n = l.gettop();
 			for (int i=2;i<=n;++i) {
-				size_t s = 0;
-				const char* data = l.checklstring(i,s);
-				if (s) {
-					m_data.emplace_back();
-					l.pushvalue(i);
-					m_data.back().set(l);
-					m_buffers.push_back(uv_buf_init(const_cast<char*>(data),s));
-					m_size += s;
+				l.pushvalue(i);
+				if (!m_buffers.put(l)) {
+					l.argerror(i,"data expected");
 				}
 			}
+			m_size = m_buffers.get_total_size();
 		}
 	};
 

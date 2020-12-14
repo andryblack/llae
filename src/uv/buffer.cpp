@@ -68,6 +68,26 @@ namespace uv {
         lua::bind::function(l,"sub",&buffer::sub);
     }
 
+    bool write_buffers::put_one(lua::state& l) {
+        auto buf = lua::stack<uv::buffer_ptr>::get(l, -1);
+        if (buf) {
+            m_refs.emplace_back();
+            m_refs.back().set(l);
+            m_bufs.push_back(*buf->get());
+        } else {
+            size_t size;
+            
+            const char* val = l.tolstring(-1,size);
+            if (val && size !=0) {
+                m_refs.emplace_back();
+                m_refs.back().set(l);
+                m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
     bool write_buffers::put(lua::state &l) {
         auto t = l.get_type(-1);
         if (t == lua::value_type::table) {
@@ -76,34 +96,15 @@ namespace uv {
             m_refs.reserve(tl);
             for (size_t j=0;j<tl;++j) {
                 l.rawgeti(-1,j+1);
-                auto buf = lua::stack<uv::buffer_ptr>::get(l, -1);
-                if (buf) {
-                    m_refs.emplace_back();
-                    m_refs.back().set(l);
-                    m_bufs.push_back(*buf->get());
-                } else {
-                    size_t size;
-                    
-                    const char* val = l.tolstring(-1,size);
-                    if (val && size !=0) {
-                        m_refs.emplace_back();
-                        m_refs.back().set(l);
-                        m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
-                    } else {
-                        l.pop(2);
-                        return false;
-                    }
+                if (!put_one(l)) {
+                    l.pop(2);
+                    return false;
                 }
             }
             l.pop(1);
         } else {
-            size_t size;
-            const char* val = l.tolstring(-1,size);
-            if (val && size != 0) {
-                m_refs.emplace_back();
-                m_refs.back().set(l);
-                m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
-            } else {
+            if (!put_one(l)) {
+                l.pop(1);
                 return false;
             }
         }
@@ -116,6 +117,12 @@ namespace uv {
         }
         m_bufs.clear();
         m_refs.clear();
+    }
+
+    void write_buffers::release() {
+        for (auto& r:m_refs) {
+            r.release();
+        }
     }
 
     void write_buffers::pop_front(lua::state& l) {

@@ -53,12 +53,22 @@ namespace uv {
     private:
         std::vector<uv_buf_t> m_bufs;
         std::vector<lua::ref> m_refs;
+        std::vector<buffer_ptr> m_ext;
+        bool put_one(lua::state& s);
     public:
         bool put(lua::state& s);
         void reset(lua::state& l);
+        void release();
         const std::vector<uv_buf_t>& get_buffers() const { return m_bufs; }
         bool empty() const { return m_bufs.empty(); }
         void pop_front(lua::state& l);
+        size_t get_total_size() const {
+            size_t res = 0;
+            for (auto& b:m_bufs) {
+                res += b.len;
+            }
+            return res;
+        }
     };
     
 }
