@@ -30,6 +30,11 @@ solution '<%= project:name() %>'
 		visibility 'Hidden'
 	configuration{}
 
+	
+	filter{'action:xcode4'}
+	location '../project'
+	filter{}
+
 <% for _,mod in project:foreach_module() do %>
 <% if mod.solution then %>
 	-- module <%= mod.name %> / <%= mod.location %>
@@ -63,7 +68,9 @@ solution '<%= project:name() %>'
 			project "module-<%= mod.name %>"
 			kind 'StaticLib'
 			targetdir 'lib'
-			location 'project'
+			filter{'action:gmake or gmake2'}
+				location 'project'
+			filter{}
 			<%= template.compile(mod.build_lib.project,{env=...}){
 				module = mod,
 				lib = mod.build_lib,
@@ -79,8 +86,10 @@ solution '<%= project:name() %>'
 	project '<%= project:name() %>'
 		kind 'ConsoleApp'
 		targetdir '../bin'
-		location 'project'
 		targetname '<%= project:name() %>'
+		filter{'action:gmake or gmake2'}
+			location 'project'
+		filter{}
 
 		xcodebuildsettings{
    			MACOSX_DEPLOYMENT_TARGET='10.14'

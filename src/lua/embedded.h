@@ -13,7 +13,7 @@ namespace lua {
 	};
 
 	void attach_embedded_scripts(lua::state& lua);
-	
+	status load_embedded(lua::state& lua,const char* name);
 
 }
 

@@ -13,11 +13,14 @@ __attribute__((weak)) const lua::embedded_script lua::embedded_script::scripts[]
 namespace lua {
 
 	static int load_script(lua_State* L,const embedded_script* script) {
-		lua_pushstring(L, "$");
-		lua_pushstring(L, script->name);
-		lua_pushstring(L, ".lua");
-		lua_concat(L, 3);
-		luaL_loadbuffer(L, (const char*)script->content, script->size, script->name);
+		// lua_pushstring(L, "$");
+		// lua_pushstring(L, script->name);
+		// lua_pushstring(L, ".lua");
+		// lua_concat(L, 3);
+		int err = luaL_loadbuffer(L, (const char*)script->content, script->size, script->name);
+		if (err!=LUA_OK) {
+			luaL_error(L,"filed load embedded script %s : %d",script->name,err);
+		}
 		return 1;
 	}
 
@@ -34,15 +37,23 @@ namespace lua {
 		return 1;
 	}
 
-	static int get_embedded(lua_State* L) {
-		const char *name = luaL_checkstring(L, 1);
+	static const embedded_script* find_embedded(const char* name) {
 		const embedded_script* s = embedded_script::scripts;
 		while (s->name) {
 			if (strcmp(s->name,name)==0){
-				lua_pushlstring(L,(const char*)s->content, s->size);
-				return 1;
+				return s;
 			}
 			++s;
+		}
+		return nullptr;
+	}
+
+	static int get_embedded(lua_State* L) {
+		const char *name = luaL_checkstring(L, 1);
+		const embedded_script* s = find_embedded(name);
+		if (s) {
+			lua_pushlstring(L,(const char*)s->content, s->size);
+			return 1;
 		}
 		return 0;
 	}
@@ -63,6 +74,18 @@ namespace lua {
 		lua.pushcfunction(&get_embedded);
 		lua.setfield(-2,"get_embedded");
 		lua.pop(1);
+	}
+
+	status load_embedded(lua::state& l,const char* name) {
+		const embedded_script* s = find_embedded(name);
+		if (!s) {
+			l.pushstring("not found embedded ");
+			l.pushstring(name);
+			l.concat(2);
+			return status::errun;
+		}
+		int res = luaL_loadbuffer(l.native(), (const char*)s->content, s->size, s->name);
+		return static_cast<status>(res);
 	}
 
 }

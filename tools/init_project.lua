@@ -54,6 +54,7 @@ function cmd:exec( args )
 			fs.write_file(path.join(install_dir,'.gitignore'),[[
 /bin/
 /build/
+/project/
 	]])
 
 	fs.write_file(path.join(install_dir,'llae-project.lua'),utils.replace_tokens([[

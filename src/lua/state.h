@@ -76,6 +76,7 @@ namespace lua {
 		status pcall(int nargs,int nresult, int msgh) { return static_cast<status>(lua_pcall(m_L,nargs,nresult,msgh)); }
 		void require(const char* modname,lua_CFunction func);
 		void pushvalue(int idx) const { lua_pushvalue(m_L,idx); }
+		void concat(int count) const { lua_concat(m_L,count); }
 		int ref() { return luaL_ref(m_L,LUA_REGISTRYINDEX); }
 		void unref(int r) { luaL_unref(m_L,LUA_REGISTRYINDEX,r); }
 		void pushref(int r) { lua_geti(m_L,LUA_REGISTRYINDEX,r); }
@@ -112,7 +113,7 @@ namespace lua {
         bool istable(int idx) const { return lua_istable(m_L,idx); }
         bool isthread(int idx) const { return lua_isthread(m_L,idx); }
         bool isuserdata(int idx) const { return lua_isuserdata(m_L,idx); }
-        
+
         bool isyieldable() const { return lua_isyieldable(m_L); }
 	};
 

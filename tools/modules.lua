@@ -5,7 +5,7 @@ local os = require 'llae.os'
 local http = require 'net.http'
 local log = require 'llae.log'
 local untar = require 'untar'
-
+local tool = require 'tool'
 
 local m = {}
 
@@ -306,7 +306,7 @@ function _M.get( locations, modname )
 		end
 	end
 	if not mod then
-		local fn = path.join(path.dirname(fs.exepath()),'..','modules',modname .. '.lua')
+		local fn = tool.get_llae_path('modules',modname .. '.lua') 
 		if fs.isfile(fn) then
 			mod =  _M.loadfile(fn)
 			mod.source = fn
@@ -317,6 +317,10 @@ function _M.get( locations, modname )
 		return mod
 	end
 	log.error('not found module ' , modname)
+	for _,v in ipairs(locations) do
+		log.error('\t','at',v)
+	end
+	log.error('\t','at',tool.get_llae_path('modules'))
 	error('not found module ' .. modname)
 end
 

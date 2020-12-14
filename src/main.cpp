@@ -69,14 +69,11 @@ int main(int argc,char** argv) {
 		llae_register_modules(L.native());
 
 		lua::attach_embedded_scripts(L);
+
 		L.pushcfunction(&err_handler);
-		L.getglobal("require");
-		L.pushstring("_main");
-		auto err = L.pcall(1,1,-3);
-		if (err != lua::status::ok) {
+		auto err = lua::load_embedded(L,"_main");
+		if (err!=lua::status::ok) {
 			app.show_error(L,err);
-		} else if (!lua::value(L,-1).is_function()) {
-			std::cout << "main dnt return function" << std::endl;
 		} else {
 			createargtable(L,argv,argc);
 			err = L.pcall(1,0,-3);

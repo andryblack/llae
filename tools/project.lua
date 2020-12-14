@@ -5,9 +5,11 @@ local template = require 'llae.template'
 local path = require 'llae.path'
 local log = require 'llae.log'
 local utils = require 'llae.utils'
+local tool = require 'tool'
 
 local Project = class(nil,'Project')
 
+Project.__llae_root = path.join(fs.exepath(),'..')
 Project.env = {}
 
 function Project.env:project( name )
@@ -147,7 +149,7 @@ end
 
 
 function Project:write_premake(  )
-	local template_source_filename = path.join(path.dirname(fs.exepath()),'..','data','premake5-template.lua')
+	local template_source_filename = tool.get_llae_path('data','premake5-template.lua')
 	local filename = path.join(self._root,'build','premake5.lua')
 	log.info('generate premake5.lua')
 	fs.mkdir_r(path.dirname(filename))
