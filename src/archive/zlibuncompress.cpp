@@ -21,7 +21,7 @@ namespace archive {
     int zlibuncompress::process(z_stream* z,int flush,impl::zlibstream<zlibuncompress>& s) {
         auto& self(static_cast<zlibuncompress&>(s));
         auto origin = z->next_in;
-        int r = inflate(z, flush);
+        int r = ::inflate(z, flush);
         if (r == Z_DATA_ERROR && z->total_out==0 && self.m_try_raw) {
             auto avail_in = z->avail_in + (z->next_in-origin);
             self.m_try_raw = false;
@@ -30,7 +30,7 @@ namespace archive {
             z->avail_in = avail_in;
             z->next_in = origin;
             if ( r!=Z_OK) return r;
-            r = inflate(z, flush);
+            r = ::inflate(z, flush);
         }
         return r;
     }
@@ -153,6 +153,16 @@ namespace archive {
         }
         lua::push(l,std::move(res));
         return {1};
+    }
+
+    bool zlibuncompress::inflate(const void* src,size_t src_size,void* dst,size_t& dst_size) {
+        uLongf dstLen = dst_size;
+        int r = uncompress(static_cast<Bytef*>(dst),&dstLen,static_cast<const Bytef*>(src),src_size);
+        if (r!=Z_OK) {
+            dst_size = dstLen;
+            return false;
+        }
+        return true;
     }
    
 }

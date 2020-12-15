@@ -155,12 +155,12 @@ function _M.embed( patterns , files_content )
 			buffered.writeln(result, "/* " .. dst_name .. " */")
 			local id_name = dst_name:gsub('[%.%/%-]','_')
 			buffered.writeln(result, "static const unsigned char " .. id_name .. '[] = {')
-			local conent = io.readfile(f)
-			output_script(result,conent)
+			local content = io.readfile(f)
+			output_script(result,content)
 			buffered.writeln(result,'};')
 			table.insert(embedded_files,{
 				id = id_name,
-				name = dst_name:gsub('[%/]','.'):gsub('%.lua','')
+				name = dst_name:gsub('[%/]','.'):gsub('%.lua',''),
 				})
 		end
 	end
@@ -170,6 +170,7 @@ function _M.embed( patterns , files_content )
 		buffered.writeln(result, "/* " .. dst_name .. " */")
 		local id_name = dst_name:gsub('[%.%/%-]','_')
 		buffered.writeln(result, "static const unsigned char " .. id_name .. '[] = {')
+		local size = #content;
 		output_script(result,v)
 		buffered.writeln(result,'};')
 		table.insert(embedded_files,{
@@ -186,10 +187,11 @@ function _M.embed( patterns , files_content )
 		buffered.writeln(result, "\t{")
 		buffered.writeln(result, '\t\t"' .. v.name .. '",')
 		buffered.writeln(result, '\t\t' .. v.id .. ',')
-		buffered.writeln(result, '\t\tsizeof(' .. v.id .. ')')
+		buffered.writeln(result, '\t\tsizeof(' .. v.id .. '),')
+		buffered.writeln(result, '\t\t0')
 		buffered.writeln(result, "\t},")
 	end
-	buffered.writeln(result, "\t{0,0,0}")
+	buffered.writeln(result, "\t{0,0,0,0}")
 	buffered.writeln(result, "};")
 	buffered.writeln(result, "")
 

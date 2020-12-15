@@ -19,13 +19,6 @@ mv lloyd-yajl-]] .. revision .. ' ' .. dir .. [[ || exit 1
 		['build/include/yajl/yajl_parse.h'] = 		dir..'/src/api/yajl_parse.h',
 		['build/include/yajl/yajl_tree.h'] = 		dir..'/src/api/yajl_tree.h',
 	}
-	-- preprocess{
-	-- 	src = 'lua-'..version .. '/src/luaconf.h',
-	-- 	dst = 'build/include/luaconf.h',
-	-- 	replace={
-	-- 		['LUA_API'] = '',
-	-- 		['LUAI_FUNC'] = ''
-	-- 	}}
 end
 
 

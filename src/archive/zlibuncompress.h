@@ -23,6 +23,8 @@ namespace archive {
 		
 		bool init_inflate(lua::state& l,int argbase);
 		bool init_gzinflate(lua::state& l,int argbase);
+
+        static bool inflate(const void* src,size_t src_size,void* dst,size_t& dst_size);
 		static void lbind(lua::state& l);
 	};
 	using zlibuncompress_ptr = common::intrusive_ptr<zlibuncompress>; 

@@ -1,4 +1,6 @@
 #include "embedded.h"
+#include "archive/zlibuncompress.h"
+#include <memory>
 
 extern "C" {
 #include <lua.h>
@@ -13,15 +15,17 @@ __attribute__((weak)) const lua::embedded_script lua::embedded_script::scripts[]
 namespace lua {
 
 	static int load_script(lua_State* L,const embedded_script* script) {
-		// lua_pushstring(L, "$");
-		// lua_pushstring(L, script->name);
-		// lua_pushstring(L, ".lua");
-		// lua_concat(L, 3);
-		int err = luaL_loadbuffer(L, (const char*)script->content, script->size, script->name);
-		if (err!=LUA_OK) {
-			luaL_error(L,"filed load embedded script %s : %d",script->name,err);
-		}
-		return 1;
+		size_t uncompressed = script->uncompressed;
+		if (uncompressed) {
+			std::unique_ptr<char[]> data(new char[script->uncompressed]);
+			if (archive::zlibuncompress::inflate(script->content,script->size,data.get(),uncompressed)) {
+				return luaL_loadbuffer(L, data.get(), uncompressed, script->name);
+			} else {
+				return LUA_ERRRUN;
+			}
+		} 
+
+		return luaL_loadbuffer(L, reinterpret_cast<const char*>(script->content), script->size, script->name);
 	}
 
 	static int embedded_searcher(lua_State* L) {
@@ -29,7 +33,11 @@ namespace lua {
 		const embedded_script* s = embedded_script::scripts;
 		while (s->name) {
 			if (strcmp(s->name,name)==0){
-				return load_script(L,s);
+				int err = load_script(L,s);
+				if (err!=LUA_OK) {
+					luaL_error(L,"filed load embedded script %s : %d",s->name,err);
+				}
+				return 1;
 			}
 			++s;
 		}
@@ -52,7 +60,16 @@ namespace lua {
 		const char *name = luaL_checkstring(L, 1);
 		const embedded_script* s = find_embedded(name);
 		if (s) {
-			lua_pushlstring(L,(const char*)s->content, s->size);
+			size_t uncompressed = s->uncompressed;
+			if (uncompressed) {
+				std::unique_ptr<char[]> data(new char[s->uncompressed]);
+				if (!archive::zlibuncompress::inflate(s->content,s->size,data.get(),uncompressed)) {
+					return 0;
+				}
+				lua_pushlstring(L,data.get(), uncompressed);
+			} else {
+				lua_pushlstring(L,reinterpret_cast<const char*>(s->content), s->size);
+			}
 			return 1;
 		}
 		return 0;
@@ -84,7 +101,7 @@ namespace lua {
 			l.concat(2);
 			return status::errun;
 		}
-		int res = luaL_loadbuffer(l.native(), (const char*)s->content, s->size, s->name);
+		int res = load_script(l.native(), s);
 		return static_cast<status>(res);
 	}
 

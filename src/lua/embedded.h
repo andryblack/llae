@@ -9,6 +9,7 @@ namespace lua {
 		const char* name;
 		const unsigned char* content;
 		size_t size;
+		size_t uncompressed;
 		static const embedded_script scripts[];
 	};
 

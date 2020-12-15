@@ -17,9 +17,12 @@ end
 %>
 <% for _,v in ipairs(scripts) do %>
 <% v.data_name = '_script_' .. v.name:gsub('[%.%/%-]','_') %>
+<% local compressed = (require 'llae.compression').deflate(v.content)
+   v.uncompressed_size = #v.content
+  %>
 /* <%= v.name %> */
 static const unsigned char <%= v.data_name %>[] = {
-<%- output_script(v.content) %>
+<%- output_script(compressed) %>
 };
 
 <% end %>
@@ -31,12 +34,13 @@ const lua::embedded_script lua::embedded_script::scripts[] = {
 	"<%= v.name %>",
 	<%= v.data_name %>,
 	sizeof(<%= v.data_name %>),
+	<%= v.uncompressed_size %>,
 },
 <% end %>
 
 	{
 		nullptr,
 		nullptr,
-		0
+		0,0
 	}
 };

@@ -346,7 +346,17 @@ namespace archive { namespace impl {
 		}
 		void add_data(uv::buffer_ptr&& b) {
 			uv::scoped_lock l(m_mutex);
-			m_processed.emplace_back(std::move(b));
+			if (!m_processed.empty()) {
+				size_t tail = m_processed.back()->get_capacity()-m_processed.back()->get_len();
+				if (tail >= b->get_len()) {
+					::memcpy(m_processed.back()->get_end(),b->get_base(),b->get_len());
+					m_processed.back()->set_len(m_processed.back()->get_len()+b->get_len());
+					b.reset();
+				}
+			}
+			if (b) {
+				m_processed.emplace_back(std::move(b));
+			}
 			if (m_read_resume) {
 				m_read_resume->send();
 			}
