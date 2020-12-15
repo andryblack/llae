@@ -2,11 +2,12 @@ name = 'lua'
 version = '5.3.5'
 archive = 'lua-' .. version .. '.tar.gz'
 url = 'https://www.lua.org/ftp/' .. archive
+hash = '4f4b4f323fd3514a68e0ab3da8ce3455'
 
 dir = name .. '-' .. version
 
 function install()
-	download(url,archive)
+	download(url,archive,hash)
 
 	unpack_tgz(archive)
 	

@@ -2,11 +2,11 @@ name = 'zlib'
 version = '1.2.11'
 archive = 'zlib-' .. version .. '.tar.gz'
 url = 'https://zlib.net/' .. archive
-
+hash = '1c9f62f0778697a09d36121ead88e08e'
 dir = name .. '-' .. version
 
 function install()
-	download(url,archive)
+	download(url,archive,hash)
 	unpack_tgz(archive)
 	
 	move_files{

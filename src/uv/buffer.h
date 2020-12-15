@@ -47,6 +47,7 @@ namespace uv {
         static buffer* get(uv_buf_t* b);
         static buffer* get(char* base);
         uv_buf_t* get() { return &m_buf;}
+        lua::multiret hex(lua::state& l);
         static void lbind(lua::state& l);
     };
 

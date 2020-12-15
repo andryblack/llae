@@ -5,10 +5,11 @@ version = '2.1.0'
 url = 'https://github.com/lloyd/yajl/tarball/'..version
 dir =  name .. '-' .. version 
 archive = dir ..  '.tar.gz'
+hash = '8df8a92a2799bc949577e8e7a9f43670'
 
 
 function install()
-	download(url,archive)
+	download(url,archive,hash)
 	unpack_tgz(archive)
 	shell([[
 mv lloyd-yajl-]] .. revision .. ' ' .. dir .. [[ || exit 1

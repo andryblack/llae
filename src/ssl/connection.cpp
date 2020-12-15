@@ -3,13 +3,15 @@
 #include "uv/luv.h"
 #include "lua/stack.h"
 #include "lua/bind.h"
+#include "crypto/crypto.h"
 #include <iostream>
 #include <mbedtls/debug.h>
+
 
 META_OBJECT_INFO(ssl::connection,meta::object)
 
 namespace ssl {
-    void push_error(lua::state& l,const char* fmt, int error);
+    using crypto::push_error;
 
 	connection::connection( const ctx_ptr& ctx, const uv::stream_ptr& stream ) : m_ctx(ctx), m_stream(stream) {
         mbedtls_ssl_init( &m_ssl );

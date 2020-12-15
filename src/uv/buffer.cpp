@@ -3,10 +3,13 @@
 #include <new>
 #include <cstddef>
 #include <cstdlib>
+#include <memory>
 
 META_OBJECT_INFO(uv::buffer,meta::object)
 
 namespace uv {
+
+    static const char hex_char[] = "0123456789abcdef";
 
     buffer::buffer(const buffer_alloc_tag& tag) : m_capacity(tag.size) {
         m_buf.base = tag.data;
@@ -62,10 +65,25 @@ namespace uv {
         return {1};
     }
 
+    lua::multiret buffer::hex(lua::state& l) {
+        size_t size = get_len()*2;
+        std::unique_ptr<char[]> buf(new char[size]);
+        char* dst = buf.get();
+        const unsigned char* d = static_cast<const unsigned char*>(get_base());
+        for (size_t i=0;i<get_len();++i) {
+            *dst++ = hex_char[(*d>>4) & 0xf];
+            *dst++ = hex_char[*d & 0xf];
+            ++d;
+        }
+        l.pushlstring(buf.get(),size);
+        return {1};
+    }
+
     void buffer::lbind(lua::state& l) {
         lua::bind::function(l,"get_len",&buffer::get_len);
         lua::bind::function(l,"__len",&buffer::get_len);
         lua::bind::function(l,"sub",&buffer::sub);
+        lua::bind::function(l,"hex",&buffer::hex);
     }
 
     bool write_buffers::put_one(lua::state& l) {

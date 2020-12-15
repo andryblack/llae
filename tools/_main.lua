@@ -10,7 +10,7 @@ if root then
 	print('use scripts at',root)
 	table.remove(package.searchers,1)
 	local store_packages = {
-		'json','llae','uv','ssl','archive'
+		'json','llae','uv','ssl','archive','crypto'
 	}
 	local store = { }
 	for _,v in ipairs(store_packages) do

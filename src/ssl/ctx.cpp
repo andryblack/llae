@@ -1,6 +1,7 @@
 #include "ctx.h"
 #include "lua/stack.h"
 #include "lua/bind.h"
+#include "crypto/crypto.h"
 #include <mbedtls/debug.h>
 #include <mbedtls/error.h>
 #include <iostream>
@@ -15,12 +16,8 @@ namespace ssl {
 #else
 	static const char* default_cafile = "/etc/ssl/cert.pem";
 #endif
-
-	void push_error(lua::state& l,const char* fmt, int error) {
-		char buffer[128] = {0};
-		mbedtls_strerror(error,buffer,sizeof(buffer));
-		l.pushfstring(fmt,error,buffer);
-	}
+	using crypto::push_error;
+	
 
 	ctx::ctx() {
 		mbedtls_entropy_init( &m_entropy );

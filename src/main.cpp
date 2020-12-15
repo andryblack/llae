@@ -17,6 +17,7 @@ int luaopen_uv(lua_State* L);
 int luaopen_ssl(lua_State* L);
 int luaopen_llae(lua_State* L);
 int luaopen_archive(lua_State* L);
+int luaopen_crypto(lua_State* L);
 
 static void createargtable (lua::state& lua, char **argv, int argc) {
   	int narg = argc - 1;  /* number of positive indices */
@@ -40,6 +41,7 @@ static const struct {
 	{"json",	luaopen_json},
 	{"llae",	luaopen_llae},
 	{"archive",	luaopen_archive},
+	{"crypto",	luaopen_crypto},
   {NULL, NULL}
 };
 

@@ -107,6 +107,22 @@ function fs.load_file( fn )
 	return table.concat(cont,'')
 end
 
+function fs.read_file( fn )
+	local cont = {}
+	local f = assert( fs.open(fn,fs.O_RDONLY) )
+	return function()
+		if not f then
+			return nil
+		end
+		local ch = assert(f:read(CHUNK_SIZE))
+		if #ch < CHUNK_SIZE then
+			f:close()
+			f = nil
+		end
+		return ch
+	end,f
+end
+
 function fs.write_file( fn , ... )
 	fs.unlink(fn)
 	local f = assert(fs.open(fn,fs.O_WRONLY|fs.O_CREAT))

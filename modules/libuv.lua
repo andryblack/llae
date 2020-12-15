@@ -3,11 +3,11 @@ name = 'libuv'
 version = 'v1.35.0'
 archive = name .. '-' .. version .. '.tar.gz'
 url = 'https://dist.libuv.org/dist/'..version..'/' .. archive
-
+hash = '6b0ad0df2cfe90ed556a500423d6f1b8'
 dir = name .. '-' .. version
 
 function install()
-	download(url,archive)
+	download(url,archive,hash)
 	unpack_tgz(archive)
 	
 	install_files {

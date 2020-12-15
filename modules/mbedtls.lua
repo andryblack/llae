@@ -3,6 +3,7 @@ version = '2.16.5'
 dir = name .. '-' .. version 
 archive = dir .. '.tar.gz'
 url = 'https://tls.mbed.org/download/' .. dir .. '-apache.tgz'
+hash = '339f0505323b29851ef3128a53d2de20'
 
 local uncomment = {
 	['MBEDTLS_DEPRECATED_REMOVED'] = true,
@@ -18,7 +19,7 @@ local comment = {
 
 
 function install()
-	download(url,archive)
+	download(url,archive,hash)
 
 	unpack_tgz(archive)
 

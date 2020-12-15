@@ -6,6 +6,7 @@ local http = require 'net.http'
 local log = require 'llae.log'
 local untar = require 'untar'
 local tool = require 'tool'
+local crypto = require 'llae.crypto'
 
 local m = {}
 
@@ -31,11 +32,23 @@ function m:download_git(url,config)
 	exec_cmd(cmd .. ' > ' .. path.join(self.location,'download_git_log.txt') .. ' 2>&1')
 end
 
-function m:download(url,file)
+function m:download(url,file,hash)
 	log.info('download',self.name,url)
 	local dst = path.join(self.location,file)
+	if hash and fs.isfile(dst) then
+		local h = crypto.md5()
+		for b in fs.read_file(dst) do
+			assert(h:update(b))
+		end
+		local fhash = assert(h:finish()):hex()
+		if fhash == hash then
+			log.info('skip, already downloaded')
+			return
+		end
+	end
 	fs.unlink(dst)
 
+	local h = hash and crypto.md5()
 	local uri = (require 'net.url').parse(url)
 	if uri.scheme == 'ftp' then
 		local ftp = (require 'net.ftp').new()
@@ -45,6 +58,9 @@ function m:download(url,file)
 
 		ftp:getfile(uri.path,dst,function(ch,total)
 			loaded = loaded + #ch
+			if h and #ch>0 then
+				assert(h:update(ch))
+			end
 			p:update(loaded,total)
 		end)
 	else
@@ -78,11 +94,23 @@ function m:download(url,file)
 				p:close()
 				break
 			end
-			f:write(ch)
+			if #ch > 0 then
+				if h then
+					assert(h:update(ch))
+				end
+				f:write(ch)
+			end
 			loaded = loaded + #ch
 			p:update(loaded,total)
 		end
 		f:close()
+	end
+	if h then
+		fhash = assert(h:finish()):hex()
+		if fhash ~= hash then
+			log.error('invalid file hash',fhash,hash)
+			error('invalid file hash')
+		end
 	end
 end
 
@@ -273,7 +301,7 @@ function _M.install( env , root , tosystem)
 	os.setenv('LLAE_PROJECT_ROOT',env.root)
 	env.location = path.join(env.root,'build','modules', env.name)
 	env.tosystem = tosystem
-	fs.rmdir_r(env.location)
+	--fs.rmdir_r(env.location)
 	fs.mkdir_r(env.location)
 		
 	env.install(tosystem)
