@@ -37,6 +37,7 @@ namespace uv {
 		lua::multiret close(lua::state& l);
 		lua::multiret write(lua::state& l);
         lua::multiret read(lua::state& l);
+        void seek(size_t pos) { m_offset = pos; }
 	};
 	typedef common::intrusive_ptr<file> file_ptr;
 

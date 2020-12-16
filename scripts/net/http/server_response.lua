@@ -19,6 +19,7 @@ local default_content_type = {
 	['jpeg'] = 'image/jpeg',
 	['jpg'] = 'image/jpeg',
 	['wasm'] ='application/wasm',
+	['mp4'] ='video/mp4',
 }
 
 
@@ -208,6 +209,48 @@ function response:_need_compress_file( ftype, conf )
 	return true
 end
 
+local BUFFER_SIZE = 1024*16
+local MAX_SEND = 1024*256
+
+function response:send_file_range( f,fsize,range )
+	local range_begin,range_end = string.match(range,'(%d+)%-(%d+)')
+	if range_begin then
+		range_begin = tonumber(range_begin)
+		range_end = tonumber( range_end ) 
+	else
+		range_begin = string.match(range,'(%d+)%-')
+		if range_begin then
+			range_begin = tonumber(range_begin)
+			range_end = size-1
+		end
+	end
+	if range_begin ~= 0 then
+		f:seek(range_begin)
+	end
+	local size = range_end-range_begin+1
+	if size > MAX_SEND then
+		size = MAX_SEND
+		range_end = range_begin + size - 1
+	end
+	log.debug('send partial',size)
+	self:set_header('Content-Length',size)
+	self:set_header('Content-Range',string.format('bytes %d-%d/%d',range_begin,range_end,fsize))
+	self:status(206,'Partial Content')
+	self._compress = nil 
+	self:_send_response(false)
+	while size > 0 do
+		local rsize = size
+		if rsize > BUFFER_SIZE then
+			rsize = BUFFER_SIZE
+		end
+		local b = f:read(rsize)
+		--log.debug('write',#b)
+		self._client:write(b)
+		size = size - #b
+	end
+	self._data = nil
+	-- body
+end
 function response:send_static_file( fpath , conf )
 	assert(self._headers,'response already sended')
 	assert(not next(self._data),'data not empty')
@@ -233,35 +276,41 @@ function response:send_static_file( fpath , conf )
 			log.error('faled open',fpath,e)
 			send_404(self,fpath,e)
 		else
+			local range = req:get_header('Range')
 			local ftype = (conf and conf.type) or default_content_type[path.extension(fpath)]
 			self:set_header('Content-Type',ftype)
-			self:set_header('Last-Modified',timestamp.format(stat.mtim.sec))
-			self:set_header('Cache-Control','public,max-age=0')
-			if self:_need_compress_file(ftype, conf) then
-				self._compress:send_async(f)
-				local data_size = 0
-				while true do
-					local ch,er = self._compress:read_buffer()
-					if er then
-						error( er )
-					end
-					if ch then
-						table.insert(self._data,ch)
-					else
-						break
-					end
-				end
-				self:set_header('Content-Encoding',self._compress.encoding)
-				self._compress = nil
-				self:set_header('Content-Length',data_size)
-				self:_send_response(true)
+			if range then
+				self:send_file_range(f,stat.size,range)
 				self:_finish()
 			else
-				--print('opened',path)
-				self:set_header('Content-Length',stat.size)
-				self:_send_response(false)
-				self._client:send(f)
-				self:_finish()
+				self:set_header('Last-Modified',timestamp.format(stat.mtim.sec))
+				self:set_header('Cache-Control','public,max-age=0')
+				if self:_need_compress_file(ftype, conf) then
+					self._compress:send_async(f)
+					local data_size = 0
+					while true do
+						local ch,er = self._compress:read_buffer()
+						if er then
+							error( er )
+						end
+						if ch then
+							table.insert(self._data,ch)
+						else
+							break
+						end
+					end
+					self:set_header('Content-Encoding',self._compress.encoding)
+					self._compress = nil
+					self:set_header('Content-Length',data_size)
+					self:_send_response(true)
+					self:_finish()
+				else
+					--print('opened',path)
+					self:set_header('Content-Length',stat.size)
+					self:_send_response(false)
+					self._client:send(f)
+					self:_finish()
+				end
 			end
 			f:close()
 		end
