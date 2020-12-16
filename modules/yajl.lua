@@ -13,6 +13,7 @@ function install()
 	unpack_tgz(archive)
 	shell([[
 rm -rf ]] .. dir .. [[
+
 mv lloyd-yajl-]] .. revision .. ' ' .. dir .. [[ || exit 1
 	]])
 	install_files{ 
