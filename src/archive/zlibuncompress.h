@@ -22,22 +22,31 @@ namespace archive {
 		bool is_error() const { return m_is_error; }
 		
 		bool init_inflate(lua::state& l,int argbase);
-		bool init_gzinflate(lua::state& l,int argbase);
+		
 
         static bool inflate(const void* src,size_t src_size,void* dst,size_t& dst_size);
 		static void lbind(lua::state& l);
 	};
 	using zlibuncompress_ptr = common::intrusive_ptr<zlibuncompress>; 
 
-    class zlibuncompress_read : public impl::zlibstream_read<zlibuncompress> {
+    class zlibuncompress_inflate_read : public impl::zlibstream_read<zlibuncompress> {
         META_OBJECT
     public:
-        zlibuncompress_read();
+        zlibuncompress_inflate_read();
         static void lbind(lua::state& l);
         static lua::multiret new_inflate(lua::state& l);
+    };
+    using zlibuncompress_inflate_read_ptr = common::intrusive_ptr<zlibuncompress_inflate_read>;
+
+    class zlibuncompress_gzip_read : public zlibuncompress_inflate_read {
+        META_OBJECT
+    protected:
+        bool init_gzinflate(lua::state& l,int argbase);
+    public:
+        zlibuncompress_gzip_read();
         static lua::multiret new_gzip(lua::state& l);
     };
-    using zlibuncompress_read_ptr = common::intrusive_ptr<zlibuncompress_read>;
+    using zlibuncompress_gzip_read_ptr = common::intrusive_ptr<zlibuncompress_gzip_read>;
 
     class zlibuncompress_to_stream : public impl::zlibstream_to_stream<zlibuncompress> {
         META_OBJECT

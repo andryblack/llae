@@ -23,25 +23,27 @@ local default_content_type = {
 }
 
 
-local deflate_encoding = class(nil,'http.server.deflate_encoding')
-deflate_encoding.encoding = 'deflate'
-function deflate_encoding:_init(  )
-	self._stream = archive.new_deflate_read()
+local compress_encoding = class(nil,'http.server.compress_encoding')
+
+function compress_encoding:_init( stream , encoding )
+	self.encoding = encoding
+	self._stream = stream
 end
-function deflate_encoding:write( ... )
+function compress_encoding:write( ... )
 	return self._stream:write(...)
 end
-function deflate_encoding:read_buffer( )
+function compress_encoding:read_buffer( )
 	return self._stream:read_buffer()
 end
-function deflate_encoding:finish(...)
+function compress_encoding:finish(...)
 	return self._stream:finish(...)
 end
-function deflate_encoding:send_async( file )
+function compress_encoding:send_async( file )
 	utils.run(function()
 		assert(self._stream:send(file))
 	end,true)
 end
+
 
 function response:_init( client , req)
 	response.baseclass._init(self)
@@ -50,8 +52,10 @@ function response:_init( client , req)
 	self._data = {}
 	self._code = 200
 	local accept = self._req:get_header('Accept-Encoding')
-	if accept and string.find(accept,'deflate') then
-		self._compress = deflate_encoding.new()
+	if accept and string.find(accept,'gzip') then
+		self._compress = compress_encoding.new(archive.new_gzip_read{},'gzip')
+	elseif accept and string.find(accept,'deflate') then
+		self._compress = compress_encoding.new(archive.new_deflate_read(),'deflate')
 	end
 end
 

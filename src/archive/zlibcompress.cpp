@@ -8,7 +8,8 @@
 #include "lua/bind.h"
 
 META_OBJECT_INFO(archive::zlibcompress,meta::object)
-META_OBJECT_INFO(archive::zlibcompress_read,archive::zlibcompress)
+META_OBJECT_INFO(archive::zlibcompress_deflate_read,archive::zlibcompress)
+META_OBJECT_INFO(archive::zlibcompress_gzip_read,archive::zlibcompress_deflate_read)
 META_OBJECT_INFO(archive::zlibcompress_to_stream,archive::zlibcompress)
 
 namespace archive {
@@ -94,7 +95,7 @@ namespace archive {
 		l.pop(1);
 		return res;
 	}
-	bool zlibcompress::init_gzdeflate(lua::state& l,int argbase) {
+	bool zlibcompress_gzip_read::init_gzdeflate(lua::state& l,int argbase) {
 		l.checktype(argbase+0,lua::value_type::table);
 
 		int level = optinteger(l,argbase+0,"level",Z_DEFAULT_COMPRESSION);
@@ -105,7 +106,7 @@ namespace archive {
 			impl::pushzerror(l,r);
 			return false;
 		}
-		gz_header header;
+		gz_header& header(m_header);
 
 		header.text = optboolean(l,argbase+0,"text",false) ? 1:0;
 		uv_timeval64_t tv;
@@ -151,19 +152,19 @@ namespace archive {
 	}
 	
 
-	zlibcompress_read::zlibcompress_read() {
+    zlibcompress_deflate_read::zlibcompress_deflate_read() {
 
 	}
 
 
-	void zlibcompress_read::lbind(lua::state& l) {
-		lua::bind::function(l,"read",&zlibcompress_read::read);
-		lua::bind::function(l,"read_buffer",&zlibcompress_read::read_buffer);
+	void zlibcompress_deflate_read::lbind(lua::state& l) {
+		lua::bind::function(l,"read",&zlibcompress_deflate_read::read);
+		lua::bind::function(l,"read_buffer",&zlibcompress_deflate_read::read_buffer);
 	}
 
 
-	lua::multiret zlibcompress_read::new_deflate(lua::state& l) {
-		zlibcompress_read_ptr res(new zlibcompress_read());
+	lua::multiret zlibcompress_deflate_read::new_deflate(lua::state& l) {
+        zlibcompress_gzip_read_ptr res(new zlibcompress_gzip_read());
 		if (!res->init_deflate(l,1)) {
 			return {2};
 		}
@@ -171,8 +172,12 @@ namespace archive {
 		return {1};
 	}
 
-	lua::multiret zlibcompress_read::new_gzip(lua::state& l) {
-		zlibcompress_read_ptr res(new zlibcompress_read());
+    zlibcompress_gzip_read::zlibcompress_gzip_read() {
+
+    }
+
+	lua::multiret zlibcompress_gzip_read::new_gzip(lua::state& l) {
+        zlibcompress_gzip_read_ptr res(new zlibcompress_gzip_read());
 		if (!res->init_gzdeflate(l,1)) {
 			return {2};
 		}

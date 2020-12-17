@@ -8,7 +8,8 @@
 #include "lua/bind.h"
 
 META_OBJECT_INFO(archive::zlibuncompress,meta::object)
-META_OBJECT_INFO(archive::zlibuncompress_read,archive::zlibuncompress)
+META_OBJECT_INFO(archive::zlibuncompress_inflate_read,archive::zlibuncompress)
+META_OBJECT_INFO(archive::zlibuncompress_gzip_read,archive::zlibuncompress_inflate_read)
 META_OBJECT_INFO(archive::zlibuncompress_to_stream,archive::zlibuncompress)
 
 namespace archive {
@@ -63,34 +64,13 @@ namespace archive {
         }
 		return true;
 	}
-	bool zlibuncompress::init_gzinflate(lua::state& l,int argbase) {
+	bool zlibuncompress_gzip_read::init_gzinflate(lua::state& l,int argbase) {
 		int r = init(llae::app::get(l).loop(),MAX_WBITS+16);
 		if (r != Z_OK) {
 			l.pushnil();
 			impl::pushzerror(l,r);
 			return false;
 		}
-//		gz_header header;
-//        header.text = 0;
-//        header.time = 0;
-//		header.xflags = 0;
-//		header.os = 3; // unix
-//		header.extra = Z_NULL;
-//		header.extra_len = 0;
-//		header.extra_max = 0;
-//        header.name = 0;
-//		header.name_max = 0;
-//		header.comment = Z_NULL;
-//		header.comm_max = 0;
-//		header.hcrc = 1;
-//		header.done = 0;
-//
-//		r = deflateSetHeader(&m_z,&header);
-//		if (r != Z_OK) {
-//			l.pushnil();
-//			pushzerror(l,r);
-//			return false;
-//		}
 		return true;
 	}
     zlibuncompress::~zlibuncompress() {
@@ -107,19 +87,19 @@ namespace archive {
 	}
 	
 
-    zlibuncompress_read::zlibuncompress_read() {
+    zlibuncompress_inflate_read::zlibuncompress_inflate_read() {
 
     }
 
 
-    void zlibuncompress_read::lbind(lua::state& l) {
-        lua::bind::function(l,"read",&zlibuncompress_read::read);
-        lua::bind::function(l,"read_buffer",&zlibuncompress_read::read_buffer);
+    void zlibuncompress_inflate_read::lbind(lua::state& l) {
+        lua::bind::function(l,"read",&zlibuncompress_inflate_read::read);
+        lua::bind::function(l,"read_buffer",&zlibuncompress_inflate_read::read_buffer);
     }
 
 
-    lua::multiret zlibuncompress_read::new_inflate(lua::state& l) {
-        zlibuncompress_read_ptr res(new zlibuncompress_read());
+    lua::multiret zlibuncompress_inflate_read::new_inflate(lua::state& l) {
+        zlibuncompress_inflate_read_ptr res(new zlibuncompress_inflate_read());
         if (!res->init_inflate(l,1)) {
             return {2};
         }
@@ -127,8 +107,12 @@ namespace archive {
         return {1};
     }
 
-    lua::multiret zlibuncompress_read::new_gzip(lua::state& l) {
-        zlibuncompress_read_ptr res(new zlibuncompress_read());
+    zlibuncompress_gzip_read::zlibuncompress_gzip_read() {
+        
+    }
+
+    lua::multiret zlibuncompress_gzip_read::new_gzip(lua::state& l) {
+        zlibuncompress_gzip_read_ptr res(new zlibuncompress_gzip_read());
         if (!res->init_gzinflate(l,1)) {
             return {2};
         }
