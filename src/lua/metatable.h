@@ -37,6 +37,13 @@ namespace lua {
 		new (data) object_holder_t{ std::move(v) };
 		set_metatable(s,info);
 	}
+    template <class T>
+    static void push_meta_object( state& s,const common::intrusive_ptr<T>& v ) {
+        void* data = s.newuserdata(sizeof(object_holder_t));
+        const meta::info_t* info = v->get_object_info();
+        new (data) object_holder_t{ v };
+        set_metatable(s,info);
+    }
 
 
 }

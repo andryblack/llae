@@ -6,6 +6,7 @@
 #include "meta/object.h"
 #include "metatable.h"
 #include "common/intrusive_ptr.h"
+#include <cstdint>
 
 
 namespace lua {
@@ -44,6 +45,16 @@ namespace lua {
 		static unsigned long get(state& s,int idx) { return s.tointeger(idx); }
 		static void push(state& s,unsigned long v) { s.pushinteger(v); }
 	};
+    template <>
+    struct stack<uint32_t> {
+        static uint32_t get(state& s,int idx) { return s.tointeger(idx); }
+        static void push(state& s,uint32_t v) { s.pushinteger(v); }
+    };
+    template <>
+    struct stack<uint64_t> {
+        static uint64_t get(state& s,int idx) { return s.tointeger(idx); }
+        static void push(state& s,uint64_t v) { s.pushinteger(v); }
+    };
 	template <>
 	struct stack<const char*> {
 		static const char* get(state& s,int idx) { return s.tostring(idx); }
@@ -78,6 +89,13 @@ namespace lua {
 			}
 			push_meta_object(s,std::move(v));
 		}
+        static void push(state& s,const common::intrusive_ptr<T>& v) {
+            if (!v) {
+                s.pushnil();
+                return;
+            }
+            push_meta_object(s,v);
+        }
 	};
 	template <class T>
 	struct stack<T*> {
@@ -93,6 +111,10 @@ namespace lua {
 	static void push(state& s,common::intrusive_ptr<T>&& val) {
 		stack<common::intrusive_ptr<T> >::push(s,std::move(val));
 	}
+    template <class T>
+    static void push(state& s,const common::intrusive_ptr<T>& val) {
+        stack<common::intrusive_ptr<T> >::push(s,val);
+    }
 }
 
 #endif /*__LLAE_LUA_STACK_H_INCLUDED__*/

@@ -79,10 +79,100 @@ namespace uv {
         return {1};
     }
 
+    lua::multiret buffer::lfind(lua::state& l) {
+        size_t len = 0;
+        const char* str = l.checklstring(2,len);
+        int offset = l.optinteger(3,1) - 1;
+        if (offset<1) {
+            // @todo
+            offset = 1;
+        } 
+        if (offset > get_len()) {
+            offset = get_len();
+        }
+        if (len == 0) { 
+            l.pushinteger(offset);
+            return {1}; 
+        }
+        if (len > get_len()) { 
+            return {0}; 
+        }
+        auto start = static_cast<const char*>(get_base()) + offset - 1;
+        while (true) {
+            size_t flen = ((static_cast<const char*>(get_base()) + get_len()) - start)-len + 1;
+            const char* pos = static_cast<const char*>(memchr(start,*str,len));
+            if (!pos) {
+                return {0}; 
+            }
+            if (len==1 || (memcmp(pos,str,len)==0)) {
+                l.pushinteger((pos-static_cast<const char*>(get_base()))+1);
+                return {1}; 
+            }
+            start = pos + 1;
+        }
+    }
+
+    lua::multiret buffer::lbyte(lua::state& l) {
+        size_t len = 0;
+        int start = l.optinteger(2,1);
+        int end = l.optinteger(3,start);
+        if (start<0) {
+            return {0};
+        }
+        if (get_len()==0) {
+            return {0};
+        }
+        if (end>get_len()) {
+            end=get_len();
+        }
+        if (end<start) {
+            return {0}; 
+        }
+        auto data = static_cast<const unsigned char*>(get_base());
+        for (int i=start;i<=end;++i) {
+            l.pushinteger(data[i-1]);
+        }
+        return {end-start+1};
+    }
+
+    lua::multiret buffer::lconcat(lua::state& l) {
+        if (l.get_type(1)==lua::value_type::userdata) {
+            auto self = lua::stack<buffer_ptr>::get(l, 1);
+            if (!self) l.argerror(1, "need buffer");
+            size_t size2 = 0;
+            const void* data2 = l.checklstring(2, size2);
+            std::vector<char> data;
+            data.reserve(size2+self->get_len());
+            data.resize(size2+self->get_len());
+            memcpy(data.data(), self->get_base(), self->get_len());
+            memcpy(data.data()+self->get_len(), data2, size2);
+            l.pushlstring(data.data(), data.size());
+            return {1};
+        } else if (l.get_type(2)==lua::value_type::userdata) {
+            auto self = lua::stack<buffer_ptr>::get(l, 2);
+            if (!self) l.argerror(2, "need buffer");
+            size_t size1 = 0;
+            const void* data1 = l.checklstring(1, size1);
+            std::vector<char> data;
+            data.reserve(size1+self->get_len());
+            data.resize(size1+self->get_len());
+            memcpy(data.data(), data1, size1);
+            memcpy(data.data()+size1, self->get_base(), self->get_len());
+            l.pushlstring(data.data(), data.size());
+            return {1};
+        } else {
+            l.argerror(1, "buffer concat");
+        }
+        return {0};
+    }
+
     void buffer::lbind(lua::state& l) {
         lua::bind::function(l,"get_len",&buffer::get_len);
         lua::bind::function(l,"__len",&buffer::get_len);
+        lua::bind::function(l,"__concat",&buffer::lconcat);
         lua::bind::function(l,"sub",&buffer::sub);
+        lua::bind::function(l,"find",&buffer::lfind);
+        lua::bind::function(l,"byte",&buffer::lbyte);
         lua::bind::function(l,"hex",&buffer::hex);
     }
 

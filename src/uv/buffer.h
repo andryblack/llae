@@ -29,6 +29,11 @@ namespace uv {
         static buffer_ptr alloc(size_t size) {
             return alloc_obj<buffer>(size);
         }
+        static buffer_ptr hold(const void* data,size_t size) {
+            auto res = alloc(size);
+            ::memcpy(res->get_base(),data,size);
+            return res;
+        }
         template <class Extend,typename...Args>
         static common::intrusive_ptr<Extend> alloc_obj(size_t size,Args...args) {
             void* mem = std::malloc(sizeof(Extend)+size);
@@ -48,6 +53,9 @@ namespace uv {
         static buffer* get(char* base);
         uv_buf_t* get() { return &m_buf;}
         lua::multiret hex(lua::state& l);
+        lua::multiret lfind(lua::state& l);
+        lua::multiret lbyte(lua::state& l);
+        static lua::multiret lconcat(lua::state& l);
         static void lbind(lua::state& l);
     };
 
