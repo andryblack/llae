@@ -7,6 +7,7 @@
 #include "lua/ref.h"
 #include "lua/state.h"
 #include <vector>
+#include <cstdlib>
 
 
 namespace uv {
@@ -31,7 +32,7 @@ namespace uv {
         }
         static buffer_ptr hold(const void* data,size_t size) {
             auto res = alloc(size);
-            ::memcpy(res->get_base(),data,size);
+            std::memcpy(res->get_base(),data,size);
             return res;
         }
         template <class Extend,typename...Args>
