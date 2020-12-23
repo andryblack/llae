@@ -57,6 +57,7 @@ __attribute__((weak)) void llae_register_modules(lua_State *L) {
 }
 
 int main(int argc,char** argv) {
+	signal(SIGPIPE,SIG_IGN);
 	auto loop = uv_default_loop();
     {
 		llae::app app{loop};

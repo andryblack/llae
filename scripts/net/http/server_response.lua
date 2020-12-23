@@ -134,9 +134,17 @@ function response:_send_response( with_data )
 
 	local headers_data = table.concat(r,'\r\n') .. '\r\n\r\n'
 	self._headers = nil	
-	self._client:write(headers_data)
+	local res,err = self._client:write(headers_data)
+	if not res then
+		log.error('failed write headers',err)
+		self._keep_alive = false
+		return res,err
+	end
 	if send_data then
-		self._client:write(send_data)
+		local res,err = self._client:write(send_data)
+		log.error('failed write data',err)
+		self._keep_alive = false
+		return res,err
 	end
 end
 
@@ -156,6 +164,7 @@ end
 function response:write( data )
 	assert(self._data,'already finished')
 	table.insert(self._data,data)
+	return true
 end
 
 function response:keep_alive(  )

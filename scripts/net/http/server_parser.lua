@@ -30,7 +30,10 @@ function parser:load( client )
 		self._data = ''
 	end
 	--print('call handler')
-	self._cb(req)
+	local resp = self._cb(req)
+	if resp._closed then
+		return true
+	end
 	while req:read() do
 	end
 	return req._closed

@@ -58,7 +58,9 @@ function server:on_connection( err )
 	local connection_thread = coroutine.create(self._read_function)
 	local res,err = coroutine.resume(connection_thread,self,client,function(req) 
 		req._client = client
-		self._cb(req,self.response.new(client,req))
+		local resp = self.response.new(client,req)
+		self._cb(req,resp)
+		return resp
 	end)
 	if not res then
 		error(err)
