@@ -6,8 +6,18 @@ function _M.readu32le( d,offset )
 	return d, offset+4
 end
 
+function _M.readu32be( d,offset )
+	local d = string.unpack('>I4',d,offset+1)
+	return d, offset+4
+end
+
 function _M.readu16le( d,offset )
 	local d = string.unpack('<I2',d,offset+1)
+	return d, offset+2
+end
+
+function _M.readu16be( d,offset )
+	local d = string.unpack('>I2',d,offset+1)
 	return d, offset+2
 end
 
@@ -19,13 +29,22 @@ function _M.writeu32le( d )
 	return string.pack('<I4',d)
 end
 
-function _M.writeu8( d )
-	return string.char(d)
+function _M.writeu32be( d )
+	return string.pack('>I4',d)
 end
 
 function _M.writeu16le( d )
 	return string.pack('<I2',d)
 end
+
+function _M.writeu16be( d )
+	return string.pack('>I2',d)
+end
+
+function _M.writeu8( d )
+	return string.char(d)
+end
+
 
 local sizes = {u32=4,u16=2,u8=1}
 
@@ -119,7 +138,7 @@ function struct:_init(s,d)
 			local fn = v[2]
 			local iv = d[fn] or v.default
 			--print('init struct field ' .. fn .. ' with ' .. iv)
-			r[fn] = assert(iv,'need field ' .. fn)
+			self[fn] = assert(iv,'need field ' .. fn)
 		end
 	end
 end
@@ -196,6 +215,10 @@ function _M.offsetof( s , f )
 	return nil
 end
 
+function _M.build( struct_def, data )
+	local r = struct.new(struct_def,data)
+	return r:build()
+end
 
 function _M.read( d, struct_def, offset )
 	local r = struct.new(struct_def)
