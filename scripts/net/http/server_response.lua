@@ -142,9 +142,11 @@ function response:_send_response( with_data )
 	end
 	if send_data then
 		local res,err = self._client:write(send_data)
-		log.error('failed write data',err)
-		self._keep_alive = false
-		return res,err
+		if not res then
+			log.error('failed write data',err)
+			self._keep_alive = false
+			return res,err
+		end
 	end
 end
 
