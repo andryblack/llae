@@ -236,7 +236,7 @@ function response:send_file_range( f,fsize,range )
 		range_begin = string.match(range,'(%d+)%-')
 		if range_begin then
 			range_begin = tonumber(range_begin)
-			range_end = size-1
+			range_end = fsize-1
 		end
 	end
 	if range_begin ~= 0 then
