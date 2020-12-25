@@ -20,12 +20,12 @@ function web:handle_request( req, res )
 	log.info('handle',req:get_method(),req:get_path())
 	
 	local components = url.parse(req:get_path())
-	local request = setmetatable({
-		query = components.query,
-		fragment = components.fragment
-	},{__index=req})
+	req.query = components.query
+	req.fragment = components.fragment
+	req.path = components.path
+
 	for _,f in ipairs(self._handlers) do
-		f(request, res)
+		f(req, res)
 	end
 	
 	local handle_next = false
@@ -33,10 +33,10 @@ function web:handle_request( req, res )
 		log.debug('next')
 		handle_next = true
 	end
-	local handled = self:resolve(req:get_method(),components.path,function(f,params)
+	local handled = self:resolve(req:get_method(),req.path,function(f,params)
 		handle_next = false
-		request.params = params
-		f(request,res,do_next)
+		req.params = params
+		f(req,res,do_next)
 		return not handle_next
 	end)
 	if not handled or not res:is_finished() then
@@ -68,6 +68,11 @@ end
 function web.views( root, data )
 	local views = require 'web.views'
 	return views.new(root,data)
+end
+
+function web.json( )
+	local json = require 'web.json'
+	return json.new()
 end
 
 return web
