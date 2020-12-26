@@ -213,8 +213,8 @@ namespace uv {
 
     lua::multiret udp::connect(lua::state& l) {
         struct sockaddr_storage addr;
-        const char* host = l.checkstring(3);
-        int port = l.checkinteger(4);
+        const char* host = l.checkstring(2);
+        int port = l.checkinteger(3);
         if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
               uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
             l.error("invalid IP address or port [%s:%d]", host, port);
