@@ -142,12 +142,13 @@ namespace uv {
     lua::multiret udp::bind(lua::state& l) {
         const char* host = l.checkstring(2);
         int port = l.checkinteger(3);
+        int flags = l.optinteger(4,0);
         struct sockaddr_storage addr;
         if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
               uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
             l.error("invalid IP address or port [%s:%d]", host, port);
            }
-        int res = uv_udp_bind(&m_udp,(struct sockaddr*)&addr,0);
+        int res = uv_udp_bind(&m_udp,(struct sockaddr*)&addr,flags);
         if (res < 0) {
             l.pushnil();
             uv::push_error(l,res);
@@ -331,5 +332,10 @@ namespace uv {
         lua::bind::function(l,"recv",&udp::recv);
         lua::bind::function(l,"connect",&udp::connect);
         lua::bind::function(l,"stop",&udp::stop);
+        
+        l.pushinteger(UV_UDP_IPV6ONLY);
+        l.setfield(-2,"IPV6ONLY");
+        l.pushinteger(UV_UDP_REUSEADDR);
+        l.setfield(-2,"REUSEADDR");
     }
 }
