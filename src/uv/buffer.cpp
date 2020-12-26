@@ -65,6 +65,11 @@ namespace uv {
         return {1};
     }
 
+    lua::multiret buffer::ltostring(lua::state& l) {
+        l.pushlstring(m_buf.base,get_len());
+        return {1};
+    }
+
     lua::multiret buffer::hex(lua::state& l) {
         size_t size = get_len()*2;
         std::unique_ptr<char[]> buf(new char[size]);
@@ -170,6 +175,7 @@ namespace uv {
         lua::bind::function(l,"get_len",&buffer::get_len);
         lua::bind::function(l,"__len",&buffer::get_len);
         lua::bind::function(l,"__concat",&buffer::lconcat);
+        lua::bind::function(l,"__tostring",&buffer::ltostring);
         lua::bind::function(l,"sub",&buffer::sub);
         lua::bind::function(l,"find",&buffer::lfind);
         lua::bind::function(l,"byte",&buffer::lbyte);

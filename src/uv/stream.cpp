@@ -163,7 +163,7 @@ namespace uv {
 	void stream::alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
         auto b = buffer::alloc(suggested_size);
         buf->base = static_cast<char*>(b->get_base());
-        buf->len = b->get_len();
+        buf->len = b->get_capacity();
         b->add_ref();
 	}
 	void stream::read_cb(uv_stream_t* s, ssize_t nread, const uv_buf_t* buf) {
@@ -338,6 +338,7 @@ namespace uv {
 
 			int r = req->write();
 			if (r < 0) {
+				req->reset(l);
 				l.pushnil();
 				uv::push_error(l,r);
 				return {2};

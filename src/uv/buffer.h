@@ -56,6 +56,7 @@ namespace uv {
         lua::multiret hex(lua::state& l);
         lua::multiret lfind(lua::state& l);
         lua::multiret lbyte(lua::state& l);
+        lua::multiret ltostring(lua::state& l);
         static lua::multiret lconcat(lua::state& l);
         static void lbind(lua::state& l);
     };

@@ -8,6 +8,7 @@
 #include "dns.h"
 #include "fs.h"
 #include "os.h"
+#include "udp.h"
 #include <iostream>
 #include <memory>
 
@@ -85,12 +86,15 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::object<uv::stream>::register_metatable(l,&uv::stream::lbind);
 	lua::bind::object<uv::tcp_connection>::register_metatable(l,&uv::tcp_connection::lbind);
 	lua::bind::object<uv::buffer>::register_metatable(l,&uv::buffer::lbind);
+    lua::bind::object<uv::udp>::register_metatable(l,&uv::udp::lbind);
 
 	l.createtable();
 	lua::bind::object<uv::tcp_server>::get_metatable(l);
 	l.setfield(-2,"tcp_server");
 	lua::bind::object<uv::tcp_connection>::get_metatable(l);
 	l.setfield(-2,"tcp_connection");
+    lua::bind::object<uv::udp>::get_metatable(l);
+    l.setfield(-2,"udp");
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
 	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);
 	lua::bind::function(l,"cwd",&lua_uv_cwd);
