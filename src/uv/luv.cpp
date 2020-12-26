@@ -89,6 +89,8 @@ int luaopen_uv(lua_State* L) {
     lua::bind::object<uv::udp>::register_metatable(l,&uv::udp::lbind);
 
 	l.createtable();
+	lua::bind::object<uv::buffer>::get_metatable(l);
+	l.setfield(-2,"buffer");
 	lua::bind::object<uv::tcp_server>::get_metatable(l);
 	l.setfield(-2,"tcp_server");
 	lua::bind::object<uv::tcp_connection>::get_metatable(l);

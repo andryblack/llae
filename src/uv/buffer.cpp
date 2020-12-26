@@ -1,9 +1,11 @@
 #include "buffer.h"
 #include "lua/bind.h"
+#include "lua/stack.h"
 #include <new>
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
+#include <mbedtls/base64.h>
 
 META_OBJECT_INFO(uv::buffer,meta::object)
 
@@ -81,6 +83,56 @@ namespace uv {
             ++d;
         }
         l.pushlstring(buf.get(),size);
+        return {1};
+    }
+
+    lua::multiret buffer::base64_encode(lua::state& l) {
+        size_t osize = 0;
+        const unsigned char* src = nullptr;
+        size_t src_size = 0;
+        if (l.isstring(1)) {
+            src = reinterpret_cast<const unsigned char*>(l.tolstring(1,src_size));
+        } else {
+            auto self = lua::stack<buffer_ptr>::get(l, 1);
+            if (!self) l.argerror(1, "need buffer or string");
+            src = static_cast<const unsigned char*>(self->get_base());
+            src_size = self->get_len();
+        }
+
+        if (MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL!=mbedtls_base64_encode(nullptr,0,&osize,src,src_size)) {
+            return {0};
+        }
+        buffer_ptr buf(buffer::alloc(osize));
+        if (mbedtls_base64_encode(static_cast<unsigned char*>(buf->get_base()),osize,&osize,src,src_size)!=0) {
+            return {0};
+        }
+        buf->set_len(osize);
+        lua::push(l,buf);
+        return {1};
+    }
+
+    lua::multiret buffer::base64_decode(lua::state& l) {
+        size_t osize = 0;
+        const unsigned char* src = nullptr;
+        size_t src_size = 0;
+        if (l.isstring(1)) {
+            src = reinterpret_cast<const unsigned char*>(l.tolstring(1,src_size));
+        } else {
+            auto self = lua::stack<buffer_ptr>::get(l, 1);
+            if (!self) l.argerror(1, "need buffer or string");
+            src = static_cast<const unsigned char*>(self->get_base());
+            src_size = self->get_len();
+        }
+
+        if (MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL!=mbedtls_base64_decode(nullptr,0,&osize,src,src_size)) {
+            return {0};
+        }
+        buffer_ptr buf(buffer::alloc(osize));
+        if (mbedtls_base64_decode(static_cast<unsigned char*>(buf->get_base()),osize,&osize,src,src_size)!=0) {
+            return {0};
+        }
+        buf->set_len(osize);
+        lua::push(l,buf);
         return {1};
     }
 
@@ -180,6 +232,8 @@ namespace uv {
         lua::bind::function(l,"find",&buffer::lfind);
         lua::bind::function(l,"byte",&buffer::lbyte);
         lua::bind::function(l,"hex",&buffer::hex);
+        lua::bind::function(l,"base64_encode",&buffer::base64_encode);
+        lua::bind::function(l,"base64_decode",&buffer::base64_decode);
     }
 
     bool write_buffers::put_one(lua::state& l) {
