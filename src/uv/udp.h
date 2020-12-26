@@ -9,6 +9,7 @@
 
 namespace uv {
 
+    class loop;
     class udp;
     using udp_ptr = common::intrusive_ptr<udp>;
 
@@ -62,12 +63,13 @@ namespace uv {
         virtual uv_handle_t* get_handle() override final { return reinterpret_cast<uv_handle_t*>(&m_udp); }
         uv_udp_t* get_udp() { return &m_udp; }
     protected:
-        explicit udp(lua::state& l);
         virtual ~udp() override;
         virtual void on_closed() override;
         bool on_recv(ssize_t nread, const buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags);
     public:
-        static int lnew(lua_State* L);
+        explicit udp(uv::loop& loop);
+        
+        static lua::multiret lnew(lua::state& l);
         static void lbind(lua::state& l);
         
         lua::multiret bind(lua::state& l);

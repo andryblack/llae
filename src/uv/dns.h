@@ -15,7 +15,7 @@ namespace uv {
 		static void getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* res);
 		void on_end(int status, struct addrinfo* res);
 	public:
-		getaddrinfo_req(lua::ref&& cont);
+		explicit getaddrinfo_req(lua::ref&& cont);
 		~getaddrinfo_req();
 		uv_getaddrinfo_t* get() { return &m_req; }
 		static lua::multiret getaddrinfo(lua::state& l);

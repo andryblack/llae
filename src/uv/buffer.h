@@ -53,7 +53,7 @@ namespace uv {
         static buffer* get(uv_buf_t* b);
         static buffer* get(char* base);
         uv_buf_t* get() { return &m_buf;}
-        lua::multiret hex(lua::state& l);
+        static lua::multiret hex_encode(lua::state& l);
         static lua::multiret base64_decode(lua::state& l);
         static lua::multiret base64_encode(lua::state& l);
         lua::multiret lfind(lua::state& l);

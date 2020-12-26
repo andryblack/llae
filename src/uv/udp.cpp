@@ -127,9 +127,9 @@ namespace uv {
     };
 
 
-    udp::udp(lua::state& l) {
-        int r = uv_udp_init(llae::app::get(l).loop().native(),&m_udp);
-        check_error(l,r);
+    udp::udp(uv::loop& loop) {
+        int r = uv_udp_init(loop.native(),&m_udp);
+        UV_DIAG_CHECK(r);
         attach();
     }
     udp::~udp() {
@@ -319,11 +319,10 @@ namespace uv {
         m_recv_consumer.reset();
     }
 
-    int udp::lnew(lua_State* L) {
-        lua::state l(L);
-        common::intrusive_ptr<udp> server{new udp(l)};
+    lua::multiret udp::lnew(lua::state& l) {
+        common::intrusive_ptr<udp> server{new udp(llae::app::get(l).loop())};
         lua::push(l,std::move(server));
-        return 1;
+        return {1};
     }
     void udp::lbind(lua::state& l) {
         lua::bind::function(l,"new",&udp::lnew);

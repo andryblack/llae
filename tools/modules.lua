@@ -40,7 +40,7 @@ function m:download(url,file,hash)
 		for b in fs.read_file(dst) do
 			assert(h:update(b))
 		end
-		local fhash = assert(h:finish()):hex()
+		local fhash = tostring(assert(h:finish()):hex_encode())
 		if fhash == hash then
 			log.info('skip, already downloaded')
 			return
@@ -106,7 +106,7 @@ function m:download(url,file,hash)
 		f:close()
 	end
 	if h then
-		fhash = assert(h:finish()):hex()
+		fhash = tostring(assert(h:finish()):hex_encode())
 		if fhash ~= hash then
 			log.error('invalid file hash',fhash,hash)
 			error('invalid file hash')

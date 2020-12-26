@@ -58,9 +58,9 @@ namespace uv {
 		}
 	};
 
-	tcp_connection::tcp_connection(lua::state& l) {
-		int r = uv_tcp_init(llae::app::get(l).loop().native(),&m_tcp);
-		check_error(l,r);
+	tcp_connection::tcp_connection(uv::loop& loop) {
+		int r = uv_tcp_init(loop.native(),&m_tcp);
+		UV_DIAG_CHECK(r);
 		attach();
         //std::cout << "tcp_connection::tcp_connection" << std::endl;
 	}
@@ -68,11 +68,10 @@ namespace uv {
         //std::cout << "tcp_connection::~tcp_connection" << std::endl;
 	}
 
-	int tcp_connection::lnew(lua_State* L) {
-		lua::state l(L);
-		common::intrusive_ptr<tcp_connection> connection{new tcp_connection(l)};
+	lua::multiret tcp_connection::lnew(lua::state& l) {
+		common::intrusive_ptr<tcp_connection> connection{new tcp_connection(llae::app::get(l).loop())};
 		lua::push(l,std::move(connection));
-		return 1;
+		return {1};
 	}
 
 	lua::multiret tcp_connection::connect(lua::state& l) {

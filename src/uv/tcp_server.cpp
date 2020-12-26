@@ -10,9 +10,9 @@ META_OBJECT_INFO(uv::tcp_server,uv::handle)
 
 namespace uv {
 
-	tcp_server::tcp_server(lua::state& l) {
-		int r = uv_tcp_init(llae::app::get(l).loop().native(),&m_tcp);
-		check_error(l,r);
+	tcp_server::tcp_server(loop& l) {
+		int r = uv_tcp_init(l.native(),&m_tcp);
+		UV_DIAG_CHECK(r);
 		attach();
 	}
 	tcp_server::~tcp_server() {
@@ -99,11 +99,10 @@ namespace uv {
 		close();
 	}
 
-	int tcp_server::lnew(lua_State* L) {
-		lua::state l(L);
-		common::intrusive_ptr<tcp_server> server{new tcp_server(l)};
+	lua::multiret tcp_server::lnew(lua::state& l) {
+		common::intrusive_ptr<tcp_server> server{new tcp_server(llae::app::get(l).loop())};
 		lua::push(l,std::move(server));
-		return 1;
+		return {1};
 	}
 	void tcp_server::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&tcp_server::lnew);

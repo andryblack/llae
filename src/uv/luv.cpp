@@ -21,6 +21,11 @@ namespace uv {
         if (!err) err = "unknown";
         l.error("UV error \"%q\"",err);
     }
+    void error(int e,const char* file,int line) {
+        const char* err = uv_strerror_r(e, uv_error_buf, sizeof(uv_error_buf));
+        if (!err) err = "unknown";
+        llae::report_diag_error(err,file,line);
+    }
     void push_error(lua::state& l,int e) {
         const char* err = uv_strerror_r(e, uv_error_buf, sizeof(uv_error_buf));
         if (!err) err = "unknown";

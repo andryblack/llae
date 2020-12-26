@@ -72,17 +72,26 @@ namespace uv {
         return {1};
     }
 
-    lua::multiret buffer::hex(lua::state& l) {
-        size_t size = get_len()*2;
-        std::unique_ptr<char[]> buf(new char[size]);
-        char* dst = buf.get();
-        const unsigned char* d = static_cast<const unsigned char*>(get_base());
-        for (size_t i=0;i<get_len();++i) {
-            *dst++ = hex_char[(*d>>4) & 0xf];
-            *dst++ = hex_char[*d & 0xf];
-            ++d;
+    lua::multiret buffer::hex_encode(lua::state& l) {
+        const unsigned char* src = nullptr;
+        size_t src_size = 0;
+        if (l.isstring(1)) {
+            src = reinterpret_cast<const unsigned char*>(l.tolstring(1,src_size));
+        } else {
+            auto self = lua::stack<buffer_ptr>::get(l, 1);
+            if (!self) l.argerror(1, "need buffer or string");
+            src = static_cast<const unsigned char*>(self->get_base());
+            src_size = self->get_len();
         }
-        l.pushlstring(buf.get(),size);
+        size_t size = src_size*2;
+        buffer_ptr buf(buffer::alloc(size));
+        char* dst = static_cast<char*>(buf->get_base());
+        for (size_t i=0;i<src_size;++i) {
+            *dst++ = hex_char[(*src>>4) & 0xf];
+            *dst++ = hex_char[*src & 0xf];
+            ++src;
+        }
+        lua::push(l,buf);
         return {1};
     }
 
@@ -231,7 +240,7 @@ namespace uv {
         lua::bind::function(l,"sub",&buffer::sub);
         lua::bind::function(l,"find",&buffer::lfind);
         lua::bind::function(l,"byte",&buffer::lbyte);
-        lua::bind::function(l,"hex",&buffer::hex);
+        lua::bind::function(l,"hex_encode",&buffer::hex_encode);
         lua::bind::function(l,"base64_encode",&buffer::base64_encode);
         lua::bind::function(l,"base64_decode",&buffer::base64_decode);
     }

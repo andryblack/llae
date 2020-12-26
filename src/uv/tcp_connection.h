@@ -7,6 +7,8 @@
 
 namespace uv {
 
+	class loop;
+	
 	class tcp_connection : public stream {
 		META_OBJECT
 	private:
@@ -15,10 +17,10 @@ namespace uv {
 		virtual uv_handle_t* get_handle() override final { return reinterpret_cast<uv_handle_t*>(&m_tcp); }
 		virtual uv_stream_t* get_stream() override final { return reinterpret_cast<uv_stream_t*>(&m_tcp); }
 	protected:
-		explicit tcp_connection(lua::state& l);
 		virtual ~tcp_connection() override;
 	public:
-		static int lnew(lua_State* L);
+		explicit tcp_connection(uv::loop& loop);
+		static lua::multiret lnew(lua::state& l);
 		lua::multiret connect(lua::state& l);
 		static void lbind(lua::state& l);
 	};

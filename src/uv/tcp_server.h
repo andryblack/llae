@@ -8,6 +8,7 @@
 
 namespace uv {
 
+	class loop;
 	class tcp_server : public handle {
 		META_OBJECT
 	private:
@@ -18,12 +19,13 @@ namespace uv {
 		virtual uv_handle_t* get_handle() override final { return reinterpret_cast<uv_handle_t*>(&m_tcp); }
 		uv_stream_t* get_stream() { return reinterpret_cast<uv_stream_t*>(&m_tcp); }
 	protected:
-		explicit tcp_server(lua::state& l);
 		virtual ~tcp_server() override;
 		virtual void on_connection(int st);
 		virtual void on_closed() override;
 	public:
-		static int lnew(lua_State* L);
+		explicit tcp_server(loop& l);
+		
+		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& l);
 
 		lua::multiret bind(lua::state& l);
@@ -31,6 +33,7 @@ namespace uv {
 		void stop(lua::state& l);
 		lua::multiret accept(lua::state& l,const stream_ptr& stream);
 	};
+	using tcp_server_ptr = common::intrusive_ptr<tcp_server>;
 
 }
 

@@ -17,7 +17,7 @@ namespace uv {
 		static void signal_cb(uv_signal_t* sig, int signum);
 		std::function<void()> m_cb;
 	public:
-		signal(loop& l);
+		explicit signal(loop& l);
 		~signal();
 		int start(int signum,std::function<void()>&& f);
 		int start_oneshot(int signum,std::function<void()>&& f);
