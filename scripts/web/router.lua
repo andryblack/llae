@@ -125,7 +125,7 @@ end
 
 for _,method in ipairs(methods) do
 	router[method] = function(self,path,func)
-		return self:match(method:upper(),path,func)
+		return self:match('HTTP:'..method:upper(),path,func)
 	end
 end
 

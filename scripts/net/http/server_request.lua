@@ -3,9 +3,10 @@ local class = require 'llae.class'
 local request = class(require 'net.http.headers','http.server.request')
 
 
-function request:_init( method, path, headers , version, length)
+function request:_init( method, protocol, path, headers , version, length)
 	request.baseclass._init(self,headers)
 	self._method = method
+	self._protocol = protocol
 	self._path = path
 	self._headers = headers
 	self._version = version
@@ -14,6 +15,10 @@ end
 
 function request:get_path(  )
 	return self._path
+end
+
+function request:get_protocol( )
+	return self._protocol
 end
 
 function request:get_method( )

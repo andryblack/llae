@@ -24,7 +24,7 @@ function parser:load( client )
 		end
 	end
 	local _length = tonumber(self:get_header('Content-Length') or 0)
-	local req = self.request.new(self._method,self._path,self._headers,self._ver,_length)
+	local req = self.request.new(self._method,self._protocol,self._path,self._headers,self._ver,_length)
 	if self._data and self._data ~= '' then
 		req._body = self._data
 		self._data = ''
@@ -47,12 +47,13 @@ function parser:parse_method( client )
 		end
 		return false
 	end
-	local method,path,ver = string.match(line,'^([^%s]+)%s([^%s]+)%sHTTP/(%d%.%d)$')
+	local method,path,protocol,ver = string.match(line,'^(%u+)%s([^%s]+)%s(%u+)/(%d%.%d)$')
 	if method then
 		self._method = method
 		self._path = path
 		self._ver = ver
 		self._data = tail
+		self._protocol = protocol
 		--print('found method',method)
 		return true
 	else

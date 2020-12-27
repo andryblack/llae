@@ -33,14 +33,15 @@ function web:handle_request( req, res )
 		log.debug('next')
 		handle_next = true
 	end
-	local handled = self:resolve(req:get_method(),req.path,function(f,params)
+	local method = req:get_protocol()..':'..req:get_method()
+	local handled = self:resolve(method,req.path,function(f,params)
 		handle_next = false
 		req.params = params
 		f(req,res,do_next)
 		return not handle_next
 	end)
 	if not handled or not res:is_finished() then
-		res:status(404,'Not found'):finish('Not found [' .. req:get_method() .. ']' .. req:get_path())
+		res:status(404,'Not found'):finish('Not found [' .. method .. ']' .. req:get_path())
 		return
 	end
 end

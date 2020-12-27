@@ -51,6 +51,7 @@ function response:_init( client , req)
 	self._req = req
 	self._data = {}
 	self._code = 200
+	self._protocol = req:get_protocol()
 	local accept = self._req:get_header('Accept-Encoding')
 	if accept and string.find(accept,'gzip') then
 		self._compress = compress_encoding.new(archive.new_gzip_read{},'gzip')
@@ -125,7 +126,7 @@ function response:_send_response( with_data )
 		self._keep_alive = true
 	end
 	local r = {
-		'HTTP/' .. (self._version or self._req._version or '1.0') ..
+		self._protocol .. '/' .. (self._version or self._req._version or '1.0') ..
 			' ' .. (self._code or 200) .. ' ' .. (self._status or 'OK')
 	}
 	for hn,hv in pairs(self._headers) do
