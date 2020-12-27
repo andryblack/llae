@@ -11,7 +11,7 @@ namespace uv {
 	static inline void check_error(lua::state& l,int e) {
 		if (e<0) error(l,e);
 	}
-#define UV_DIAG_CHECK(e) do{ if (e<0) error(e,__FILE__,__LINE__); } while(false)
+#define UV_DIAG_CHECK(e) do{ if (e<0) ::uv::error(e,__FILE__,__LINE__); } while(false)
 	void push_error(lua::state& s,int r);
 	void print_error(int r);
 }

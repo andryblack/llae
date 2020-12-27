@@ -22,6 +22,7 @@ namespace uv {
 		explicit tcp_connection(uv::loop& loop);
 		static lua::multiret lnew(lua::state& l);
 		lua::multiret connect(lua::state& l);
+        lua::multiret getpeername(lua::state& l);
 		static void lbind(lua::state& l);
 	};
 	typedef common::intrusive_ptr<tcp_connection> tcp_connection_ptr;

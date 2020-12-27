@@ -124,6 +124,12 @@ namespace uv {
             }
             return true;
         }
+        virtual void on_stop_recv(udp* s) override {
+            if (m_recv_cont.valid()) {
+                auto& l = llae::app::get(s->get_udp()->loop).lua();
+                m_recv_cont.reset(l);
+            }
+        }
     };
 
 
@@ -158,9 +164,6 @@ namespace uv {
         return {1};
     }
 
-    void udp::stop(lua::state& l) {
-        close();
-    }
 
     lua::multiret udp::send(lua::state& l) {
         struct sockaddr_storage addr;
@@ -228,6 +231,11 @@ namespace uv {
         m_connected = true;
         l.pushboolean(true);
         return {1};
+    }
+
+    void udp::disconnect() {
+        int r = uv_udp_connect(&m_udp,nullptr);
+        UV_DIAG_CHECK(r);
     }
 
     lua::multiret udp::recv(lua::state& l) {
@@ -330,7 +338,9 @@ namespace uv {
         lua::bind::function(l,"send",&udp::send);
         lua::bind::function(l,"recv",&udp::recv);
         lua::bind::function(l,"connect",&udp::connect);
-        lua::bind::function(l,"stop",&udp::stop);
+        lua::bind::function(l,"disconnect", &udp::disconnect);
+        lua::bind::function(l,"stop_recv",&udp::stop_recv);
+        lua::bind::function(l,"close",&udp::close);
         
         l.pushinteger(UV_UDP_IPV6ONLY);
         l.setfield(-2,"IPV6ONLY");

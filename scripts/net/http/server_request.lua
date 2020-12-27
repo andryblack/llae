@@ -25,6 +25,10 @@ function request:get_method( )
 	return self._method
 end
 
+function request:getpeername( )
+	return self._client:getpeername()
+end
+
 function request:on_closed(  )
 	-- body
 end

@@ -109,8 +109,33 @@ namespace uv {
 		return {0};
 	}
 
+    lua::multiret tcp_connection::getpeername(lua::state& l) {
+        struct sockaddr_storage addr;
+        int len = sizeof(addr);
+        int r = uv_tcp_getpeername(&m_tcp,(struct sockaddr*)&addr,&len);
+        if (r < 0) {
+            l.pushnil();
+            uv::push_error(l,r);
+            return {2};
+        }
+        char name[128];
+        if (uv_ip4_name((const struct sockaddr_in*)&addr,name,sizeof(name)) == 0) {
+            l.pushstring(name);
+            l.pushinteger(ntohs(((const struct sockaddr_in*)&addr)->sin_port));
+            return {2};
+        } else if (uv_ip6_name((const struct sockaddr_in6*)&addr,name,sizeof(name))==0) {
+            l.pushstring(name);
+            l.pushinteger(ntohs(((const struct sockaddr_in6*)&addr)->sin6_port));
+            return {2};
+        }
+        l.pushnil();
+        l.pushstring("failed decode");
+        return {2};
+    }
+
 	void tcp_connection::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&tcp_connection::lnew);
 		lua::bind::function(l,"connect",&tcp_connection::connect);
+        lua::bind::function(l,"getpeername",&tcp_connection::getpeername);
 	}
 }

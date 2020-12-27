@@ -75,10 +75,10 @@ namespace uv {
         lua::multiret bind(lua::state& l);
         lua::multiret send(lua::state& l);
         lua::multiret connect(lua::state& l);
+        void disconnect();
         lua::multiret recv(lua::state& l);
         int start_recv( const udp_recv_consumer_ptr& consumer );
         void stop_recv();
-        void stop(lua::state& l);
     };
 
 }
