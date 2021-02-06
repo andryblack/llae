@@ -31,9 +31,19 @@ namespace lua {
 		static void push(state& s,int v) { s.pushinteger(v); }
 	};
 	template <>
+	struct stack<unsigned int> {
+		static unsigned int get(state& s,int idx) { return s.tointeger(idx); }
+		static void push(state& s,unsigned int v) { s.pushinteger(v); }
+	};
+	template <>
 	struct stack<long> {
 		static long get(state& s,int idx) { return s.tointeger(idx); }
 		static void push(state& s,long v) { s.pushinteger(v); }
+	};
+	template <>
+	struct stack<unsigned long> {
+		static unsigned long get(state& s,int idx) { return s.tointeger(idx); }
+		static void push(state& s,unsigned long v) { s.pushinteger(v); }
 	};
 	template <>
 	struct stack<long long> {
@@ -41,20 +51,11 @@ namespace lua {
 		static void push(state& s,long long v) { s.pushinteger(v); }
 	};
 	template <>
-	struct stack<unsigned long> {
-		static unsigned long get(state& s,int idx) { return s.tointeger(idx); }
-		static void push(state& s,unsigned long v) { s.pushinteger(v); }
+	struct stack<unsigned long long> {
+		static unsigned long long get(state& s,int idx) { return s.tointeger(idx); }
+		static void push(state& s,unsigned long long v) { s.pushinteger(v); }
 	};
-    template <>
-    struct stack<uint32_t> {
-        static uint32_t get(state& s,int idx) { return s.tointeger(idx); }
-        static void push(state& s,uint32_t v) { s.pushinteger(v); }
-    };
-    template <>
-    struct stack<uint64_t> {
-        static uint64_t get(state& s,int idx) { return s.tointeger(idx); }
-        static void push(state& s,uint64_t v) { s.pushinteger(v); }
-    };
+    
 	template <>
 	struct stack<const char*> {
 		static const char* get(state& s,int idx) { return s.tostring(idx); }
