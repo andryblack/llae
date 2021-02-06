@@ -26,6 +26,9 @@ function web:handle_request( req, res )
 
 	for _,f in ipairs(self._handlers) do
 		f(req, res)
+		if res:is_finished() then
+			return
+		end
 	end
 	
 	local handle_next = false
