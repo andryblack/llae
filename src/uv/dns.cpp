@@ -36,14 +36,14 @@ namespace uv {
 			case AF_INET: {
 				struct sockaddr_in *addr_in = (struct sockaddr_in *)res->ai_addr;
 				char buf[INET_ADDRSTRLEN];
-				inet_ntop(AF_INET, &(addr_in->sin_addr), buf, INET_ADDRSTRLEN);
+				uv_inet_ntop(AF_INET, &(addr_in->sin_addr), buf, INET_ADDRSTRLEN);
 				l.pushstring(buf);
 				l.setfield(-2,"addr");
 			} break;
 			case AF_INET6: {
 				struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)res->ai_addr;
 				char buf[INET6_ADDRSTRLEN];
-				inet_ntop(AF_INET6, &(addr_in6->sin6_addr), buf, INET6_ADDRSTRLEN);
+				uv_inet_ntop(AF_INET6, &(addr_in6->sin6_addr), buf, INET6_ADDRSTRLEN);
 				l.pushstring(buf);
 				l.setfield(-2,"addr");
 			} break;
