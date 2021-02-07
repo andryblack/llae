@@ -591,6 +591,7 @@ namespace uv {
 		lua::bind::function(l,"write",&file::write);
         lua::bind::function(l,"read",&file::read);
         lua::bind::function(l,"seek",&file::seek);
+        lua::bind::function(l,"tell",&file::tell);
 	}
 
 	void fs::lbind(lua::state& l) {
