@@ -40,6 +40,11 @@ build_lib = {
 	linux_files = {'linux-core.c','linux-inotify.c','linux-syscalls.c','linux-syscalls.h',
 					'procfs-exepath.c','random-getrandom.c','random-sysctl-linux.c',
 					'sysinfo-loadavg.c'},
+	windows_files = {'async.c','core.c','detect-wakeup.c','dl.c','error.c','fs.c',
+					'fs-event.c','getaddrinfo.c','getnameinfo.c','handle.c','loop-watcher.c',
+					'pipe.c','thread.c','poll.c','process.c','process-stdio.c','signal.c',
+					'snprintf.c','stream.c','tcp.c','tty.c','udp.c','util.c',
+					'winapi.c','winsock.c'},
 	project = [[
 	files {
 				<% for _,f in ipairs(lib.common_files) do %>
@@ -76,6 +81,15 @@ build_lib = {
 				<% for _,f in ipairs(lib.linux_files) do %>
 					<%= format_file(module.dir,'src','unix',f) %>,<% end %>
 			}
+	filter "system:windows"
+			defines {
+				'WIN32_LEAN_AND_MEAN',
+				'_WIN32_WINNT=0x0602',
+			}
+			files {
+				<% for _,f in ipairs(lib.windows_files) do %>
+					<%= format_file(module.dir,'src','win',f) %>,<% end %>
+			}
 	filter {}
 ]]
 }
@@ -83,5 +97,7 @@ build_lib = {
 project_main = [[
 	filter "system:linux"
 		links{ 'pthread','dl' }
+	filter "system:windows"
+		links{ 'psapi','user32','advapi32','iphlpapi','userenv','ws2_32' }
 	filter {}
 ]]

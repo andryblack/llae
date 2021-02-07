@@ -1,5 +1,6 @@
 #include "lua/state.h"
 #include <memory>
+#include <cstdlib>
 
 namespace lua {
 

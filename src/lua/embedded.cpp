@@ -8,10 +8,6 @@ extern "C" {
 #include <lualib.h>
 }
 
-__attribute__((weak)) const lua::embedded_script lua::embedded_script::scripts[] = {
-	{0,0,0}
-};
-
 namespace lua {
 
 	static int load_script(lua_State* L,const embedded_script* script) {
