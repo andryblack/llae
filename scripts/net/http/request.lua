@@ -32,6 +32,9 @@ end
 
 function request:get_path(  )
 	local p = self._url.path or ''
+	if p == '' then
+		p = '/'
+	end
 	if self._url.query then
 		local qstring = tostring(self._url.query)
 		if qstring ~= "" then
@@ -82,7 +85,7 @@ function request:exec(  )
 
 	local headers = {}
 	if not self:get_header('Host') then
-		table.insert(headers,'Host: ' .. self._url.host)
+		table.insert(headers,'Host: ' .. self._url.host .. (self._url.port and (':'..self._url.port) or ''))
 	end
 	if not self:get_header('Accept-Encoding') then
 		table.insert(headers,'Accept-Encoding: deflate, gzip')
