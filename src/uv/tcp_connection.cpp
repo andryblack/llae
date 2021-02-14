@@ -26,6 +26,17 @@ namespace uv {
 			self->on_end(status);
 			self->remove_ref();
 		}
+        int connect(uv_tcp_t* tcp,struct sockaddr * addr) {
+            add_ref();
+            int r = uv_tcp_connect(&m_req,tcp,addr,&connect_req::connect_cb);
+            if (r < 0) {
+                remove_ref();
+            }
+            return r;
+        }
+        void reset(lua::state& l) {
+            m_cont.reset(l);
+        }
 		void on_end(int status) {
             if (llae::app::closed(m_conn->get_handle()->loop)) {
                 m_cont.release();
@@ -96,10 +107,9 @@ namespace uv {
 		
 			common::intrusive_ptr<connect_req> req{new connect_req(tcp_connection_ptr(this),
 				std::move(connect_cont))};
-			req->add_ref();
-			int r = uv_tcp_connect(req->get(),&m_tcp,(struct sockaddr *)&addr,&connect_req::connect_cb);
+            int r = req->connect(&m_tcp,(struct sockaddr *)&addr);
 			if (r < 0) {
-				req->remove_ref();
+                req->reset(l);
 				l.pushnil();
 				uv::push_error(l,r);
 				return {2};

@@ -41,32 +41,38 @@ function request:get_path(  )
 	return p
 end
 
+function request:_connect( port )
+	local ip = nil
+	for _,v in ipairs(self._ip_list) do
+		if v.addr and v.socktype=='tcp' then
+			local ip = v.addr
+			log.debug('connect to',ip,port)
+			self._connection = uv.tcp_connection:new()
+			local res,err = self._connection:connect(ip,port)
+			if not res then
+				log.debug('failed connect to',ip,port,err)
+				self._connection:close()
+			else
+				return res
+			end
+		end
+	end
+	return nil,'failed connect to ' .. self._url.host
+end
+
 function request:exec(  )
-	self._connection = uv.tcp_connection:new()
 	local err = nil
 	log.debug('resolve',self._url.host)
 	self._ip_list,err = uv.getaddrinfo(self._url.host)
 	if not self._ip_list then
 		return nil,err
 	end
-	local ip = nil
-	for _,v in ipairs(self._ip_list) do
-		if v.addr and v.socktype=='tcp' then
-			ip = v.addr
-			break
-		end
-	end
-	if not ip then
-		return nil,'failed resolve ip for ' .. self._url.host
-	end
 	local port = self._url.port or url.services[self._url.scheme]
-	log.debug('connect to',ip,port)
-	local res,err = self._connection:connect(ip,port)
+	local res,err = self:_connect(port)
 	if not res then
-		log.error('failed connect to',ip,port)
-		self._connection:close()
 		return nil,err
 	end
+	
 	log.debug('connected')
 
 	self._headers['Content-Length'] = #self._body
