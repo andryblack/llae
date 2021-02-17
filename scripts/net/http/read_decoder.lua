@@ -35,7 +35,7 @@ function decoder:read(  )
 
 	local ch,e = self._connection:read()
 	if ch then
-		log.debug('connection readed',#ch)
+		--log.debug('connection readed',#ch)
 		if self._length then
 			self._length = self._length - #ch
 		end

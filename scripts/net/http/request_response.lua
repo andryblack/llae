@@ -81,7 +81,7 @@ function response:read_body(  )
 		if not ch then
 			break
 		end
-		log.debug('read body',#ch)
+		--log.debug('read body',#ch)
 		table.insert(d,ch)
 	end
 	return table.concat(d)
