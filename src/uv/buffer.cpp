@@ -45,30 +45,75 @@ namespace uv {
             l.pushstring("");
             return {1};
         }
-        lua_Integer begin = l.optinteger(2,1)-1;
-        lua_Integer end = l.optinteger(3,get_len())-1;
-        if (begin<0){
-            begin = 0;
-        }
-        if (begin >= get_len()) {
-            begin = get_len()-1;
+        auto len = get_len();
+        lua_Integer begin = l.checkinteger(2);
+        lua_Integer end = l.optinteger(3,-1);
+        if (begin < 0){
+            begin = len + 1 + begin;
         }
         if (end < 0) {
-            end = 0;
+            end = len + 1 + end;
         }
-        if (end >= get_len()) {
-            end = get_len()-1;
+        if (begin < 1) {
+            begin = 1;
         }
-        if (begin>=end) {
+        if (end > len) {
+            end = len;
+        }
+        if (begin > end) {
             l.pushstring("");
             return {1};
         }
-        l.pushlstring(m_buf.base+begin,end-begin+1);
+        l.pushlstring(m_buf.base+begin-1,end-begin+1);
         return {1};
     }
 
     lua::multiret buffer::ltostring(lua::state& l) {
         l.pushlstring(m_buf.base,get_len());
+        return {1};
+    }
+
+    using uchar = unsigned char;
+
+    static inline uchar decode_hex(lua::state& l,uchar ch) {
+        if (ch>=uchar('0')&&ch<=uchar('9')) {
+            return ch-uchar('0');
+        }
+        if (ch>=uchar('a')&&ch<=uchar('f')) {
+            ch -= uchar('a');
+            return ch + 0x0a;
+        }
+        if (ch>=uchar('A')&&ch<=uchar('F')) {
+            ch -= uchar('A');
+            return ch + 0x0a;
+        }
+        l.argerror(1, "non hex char");
+        return 0;
+    }
+    lua::multiret buffer::hex_decode(lua::state& l) {
+        const uchar* src = nullptr;
+        size_t src_size = 0;
+        if (l.isstring(1)) {
+            src = reinterpret_cast<const uchar*>(l.tolstring(1,src_size));
+        } else {
+            auto self = lua::stack<buffer_ptr>::get(l, 1);
+            if (!self) l.argerror(1, "need buffer or string");
+            src = static_cast<const uchar*>(self->get_base());
+            src_size = self->get_len();
+        }
+        if (src_size & 1) {
+            l.argerror(1, "invalid source size");
+        }
+        size_t size = src_size/2;
+        buffer_ptr buf(buffer::alloc(size));
+        uchar* dst = static_cast<uchar*>(buf->get_base());
+        
+        for (size_t i=0;i<size;++i) {
+            *dst = decode_hex(l,*src++) << 4;
+            *dst |= decode_hex(l,*src++);
+            ++dst;
+        }
+        lua::push(l,buf);
         return {1};
     }
 
@@ -201,8 +246,35 @@ namespace uv {
         return {end-start+1};
     }
 
+    lua::multiret buffer::reverse(lua::state& l) {
+        size_t len = get_len();
+        if (len > 1) {
+            uchar* front = static_cast<uchar*>(get_base());
+            uchar* tail = front + (len - 1);
+            size_t half = len / 2;
+            for (size_t i=0;i<half;++i) {
+                std::swap(*front,*tail);
+                ++front;
+                --tail;
+            }
+        }
+        l.pushvalue(1);
+        return {1};
+    }
+
     lua::multiret buffer::lconcat(lua::state& l) {
-        if (l.get_type(1)==lua::value_type::userdata) {
+        if (l.get_type(1)==lua::value_type::userdata &&
+            l.get_type(2)==lua::value_type::userdata) {
+            auto b1 = lua::stack<buffer_ptr>::get(l, 1);
+            if (!b1) l.argerror(1, "need buffer");
+            auto b2 = lua::stack<buffer_ptr>::get(l, 2);
+            if (!b2) l.argerror(2, "need buffer");
+            auto b = buffer::alloc(b1->get_len()+b2->get_len());
+            memcpy(b->get_base(), b1->get_base(), b1->get_len());
+            memcpy(static_cast<char*>(b->get_base())+b1->get_len(), b2->get_base(), b2->get_len());
+            lua::push(l,std::move(b));
+            return {1};
+        } else if (l.get_type(1)==lua::value_type::userdata) {
             auto self = lua::stack<buffer_ptr>::get(l, 1);
             if (!self) l.argerror(1, "need buffer");
             size_t size2 = 0;
@@ -240,6 +312,8 @@ namespace uv {
         lua::bind::function(l,"sub",&buffer::sub);
         lua::bind::function(l,"find",&buffer::lfind);
         lua::bind::function(l,"byte",&buffer::lbyte);
+        lua::bind::function(l,"reverse", &buffer::reverse);
+        lua::bind::function(l,"hex_decode",&buffer::hex_decode);
         lua::bind::function(l,"hex_encode",&buffer::hex_encode);
         lua::bind::function(l,"base64_encode",&buffer::base64_encode);
         lua::bind::function(l,"base64_decode",&buffer::base64_decode);
