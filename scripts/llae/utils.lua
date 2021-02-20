@@ -81,6 +81,13 @@ function utils.merge( ... )
 	return r
 end
 
+function utils.list_concat( a,b )
+	local r = {}
+	for _,v in ipairs(a) do table.insert(r,v) end
+	for _,v in ipairs(b) do table.insert(r,v) end
+	return r
+end
+
 
 local function reversedipairsiter(t, i)
     i = i - 1

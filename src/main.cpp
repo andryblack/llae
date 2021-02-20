@@ -9,15 +9,6 @@
 #include "llae/app.h"
 #include "llae/diag.h"
 
-extern "C" int luaopen_llae_crypto(lua_State* L);
-extern "C" int luaopen_llae_file(lua_State* L);
-
-int luaopen_json(lua_State* L);
-int luaopen_uv(lua_State* L);
-int luaopen_ssl(lua_State* L);
-int luaopen_llae(lua_State* L);
-int luaopen_archive(lua_State* L);
-int luaopen_crypto(lua_State* L);
 
 static void createargtable (lua::state& lua, char **argv, int argc) {
   	int narg = argc - 1;  /* number of positive indices */
@@ -28,32 +19,10 @@ static void createargtable (lua::state& lua, char **argv, int argc) {
   	}
 }
 
-static const struct {
-		const char* name;
-		lua_CFunction func;
-} embedded_libs [] = {
-  //{"llae.crypto", luaopen_llae_crypto},
-  //{"llae.json", luaopen_llae_json},
-  //{"llae",luaopen_llae},
-  //{"llae.file",luaopen_llae_file},
-	{"uv",		luaopen_uv},
-	{"ssl",		luaopen_ssl},
-	{"json",	luaopen_json},
-	{"llae",	luaopen_llae},
-	{"archive",	luaopen_archive},
-	{"crypto",	luaopen_crypto},
-  {NULL, NULL}
-};
-
 static int err_handler(lua_State* L) {
 	auto msg = lua_tostring(L,-1);
 	luaL_traceback(L,L,msg,1);
 	return 1;
-}
-
-extern "C" 
-__attribute__((weak)) void llae_register_modules(lua_State *L) {
-
 }
 
 int main(int argc,char** argv) {
@@ -64,12 +33,7 @@ int main(int argc,char** argv) {
 
 		lua::state& L(app.lua());
 
-		/* call open functions from 'loadedlibs' and set results to global table */
-		for (const auto *lib = embedded_libs; lib->func; lib++) {
-			L.require(lib->name,lib->func);
-		}
-
-		llae_register_modules(L.native());
+		lua::attach_embedded_modules(L);
 
 		lua::attach_embedded_scripts(L);
 

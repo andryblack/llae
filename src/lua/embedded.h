@@ -16,6 +16,12 @@ namespace lua {
 	void attach_embedded_scripts(lua::state& lua);
 	status load_embedded(lua::state& lua,const char* name);
 
+	struct embedded_module {
+		const char* name;
+		lua_CFunction func;
+		static const embedded_module modules[];
+	};
+	void attach_embedded_modules(lua::state& lua);
 }
 
 #endif /*_LLAE_LUA_EMBEDDED_H_INCLUDED_*/

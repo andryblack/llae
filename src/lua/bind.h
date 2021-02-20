@@ -200,6 +200,21 @@ namespace lua {
 				return 1;
 			}
 		};
+    
+        template <class R,typename ... Args>
+        struct helper<R,void,Args...> {
+            typedef R (*func_t)(Args ... args);
+            template <size_t... Is>
+            static R apply(func_t func,const indices<Is...>) {
+                return (*func)(stack<Args>::get(1+Is)...);
+            }
+            static int function(lua_State* L) {
+                auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+                state l(L);
+                stack<R>::push(l,apply(*f,build_indices<sizeof...(Args)>()));
+                return 1;
+            }
+        };
 		
 		static void function(state& s,const char* name,int (*func)(lua_State*)) {
 			s.pushcclosure(func,0);

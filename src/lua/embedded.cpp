@@ -101,4 +101,11 @@ namespace lua {
 		return static_cast<status>(res);
 	}
 
+	void attach_embedded_modules(lua::state& l) {
+		/* call open functions from 'loadedlibs' and set results to global table */
+		for (const auto *lib = embedded_module::modules; lib->func; lib++) {
+			l.require(lib->name,lib->func);
+		}
+	}
+
 }

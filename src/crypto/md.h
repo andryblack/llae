@@ -27,6 +27,7 @@ namespace crypto {
 		void on_finish_completed(uv::loop& l,int uvstatus,int mbedlsstatus,uv::buffer_ptr&& digest);
 		lua::ref m_cont;
 		bool m_started = false;
+        void release() { m_cont.release(); }
 	public:
 		~md();
 		lua::multiret update(lua::state& l);

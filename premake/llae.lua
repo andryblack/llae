@@ -204,7 +204,7 @@ function _M.embed( patterns , files_content )
 
 	local output = buffered.tostring(result)
 
-	files { scriptsFile }
+	
 
 	local f, err = os.writefile_ifnotequal(output, scriptsFile);
 	if (f < 0) then
@@ -212,6 +212,37 @@ function _M.embed( patterns , files_content )
 	elseif (f > 0) then
 		printf("Generated %s...", path.getrelative(os.getcwd(), scriptsFile))
 	end
+
+
+
+	local modulesFile = path.join( dir, 'embed_modules.cpp')
+	f,err = os.writefile_ifnotequal([[
+#include "lua/embedded.h"
+int luaopen_uv(lua_State*);
+int luaopen_ssl(lua_State*);
+int luaopen_json(lua_State*);
+int luaopen_llae(lua_State*);
+int luaopen_archive(lua_State*);
+int luaopen_crypto(lua_State*);
+
+const lua::embedded_module lua::embedded_module::modules[] = {
+	{"uv",&luaopen_uv},
+	{"ssl",&luaopen_ssl},
+	{"json",&luaopen_json},
+	{"llae",&luaopen_llae},
+	{"archive",&luaopen_archive},
+	{"crypto",&luaopen_crypto},
+	{nullptr,nullptr}
+};
+	]],modulesFile)
+
+	if (f < 0) then
+		error(err, 0)
+	elseif (f > 0) then
+		printf("Generated %s...", path.getrelative(os.getcwd(), modulesFile))
+	end
+
+	files { scriptsFile , modulesFile }
 end
 
 return _M

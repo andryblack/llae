@@ -32,6 +32,15 @@ make -C <%= dir %>/build config=release verbose=1
 	install_files(all_files)
 end
 
+cmodules = {
+	'uv',
+	'ssl',
+	'json',
+	'llae',
+	'archive',
+	'crypto'
+}
+
 includedir = dir .. '/src' 
 
 dependencies = {
@@ -85,4 +94,10 @@ generate_src = {{
 			content = fs.load_file(path.join(location,dir,'scripts','llae/utils.lua'))
 		}
 	}]]
+},{
+	template = dir .. '/data/embedded-modules.cpp',
+	filename = 'build/src/embedded-modules.cpp',
+	config = [[
+		modules = project:get_cmodules()
+	]]
 }}

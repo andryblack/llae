@@ -33,6 +33,17 @@ function Project.env:premake( data )
 	self.premake = data
 end
 
+function Project.env:cmodule( data )
+	if not self.cmodules then
+		self.cmodules = {}
+	end 
+	if type(data) == 'string' then
+		table.insert(self.cmodules,{name=data,func='luaopen_' .. data})
+	else
+		table.insert(self.cmodules,{name=data[1],func=data[2]})
+	end
+end
+
 function Project.env:generate_src( data )
 	if type(data) ~= 'table' then
 		error('generate_src must be table')
@@ -51,6 +62,7 @@ function Project:_init( env , root)
 	self._modules_locations = {}
 	self._modules = {}
 	self._modules_list = {}
+	self._cmodules = {}
 	if root then
 		self:add_modules_location(path.join(root,'modules'))
 	end
@@ -91,6 +103,15 @@ function Project:add_module( name )
 		end
 	end
 	table.insert(self._modules_list,m)
+	if m.cmodules then
+		for _,cmod in ipairs(m.cmodules) do
+			if type(cmod) == 'string' then
+				table.insert(self._cmodules,{name=cmod,func='luaopen_' .. cmod})
+			else
+				table.insert(self._cmodules,{name=cmod[1],func=cmod[2]})
+			end
+		end
+	end
 end
 
 function Project:load_modules(  )
@@ -147,6 +168,9 @@ function Project:get_module( name )
 	return self._modules[name]
 end
 
+function Project:get_cmodules(  )
+	return utils.list_concat(self._cmodules,self._env.cmodules or {})
+end
 
 function Project:write_premake(  )
 	local template_source_filename = tool.get_llae_path('data','premake5-template.lua')

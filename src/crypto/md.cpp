@@ -49,10 +49,15 @@ namespace crypto {
 			return m_buffers.put(l);
 		}
 		virtual void on_after_work(int status) {
-			uv::loop loop(get_loop());
-            lua::state& l(llae::app::get(loop).lua());
-            m_buffers.reset(l);
-            m_md->on_update_completed(l,status,m_status);
+            if (llae::app::closed(get_loop())) {
+                m_buffers.release();
+                m_md->release();
+            } else {
+                uv::loop loop(get_loop());
+                lua::state& l(llae::app::get(loop).lua());
+                m_buffers.reset(l);
+                m_md->on_update_completed(l,status,m_status);
+            }
 		}
 	};
 
