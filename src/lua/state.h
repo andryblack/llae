@@ -115,6 +115,8 @@ namespace lua {
         bool isuserdata(int idx) const { return lua_isuserdata(m_L,idx); }
 
         bool isyieldable() const { return lua_isyieldable(m_L); }
+        
+        bool next(int idx) const { return lua_next(m_L,idx) != 0; }
 	};
 
 	class main_state : public state {

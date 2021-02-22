@@ -7,11 +7,12 @@
 #include "metatable.h"
 #include "common/intrusive_ptr.h"
 #include <cstdint>
+#include <type_traits>
 
 
 namespace lua {
 
-	template <class T>
+	template <class T, class enable = void>
 	struct stack {};
 
 	template <>
@@ -106,6 +107,17 @@ namespace lua {
 			return hdr->get_raw<T>();
 		}
 	};
+
+    template <class T>
+    struct stack<T,typename std::enable_if< std::is_enum<T>::value>::type> {
+        static T get(state& s,int idx) {
+            return static_cast<T>(stack<int>::get(s,idx));
+        }
+        static void push(state& s,T v) {
+            stack<int>::push(s,int(v));
+        }
+    };
+
 	template <class T>
 	struct stack<const common::intrusive_ptr<T>& > : stack<common::intrusive_ptr<T> >{};
 	template <class T>

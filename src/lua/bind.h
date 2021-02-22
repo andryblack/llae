@@ -259,6 +259,12 @@ namespace lua {
 			s.pushcclosure(hpr::function,1);
 			s.setfield(-2,name);
 		}
+    
+        template <class T>
+        static void value(state& s,const char* name,T v) {
+            stack<T>::push(s,v);
+            s.setfield(-2,name);
+        }
 
 
 		template <class T>
