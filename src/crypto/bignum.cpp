@@ -140,12 +140,22 @@ namespace crypto {
         return {1};
     }
 
+    bool bignum::less(const bignum_ptr& b) const {
+        return mbedtls_mpi_cmp_mpi(&m_mpi,&b->m_mpi) == -1;
+    }
+    bool bignum::lequal(const bignum_ptr& b) const {
+        auto v = mbedtls_mpi_cmp_mpi(&m_mpi,&b->m_mpi);
+        return v == -1 || v == 0;
+    }
+
     void bignum::lbind(lua::state& l) {
         lua::bind::function(l,"new",&bignum::lnew);
         lua::bind::function(l,"__add",&bignum::add);
         lua::bind::function(l,"__mul",&bignum::mul);
         lua::bind::function(l,"__sub",&bignum::sub);
         lua::bind::function(l,"__tostring",&bignum::tostring);
+        lua::bind::function(l,"__lt",&bignum::less);
+        lua::bind::function(l,"__le",&bignum::lequal);
         lua::bind::function(l,"tostring",&bignum::tostring);
         lua::bind::function(l,"add",&bignum::add);
         lua::bind::function(l,"mul",&bignum::mul);
