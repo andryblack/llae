@@ -140,6 +140,23 @@ namespace crypto {
         return {1};
     }
 
+    lua::multiret bignum::read(lua::state& l) {
+        if (l.isstring(2)) {
+            size_t len = 0;
+            auto base = l.tolstring(2,len);
+            int r = mbedtls_mpi_read_binary(&m_mpi,reinterpret_cast<const unsigned char*>(base),len);
+            check_error(l,r);
+        } else {
+            auto b = lua::stack<uv::buffer_ptr>::get(l,2);
+            if (!b) {
+                l.argerror(2,"need data");
+            }
+            int r = mbedtls_mpi_read_binary(&m_mpi,static_cast<const unsigned char*>(b->get_base()),b->get_len());
+            check_error(l,r);
+        }
+        return {0};
+    }
+
     bool bignum::less(const bignum_ptr& b) const {
         return mbedtls_mpi_cmp_mpi(&m_mpi,&b->m_mpi) == -1;
     }
@@ -164,6 +181,7 @@ namespace crypto {
         lua::bind::function(l,"self_mul",&bignum::self_mul);
         lua::bind::function(l,"self_sub",&bignum::self_sub);
         lua::bind::function(l,"write",&bignum::write);
+        lua::bind::function(l,"read",&bignum::read);
     }
 
     lua::multiret bignum::lnew(lua::state& l) {
