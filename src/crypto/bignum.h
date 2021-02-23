@@ -26,6 +26,7 @@ namespace crypto {
         void self_mul(lua::state& l);
         void self_sub(lua::state& l);
         bignum_ptr mul(lua::state& l);
+        lua::multiret div(lua::state& l);
         bignum_ptr add(lua::state& l);
         bignum_ptr sub(lua::state& l);
         lua::multiret write(lua::state& l);

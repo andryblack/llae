@@ -90,6 +90,24 @@ namespace crypto {
         return res;
     }
 
+    lua::multiret bignum::div(lua::state& l) {
+        bignum_ptr res(new bignum());
+        bignum_ptr rem(new bignum());
+        if (l.gettop()<2) {
+            l.argerror(2, "need value");
+        }
+        if (l.isnumber(2)) {
+            check_error(l,mbedtls_mpi_div_int(&res->m_mpi, &rem->m_mpi, &m_mpi, l.tointeger(2)));
+        } else {
+            auto ptr = lua::stack<const bignum*>::get(l, 2);
+            if (!ptr) l.argerror(2, "need number");
+            check_error(l,mbedtls_mpi_div_mpi(&res->m_mpi, &rem->m_mpi, &m_mpi, &ptr->m_mpi));
+        }
+        lua::push(l,res);
+        lua::push(l,rem);
+        return {2};
+    }
+
     void bignum::self_sub(lua::state& l) {
         if (l.gettop()<2) {
             l.argerror(2, "need value");
@@ -170,6 +188,7 @@ namespace crypto {
         lua::bind::function(l,"__add",&bignum::add);
         lua::bind::function(l,"__mul",&bignum::mul);
         lua::bind::function(l,"__sub",&bignum::sub);
+        lua::bind::function(l,"__div",&bignum::div);
         lua::bind::function(l,"__tostring",&bignum::tostring);
         lua::bind::function(l,"__lt",&bignum::less);
         lua::bind::function(l,"__le",&bignum::lequal);
