@@ -29,6 +29,7 @@ namespace uv {
         void reset(lua::state& l) {
             m_cont.reset(l);
         }
+        virtual void on_closed() override;
     protected:
         virtual void on_async() override;
         virtual int on_cont(lua::state& l) {
@@ -37,6 +38,7 @@ namespace uv {
         virtual void release() {
             m_cont.release();
         }
+
     public:
         explicit async_continue(loop& loop,lua::ref&& cont) : async(loop), m_cont(std::move(cont)) {}
         int send();

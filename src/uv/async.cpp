@@ -18,6 +18,11 @@ namespace uv {
 		return uv_async_send(&m_async);
 	}
 
+    void async_continue::on_closed() {
+        release();
+        async::on_closed();
+    }
+
     void async_continue::on_async() {
         auto& l = llae::app::get(get_handle()->loop).lua();
         if (!l.native()) {
