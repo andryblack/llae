@@ -32,8 +32,8 @@ namespace crypto {
         lua::multiret write(lua::state& l);
         lua::multiret read(lua::state& l);
 
-        bool less(const bignum_ptr& b) const;
-        bool lequal(const bignum_ptr& b) const;
+        lua::multiret less(lua::state& l);
+        lua::multiret lequal(lua::state& l);
         
         lua::multiret tostring(lua::state& l);
         

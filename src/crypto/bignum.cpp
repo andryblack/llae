@@ -175,12 +175,27 @@ namespace crypto {
         return {0};
     }
 
-    bool bignum::less(const bignum_ptr& b) const {
-        return mbedtls_mpi_cmp_mpi(&m_mpi,&b->m_mpi) == -1;
+    lua::multiret bignum::less(lua::state& l) {
+        if (l.isnumber(2)) {
+            l.pushboolean(mbedtls_mpi_cmp_int(&m_mpi,l.tointeger(2)) == -1);
+            return {1};
+        }
+        auto b = lua::stack<bignum_ptr>::get(l,2);
+        if (!b) l.argerror(2,"need value");
+        l.pushboolean(mbedtls_mpi_cmp_mpi(&m_mpi,&b->m_mpi) == -1);
+        return {1};
     }
-    bool bignum::lequal(const bignum_ptr& b) const {
+    lua::multiret bignum::lequal(lua::state& l) {
+        if (l.isnumber(2)) {
+            auto v = mbedtls_mpi_cmp_int(&m_mpi,l.tointeger(2));
+            l.pushboolean(v == -1 || v == 0);
+            return {1};
+        }
+        auto b = lua::stack<bignum_ptr>::get(l,2);
+        if (!b) l.argerror(2,"need value");
         auto v = mbedtls_mpi_cmp_mpi(&m_mpi,&b->m_mpi);
-        return v == -1 || v == 0;
+        l.pushboolean(v == -1 || v == 0);
+        return {1};
     }
 
     void bignum::lbind(lua::state& l) {
