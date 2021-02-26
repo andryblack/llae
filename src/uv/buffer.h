@@ -49,7 +49,8 @@ namespace uv {
         void* get_end() { return m_buf.base + m_buf.len;}
         void set_len(size_t l){m_buf.len=l;}
         lua::multiret sub(lua::state& l);
-        lua::multiret reverse(lua::state& l);
+        buffer_ptr reverse();
+        void self_reverse();
         const void* get_base() const { return m_buf.base; }
         static buffer* get(uv_buf_t* b);
         static buffer* get(char* base);

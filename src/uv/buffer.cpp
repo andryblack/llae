@@ -246,7 +246,20 @@ namespace uv {
         return {end-start+1};
     }
 
-    lua::multiret buffer::reverse(lua::state& l) {
+    buffer_ptr buffer::reverse() {
+        auto res = buffer::alloc(get_len());
+        size_t len = get_len();
+        uchar* tail = static_cast<uchar*>(res->get_base()) + (len - 1);
+        const uchar* front = static_cast<const uchar*>(get_base());
+        for (size_t i=0;i<len;++i) {
+            *tail = *front;
+            ++front;
+            --tail;
+        }
+        return res;
+    }
+
+    void buffer::self_reverse() {
         size_t len = get_len();
         if (len > 1) {
             uchar* front = static_cast<uchar*>(get_base());
@@ -258,8 +271,6 @@ namespace uv {
                 --tail;
             }
         }
-        l.pushvalue(1);
-        return {1};
     }
 
     lua::multiret buffer::lconcat(lua::state& l) {
@@ -313,6 +324,7 @@ namespace uv {
         lua::bind::function(l,"find",&buffer::lfind);
         lua::bind::function(l,"byte",&buffer::lbyte);
         lua::bind::function(l,"reverse", &buffer::reverse);
+        lua::bind::function(l,"self_reverse", &buffer::self_reverse);
         lua::bind::function(l,"hex_decode",&buffer::hex_decode);
         lua::bind::function(l,"hex_encode",&buffer::hex_encode);
         lua::bind::function(l,"base64_encode",&buffer::base64_encode);
