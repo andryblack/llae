@@ -40,6 +40,16 @@ namespace uv {
         return static_cast<buffer*>(start);
     }
 
+    lua::multiret buffer::lnew(lua::state& l) {
+        size_t len = 0;
+        auto base = l.checklstring(1,len);
+        auto res = buffer::alloc(len);
+        memcpy(res->get_base(),base,len);
+        lua::push(l,std::move(res));
+        return {1};
+    }
+
+
     lua::multiret buffer::sub(lua::state& l) {
         if (get_len()==0) {
             l.pushstring("");
@@ -73,6 +83,26 @@ namespace uv {
         return {1};
     }
 
+    lua::multiret buffer::leq(lua::state& l) {
+        if (l.isstring(2)) {
+            size_t len = 0;
+            auto base = l.tolstring(2,len);
+            if (len == get_len()) {
+                l.pushboolean(memcmp(get_base(),base,len)==0);
+                return {1};
+            }
+        } else {
+            auto b = lua::stack<buffer_ptr>::get(l,2);
+            if (b) {
+                if (b.get()==this || (b->get_len() == get_len() && memcmp(get_base(),b->get_base(),get_len())==0)) {
+                    l.pushboolean(false);
+                    return {1};
+                }
+            }
+        }
+        l.pushboolean(false);
+        return {1};
+    }
     using uchar = unsigned char;
 
     static inline uchar decode_hex(lua::state& l,uchar ch) {
@@ -316,10 +346,12 @@ namespace uv {
     }
 
     void buffer::lbind(lua::state& l) {
+        lua::bind::function(l,"new",&buffer::lnew);
         lua::bind::function(l,"get_len",&buffer::get_len);
         lua::bind::function(l,"__len",&buffer::get_len);
         lua::bind::function(l,"__concat",&buffer::lconcat);
         lua::bind::function(l,"__tostring",&buffer::ltostring);
+        lua::bind::function(l,"__eq",&buffer::leq);
         lua::bind::function(l,"sub",&buffer::sub);
         lua::bind::function(l,"find",&buffer::lfind);
         lua::bind::function(l,"byte",&buffer::lbyte);
