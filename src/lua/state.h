@@ -31,7 +31,7 @@ namespace lua {
 		void* newuserdata(size_t size) { return lua_newuserdata(m_L,size); }
 		void createtable(int narr=0,int nset=0) { lua_createtable(m_L,narr,nset); }
 		void newtable() { lua_newtable(m_L); }
-        bool isboolean(int idx) { return lua_isboolean(m_L,idx); }
+        bool isboolean(int idx) { return lua_type(m_L,idx) == LUA_TBOOLEAN; }
 		void pushboolean(bool v) { lua_pushboolean(m_L,v?1:0);}
 		void pushinteger(lua_Integer val) { lua_pushinteger(m_L,val); }
 		void pushnumber(lua_Number val) { lua_pushnumber(m_L,val); }
@@ -108,8 +108,8 @@ namespace lua {
         bool isnil(int idx) const { return lua_isnil(m_L,idx); }
         bool isnone(int idx) const { return lua_isnone(m_L,idx); }
         bool isnoneornil(int idx) const { return lua_isnoneornil(m_L,idx); }
-        bool isnumber(int idx) const { return lua_isnumber(m_L,idx); }
-        bool isstring(int idx) const { return lua_isstring(m_L,idx); }
+        bool isnumber(int idx) const { return lua_type(m_L,idx)==LUA_TNUMBER; }
+        bool isstring(int idx) const { return lua_type(m_L,idx)==LUA_TSTRING; }
         bool istable(int idx) const { return lua_istable(m_L,idx); }
         bool isthread(int idx) const { return lua_isthread(m_L,idx); }
         bool isuserdata(int idx) const { return lua_isuserdata(m_L,idx); }
