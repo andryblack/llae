@@ -84,7 +84,11 @@ solution '<%= project:name() %>'
 
 
 	project '<%= project:name() %>'
+<% if project:get_premake() and project:get_premake().kind then %>
+		kind '<%= project:get_premake().kind %>'
+<% else %>
 		kind 'ConsoleApp'
+<% end %>
 		targetdir '../bin'
 		targetname '<%= project:name() %>'
 		filter{'action:gmake or gmake2'}
