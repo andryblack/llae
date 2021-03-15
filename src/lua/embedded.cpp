@@ -1,5 +1,5 @@
 #include "embedded.h"
-#include "archive/zlibuncompress.h"
+#include "archive/archive.h"
 #include <memory>
 
 extern "C" {
@@ -14,7 +14,7 @@ namespace lua {
 		size_t uncompressed = script->uncompressed;
 		if (uncompressed) {
 			std::unique_ptr<char[]> data(new char[script->uncompressed]);
-			if (archive::zlibuncompress::inflate(script->content,script->size,data.get(),uncompressed)) {
+			if (archive::inflate(script->content,script->size,data.get(),uncompressed)) {
 				return luaL_loadbuffer(L, data.get(), uncompressed, script->name);
 			} else {
 				return LUA_ERRRUN;
@@ -59,7 +59,7 @@ namespace lua {
 			size_t uncompressed = s->uncompressed;
 			if (uncompressed) {
 				std::unique_ptr<char[]> data(new char[s->uncompressed]);
-				if (!archive::zlibuncompress::inflate(s->content,s->size,data.get(),uncompressed)) {
+				if (!archive::inflate(s->content,s->size,data.get(),uncompressed)) {
 					return 0;
 				}
 				lua_pushlstring(L,data.get(), uncompressed);
