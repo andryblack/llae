@@ -4,6 +4,7 @@
 #include "common/intrusive_ptr.h"
 #include "handle.h"
 #include "lua/ref.h"
+#include <utility>
 
 namespace uv {
     
