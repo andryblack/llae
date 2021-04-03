@@ -9,7 +9,9 @@
 #include "llae/app.h"
 #include "llae/diag.h"
 
+#ifndef WIN32
 #include <signal.h>
+#endif
 
 static void createargtable (lua::state& lua, char **argv, int argc) {
   	int narg = argc - 1;  /* number of positive indices */
@@ -27,7 +29,9 @@ static int err_handler(lua_State* L) {
 }
 
 int main(int argc,char** argv) {
+#ifndef WIN32
 	signal(SIGPIPE,SIG_IGN);
+#endif
 	auto loop = uv_default_loop();
     {
 		llae::app app{loop};
