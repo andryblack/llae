@@ -9,6 +9,7 @@
 #include "llae/app.h"
 #include "llae/diag.h"
 
+#include <signal.h>
 
 static void createargtable (lua::state& lua, char **argv, int argc) {
   	int narg = argc - 1;  /* number of positive indices */
