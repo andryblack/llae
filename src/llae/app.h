@@ -5,6 +5,8 @@
 #include "uv/loop.h"
 #include "uv/signal.h"
 #include "common/intrusive_ptr.h"
+#include "lua/stack.h"
+#include "lua/ref.h"
 
 namespace llae {
 
@@ -28,6 +30,21 @@ namespace llae {
 		static app& get(uv_loop_t* l);
 		static app& get(lua::state& s) { return get(s.native()); }
 		static app& get(uv::loop& l) { return get(l.native()); }
+
+		template <typename ...Args>
+		void resume(lua::ref& cont,Args&&... args) {
+			auto& l(lua());
+            cont.push(l);
+			cont.reset(l);
+			auto toth = l.tothread(-1);
+			toth.checkstack(sizeof...(Args));
+			int unused[]{(lua::push(toth,std::move(args)),1)...};
+			auto s = toth.resume(l,sizeof...(Args));
+			if (s != lua::status::ok && s != lua::status::yield) {
+				llae::app::show_error(toth,s);
+			}
+			l.pop(1);// thread
+		}
 	};
 
 }

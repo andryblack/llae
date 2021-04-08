@@ -66,6 +66,7 @@ namespace uv {
         static lua::multiret lconcat(lua::state& l);
         static lua::multiret lnew(lua::state& l);
         static void lbind(lua::state& l);
+        static buffer_ptr get(lua::state& l,int idx);
     };
 
     class write_buffers {

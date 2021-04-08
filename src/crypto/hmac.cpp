@@ -72,14 +72,7 @@ namespace crypto {
 			m_key.reset();
 		}
 		bool put(lua::state& l) {
-			auto buf = lua::stack<uv::buffer_ptr>::get(l, -1);
-	        if (buf) {
-	        	m_key = std::move(buf);
-	        } else {
-	            size_t size;
-	            auto data = l.tolstring(-1,size);
-	            m_key = uv::buffer::hold(data,size);
-	        }
+			m_key = uv::buffer::get(l,-1);
 	        return m_key;
 		}
 		virtual void on_after_work(int status) {

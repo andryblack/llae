@@ -103,8 +103,8 @@ namespace crypto {
             if (!ptr) l.argerror(2, "need number");
             check_error(l,mbedtls_mpi_div_mpi(&res->m_mpi, &rem->m_mpi, &m_mpi, &ptr->m_mpi));
         }
-        lua::push(l,res);
-        lua::push(l,rem);
+        lua::push(l,std::move(res));
+        lua::push(l,std::move(rem));
         return {2};
     }
 
@@ -232,7 +232,7 @@ namespace crypto {
                 else ptr->set(*optr);
             }
         }
-        lua::push(l,ptr);
+        lua::push(l,std::move(ptr));
         return {1};
     }
 }

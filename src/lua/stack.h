@@ -122,13 +122,18 @@ namespace lua {
 	struct stack<const common::intrusive_ptr<T>& > : stack<common::intrusive_ptr<T> >{};
 	template <class T>
     struct stack<common::intrusive_ptr<T>&& > : stack<common::intrusive_ptr<T> >{};
-	template <class T>
-	static void push(state& s,common::intrusive_ptr<T>&& val) {
-		stack<common::intrusive_ptr<T> >::push(s,std::move(val));
-	}
+	
     template <class T>
-    static void push(state& s,const common::intrusive_ptr<T>& val) {
-        stack<common::intrusive_ptr<T> >::push(s,val);
+    static void push(state& s,const T& val) {
+        stack<T>::push(s,val);
+    }
+    template <class T>
+    static void push(state& s,T& val) {
+        stack<T>::push(s,val);
+    }
+    template <class T>
+    static void push(state& s, T&& val) {
+        stack<T>::push(s,std::move(val));
     }
 }
 

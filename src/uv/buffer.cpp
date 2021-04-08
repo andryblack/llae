@@ -143,7 +143,7 @@ namespace uv {
             *dst |= decode_hex(l,*src++);
             ++dst;
         }
-        lua::push(l,buf);
+        lua::push(l,std::move(buf));
         return {1};
     }
 
@@ -166,7 +166,7 @@ namespace uv {
             *dst++ = hex_char[*src & 0xf];
             ++src;
         }
-        lua::push(l,buf);
+        lua::push(l,std::move(buf));
         return {1};
     }
 
@@ -191,7 +191,7 @@ namespace uv {
             return {0};
         }
         buf->set_len(osize);
-        lua::push(l,buf);
+        lua::push(l,std::move(buf));
         return {1};
     }
 
@@ -216,7 +216,7 @@ namespace uv {
             return {0};
         }
         buf->set_len(osize);
-        lua::push(l,buf);
+        lua::push(l,std::move(buf));
         return {1};
     }
 
@@ -343,6 +343,15 @@ namespace uv {
             l.argerror(1, "buffer concat");
         }
         return {0};
+    }
+
+    buffer_ptr buffer::get(lua::state& l,int idx) {
+        buffer_ptr r = lua::stack<buffer_ptr>::get(l,idx);
+        if (r) return r;
+        /// @todo hold data on lua
+        size_t size = 0;
+        auto ptr = l.tolstring(idx,size);
+        return hold(ptr,size);
     }
 
     void buffer::lbind(lua::state& l) {
