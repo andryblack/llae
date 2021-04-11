@@ -65,16 +65,13 @@ namespace crypto {
 	private:
 		uv::buffer_ptr m_key;
 	public:
-		explicit start_async(hmac_ptr&& m) : hmac::async(std::move(m)) {}
+		explicit start_async(hmac_ptr&& m,uv::buffer_ptr&& key) : hmac::async(std::move(m)),m_key(std::move(key)) {}
 		virtual void on_work() {
 			m_status = mbedtls_md_hmac_starts(&m_hmac->m_ctx,
 				reinterpret_cast<const unsigned char*>(m_key->get_base()),m_key->get_len());
 			m_key.reset();
 		}
-		bool put(lua::state& l) {
-			m_key = uv::buffer::get(l,-1);
-	        return m_key;
-		}
+		
 		virtual void on_after_work(int status) {
             if (!llae::app::closed(get_loop())) {
                 uv::loop loop(get_loop());
@@ -113,14 +110,14 @@ namespace crypto {
 			return {2};
 		}
 		{
-			common::intrusive_ptr<start_async> req{new start_async(hmac_ptr(this))};
-			l.pushvalue(2);
-			if (!req->put(l)) {
+			auto key = uv::buffer::get(l,2);
+			if (!key) {
 				l.pushnil();
-				l.pushstring("md::start invalid data");
+				l.pushstring("hmac::start need key");
 				return {2};
 			}
-
+			common::intrusive_ptr<start_async> req{new start_async(hmac_ptr(this),std::move(key))};
+			
 			l.pushthread();
 			m_cont.set(l);
 			
@@ -142,11 +139,7 @@ namespace crypto {
 			l.pushstring("hmac::reset operation in progress");
 			return {2};
 		}
-		if (!m_started) {
-			l.pushnil();
-			l.pushstring("hmac::reset not started");
-			return {2};
-		}
+	
 		auto mbedlsstatus = mbedtls_md_hmac_reset(&m_ctx);
 
 		int nres = 1;
@@ -155,7 +148,7 @@ namespace crypto {
             push_error(l,"reset failed, code:%d, %s",mbedlsstatus);
             nres = 2;
         } else {
-            l.pushboolean(true);
+        	l.pushboolean(true);
             nres = 1;
         }
         return {nres};
@@ -172,11 +165,7 @@ namespace crypto {
 			l.pushstring("hmac::update operation in progress");
 			return {2};
 		}
-		if (!m_started) {
-			l.pushnil();
-			l.pushstring("hmac::update not started");
-			return {2};
-		}
+		
 		{
 			common::intrusive_ptr<update_async> req{new update_async(hmac_ptr(this))};
 			l.pushvalue(2);
@@ -250,7 +239,6 @@ namespace crypto {
         } else {
             toth.pushboolean(true);
             nres = 1;
-            m_started = true;
         }
         
 		auto s = toth.resume(l,nres);
@@ -296,7 +284,6 @@ namespace crypto {
 		
 		m_cont.push(l);
 		m_cont.reset(l);
-		m_started = false;
 		auto toth = l.tothread(-1);
 		toth.checkstack(3);
         
