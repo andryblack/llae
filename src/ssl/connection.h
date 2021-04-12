@@ -109,7 +109,6 @@ namespace ssl {
 	public:
 		explicit connection( const ctx_ptr& ctx, const uv::stream_ptr& stream );
 		~connection();
-		static int lnew(lua_State* L);
 		static void lbind(lua::state& l);
 		lua::multiret configure(lua::state& l);
 		lua::multiret set_host(lua::state& l,const char* host);

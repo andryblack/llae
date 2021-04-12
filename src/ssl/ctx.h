@@ -20,7 +20,6 @@ namespace ssl {
 	public:
 		explicit ctx(  );
 		~ctx();
-		static int lnew(lua_State* L);
 		static void lbind(lua::state& l);
 		lua::multiret init(lua::state& l);
 		int configure(mbedtls_ssl_config* conf);

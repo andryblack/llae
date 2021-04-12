@@ -482,14 +482,6 @@ namespace ssl {
 		return readed;
 	}
 
-	int connection::lnew(lua_State* L) {
-		lua::state l(L);
-		auto c = lua::stack<ctx_ptr>::get(l,2);
-		auto stream = lua::stack<uv::stream_ptr>::get(l,3);
-		common::intrusive_ptr<connection> conn{new connection(c,stream)};
-		lua::push(l,std::move(conn));
-		return 1;
-	}
 
 
     lua::multiret connection::write(lua::state& l) {
@@ -640,7 +632,8 @@ namespace ssl {
         }
     }
 	void connection::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&connection::lnew);
+        
+        lua::bind::constructor<connection, ctx_ptr, uv::stream_ptr >(l);
 		lua::bind::function(l,"configure",&connection::configure);
 		lua::bind::function(l,"set_host",&connection::set_host);
 		lua::bind::function(l,"handshake",&connection::handshake);

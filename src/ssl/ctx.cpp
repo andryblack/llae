@@ -66,16 +66,8 @@ namespace ssl {
 		return {1};
 	}
 
-
-	int ctx::lnew(lua_State* L) {
-		lua::state l(L);
-		common::intrusive_ptr<ctx> c{new ctx()};
-		lua::push(l,std::move(c));
-		return 1;
-	}
-
 	void ctx::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&ctx::lnew);
+        lua::bind::constructor<ctx>(l);
 		lua::bind::function(l,"init",&ctx::init);
 		lua::bind::function(l,"set_debug_threshold",&ctx::set_debug_threshold);
 	}

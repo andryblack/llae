@@ -102,6 +102,10 @@ namespace lua {
 			static void apply(state&l,T* obj,func_t func,const indices<Is...>) {
 				(obj->*func)(l,stack<Args>::get(l,2+Is)...);
 			}
+            template <size_t... Is>
+            static T* apply_ctr(state&l,const indices<Is...>) {
+                return new T(l,stack<Args>::get(l,1+Is)...);
+            }
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
@@ -112,6 +116,12 @@ namespace lua {
 				apply(l,obj,*f,build_indices<sizeof...(Args)>());
 				return 0;
 			}
+            static int ctr(lua_State* L) {
+                state l(L);
+                common::intrusive_ptr<T> res{apply_ctr(l,build_indices<sizeof...(Args)>())};
+                stack<common::intrusive_ptr<T> >::push(l,std::move(res));
+                return 1;
+            }
 		};
 
 		template <class T,typename ... Args>
@@ -121,6 +131,10 @@ namespace lua {
 			static void apply(state&l,T* obj,func_t func,const indices<Is...>) {
 				(obj->*func)(stack<Args>::get(l,2+Is)...);
 			}
+            template <size_t... Is>
+            static T* apply_ctr(state&l,const indices<Is...>) {
+                return new T(stack<Args>::get(l,1+Is)...);
+            }
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
@@ -131,6 +145,12 @@ namespace lua {
 				apply(l,obj,*f,build_indices<sizeof...(Args)>());
 				return 0;
 			}
+            static int ctr(lua_State* L) {
+                state l(L);
+                common::intrusive_ptr<T> res{apply_ctr(l,build_indices<sizeof...(Args)>())};
+                stack<common::intrusive_ptr<T> >::push(l,std::move(res));
+                return 1;
+            }
 		};
 
 		template <class T,typename ... Args>
@@ -259,6 +279,13 @@ namespace lua {
 			s.pushcclosure(hpr::function,1);
 			s.setfield(-2,name);
 		}
+    
+        template <class T,typename ... Args>
+        static void constructor(state& s) {
+            typedef helper<void,T,Args...> hpr;
+            s.pushcclosure(hpr::ctr,0);
+            s.setfield(-2,"new");
+        }
     
         template <class T>
         static void value(state& s,const char* name,T v) {
