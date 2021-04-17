@@ -316,7 +316,7 @@ namespace archive { namespace impl {
 					toth.pushnil();
 					uv::push_error(toth,status);
 					args = 2;
-				} else if (z_err != Z_OK && z_err != Z_BUF_ERROR) {
+				} else if (z_err != Z_OK && z_err != Z_BUF_ERROR && z_err != Z_STREAM_END) {
 					toth.pushnil();
 					if (m_z.msg) {
 						toth.pushstring(m_z.msg);
@@ -429,11 +429,7 @@ namespace archive { namespace impl {
 	            l.pushstring("zlibcompress::finish is error");
 	            return {2};
 	        }
-	        if (m_finished) {
-	            l.pushnil();
-	            l.pushstring("zlibcompress::finish is finished");
-	            return {2};
-	        }
+	        
 	        if (!l.isyieldable()) {
 	            l.pushnil();
 	            l.pushstring("zlibcompress::finish is async");
@@ -443,6 +439,16 @@ namespace archive { namespace impl {
 	            l.pushnil();
 	            l.pushstring("zlibcompress::finish async not completed");
 	            return {2};
+	        }
+	        if (m_finished) {
+	        	if (l.gettop()>1) {
+		            l.pushnil();
+		            l.pushstring("zlibcompress::finish is finished");
+		            return {2};
+		        } else {
+		        	l.pushboolean(true);
+		        	return {1};
+		        }
 	        }
 	        {
 	            l.pushthread();
