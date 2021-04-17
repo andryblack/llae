@@ -107,7 +107,7 @@ end
 
 function ftp:connect( addr, port )
 	self._port = port or 21
-	self._cmd_con = uv.tcp_connection:new()
+	self._cmd_con = uv.tcp_connection.new()
 
 	log.debug('resolve',addr)
 	local err
@@ -178,7 +178,7 @@ function ftp:getfile( name , to , cb)
 	end
 	local paddr,pport = parse_passv(data)
 	log.debug('open transfer connection',paddr,pport)
-	local con = uv.tcp_connection:new()
+	local con = uv.tcp_connection.new()
 	assert(con:connect(paddr,pport))
 
 	self:_send_cmd('TYPE I')

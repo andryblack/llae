@@ -15,6 +15,12 @@ namespace lua {
 	template <class T, class enable = void>
 	struct stack {};
 
+    template <class T>
+    struct check {
+        using type = T;
+    };
+
+
 	template <>
 	struct stack<value> {
 		static value get(state& s,int idx) {
@@ -99,6 +105,31 @@ namespace lua {
             push_meta_object(s,v);
         }
 	};
+    template <class T>
+    struct stack<check<common::intrusive_ptr<T> > > {
+        static common::intrusive_ptr<T> get(state& s,int idx) {
+            if (s.get_type(idx) != value_type::userdata) {
+                s.argerror(idx,T::get_class_info()->name);
+            }
+            auto hdr = static_cast<object_holder_t*>(s.touserdata(idx));
+            if (!hdr) return common::intrusive_ptr<T>{};
+            return hdr->get_intrusive<T>();
+        }
+        static void push(state& s,common::intrusive_ptr<T>&& v) {
+            if (!v) {
+                s.pushnil();
+                return;
+            }
+            push_meta_object(s,std::move(v));
+        }
+        static void push(state& s,const common::intrusive_ptr<T>& v) {
+            if (!v) {
+                s.pushnil();
+                return;
+            }
+            push_meta_object(s,v);
+        }
+    };
 	template <class T>
 	struct stack<T*> {
 		static T* get(state& s,int idx) { 

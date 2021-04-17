@@ -107,7 +107,7 @@ namespace ssl {
         void end_op(const char* op);
         common::intrusive_ptr<connection> m_active_op_lock;
 	public:
-		explicit connection( const ctx_ptr& ctx, const uv::stream_ptr& stream );
+		explicit connection( ctx_ptr&& ctx, uv::stream_ptr&& stream );
 		~connection();
 		static void lbind(lua::state& l);
 		lua::multiret configure(lua::state& l);

@@ -16,7 +16,7 @@ server.defaults = {
 }
 
 function server:_init( cb )
-	self._server = uv.tcp_server:new()
+	self._server = uv.tcp_server.new()
 	self._backlog = server.defaults.backlog
 	self._cb = cb
 end
@@ -53,7 +53,7 @@ end
 
 function server:on_connection( err )
 	assert(not err, err)
-	local client = uv.tcp_connection:new()
+	local client = uv.tcp_connection.new()
 	self._server:accept(client)
 	local connection_thread = coroutine.create(self._read_function)
 	local res,err = coroutine.resume(connection_thread,self,client,function(req) 

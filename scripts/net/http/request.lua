@@ -13,7 +13,7 @@ request.response = require 'net.http.request_response'
 
 function request.get_ssl_ctx() 
 	if not request._ssl_ctx then
-		request._ssl_ctx = ssl.ctx:new()
+		request._ssl_ctx = ssl.ctx.new()
 		assert(request._ssl_ctx:init())
 	end
 	return request._ssl_ctx
@@ -50,7 +50,7 @@ function request:_connect( port )
 		if v.addr and v.socktype=='tcp' then
 			local ip = v.addr
 			log.debug('connect to',ip,port)
-			self._connection = uv.tcp_connection:new()
+			self._connection = uv.tcp_connection.new()
 			local res,err = self._connection:connect(ip,port)
 			if not res then
 				log.debug('failed connect to',ip,port,err)
@@ -97,7 +97,7 @@ function request:exec(  )
 	if self._url.scheme == 'https' then
 		log.debug('open ssl connection')
 		self._tcp = self._connection
-		self._ssl = ssl.connection:new( request.get_ssl_ctx(), self._connection)
+		self._ssl = ssl.connection.new( request.get_ssl_ctx(), self._connection)
 		self._connection = self._ssl
 		local res,err = self._ssl:configure()
 		if not res then

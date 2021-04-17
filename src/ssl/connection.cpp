@@ -13,7 +13,8 @@ META_OBJECT_INFO(ssl::connection,meta::object)
 namespace ssl {
     using crypto::push_error;
 
-	connection::connection( const ctx_ptr& ctx, const uv::stream_ptr& stream ) : m_ctx(ctx), m_stream(stream) {
+	connection::connection( ctx_ptr&& ctx, uv::stream_ptr&& stream ) : m_ctx(std::move(ctx)), m_stream(std::move(stream)) {
+        
         mbedtls_ssl_init( &m_ssl );
 		mbedtls_ssl_config_init( &m_conf );
 		m_write_req.data = this;
@@ -57,7 +58,7 @@ namespace ssl {
 	}
 
 	lua::multiret connection::configure(lua::state& l) {
-		int ret = mbedtls_ssl_config_defaults( &m_conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT );
+        int ret = mbedtls_ssl_config_defaults( &m_conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT );
 		if (ret != 0) {
 			l.pushnil();
             ::ssl::push_error(l,"mbedtls_ssl_config_defaults failed, code:%d, %s",ret);
@@ -633,7 +634,7 @@ namespace ssl {
     }
 	void connection::lbind(lua::state& l) {
         
-        lua::bind::constructor<connection, ctx_ptr, uv::stream_ptr >(l);
+        lua::bind::constructor<connection, lua::check<ctx_ptr>, lua::check<uv::stream_ptr> >(l);
 		lua::bind::function(l,"configure",&connection::configure);
 		lua::bind::function(l,"set_host",&connection::set_host);
 		lua::bind::function(l,"handshake",&connection::handshake);
