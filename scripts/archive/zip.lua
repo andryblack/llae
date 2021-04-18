@@ -363,6 +363,15 @@ function zip:open_file( filename )
 	end
 end
 
+function zip.open( filename  )
+	local st = assert(fs.stat(filename))
+	local f = assert(fs.open(filename,fs.O_RDONLY))
+	local z = zip.new(f,st.size)
+	local files = {}
+	assert(z:scan())
+	return z
+end
+
 function zip.unpack_zip( filename , dst )
 	local st = assert(fs.stat(filename))
 	local f = assert(fs.open(filename,fs.O_RDONLY))
