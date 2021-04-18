@@ -70,6 +70,7 @@ namespace lua {
 		const char* tolstring(int idx,size_t& size) { return lua_tolstring(m_L,idx,&size); }
 		void* touserdata(int idx) const { return lua_touserdata(m_L,idx); }
 
+		status loadfile(const char* fn) { return static_cast<status>(luaL_loadfile(m_L,fn)); }
 		void checktype(int arg, value_type t) { luaL_checktype(m_L,arg,static_cast<int>(t)); }
 		status dostring(const char* str);
 		void call(int nargs,int nresult) { lua_call(m_L,nargs,nresult); }

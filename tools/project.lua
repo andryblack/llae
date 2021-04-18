@@ -44,6 +44,23 @@ function Project.env:cmodule( data )
 	end
 end
 
+function Project.env:config( module, config, value )
+	if not self.module_config then
+		self.module_config = {}
+	end 
+	local mod = self.module_config[module]
+	if not mod then
+		mod = {}
+		self.module_config[module] = mod
+	end
+	local conf = mod[config]
+	if not conf then
+		conf = {}
+		mod[config] = conf
+	end
+	table.insert(conf,value)
+end
+
 function Project.env:generate_src( data )
 	if type(data) ~= 'table' then
 		error('generate_src must be table')
@@ -170,6 +187,17 @@ end
 
 function Project:get_cmodules(  )
 	return utils.list_concat(self._cmodules,self._env.cmodules or {})
+end
+
+function Project:get_config( module, config )
+	if not self._env.module_config then
+		return nil
+	end
+	local mc = self._env.module_config[module]
+	if not mc then
+		return nil
+	end
+	return mc[config]
 end
 
 function Project:write_premake(  )

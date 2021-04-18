@@ -24,13 +24,26 @@ make -C <%= dir %>/build config=release verbose=1
 	
 	]]
 
-	install_bin(dir .. '/bin/llae')
 	local all_files = {}
 	for fn in foreach_file(dir .. '/data') do
 		all_files['data/' .. fn] = dir .. '/data/' .. fn
 	end
+	all_files['llae-project.lua'] = dir .. '/data/llae-project.lua' 
 	install_files(all_files)
+
+	shell [[
+export LUA_PATH="<%= dir %>/tools/?.lua;<%= dir %>/scripts/?.lua"
+<%= dir %>/bin/llae-bootstrap install 
+<%= dir %>/bin/llae-bootstrap init
+premake5$LLAE_EXE --file=build/premake5.lua gmake
+make -C build config=release verbose=1
+	]]
 end
+
+project_config = {
+	{'embed_sctipts',type='string',storage='list'},
+	{'cmodule',type='string',storage='list'}
+}
 
 cmodules = {
 	'uv',
@@ -38,7 +51,8 @@ cmodules = {
 	'json',
 	'llae',
 	'archive',
-	'crypto'
+	'crypto',
+	--'xml'
 }
 
 includedir = dir .. '/src' 
@@ -49,7 +63,8 @@ dependencies = {
 	'libuv',
 	'yajl',
 	'mbedtls',
-	'zlib'
+	'zlib',
+	'pugixml',
 }
 
 solution = [[
@@ -83,17 +98,37 @@ generate_src = {{
 	template = dir .. '/data/embedded-template.cpp',
 	filename = 'build/src/embedded-scripts.cpp',
 	config = [[
-	scripts = {
-		{
+	scripts = {}
+	local installed_scripts = {}
+	local project_scripts = project:get_config('llae','embed_scripts')
+	for _,v in ipairs(project_scripts or {}) do
+		local files = fs.scanfiles_r(path.join(project:get_root(),v))
+		for __,f in ipairs(files) do
+			if path.extension(f) == 'lua' then
+				local name = string.gsub(f:sub(1,-5),'/','.')
+				installed_scripts[name] = true
+				table.insert(scripts,{
+					name = name,
+					content = fs.load_file(path.join(project:get_root(),v,f))
+					})
+			end
+		end
+	end
+	if not installed_scripts._main then
+		table.insert(scripts,{
 			name = '_main',
 			content = template.render_file(path.join(location,dir,'data','main-template.lua'),{
-
 			})
-		}, {
-			name = 'llae.utils',
+		})
+	end
+	if not installed_scripts['lae.utils'] then
+		table.insert(scripts,{
+			name = 'lae.utils',
 			content = fs.load_file(path.join(location,dir,'scripts','llae/utils.lua'))
-		}
-	}]]
+		})
+	end
+
+	]]
 },{
 	template = dir .. '/data/embedded-modules.cpp',
 	filename = 'build/src/embedded-modules.cpp',

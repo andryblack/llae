@@ -6,6 +6,7 @@
 namespace archive {
 
 	bool inflate(const void* src,size_t src_size,void* dst,size_t& dst_size);
+    bool deflate(const void* src,size_t src_size,void* dst,size_t& dst_size);
 		
 }
 

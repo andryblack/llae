@@ -32,12 +32,7 @@ if _ACTION ~= 'download' then
 		project 'llae-tool'
 			kind 'ConsoleApp'
 			targetdir 'bin'
-			targetname 'llae'
-			llae.embed({
-					{ 'scripts/llae/**.lua', 'scripts' },
-					{ 'scripts/net/**.lua', 'scripts' },
-					{ 'tools/*.lua', 'tools' },
-				})
+			targetname 'llae-bootstrap'
 			llae.exe()
 end
 	

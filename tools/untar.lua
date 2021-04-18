@@ -2,6 +2,7 @@ local class = require 'llae.class'
 local struct = require 'llae.struct'
 local log = require 'llae.log'
 local fs = require 'llae.fs'
+local path = require 'llae.path'
 
 local untar = class(nil,'untar')
 
@@ -89,6 +90,7 @@ function untar:prepare_file(  )
 		self._next = 'file'
 		self._state = 'align'
 		local fn = self:get_path(self._file.name)
+		fs.mkdir_r(path.dirname(fn))
 		fs.unlink(fn)
 		self._file.f = assert(fs.open(fn,fs.O_WRONLY|fs.O_CREAT))
 	end

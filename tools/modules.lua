@@ -26,8 +26,18 @@ end
 function m:download_git(url,config)
 	log.info('download_git',self.name,url)
 	local dst = path.join(self.location,config.dir or 'src')
-	fs.rmdir_r(dst)
 	local tag = config.tag or config.branch or 'master'
+
+	if fs.isdir(dst) and fs.isdir(path.join(dst,'.git')) then
+		local cmd = 'git -C ' .. dst .. ' reset --hard'
+		exec_cmd(cmd .. ' > ' .. path.join(self.location,'update_git_log.txt') .. ' 2>&1')
+		cmd = 'git -C ' .. dst .. ' fetch origin ' .. tag 
+		exec_cmd(cmd .. ' >> ' .. path.join(self.location,'update_git_log.txt') .. ' 2>&1')
+		cmd = 'git -C ' .. dst .. ' reset --hard origin/' .. tag 
+		exec_cmd(cmd .. ' >> ' .. path.join(self.location,'update_git_log.txt') .. ' 2>&1')
+		return
+	end
+	fs.rmdir_r(dst)
 	local cmd = 'git clone --depth 1 --branch ' .. tag .. ' --single-branch ' .. url .. ' ' .. dst
 	exec_cmd(cmd .. ' > ' .. path.join(self.location,'download_git_log.txt') .. ' 2>&1')
 end
