@@ -17,10 +17,12 @@ end
 
 function bootstrap()
 	shell [[
-
-premake5$LLAE_EXE --file=<%= dir %>/premake5.lua download
-premake5$LLAE_EXE --file=<%= dir %>/premake5.lua gmake
-make -C <%= dir %>/build config=release verbose=1
+echo "build llae-bootstrap at $PWD/<%= dir %>"
+cd <%= dir %>
+LUA_PATH='?.lua'
+premake5$LLAE_EXE download || exit 1
+premake5$LLAE_EXE gmake || exit 1
+make -C build config=release verbose=1 || exit 1
 	
 	]]
 
@@ -32,11 +34,14 @@ make -C <%= dir %>/build config=release verbose=1
 	install_files(all_files)
 
 	shell [[
-export LUA_PATH="<%= dir %>/tools/?.lua;<%= dir %>/scripts/?.lua"
-<%= dir %>/bin/llae-bootstrap install 
-<%= dir %>/bin/llae-bootstrap init
-premake5$LLAE_EXE --file=build/premake5.lua gmake
-make -C build config=release verbose=1
+CURDIR=$PWD
+LUA_PATH="$CURDIR/<%= dir %>/tools/?.lua;$CURDIR/<%= dir %>/scripts/?.lua"
+cd $LLAE_PROJECT_ROOT
+$CURDIR/<%= dir %>/bin/llae-bootstrap install || exit 1
+$CURDIR/<%= dir %>/bin/llae-bootstrap init || exit 1
+LUA_PATH='?.lua'
+premake5$LLAE_EXE --file=build/premake5.lua gmake || exit 1
+make -C build config=release verbose=1 || exit 1
 	]]
 end
 

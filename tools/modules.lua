@@ -5,6 +5,7 @@ local os = require 'llae.os'
 local http = require 'net.http'
 local log = require 'llae.log'
 local untar = require 'untar'
+local unzip = require 'unzip'
 local tool = require 'tool'
 local crypto = require 'llae.crypto'
 
@@ -131,6 +132,13 @@ function m:unpack_tgz( file , todir )
 	untar.unpack_tgz(src,dst)
 end
 
+function m:unpack_zip( file , todir )
+	local src = path.join(self.location,file)
+	local dst = todir and path.join(self.location,todir) or self.location
+	log.info('unpack',file)
+	unzip.unpack_zip(src,dst)
+end
+
 function m:shell( text )
 	local script = path.join(self.location,'temp.sh')
 	fs.unlink(script)
@@ -149,7 +157,7 @@ end
 function m:install_bin( fn )
 	local src = path.join(self.location,fn)
 	local dst = path.join(self.root,'bin',path.basename(fn))
-	log.debug('install',src,'->',dst)
+	log.info('install',src,'->',dst)
 	assert(fs.copyfile(src,dst))
 end
 

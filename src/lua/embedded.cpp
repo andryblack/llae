@@ -1,6 +1,7 @@
 #include "embedded.h"
 #include "archive/archive.h"
 #include <memory>
+#include <string>
 
 extern "C" {
 #include <lua.h>
@@ -12,16 +13,18 @@ namespace lua {
 
 	static int load_script(lua_State* L,const embedded_script* script) {
 		size_t uncompressed = script->uncompressed;
+		std::string chname = "embedded:";
+		chname.append(script->name);
 		if (uncompressed) {
 			std::unique_ptr<char[]> data(new char[script->uncompressed]);
 			if (archive::inflate(script->content,script->size,data.get(),uncompressed)) {
-				return luaL_loadbuffer(L, data.get(), uncompressed, script->name);
+				return luaL_loadbuffer(L, data.get(), uncompressed, chname.c_str());
 			} else {
 				return LUA_ERRRUN;
 			}
 		} 
 
-		return luaL_loadbuffer(L, reinterpret_cast<const char*>(script->content), script->size, script->name);
+		return luaL_loadbuffer(L, reinterpret_cast<const char*>(script->content), script->size, chname.c_str());
 	}
 
 	static int embedded_searcher(lua_State* L) {

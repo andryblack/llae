@@ -40,8 +40,8 @@ function untar:process_header( data )
 		self._header = struct.read(self._data,posix_header_t)
 		self._data = string.sub(self._data,posix_header_size+1)
 		self._processed = self._processed + posix_header_size
-		log.debug('found header')
-		self._header:dump(nil,log.debug)
+		--log.debug('found header')
+		--self._header:dump(nil,log.debug)
 		self._state = 'file'
 		self:prepare_file()
 		return true
@@ -80,7 +80,7 @@ function untar:prepare_file(  )
 		readed = 0
 	}
 	if self._header.typeflag == string.byte('5') then
-		log.debug('found dir',self._file.name)
+		--log.debug('found dir',self._file.name)
 		assert(self._file.size == 0)
 		fs.mkdir(self:get_path(self._file.name))
 		self._state = 'align'
@@ -107,7 +107,7 @@ function untar:process_file( data )
 		assert(self._file.f:write(d))
 	end
 	if self._file.readed >= self._file.size then
-		log.debug('end file',self._file.name,self._file.readed)
+		--log.debug('end file',self._file.name,self._file.readed)
 		self._file.f:close()
 		self._state = 'align'
 		self._next = 'header'
@@ -124,11 +124,11 @@ function untar:process_align( data )
 		if #self._data < skip then
 			return false
 		end
-		log.debug('skip',skip)
+		--log.debug('skip',skip)
 		self._data = string.sub(self._data,skip+1)
 		self._processed = self._processed + skip
 	end
-	log.debug('aligned')
+	--log.debug('aligned')
 	self._state = self._next
 	return true
 end

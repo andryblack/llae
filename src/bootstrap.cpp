@@ -35,6 +35,11 @@ static const char main_code[] =
 "local commands = require 'commands' \n"
 
 "local cmdargs = utils.parse_args(...) \n"
+
+"if cmdargs.verbose then \n"
+"	(require 'llae.log').set_verbose(true) \n"
+"end \n"
+
 "local cmdname = cmdargs[1] \n"
 "if not cmdname then \n"
 " 	cmdname = 'help' \n"
