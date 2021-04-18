@@ -4,8 +4,8 @@ local utils = require 'llae.utils'
 local os = require 'llae.os'
 local http = require 'net.http'
 local log = require 'llae.log'
-local untar = require 'untar'
-local unzip = require 'unzip'
+local untar = require 'archive.tar'
+local unzip = require 'archive.zip'
 local tool = require 'tool'
 local crypto = require 'llae.crypto'
 
@@ -273,8 +273,10 @@ end
 
 local _M = {}
 
-function _M.create_env(  )
-	local env = {}
+function _M.create_env( project )
+	local env = {
+		project = project
+	}
 	local super_env = {}
 	for n,v in pairs(m) do
 		super_env[n] = function(...)
@@ -299,8 +301,8 @@ function _M.check_module( env, name )
 	end
 end
 
-function _M.loadfile( filename )
-	local env = _M.create_env()
+function _M.loadfile( filename , project )
+	local env = _M.create_env( project )
 	assert(loadfile(filename,'bt',env))()
 	_M.check_module(env,'file:' .. filename)
 	return env
@@ -339,13 +341,14 @@ function _M.install_file( filename, root )
 	end
 end
 
-function _M.get( locations, modname )
+function _M.get( project, modname )
 	local mod
 	local root
+	local locations = project:get_modules_locations()
 	for _,v in ipairs(locations) do
 		local fn = path.join(v,modname .. '.lua')
 		if fs.isfile(fn) then
-			mod = _M.loadfile( fn )
+			mod = _M.loadfile( fn , project )
 			mod.source = fn
 			break
 		else

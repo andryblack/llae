@@ -2,7 +2,6 @@
 local uv = require 'uv'
 local utils = require 'llae.utils'
 
-local commands = require 'commands'
 
 local cmdargs = utils.parse_args(...)
 local root = cmdargs.root
@@ -12,19 +11,15 @@ if root then
 	local store_packages = {
 		'json','llae','uv','ssl','archive','crypto'
 	}
-	local store = { }
-	for _,v in ipairs(store_packages) do
-		store[v] = package.loaded[v]
-	end
-	utils.clear_table(package.loaded)
-	for k,v in pairs(store) do
-		package.loaded[k]=v
-	end
+	package.loaded['llae.utils'] = nil
 	package.path = root .. '/scripts/?.lua;' .. root .. '/tools/?.lua'
-	commands = require 'commands'
 	local tool = require 'tool'
+	utils = require 'llae.utils'
 	tool.set_root(root)
 end
+
+local commands = require 'commands'
+
 if cmdargs.verbose then
 	local log = require 'llae.log'
 	log.set_verbose(true)

@@ -30,7 +30,7 @@ make -C build config=release verbose=1 || exit 1
 	for fn in foreach_file(dir .. '/data') do
 		all_files['data/' .. fn] = dir .. '/data/' .. fn
 	end
-	all_files['llae-project.lua'] = dir .. '/data/llae-project.lua' 
+	all_files['llae-project.lua'] = dir .. '/llae-project.lua' 
 	install_files(all_files)
 
 	shell [[
@@ -57,7 +57,7 @@ cmodules = {
 	'llae',
 	'archive',
 	'crypto',
-	--'xml'
+	'xml'
 }
 
 includedir = dir .. '/src' 
@@ -76,7 +76,18 @@ solution = [[
 ]]
 
 build_lib = {
-	project = [[
+	project = project:get_cmdargs().inplace  and [[
+		files {
+			'<%= path.join('..','src','*/**.h') %>',
+			'<%= path.join('..','src','*/**.cpp') %>',
+		}
+		sysincludedirs {
+			'include',
+		}
+		includedirs{
+			'<%= path.join('..','src') %>',
+		}
+	]] or [[
 		files {
 			<%= format_file(module.dir,'src','*/**.h') %>,
 			<%= format_file(module.dir,'src','*/**.cpp') %>,
@@ -112,9 +123,11 @@ generate_src = {{
 			if path.extension(f) == 'lua' then
 				local name = string.gsub(f:sub(1,-5),'/','.')
 				installed_scripts[name] = true
+				local script_path = path.join(project:get_root(),v,f)
+				log.debug('embed',script_path,name)
 				table.insert(scripts,{
 					name = name,
-					content = fs.load_file(path.join(project:get_root(),v,f))
+					content = fs.load_file(script_path)
 					})
 			end
 		end

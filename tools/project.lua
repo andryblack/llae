@@ -72,7 +72,7 @@ function Project.env:generate_src( data )
 	end
 end
 
-function Project:_init( env , root)
+function Project:_init( env , root, cmdargs )
 	self._env = env
 	self._root = root
 	self._scripts = {}
@@ -80,6 +80,7 @@ function Project:_init( env , root)
 	self._modules = {}
 	self._modules_list = {}
 	self._cmodules = {}
+	self._cmdargs = cmdargs or {}
 	if root then
 		self:add_modules_location(path.join(root,'modules'))
 	end
@@ -97,15 +98,24 @@ function Project:get_root( )
 	return self._root
 end
 
+function Project:get_cmdargs(  )
+	return self._cmdargs
+end
+
 function Project:add_modules_location( loc )
 	log.debug('add modules location',loc)
 	table.insert(self._modules_locations,loc)
 end
+
+function Project:get_modules_locations() 
+	return self._modules_locations
+end
+
 function Project:add_module( name )
 	if self._modules[name] then
 		return
 	end
-	local m = modules.get(self._modules_locations,name)
+	local m = modules.get(self,name)
 	
 	m.root = self._root
 	if self._root then
@@ -242,6 +252,7 @@ function Project:write_generated( )
 				path = path,
 				conf = conf,
 				fs = fs,
+				log = log
 			},{__index=m})
 			if conf.config then
 				load(conf.config,'generate:config','t',ctx)()
@@ -282,11 +293,13 @@ function Project:write_generated( )
 
 end
 
-local function create_env( )
+local function create_env( cmdargs )
 	local env = {
 		modules = {}
 	}
-	local global_env = {}
+	local global_env = {
+		cmdargs = cmdargs or {}
+	}
 	local super_env = {}
 	for n,v in pairs(Project.env) do
 		super_env[n] = function(...)
@@ -296,13 +309,13 @@ local function create_env( )
 	return setmetatable( global_env, {__index=super_env} ), env
 end
 
-function Project.load( root_dir )
+function Project.load( root_dir , cmdargs )
 	if root_dir then
 		root_dir = path.join(fs.pwd(),root_dir)
 	else
 		root_dir = fs.pwd()
 	end
-	local load_env,env = create_env( )
+	local load_env,env = create_env( cmdargs )
 	local res,err = loadfile(path.join(root_dir,'llae-project.lua'),'bt',load_env)
 	if not res then
 		return res,err
@@ -318,7 +331,7 @@ function Project.load( root_dir )
 	end
 
 	log.debug('loaded project at',root_dir)
-	return Project.new(env,root_dir)
+	return Project.new(env,root_dir,cmdargs)
 end
 
 return Project
