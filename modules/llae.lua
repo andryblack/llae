@@ -139,9 +139,9 @@ generate_src = {{
 			})
 		})
 	end
-	if not installed_scripts['lae.utils'] then
+	if not installed_scripts['llae.utils'] then
 		table.insert(scripts,{
-			name = 'lae.utils',
+			name = 'llae.utils',
 			content = fs.load_file(path.join(location,dir,'scripts','llae/utils.lua'))
 		})
 	end
