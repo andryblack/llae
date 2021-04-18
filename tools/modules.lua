@@ -358,7 +358,7 @@ function _M.get( project, modname )
 	if not mod then
 		local fn = tool.get_llae_path('modules',modname .. '.lua') 
 		if fs.isfile(fn) then
-			mod =  _M.loadfile(fn)
+			mod =  _M.loadfile(fn , project)
 			mod.source = fn
 		end
 	end
