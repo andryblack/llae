@@ -1,32 +1,26 @@
 name = 'premake'
-version = '5.0.0-alpha16'
-dir = name .. '-' .. version .. '-src'
-archive = dir .. '.zip'
-url = 'https://github.com/premake/premake-core/releases/download/v'..version..'/'..archive
-hash = 'ba98e737ab2d148cbc13b068ac8ccca4'
+version = 'v5.0.0-alpha16'
 
 function install()
 end
 
 function bootstrap()
-	download(url,archive,hash)
-	unpack_zip(archive)
-
+	download_git('https://github.com/premake/premake-core.git',{tag=version})
 	shell [[
 
 PLATFORM=`uname -s`
 
 if [ "$PLATFORM" = "Darwin" ]; then
     xcode-select --install
-    PLATFORM=macosx
+    PLATFORM=osx
 fi
 if [ "$PLATFORM" = "Linux" ]; then
     PLATFORM=linux
 fi
 
-make -C <%= dir %>/build/gmake2.$PLATFORM config=release
+make -C src -f Bootstrap.mak $PLATFORM
 
 	]]
 
-	install_bin(dir .. '/bin/release/premake5')
+	install_bin('src/bin/release/premake5')
 end

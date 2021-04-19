@@ -29,7 +29,7 @@ function m:download_git(url,config)
 	local dst = path.join(self.location,config.dir or 'src')
 	local tag = config.tag or config.branch or 'master'
 
-	if fs.isdir(dst) and fs.isdir(path.join(dst,'.git')) then
+	if fs.isdir(dst) and fs.isdir(path.join(dst,'.git')) and not config.tag then
 		local cmd = 'git -C ' .. dst .. ' reset --hard'
 		exec_cmd(cmd .. ' > ' .. path.join(self.location,'update_git_log.txt') .. ' 2>&1')
 		cmd = 'git -C ' .. dst .. ' fetch origin ' .. tag 
