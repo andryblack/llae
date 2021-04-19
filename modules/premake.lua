@@ -21,7 +21,7 @@ if [ "$PLATFORM" = "Darwin" ]; then
     PLATFORM=macosx
 fi
 if [ "$PLATFORM" = "Linux" ]; then
-    PLATFORM=unix
+    PLATFORM=linux
 fi
 
 make -C <%= dir %>/build/gmake2.$PLATFORM config=release
