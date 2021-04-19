@@ -21,7 +21,7 @@ echo "build llae-bootstrap at $PWD/<%= dir %>"
 cd <%= dir %>
 export LUA_PATH='?.lua'
 premake5$LLAE_EXE download || exit 1
-premake5$LLAE_EXE gmake || exit 1
+premake5$LLAE_EXE gmake2 || exit 1
 make -C build config=release verbose=1 || exit 1
 	
 	]]
@@ -40,7 +40,7 @@ cd $LLAE_PROJECT_ROOT
 $CURDIR/<%= dir %>/bin/llae-bootstrap install || exit 1
 $CURDIR/<%= dir %>/bin/llae-bootstrap init || exit 1
 export LUA_PATH='?.lua'
-premake5$LLAE_EXE --file=build/premake5.lua gmake || exit 1
+premake5$LLAE_EXE --file=build/premake5.lua gmake2 || exit 1
 make -C build config=release verbose=1 || exit 1
 	]]
 end
