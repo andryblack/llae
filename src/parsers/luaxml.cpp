@@ -26,6 +26,7 @@ namespace xml {
         for (pugi::xml_node_iterator it = node.begin(); it != node.end(); ++it) {
             parse_node(doc,l,*it);
             l.seti(-2,i);
+            ++i;
         }
         l.setfield(-2,"childs");
     }
