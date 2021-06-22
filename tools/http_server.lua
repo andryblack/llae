@@ -11,6 +11,7 @@ cmd.args = {
 }
 local llae = require 'llae'
 local http = require 'net.http'
+local url = require 'net.url'
 local log  = require 'llae.log'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
@@ -23,10 +24,15 @@ function cmd:exec( args )
 	local addr = args.bind or '127.0.0.1'
 	local root = args.root or fs.pwd()
 	assert(http.createServer(function (req, res)
-		local req_path = req:get_path()
-		log.info('request',req:get_method(),req_path)
+		
+		local components = url.parse(req:get_path())
+		req.query = components.query
+		req.fragment = components.fragment
+		req.path = components.path
+
+		log.info('request',req:get_method(),req.path)
 		if req:get_method() == 'GET' then
-			local f = path.join(root,req_path)
+			local f = path.join(root,req.path)
 			if fs.isfile(f) then
 				return res:send_static_file(f)
 			elseif fs.isdir(f) then
@@ -52,7 +58,7 @@ function cmd:exec( args )
 				res:finish(body)
 
 			else
-				res:status(404,'Not found'):finish('Not found [' .. req:get_method() .. ']' .. req:get_path())
+				res:status(404,'Not found'):finish('Not found [' .. req:get_method() .. ']' .. req.path)
 			end
 		end
 
