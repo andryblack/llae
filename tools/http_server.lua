@@ -37,7 +37,7 @@ function cmd:exec( args )
 				return res:send_static_file(f)
 			elseif fs.isdir(f) then
 				local r = {'<html>','<body>'}
-				local parent = req_path
+				local parent = req.path
 				if #parent > 1 then
 					table.insert(r,'<a href="' .. path.dirname(parent) .. '">..</a><p>')
 					parent = parent .. '/'
