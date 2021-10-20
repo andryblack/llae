@@ -95,6 +95,7 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::object<uv::buffer>::register_metatable(l,&uv::buffer::lbind);
     lua::bind::object<uv::udp>::register_metatable(l,&uv::udp::lbind);
     lua::bind::object<uv::tty>::register_metatable(l,&uv::tty::lbind);
+    lua::bind::object<uv::poll>::register_metatable(l,&uv::poll::lbind);
 
 	l.createtable();
 	lua::bind::object<uv::buffer>::get_metatable(l);
@@ -107,6 +108,8 @@ int luaopen_uv(lua_State* L) {
     l.setfield(-2,"udp");
     lua::bind::object<uv::tty>::get_metatable(l);
     l.setfield(-2,"tty");
+    lua::bind::object<uv::poll>::get_metatable(l);
+    l.setfield(-2,"poll");
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
 	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);
 	lua::bind::function(l,"cwd",&lua_uv_cwd);
