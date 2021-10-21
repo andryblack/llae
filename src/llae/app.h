@@ -39,6 +39,7 @@ namespace llae {
 			auto toth = l.tothread(-1);
 			toth.checkstack(sizeof...(Args));
 			int unused[]{(lua::push(toth,std::move(args)),1)...};
+            (void)unused;
 			auto s = toth.resume(l,sizeof...(Args));
 			if (s != lua::status::ok && s != lua::status::yield) {
 				llae::app::show_error(toth,s);

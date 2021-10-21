@@ -241,7 +241,7 @@ namespace uv {
         auto start = static_cast<const char*>(get_base()) + offset - 1;
         while (true) {
             size_t flen = ((static_cast<const char*>(get_base()) + get_len()) - start)-len + 1;
-            const char* pos = static_cast<const char*>(memchr(start,*str,len));
+            const char* pos = static_cast<const char*>(memchr(start,*str,flen));
             if (!pos) {
                 return {0}; 
             }
@@ -254,7 +254,6 @@ namespace uv {
     }
 
     lua::multiret buffer::lbyte(lua::state& l) {
-        size_t len = 0;
         int start = l.optinteger(2,1);
         int end = l.optinteger(3,start);
         if (start<0) {

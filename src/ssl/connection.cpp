@@ -488,7 +488,9 @@ namespace ssl {
     lua::multiret connection::write(lua::state& l) {
         if (is_error()) {
             l.pushnil();
-            l.pushstring("connection::write is error");
+            l.pushstring("connection::write is error: ");
+            push_error(l);
+            l.concat(2);
             return {2};
         }
         if (!l.isyieldable()) {
@@ -544,7 +546,9 @@ namespace ssl {
     lua::multiret connection::read(lua::state& l) {
         if (is_error()) {
             l.pushnil();
-            l.pushstring("connection::read is error");
+            l.pushstring("connection::read is error: ");
+            push_error(l);
+            l.concat(2);
             return {2};
         }
         if (!l.isyieldable()) {
