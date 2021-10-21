@@ -9,6 +9,7 @@
 namespace lua {
 
 	struct object_holder_t {
+		static constexpr uint32_t type_marker = 0xb1c1401d;
 		common::intrusive_ptr<meta::object> hold;
         ~object_holder_t() {
             hold.reset();
@@ -22,6 +23,21 @@ namespace lua {
 		template <class T>
 		T* get_raw() const {
 			return meta::cast<T>(hold.get());
+		}
+
+		static object_holder_t* get(state& s,int idx) {
+			void* data = s.touserdata(idx);
+			if (!data) return nullptr;
+			if (s.getmetafield(idx,"__llae_type") != lua::value_type::number) {
+				s.pop(1);
+				return nullptr;
+			}
+			auto v = s.tointeger(-1);
+			s.pop(1);
+			if (v != type_marker) {
+				return nullptr;
+			}
+			return static_cast<object_holder_t*>(data);
 		}
 	};
 

@@ -27,6 +27,8 @@ namespace lua {
 		s.setfield(-2,"__index");
 		s.pushcclosure(&metaobject_destroy,0);
 		s.setfield(-2,"__gc");
+		s.pushinteger(object_holder_t::type_marker);
+		s.setfield(-2,"__llae_type");
 	}
 
 	void set_metatable(state& s,const meta::info_t* info) {

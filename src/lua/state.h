@@ -62,6 +62,8 @@ namespace lua {
 		lua_Integer tointeger(int idx) const { return lua_tointeger(m_L,idx); }
 		lua_Integer optinteger(int idx,lua_Integer d) const { return luaL_optinteger(m_L,idx,d); }
 		lua_Integer checkinteger(int idx) const { return luaL_checkinteger(m_L,idx); }
+		void* checkudata(int idx,const char* name) const { return luaL_checkudata(m_L,idx,name);}
+		void* testudata(int idx,const char* name) const { return luaL_testudata(m_L,idx,name);}
 
 		const char* tostring(int idx) const { return lua_tostring(m_L,idx); }
 		const char* checkstring(int idx) const { return luaL_checkstring(m_L,idx); }
@@ -101,6 +103,8 @@ namespace lua {
 		}
 		bool newmetatable(const char* name) { return luaL_newmetatable(m_L,name); }
 		value_type getmetatable(const char* name) { return static_cast<value_type>(luaL_getmetatable(m_L,name));}
+		value_type getmetafield(int idx,const char* fname) { return static_cast<value_type>(luaL_getmetafield(m_L,idx,fname));}
+		void setmetatable(const char* mname) { luaL_setmetatable(m_L,mname); }
 		void setmetatable(int idx) { lua_setmetatable(m_L,idx); }
 		void checkstack(int size) {lua_checkstack(m_L,size); }
         char* buffinitsize(luaL_Buffer& b,size_t sz) { return luaL_buffinitsize(m_L,&b,sz); }

@@ -86,7 +86,7 @@ namespace lua {
 	template <class T>
 	struct stack<common::intrusive_ptr<T> > {
 		static common::intrusive_ptr<T> get(state& s,int idx) { 
-			auto hdr = static_cast<object_holder_t*>(s.touserdata(idx));
+			auto hdr = object_holder_t::get(s,idx);
 			if (!hdr) return common::intrusive_ptr<T>{};
 			return hdr->get_intrusive<T>();
 		}
@@ -108,11 +108,10 @@ namespace lua {
     template <class T>
     struct stack<check<common::intrusive_ptr<T> > > {
         static common::intrusive_ptr<T> get(state& s,int idx) {
-            if (s.get_type(idx) != value_type::userdata) {
+        	auto hdr = object_holder_t::get(s,idx);
+            if (!hdr) {
                 s.argerror(idx,T::get_class_info()->name);
             }
-            auto hdr = static_cast<object_holder_t*>(s.touserdata(idx));
-            if (!hdr) return common::intrusive_ptr<T>{};
             return hdr->get_intrusive<T>();
         }
         static void push(state& s,common::intrusive_ptr<T>&& v) {
@@ -133,7 +132,7 @@ namespace lua {
 	template <class T>
 	struct stack<T*> {
 		static T* get(state& s,int idx) { 
-			auto hdr = static_cast<object_holder_t*>(s.touserdata(idx));
+			auto hdr = object_holder_t::get(s,idx);
 			if (!hdr) return nullptr;
 			return hdr->get_raw<T>();
 		}
