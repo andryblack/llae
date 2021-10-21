@@ -44,7 +44,7 @@ end
 function _M.solution(  )
 	configurations { 'debug', 'release' }
 	language 'c++'
-	cppdialect "C++11"
+	cppdialect "C++14"
 	configuration 'release'
 		optimize 'Speed'
 		symbols 'Off'
