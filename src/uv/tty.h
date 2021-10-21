@@ -4,6 +4,7 @@
 #include "stream.h"
 #include "lua/state.h"
 #include "lua/ref.h"
+#include "posix/fd.h"
 
 namespace uv {
 
@@ -13,14 +14,16 @@ namespace uv {
 		META_OBJECT
 	private:
 		uv_tty_t m_tty;
+		posix::fd_ptr m_fd;
 	public:
 		virtual uv_handle_t* get_handle() override final { return reinterpret_cast<uv_handle_t*>(&m_tty); }
 		virtual uv_stream_t* get_stream() override final { return reinterpret_cast<uv_stream_t*>(&m_tty); }
 	protected:
 		virtual ~tty() override;
+		explicit tty(uv::loop& loop,posix::fd_ptr && fd );
 	public:
 		explicit tty(uv::loop& loop,uv_file fd );
-		static lua::multiret lnew(lua::state& l,uv_file fd);
+		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& l);
 
 		lua::multiret set_mode(lua::state& l,uv_tty_mode_t mode);

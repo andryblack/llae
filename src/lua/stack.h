@@ -20,6 +20,11 @@ namespace lua {
         using type = T;
     };
 
+    template <class T>
+    struct raw {
+        using MT = T;
+    };
+
 
 	template <>
 	struct stack<value> {
@@ -32,6 +37,16 @@ namespace lua {
 	};
 
 
+	template <>
+	struct stack<char> {
+		static char get(state& s,int idx) { return s.tointeger(idx); }
+		static void push(state& s,char v) { s.pushinteger(v); }
+	};
+	template <>
+	struct stack<unsigned char> {
+		static unsigned char get(state& s,int idx) { return s.tointeger(idx); }
+		static void push(state& s,unsigned char v) { s.pushinteger(v); }
+	};
 	template <>
 	struct stack<int> {
 		static int get(state& s,int idx) { return s.tointeger(idx); }
@@ -152,6 +167,30 @@ namespace lua {
 	struct stack<const common::intrusive_ptr<T>& > : stack<common::intrusive_ptr<T> >{};
 	template <class T>
     struct stack<common::intrusive_ptr<T>&& > : stack<common::intrusive_ptr<T> >{};
+
+
+    template <class MT>
+    struct stack<raw<MT>> {
+    	using T = typename MT::object;
+    	static T* get(state& s,int idx) {
+    		auto res = s.testudata(idx,MT::name);
+    		return static_cast<T*>(res);
+        }
+        static void push(state& s,const T& v) {
+            auto ptr = s.newuserdata(sizeof(T));
+            memcpy(ptr,&v,sizeof(T));
+            s.setmetatable(MT::name);
+        }
+    };
+
+    template <class MT>
+    struct stack<check<raw<MT>>> : stack<raw<MT>> {
+    	using T = typename MT::object;
+    	static T* get(state& s,int idx) {
+    		auto res = s.checkudata(idx,MT::name);
+    		return static_cast<T*>(res);
+        }
+    };
 	
     template <class T>
     static void push(state& s,const T& val) {

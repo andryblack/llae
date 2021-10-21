@@ -4,7 +4,7 @@ local _M = {}
 _M.root = _MAIN_SCRIPT_DIR
 
 
-local components = { 'common','lua','meta','uv','llae','ssl','archive','crypto' }
+local components = { 'common','lua','meta','uv','llae','ssl','archive','crypto','posix' }
 
 local extlibs = {
 	require 'lua',

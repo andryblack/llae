@@ -16,6 +16,13 @@ namespace uv {
 		UV_DIAG_CHECK(r);
 		attach();
 	}
+
+	tty::tty(loop& l,posix::fd_ptr && fd) : m_fd(std::move(fd)) {
+		int r = uv_tty_init(l.native(),&m_tty,m_fd->get(),0);
+		UV_DIAG_CHECK(r);
+		attach();
+	}
+
 	tty::~tty() {
 	}
 
@@ -41,9 +48,16 @@ namespace uv {
 		return {1};
 	}
 
-	lua::multiret tty::lnew(lua::state& l,uv_file fd) {
-		common::intrusive_ptr<tty> res{new tty(llae::app::get(l).loop(),fd)};
-		lua::push(l,std::move(res));
+	lua::multiret tty::lnew(lua::state& l) {
+		posix::fd_ptr fdp = lua::stack<posix::fd_ptr>::get(l,1);
+		if (!fdp) {
+			uv_file fd = l.checkinteger(1);
+			common::intrusive_ptr<tty> res{new tty(llae::app::get(l).loop(),fd)};
+			lua::push(l,std::move(res));
+		} else {
+			common::intrusive_ptr<tty> res{new tty(llae::app::get(l).loop(),std::move(fdp))};
+			lua::push(l,std::move(res));
+		}
 		return {1};
 	}
 
@@ -59,21 +73,6 @@ namespace uv {
 		l.setfield(-2,"MODE_RAW");
 		l.pushinteger(UV_TTY_MODE_IO);
 		l.setfield(-2,"MODE_IO");
-		l.pushinteger(O_WRONLY);
-		l.setfield(-2,"O_WRONLY");
-		l.pushinteger(O_RDONLY);
-		l.setfield(-2,"O_RDONLY");
-		l.pushinteger(O_RDWR);
-		l.setfield(-2,"O_RDWR");
-		l.pushinteger(O_EXCL);
-		l.setfield(-2,"O_EXCL");
-		l.pushinteger(O_NOCTTY);
-		l.setfield(-2,"O_NOCTTY");
-		l.pushinteger(O_ASYNC);
-		l.setfield(-2,"O_ASYNC");
-		// l.pushinteger(O_DIRECT);
-		// l.setfield(-2,"O_DIRECT");
-		l.pushinteger(O_NONBLOCK);
-		l.setfield(-2,"O_NONBLOCK");
+		
 	}
 }

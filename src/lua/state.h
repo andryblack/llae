@@ -122,6 +122,8 @@ namespace lua {
         bool isyieldable() const { return lua_isyieldable(m_L); }
         
         bool next(int idx) const { return lua_next(m_L,idx) != 0; }
+
+        static int upvalueindex(int idx) { return lua_upvalueindex(idx); }
 	};
 
 	class main_state : public state {

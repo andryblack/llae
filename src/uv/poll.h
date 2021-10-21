@@ -5,6 +5,8 @@
 #include "lua/state.h"
 #include "lua/ref.h"
 #include "common/intrusive_ptr.h"
+#include "posix/fd.h"
+
 
 namespace uv {
 
@@ -22,6 +24,7 @@ namespace uv {
 		META_OBJECT
 	private:
 		uv_poll_t m_poll;
+		posix::fd_ptr m_fd;
 		poll_consumer_ptr m_consumer;
 		static void on_poll_cb(uv_poll_t *handle, int status, int events);
 		bool on_poll(int status, int events);
@@ -30,9 +33,11 @@ namespace uv {
 	protected:
 		virtual ~poll() override;
 		virtual void on_closed() override;
+		explicit poll(uv::loop& loop,posix::fd_ptr && fd );
 	public:
 		explicit poll(uv::loop& loop,int fd );
 		static void lbind(lua::state& l);
+		static lua::multiret lnew(lua::state& l);
 
 		int start_poll(int events,const poll_consumer_ptr& poll);
 		int stop_poll();

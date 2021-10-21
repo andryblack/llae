@@ -18,6 +18,8 @@ int luaopen_ssl(lua_State*);
 int luaopen_llae(lua_State*);
 int luaopen_archive(lua_State*);
 int luaopen_crypto(lua_State*);
+int luaopen_posix(lua_State*);
+int luaopen_posix_termios(lua_State*);
 
 const lua::embedded_module lua::embedded_module::modules[] = {
 	{"uv",&luaopen_uv},
@@ -25,6 +27,8 @@ const lua::embedded_module lua::embedded_module::modules[] = {
 	{"llae",&luaopen_llae},
 	{"archive",&luaopen_archive},
 	{"crypto",&luaopen_crypto},
+	{"posix",&luaopen_posix},
+	{"posix.termios",&luaopen_posix_termios},
 	{nullptr,nullptr}
 };
 

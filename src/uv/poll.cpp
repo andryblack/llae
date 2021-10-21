@@ -67,6 +67,11 @@ namespace uv {
 		UV_DIAG_CHECK(r);
 		attach();
 	}
+	poll::poll(loop& l,posix::fd_ptr && fd) : m_fd(std::move(fd)) {
+		int r = uv_poll_init(l.native(),&m_poll,m_fd->get());
+		UV_DIAG_CHECK(r);
+		attach();
+	}
 	poll::~poll() {
 	}
 
@@ -147,9 +152,23 @@ namespace uv {
         }
         handle::on_closed();
 	}
+
+	lua::multiret poll::lnew(lua::state& l) {
+		posix::fd_ptr fdp = lua::stack<posix::fd_ptr>::get(l,1);
+		if (!fdp) {
+			uv_file fd = l.checkinteger(1);
+			common::intrusive_ptr<poll> res{new poll(llae::app::get(l).loop(),fd)};
+			lua::push(l,std::move(res));
+		} else {
+			common::intrusive_ptr<poll> res{new poll(llae::app::get(l).loop(),std::move(fdp))};
+			lua::push(l,std::move(res));
+		}
+		return {1};
+	}
 		
 	void poll::lbind(lua::state& l) {
 		lua::bind::function(l,"poll",&poll::lpoll);
+		lua::bind::function(l,"new",&poll::lnew);
 
 		l.pushinteger(UV_READABLE);
 		l.setfield(-2,"READABLE");
