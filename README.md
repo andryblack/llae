@@ -1,3 +1,5 @@
+[![Build Status](https://ci.sandboxgames.ru/api/badges/andry/llae1/status.svg?ref=refs/heads/develop)](https://ci.sandboxgames.ru/andry/llae1)
+
 ## LLAE
 
 Lua applicication engine.
@@ -10,18 +12,19 @@ build-in modules:
 
 * http client/server, https client (openssl)
 
-## Build
+## Build and install
 
 ```bash
-$ premake5 gmake
+$ premake5 download
+$ premake5 gmake2
 $ make -C build
+$ LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap bootstrap
 ```
 
 ## Examples
 
 ```bash
-$ ./bin/llae-run examples/http_clien.lua 
-$ ./bin/llae-run examples/redis.lua 
+$ llae run examples/info.lua 
 ```
 
 ## License
