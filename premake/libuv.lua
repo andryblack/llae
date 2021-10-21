@@ -85,12 +85,47 @@ function _M.lib( root )
 				path.join(_M.root,'src','unix','random-sysctl-linux.c'),
 				path.join(_M.root,'src','unix','sysinfo-loadavg.c'),
 			}
+		filter "system:windows"
+			defines {
+				'WIN32_LEAN_AND_MEAN',
+				'_WIN32_WINNT=0x0601'
+			}
+			
+			files {
+				path.join(_M.root,'src','win','async.c'),
+				path.join(_M.root,'src','win','core.c'),
+				path.join(_M.root,'src','win','detect-wakeup.c'),
+				path.join(_M.root,'src','win','dl.h'),
+				path.join(_M.root,'src','win','error.c'),
+				path.join(_M.root,'src','win','fs.c'),
+				path.join(_M.root,'src','win','fs-event.c'),
+				path.join(_M.root,'src','win','getaddrinfo.c'),
+				path.join(_M.root,'src','win','getnameinfo.c'),
+				path.join(_M.root,'src','win','handle.c'),
+				path.join(_M.root,'src','win','loop-watcher.c'),
+				path.join(_M.root,'src','win','pipe.c'),
+				path.join(_M.root,'src','win','thread.c'),
+				path.join(_M.root,'src','win','poll.c'),
+				path.join(_M.root,'src','win','process.c'),
+				path.join(_M.root,'src','win','process-stdio.c'),
+				path.join(_M.root,'src','win','signal.c'),
+				path.join(_M.root,'src','win','snprintf.c'),
+				path.join(_M.root,'src','win','stream.c'),
+				path.join(_M.root,'src','win','tcp.c'),
+				path.join(_M.root,'src','win','tty.c'),
+				path.join(_M.root,'src','win','udp.c'),
+				path.join(_M.root,'src','win','util.c'),
+				path.join(_M.root,'src','win','winapi.c'),
+				path.join(_M.root,'src','win','winsock.c'),
+			}
 		filter {}
 end
 
 function _M.link(  )
 	filter "system:linux"
 		links{ 'pthread' }
+	filter "system:windows"
+		links{ 'ws2_32','userenv','iphlpapi','psapi' }
 	filter {}
 	links{ _M.name }
 end

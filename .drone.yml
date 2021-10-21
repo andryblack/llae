@@ -1,0 +1,63 @@
+
+# ---
+kind: pipeline
+type: docker
+name: default
+when: 
+ event: [ tag ]
+ branch: [ develop ]
+steps:
+- name: cleanup
+  image: alpine
+  commands:
+    - rm -rf bin/* build/* lib/*
+- name: download
+  image: build-llae
+  pull: never
+  commands:
+    - premake5 download
+- name: prepare
+  image: build-llae
+  pull: never
+  commands:
+    - premake5 gmake2
+- name: build
+  image: build-llae
+  pull: never
+  environment:
+  commands:
+    - make -C build verbose=1 config=debug
+    - make -C build verbose=1 clean
+    - make -C build verbose=1 config=release 
+
+- name: clean-for-windows
+  image: build-llae
+  pull: never
+  environment:
+  commands:
+    - rm -rf bin/* build/* lib/*
+    - premake5 download
+
+- name: prepare-windows
+  image: build-llae-windows
+  pull: never
+  environment:
+  commands:
+    - premake5 --os=windows gmake2
+
+- name: build-windows
+  image: build-llae-windows
+  pull: never
+  environment:
+     TOOLCHAIN: x86_64-w64-mingw32-
+     CC: x86_64-w64-mingw32-gcc
+     CXX: x86_64-w64-mingw32-g++
+     AR: x86_64-w64-mingw32-ar
+     LD: x86_64-w64-mingw32-ld
+  commands:
+   - make -C build verbose=1 config=debug 
+   - make -C build verbose=1 clean
+   - make -C build verbose=1 config=release 
+
+# depends_on:
+# - docker-windows

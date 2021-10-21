@@ -84,9 +84,7 @@ namespace lua {
 		}
 
 
-		template <std::size_t Idx>
-		struct apply;
-		template <std::size_t Idx>
+		template <std::size_t Idx, bool = true>
 		struct apply {
 			static constexpr const auto f = std::get<Idx>(MT::fields);
 			static bool index(state& l,T* o,const char* fn) {
@@ -103,8 +101,8 @@ namespace lua {
 				return apply<Idx+1>::newindex(l,o,fn);
 			}
 		};
-		template <>
-		struct apply<num_of_fields> {
+		template <bool dummy>
+		struct apply<num_of_fields,dummy> {
 			static bool index(state& l,T* o,const char* fn) {
 				return false;
 			}
@@ -142,6 +140,7 @@ namespace lua {
 		}
 	};
 
+	
 	
 	template <typename O,typename F>
 	static constexpr const field_t<O,F> field(const char* name,F O::* ptr) {

@@ -43,26 +43,43 @@ int luaopen_posix(lua_State* L) {
 	BIND_M(O_RDONLY);
 	BIND_M(O_RDWR);
 	BIND_M(O_EXCL);
+#ifdef O_NOCTTY
 	BIND_M(O_NOCTTY);
+#endif
+#ifdef O_ASYNC
 	BIND_M(O_ASYNC);
+#endif
 #ifdef O_DIRECT
 	BIND_M(O_DIRECT);
 #endif
+#ifdef O_NONBLOCK
 	BIND_M(O_NONBLOCK);
+#endif
 
+#ifdef F_GETFD
 	BIND_M(F_GETFD);
+#endif
+#ifdef F_GETFL
 	BIND_M(F_GETFL);
+#endif
+#ifdef F_GETOWN
 	BIND_M(F_GETOWN);
+#endif
 #ifdef F_GETSIG
 	BIND_M(F_GETSIG);
 #endif
 #ifdef F_GETLEASE
 	BIND_M(F_GETLEASE);
 #endif
-
+#ifdef F_SETFD
 	BIND_M(F_SETFD);
+#endif
+#ifdef F_SETFL
 	BIND_M(F_SETFL);
+#endif
+#ifdef F_SETOWN
 	BIND_M(F_SETOWN);
+#endif
 #ifdef F_SETSIG
 	BIND_M(F_SETSIG);
 #endif

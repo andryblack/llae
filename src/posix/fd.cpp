@@ -63,6 +63,11 @@ namespace posix {
 	}
 
 	lua::multiret fd::fcntl(lua::state& l) {
+#ifdef _WIN32
+		l.pushnil();
+		l.pushstring("unsupported");
+		return {2};
+#else
 		int cmd =  l.checkinteger(2);
 		int res;
 		switch (cmd) {
@@ -104,6 +109,7 @@ namespace posix {
 		}
 		l.pushinteger(res);
 		return {1};
+#endif
 	}
 
 	void fd::lbind(lua::state& l) {

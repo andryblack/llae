@@ -4,6 +4,8 @@
 #include "lua/raw_bind.h"
 #include "lua/bind.h"
 #include "posix/lposix.h"
+
+#ifndef _WIN32
 #include <termios.h>
 
 struct termios_mt  {
@@ -189,12 +191,16 @@ int luaopen_posix_termios(lua_State* L) {
 	BIND_M(VSTART)
 	BIND_M(VSTOP)
 	BIND_M(VSUSP)
+#ifdef VDSUSP
 	BIND_M(VDSUSP)
+#endif
 	BIND_M(VLNEXT)
 	BIND_M(VWERASE)
 	BIND_M(VREPRINT)
 	BIND_M(VDISCARD)
+#ifdef VSTATUS
 	BIND_M(VSTATUS)
+#endif
 
 	BIND_M(B9600)
 	BIND_M(B19200)
@@ -207,3 +213,8 @@ int luaopen_posix_termios(lua_State* L) {
 
 	return 1;
 }
+#else
+int luaopen_posix_termios(lua_State* L) {
+	return 0;
+}
+#endif
