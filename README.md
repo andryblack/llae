@@ -21,6 +21,13 @@ $ make -C build
 $ LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap bootstrap
 ```
 
+## Build inplace
+```bash
+LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap --root=. --inplace=true install
+LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap --root=. --inplace=true init 
+premake5 --file=build/premake5.lua gmake2
+```
+
 ## Examples
 
 ```bash

@@ -1,17 +1,22 @@
 name = 'llae'
 version = 'develop'
 
-dir = 'llae-src'
+dir = project:get_cmdargs().inplace and '../../..' or 'llae-src'
 
 function install(tosystem)
-	download_git('https://github.com/andryblack/llae.git',{branch=version,dir=dir})
-	install_scripts(dir .. '/scripts')
-	if tosystem then
-		local all_files = {}
-		for fn in foreach_file(dir .. '/modules') do
-			all_files['modules/' .. fn] = dir .. '/modules/' .. fn
+	if not project:get_cmdargs().inplace then
+
+		download_git('https://github.com/andryblack/llae.git',{branch=version,dir=dir})
+		install_scripts(dir .. '/scripts')
+		if tosystem then
+			local all_files = {}
+			for fn in foreach_file(dir .. '/modules') do
+				all_files['modules/' .. fn] = dir .. '/modules/' .. fn
+			end
+			install_files(all_files)
 		end
-		install_files(all_files)
+	else
+		log.info('skip install')
 	end
 end
 

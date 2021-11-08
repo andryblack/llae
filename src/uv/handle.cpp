@@ -36,6 +36,10 @@ namespace uv {
 	}
 
 	void handle::destroy() {
+		handle* self = static_cast<handle*>(uv_handle_get_data(get_handle()));
+		if (!self) {
+			return;
+		}
 		if (!uv_is_closing(get_handle())) {
             on_closed();
 			uv_close(get_handle(),&handle::close_destroy_cb);
@@ -45,6 +49,10 @@ namespace uv {
 	}
 
 	void handle::close() {
+		handle* self = static_cast<handle*>(uv_handle_get_data(get_handle()));
+		if (!self) {
+			return;
+		}
 		if (!uv_is_closing(get_handle())) {
 			add_ref();
 			uv_close(get_handle(),&handle::close_cb);

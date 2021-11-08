@@ -27,7 +27,7 @@ function install:exec( args )
 	end
 	local modname = args[2]
 	local Project = require 'project'
-	local prj,err = Project.load( args['project-dir'] )
+	local prj,err = Project.load( args['project-dir'] , args)
 	if not prj then
 		error('failed loading project file ' .. err)
 	end

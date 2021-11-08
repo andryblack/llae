@@ -73,6 +73,7 @@ function Project.env:generate_src( data )
 end
 
 function Project:_init( env , root, cmdargs )
+	log.debug('Project:_init',root,cmdargs)
 	self._env = env
 	self._root = root
 	self._scripts = {}

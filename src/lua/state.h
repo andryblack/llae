@@ -118,6 +118,7 @@ namespace lua {
         bool istable(int idx) const { return lua_istable(m_L,idx); }
         bool isthread(int idx) const { return lua_isthread(m_L,idx); }
         bool isuserdata(int idx) const { return lua_isuserdata(m_L,idx); }
+        bool isfunction(int idx) const { return lua_isfunction(m_L,idx); }
 
         bool isyieldable() const { return lua_isyieldable(m_L); }
         

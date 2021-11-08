@@ -275,7 +275,8 @@ local _M = {}
 
 function _M.create_env( project )
 	local env = {
-		project = project
+		project = project,
+		log = log
 	}
 	local super_env = {}
 	for n,v in pairs(m) do
