@@ -1,7 +1,7 @@
 local utils = require 'utils'
 
 local _M = {
-	name = 'llae-mbedtls',
+	name = 'mbedtls',
 	version = '2.16.5',
 	url = 'https://tls.mbed.org/download/mbedtls-2.16.5-apache.tgz',
 	archive = 'tar.gz',
@@ -39,7 +39,7 @@ function _M.lib( root )
 	-- 	assert(os.copyfile(path.join(_M.root,'src',f),
 	-- 		path.join(root,'build','include',f)))
 	-- end
-	project(_M.name)
+	project('llae-'.._M.name)
 		kind 'StaticLib'
 		targetdir 'lib'
 		location 'build/project'
@@ -69,7 +69,7 @@ function _M.lib( root )
 end
 
 function _M.link(  )
-	links{ _M.name }
+	links{ 'llae-'.._M.name }
 end
 
 return _M

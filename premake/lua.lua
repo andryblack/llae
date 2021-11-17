@@ -1,7 +1,7 @@
 local utils = require 'utils'
 
 local _M = {
-	name = 'llae-lua',
+	name = 'lua',
 	version = '5.3.5',
 	url = 'https://www.lua.org/ftp/lua-5.3.5.tar.gz',
 	archive = 'tar.gz',
@@ -30,7 +30,7 @@ function _M.lib( root )
 			['LUA_API'] = '',
 			['LUAI_FUNC'] = ''
 		}})
-	project(_M.name)
+	project('llae-'.._M.name)
 		kind 'StaticLib'
 		targetdir 'lib'
 		location 'build/project'
@@ -57,7 +57,7 @@ function _M.link(  )
 	filter "system:linux"
 		links {'dl'}
 	filter {}	
-	links{ _M.name }
+	links{ 'llae-'.._M.name }
 end
 
 return _M

@@ -1,7 +1,7 @@
 local utils = require 'utils'
 
 local _M = {
-	name = 'llae-libuv',
+	name = 'libuv',
 	version = 'v1.35.0',
 	url = 'https://dist.libuv.org/dist/v1.35.0/libuv-v1.35.0.tar.gz',
 	archive = 'tar.gz',
@@ -19,7 +19,7 @@ function _M.lib( root )
 	for _,f in ipairs(os.matchfiles(path.join(_M.root,'include','uv','*'))) do
 		utils.install_header(f,path.join('uv',path.getname(f)))
 	end
-	project(_M.name)
+	project('llae-'.._M.name)
 		kind 'StaticLib'
 		targetdir 'lib'
 		location 'build/project'
@@ -127,7 +127,7 @@ function _M.link(  )
 	filter "system:windows"
 		links{ 'ws2_32','userenv','iphlpapi','psapi' }
 	filter {}
-	links{ _M.name }
+	links{ 'llae-'.._M.name }
 end
 
 return _M

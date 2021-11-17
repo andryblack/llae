@@ -24,10 +24,12 @@ end
 
 function _M.download(  )
 	local extlibs_folder = path.join(_M.root,'build','extlibs')
+	local dl_folder = os.getenv('LLAE_DL_DIR') or path.join(_M.root,'build','dl')
+	os.mkdir(dl_folder)
 	os.mkdir(extlibs_folder)
 	for _,ext in ipairs(extlibs) do
 		if ext.url then
-			local zip_file = path.join(_M.root,'build','extlibs',ext.name..'-'..ext.version) .. '.' .. ext.archive 
+			local zip_file = path.join(dl_folder,ext.name..'-'..ext.version) .. '.' .. ext.archive 
 			if not os.isfile(zip_file) then
 				local res,code = http.download(ext.url,
 					zip_file,

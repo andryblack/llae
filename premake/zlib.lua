@@ -1,6 +1,6 @@
 local utils = require 'utils'
 local _M = {
-	name = 'llae-zlib',
+	name = 'zlib',
 	version = '1.2.11',
 	url = 'https://zlib.net/zlib-1.2.11.tar.gz',
 	archive = 'tar.gz',
@@ -17,7 +17,7 @@ function _M.lib( root )
 		local src = path.join(_M.root,f)
 		utils.install_header(src,f)
 	end
-	project(_M.name)
+	project( 'llae-'.._M.name )
 		kind 'StaticLib'
 		targetdir 'lib'
 		location 'build/project'
@@ -34,7 +34,7 @@ end
 
 
 function _M.link(  )
-	links{ _M.name }
+	links{ 'llae-'.._M.name }
 end
 
 return _M

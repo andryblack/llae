@@ -45,7 +45,7 @@ end
 
 function m:download(url,file,hash)
 	log.info('download',self.name,url)
-	local dst = path.join(self.location,file)
+	local dst = path.join(self._project:get_dl_dir(),file)
 	if hash and fs.isfile(dst) then
 		local h = crypto.md5()
 		for b in fs.read_file(dst) do
@@ -126,14 +126,14 @@ function m:download(url,file,hash)
 end
 
 function m:unpack_tgz( file , todir )
-	local src = path.join(self.location,file)
+	local src = path.join(self._project:get_dl_dir(),file)
 	local dst = todir and path.join(self.location,todir) or self.location
 	log.info('unpack',file)
 	untar.unpack_tgz(src,dst)
 end
 
 function m:unpack_zip( file , todir )
-	local src = path.join(self.location,file)
+	local src = path.join(self._project:get_dl_dir(),file)
 	local dst = todir and path.join(self.location,todir) or self.location
 	log.info('unpack',file)
 	unzip.unpack_zip(src,dst)

@@ -85,6 +85,11 @@ function Project:_init( env , root, cmdargs )
 	if root then
 		self:add_modules_location(path.join(root,'modules'))
 	end
+	self._dl_dir = (cmdargs and cmdargs['dl-dir']) or os.getenv('LLAE_DL_DIR') or path.join(self._root,'build/dl')
+end
+
+function Project:get_dl_dir()
+	return self._dl_dir
 end
 
 function Project:name(  )
