@@ -62,4 +62,16 @@ function path.getrelative( fn )
 	return fn
 end
 
+function path.remove_leading_dirs(fn,count)
+	local i = 1
+	for j = 1,count do
+		local p = string.find(fn,'/',i,true)
+		if not p then
+			return nil
+		end
+		i = p + 1
+	end
+	return string.sub(fn,i)
+end
+
 return path

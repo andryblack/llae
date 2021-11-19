@@ -73,8 +73,13 @@ function untar:prepare_file(  )
 		self._file = nil
 		return
 	end
+	local name = parse_name(self._header.name)
+	local prefix = parse_name(self._header.prefix)
+	if prefix and #prefix > 0 then
+		name = prefix .. '/' .. name
+	end
 	self._file = {
-		name = parse_name(self._header.name),
+		name = name,
 		size = tonumber(parse_name(self._header.size),8),
 		mtime = tonumber(parse_name(self._header.mtime)),
 		readed = 0
@@ -82,7 +87,10 @@ function untar:prepare_file(  )
 	if self._header.typeflag == string.byte('5') then
 		--log.debug('found dir',self._file.name)
 		assert(self._file.size == 0)
-		fs.mkdir(self:get_path(self._file.name))
+		local fn = self:get_path(self._file.name)
+		if fn then 
+			fs.mkdir(fn)
+		end
 		self._state = 'align'
 		self._next = 'header'
 	else
@@ -90,9 +98,13 @@ function untar:prepare_file(  )
 		self._next = 'file'
 		self._state = 'align'
 		local fn = self:get_path(self._file.name)
-		fs.mkdir_r(path.dirname(fn))
-		fs.unlink(fn)
-		self._file.f = assert(fs.open(fn,fs.O_WRONLY|fs.O_CREAT))
+		if fn then
+			fs.mkdir_r(path.dirname(fn))
+			fs.unlink(fn)
+			self._file.f = assert(fs.open(fn,fs.O_WRONLY|fs.O_CREAT))
+		else
+			-- skip file
+		end
 	end
 end
 
@@ -104,11 +116,15 @@ function untar:process_file( data )
 		self._data = string.sub(self._data,cnt+1)
 		self._file.readed = self._file.readed + cnt
 		self._processed = self._processed + cnt
-		assert(self._file.f:write(d))
+		if self._file.f then
+			assert(self._file.f:write(d))
+		end
 	end
 	if self._file.readed >= self._file.size then
 		--log.debug('end file',self._file.name,self._file.readed)
-		self._file.f:close()
+		if self._file.f then
+			self._file.f:close()
+		end
 		self._state = 'align'
 		self._next = 'header'
 		return true
@@ -143,14 +159,25 @@ function untar:write( data )
 	end
 end
 
-function untar.unpack_tgz( fn, dir )
+function untar.unpack_tgz( fn, dir , strip )
 	local f = assert(fs.open(fn,fs.O_RDONLY))
 	local u = (require 'archive').new_gunzip_read()
 	local t = untar.new()
-	if dir then
+	if dir or strip then
 		local path = require 'llae.path'
 		function t:get_path(fn)
-			return path.join(dir,fn)
+			local sfn = fn
+			if strip then
+				fn = path.remove_leading_dirs(fn,strip)
+			end
+			if not fn then
+				return nil
+			end
+			if dir then
+				fn = path.join(dir,fn)
+			end
+			log.debug(sfn,'->',fn)
+			return fn
 		end
 	end
 	while true do

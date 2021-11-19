@@ -164,6 +164,7 @@ function Project:install_modules( tosystem )
 	fs.mkdir(path.join(root,'build'))
 	fs.mkdir(path.join(root,'build','modules'))
 	fs.mkdir(path.join(root,'build','premake'))
+	fs.mkdir(self:get_dl_dir())
 	for _,m in ipairs(self._modules_list) do
 		modules.install(m,root,tosystem)
 	end

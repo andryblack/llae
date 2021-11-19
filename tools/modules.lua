@@ -125,11 +125,11 @@ function m:download(url,file,hash)
 	end
 end
 
-function m:unpack_tgz( file , todir )
+function m:unpack_tgz( file , todir , strip)
 	local src = path.join(self._project:get_dl_dir(),file)
 	local dst = todir and path.join(self.location,todir) or self.location
 	log.info('unpack',file)
-	untar.unpack_tgz(src,dst)
+	untar.unpack_tgz(src,dst,strip)
 end
 
 function m:unpack_zip( file , todir )
