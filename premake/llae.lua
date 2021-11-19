@@ -24,7 +24,7 @@ end
 
 function _M.download(  )
 	local extlibs_folder = path.join(_M.root,'build','extlibs')
-	local dl_folder = os.getenv('LLAE_DL_DIR') or path.join(_M.root,'build','dl')
+	local dl_folder = os.getenv('LLAE_DL_DIR') or path.join(_M.root,'dl')
 	os.mkdir(dl_folder)
 	os.mkdir(extlibs_folder)
 	for _,ext in ipairs(extlibs) do
