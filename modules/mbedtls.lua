@@ -19,7 +19,29 @@ local comment = {
 	['MBEDTLS_PSA_ITS_FILE_C'] = true,
 	['MBEDTLS_PSA_CRYPTO_STORAGE_C'] = true,
 }
+local replace_line = {
+	['#define MBEDTLS_HAVE_ASM'] = [[
 
+#ifndef __clang__
+#define MBEDTLS_HAVE_ASM
+#endif
+
+]],
+['#define MBEDTLS_AESNI_C'] = [[
+
+#ifndef __clang__
+#define MBEDTLS_AESNI_C
+#endif
+
+]],
+['#define MBEDTLS_PADLOCK_C'] = [[
+
+#ifndef __clang__
+#define MBEDTLS_AESNI_C
+#endif
+
+]]
+}
 
 function install()
 	download(url,archive,hash)
@@ -39,7 +61,8 @@ function install()
 		src =  dir .. '/include/mbedtls/mbedtls_config.h',
 		dst = 'build/include/mbedtls/mbedtls_config.h',
 		uncomment = uncomment,
-		comment = comment
+		comment = comment,
+		replace_line = replace_line
 	}
 end
 

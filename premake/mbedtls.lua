@@ -20,6 +20,9 @@ local comment = {
 	['MBEDTLS_FS_IO'] = true,
 	['MBEDTLS_PSA_ITS_FILE_C'] = true,
 	['MBEDTLS_PSA_CRYPTO_STORAGE_C'] = true,
+	['MBEDTLS_HAVE_ASM'] = true,
+	['MBEDTLS_AESNI_C'] = true,
+	['MBEDTLS_PADLOCK_C'] = true,
 }
 
 
