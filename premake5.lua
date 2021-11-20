@@ -12,7 +12,18 @@ newaction {
 
 }
 
-if _ACTION ~= 'download' then
+newaction {
+	trigger = 'unpack',
+	shortname = 'unpack dependencies',
+	description = 'unpack dependencies for build',
+	execute = function()
+		llae.unpack()
+		os.exit(0)
+	end,
+
+}
+
+if _ACTION ~= 'download' and _ACTION ~= 'unpack' then
 	solution 'llae'
 		objdir 'build' 
 		location 'build'

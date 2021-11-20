@@ -63,10 +63,12 @@ namespace uv {
         lua::multiret lbyte(lua::state& l);
         lua::multiret ltostring(lua::state& l);
         lua::multiret leq(lua::state& l);
+        void* find(const char* str);
+        buffer_ptr realloc(size_t len);
         static lua::multiret lconcat(lua::state& l);
         static lua::multiret lnew(lua::state& l);
         static void lbind(lua::state& l);
-        static buffer_ptr get(lua::state& l,int idx);
+        static buffer_ptr get(lua::state& l,int idx,bool check=false);
     };
 
     class write_buffers {

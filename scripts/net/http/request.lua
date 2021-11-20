@@ -4,6 +4,7 @@ local ssl = require 'ssl'
 
 local class = require 'llae.class'
 local log = require 'llae.log'
+local fs = require 'llae.fs'
 
 
 local request = class(require 'net.http.headers','http.request')
@@ -15,6 +16,9 @@ function request.get_ssl_ctx()
 	if not request._ssl_ctx then
 		request._ssl_ctx = ssl.ctx.new()
 		assert(request._ssl_ctx:init())
+		log.debug('load cert from',ssl.ctx.default_cafile)
+		local cert = assert(fs.load_file(ssl.ctx.default_cafile))
+		assert(request._ssl_ctx:load_cert(cert))
 	end
 	return request._ssl_ctx
 end

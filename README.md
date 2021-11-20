@@ -16,6 +16,7 @@ build-in modules:
 
 ```bash
 $ premake5 download
+$ premake5 unpack
 $ premake5 gmake2
 $ make -C build
 $ LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap bootstrap

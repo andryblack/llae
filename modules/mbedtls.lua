@@ -14,7 +14,10 @@ local uncomment = {
 }
 local comment = {
 	['MBEDTLS_NO_UDBL_DIVISION'] = true,
-	['MBEDTLS_NET_C'] = true
+	['MBEDTLS_NET_C'] = true,
+	['MBEDTLS_FS_IO'] = true,
+	['MBEDTLS_PSA_ITS_FILE_C'] = true,
+	['MBEDTLS_PSA_CRYPTO_STORAGE_C'] = true,
 }
 
 
@@ -43,6 +46,10 @@ end
 build_lib = {
 	project = [[
 		includedirs{
+			'include',
+			<%= format_file(module.dir,'library') %>
+		}
+		sysincludedirs {
 			'include',
 			<%= format_file(module.dir,'library') %>
 		}

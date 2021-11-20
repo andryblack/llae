@@ -26,7 +26,6 @@ function _M.download(  )
 	local extlibs_folder = path.join(_M.root,'build','extlibs')
 	local dl_folder = os.getenv('LLAE_DL_DIR') or path.join(_M.root,'dl')
 	os.mkdir(dl_folder)
-	os.mkdir(extlibs_folder)
 	for _,ext in ipairs(extlibs) do
 		if ext.url then
 			local zip_file = path.join(dl_folder,ext.name..'-'..ext.version) .. '.' .. ext.archive 
@@ -38,6 +37,17 @@ function _M.download(  )
 					error('failed download ' .. ext.name .. ' ' .. res)
 				end
 			end
+		end
+	end
+end
+
+function _M.unpack()
+	local extlibs_folder = path.join(_M.root,'build','extlibs')
+	local dl_folder = os.getenv('LLAE_DL_DIR') or path.join(_M.root,'dl')
+	os.mkdir(extlibs_folder)
+	for _,ext in ipairs(extlibs) do
+		if ext.url then
+			local zip_file = path.join(dl_folder,ext.name..'-'..ext.version) .. '.' .. ext.archive 
 			_M['extract_'..string.gsub(ext.archive,'%.','_')](zip_file,extlibs_folder)
 		end
 	end

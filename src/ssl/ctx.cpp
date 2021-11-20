@@ -2,9 +2,11 @@
 #include "lua/stack.h"
 #include "lua/bind.h"
 #include "crypto/crypto.h"
+#include "uv/buffer.h"
 #include <mbedtls/debug.h>
 #include <mbedtls/error.h>
 #include <iostream>
+#include <cstring>
 
 META_OBJECT_INFO(ssl::ctx,meta::object)
 
@@ -46,7 +48,6 @@ namespace ssl {
    	}
 
 	lua::multiret ctx::init(lua::state& l) {
-		const char* cafile = l.optstring(2,default_cafile);
 		int ret = mbedtls_ctr_drbg_seed( &m_ctr_drbg, mbedtls_entropy_func, &m_entropy,
                                (const unsigned char *) pers,
                                strlen( pers ) );
@@ -56,9 +57,30 @@ namespace ssl {
 			return {2};
 		}
 
-		if( ( ret = mbedtls_x509_crt_parse_file( &m_cacert, cafile ) ) != 0 ) {
+
+		l.pushboolean(true);
+		return {1};
+	}
+
+	lua::multiret ctx::load_cert(lua::state& l) {
+		uv::buffer_ptr data = uv::buffer::get(l,2,true);
+		if (!data) {
+			l.pushnil();
+			l.pushstring("need buffer with cert");
+			return {2};
+		}
+
+        if (data->find("-----BEGIN ")) {
+        	data = data->realloc(data->get_len()+1);
+        	static_cast<unsigned char*>(data->get_base())[data->get_len()]=0;
+        	data->set_len(data->get_len()+1);
+        }
+		
+
+		int ret;
+		if( ( ret = mbedtls_x509_crt_parse( &m_cacert, static_cast<const unsigned char*>(data->get_base()), data->get_len() ) ) != 0 ) {
 		    l.pushnil();
-			push_error(l,"mbedtls_x509_crt_parse_file failed, code:%d, %s",ret);
+			push_error(l,"mbedtls_x509_crt_parse failed, code:%d, %s",ret);
 			return {2};
 		}
 
@@ -67,9 +89,11 @@ namespace ssl {
 	}
 
 	void ctx::lbind(lua::state& l) {
+		lua::bind::value(l,"default_cafile",default_cafile);
         lua::bind::constructor<ctx>(l);
 		lua::bind::function(l,"init",&ctx::init);
 		lua::bind::function(l,"set_debug_threshold",&ctx::set_debug_threshold);
+		lua::bind::function(l,"load_cert",&ctx::load_cert);
 	}
 
 }

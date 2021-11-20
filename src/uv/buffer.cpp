@@ -18,6 +18,15 @@ namespace uv {
         m_buf.len = tag.size;
     }
 
+    buffer_ptr buffer::realloc(size_t nsize) {
+        if (nsize<=get_capacity())
+            return buffer_ptr(this);
+        auto res = alloc(nsize);
+        memcpy(res->get_base(),get_base(),get_len());
+        res->set_len(get_len());
+        return res;
+    }
+
     void buffer::destroy() {
         void* mem = this;
         this->~buffer();
@@ -220,6 +229,22 @@ namespace uv {
         return {1};
     }
 
+    void* buffer::find(const char* str) {
+        auto start = static_cast<char*>(get_base());
+        auto len = strlen(str);
+        if (len == 0) return get_base();
+        while (true) {
+            size_t flen = ((static_cast<const char*>(get_base()) + get_len()) - start)-len + 1;
+            char* pos = static_cast<char*>(memchr(start,*str,flen));
+            if (!pos) {
+                return nullptr;
+            }
+            if (len==1 || (memcmp(pos,str,len)==0)) {
+                return pos; 
+            }
+            start = pos + 1;
+        }
+    }
     lua::multiret buffer::lfind(lua::state& l) {
         size_t len = 0;
         const char* str = l.checklstring(2,len);
@@ -344,9 +369,10 @@ namespace uv {
         return {0};
     }
 
-    buffer_ptr buffer::get(lua::state& l,int idx) {
+    buffer_ptr buffer::get(lua::state& l,int idx,bool check) {
         buffer_ptr r = lua::stack<buffer_ptr>::get(l,idx);
         if (r) return r;
+        if (check && !l.isstring(idx)) return {};
         /// @todo hold data on lua
         size_t size = 0;
         auto ptr = l.tolstring(idx,size);
