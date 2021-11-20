@@ -55,7 +55,11 @@ function m:download(url,file,hash)
 		if fhash == hash then
 			log.info('skip, already downloaded')
 			return
+		else
+			log.info('hash different, redownload',fhash,hash)
 		end
+	else
+		log.debug('dnt found downloaded',dst,hash)
 	end
 	fs.unlink(dst)
 
@@ -234,7 +238,7 @@ end
 
 function m:preprocess( config )
 	local src_file = path.join(self.location,config.src)
-	local dst_file = path.join(self.root,config.dst)
+	local dst_file = config.insource and path.join(self.location,config.dst) or path.join(self.root,config.dst)
 
 	local data = {}
 	local uncomment = config.uncomment or {}
