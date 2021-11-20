@@ -2,8 +2,8 @@ local utils = require 'utils'
 
 local _M = {
 	name = 'mbedtls',
-	version = '2.16.5',
-	url = 'https://tls.mbed.org/download/mbedtls-2.16.5-apache.tgz',
+	version = '3.0.0',
+	url = 'https://github.com/ARMmbed/mbedtls/archive/refs/tags/v3.0.0.tar.gz',
 	archive = 'tar.gz',
 }
 
@@ -25,14 +25,21 @@ function _M.lib( root )
 	os.mkdir(path.join(root,'build','include','mbedtls'))
 	for _,f in ipairs(os.matchfiles(path.join(_M.root,'include','mbedtls','*'))) do
 		local n = path.getname(f)
-		if n ~= 'config.h' then
+		if n ~= 'mbedtls_config.h' then
 			utils.install_header(f,path.join('mbedtls',n))
 		end
 	end
+	os.mkdir(path.join(root,'build','include','psa'))
+	for _,f in ipairs(os.matchfiles(path.join(_M.root,'include','psa','*'))) do
+		local n = path.getname(f)
+		--if n ~= 'mbedtls_config.h' then
+			utils.install_header(f,path.join('psa',n))
+		--end
+	end
 
 	utils.preprocess(
-		path.join(_M.root,'include','mbedtls','config.h'),
-		path.join(root,'build','include','mbedtls','config.h'),
+		path.join(_M.root,'include','mbedtls','mbedtls_config.h'),
+		path.join(root,'build','include','mbedtls','mbedtls_config.h'),
 		{uncomment = uncomment, comment = comment })
 
 	-- for _,f in ipairs{'lua.h','luaconf.h','lauxlib.h','lualib.h'} do
@@ -45,26 +52,13 @@ function _M.lib( root )
 		location 'build/project'
 
 		includedirs{
-			path.join(root,'build','include')
+			path.join(root,'build','include'),
+			path.join(_M.root,'library')
 		}
 		files{
 			path.join(_M.root,'library','*.c')
 		}
-		-- local fls = {}
-		-- for _,c in ipairs(components) do
-		-- 	table.insert(fls,path.join(_M.root,'src',c..'.c'))
-		-- 	table.insert(fls,path.join(_M.root,'src',c..'.h'))
-		-- end
-		-- for _,c in ipairs(libs) do
-		-- 	table.insert(fls,path.join(_M.root,'src',c..'.c'))
-		-- end
-		-- files(fls)
-		-- filter "system:linux or bsd or hurd or aix or haiku"
-		-- 	defines      { "LUA_USE_POSIX", "LUA_USE_DLOPEN" }
-
-		-- filter "system:macosx"
-		-- 	defines      { "LUA_USE_MACOSX" }
-		-- filter {}
+		
 
 end
 

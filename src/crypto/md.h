@@ -18,6 +18,7 @@ namespace crypto {
 	class md : public meta::object {
 		META_OBJECT
 	private:
+		const mbedtls_md_info_t* m_info;
 		mbedtls_md_context_t m_ctx;
 		md(const mbedtls_md_info_t* info);
 		class async;

@@ -1,9 +1,9 @@
 name = 'mbedtls'
-version = '2.16.5'
+version = '3.0.0'
 dir = name .. '-' .. version 
 archive = dir .. '.tar.gz'
-url = 'https://tls.mbed.org/download/' .. dir .. '-apache.tgz'
-hash = '339f0505323b29851ef3128a53d2de20'
+url = 'https://github.com/ARMmbed/mbedtls/archive/refs/tags/v'..version..'.tar.gz'
+hash = 'badb5372a698b7f3c593456a66260036'
 
 local uncomment = {
 	['MBEDTLS_DEPRECATED_REMOVED'] = true,
@@ -21,17 +21,20 @@ local comment = {
 function install()
 	download(url,archive,hash)
 
-	unpack_tgz(archive)
+	unpack_tgz(archive,dir,1)
 
 	local includes = {}
 	for fn in foreach_file(dir .. '/include/mbedtls') do
 		includes['build/include/mbedtls/' .. fn] = dir .. '/include/mbedtls/' .. fn
 	end
+	for fn in foreach_file(dir .. '/include/psa') do
+		includes['build/include/psa/' .. fn] = dir .. '/include/psa/' .. fn
+	end
 	install_files(includes)
 -- 
 	preprocess{
-		src =  dir .. '/include/mbedtls/config.h',
-		dst = 'build/include/mbedtls/config.h',
+		src =  dir .. '/include/mbedtls/mbedtls_config.h',
+		dst = 'build/include/mbedtls/mbedtls_config.h',
 		uncomment = uncomment,
 		comment = comment
 	}
@@ -40,7 +43,8 @@ end
 build_lib = {
 	project = [[
 		includedirs{
-			'include'
+			'include',
+			<%= format_file(module.dir,'library') %>
 		}
 		files {
 			<%= format_file(module.dir,'library','*.c') %>

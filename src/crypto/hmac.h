@@ -18,6 +18,7 @@ namespace crypto {
 	class hmac : public meta::object {
 		META_OBJECT
 	private:
+		const mbedtls_md_info_t* m_info;
 		mbedtls_md_context_t m_ctx;
 		hmac(const mbedtls_md_info_t* info);
 		class async;

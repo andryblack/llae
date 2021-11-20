@@ -14,9 +14,9 @@ META_OBJECT_INFO(crypto::hmac,meta::object)
 namespace crypto {
 
 
-	hmac::hmac(const mbedtls_md_info_t* info) {
+	hmac::hmac(const mbedtls_md_info_t* info) : m_info(info) {
 		mbedtls_md_init(&m_ctx);
-		mbedtls_md_setup(&m_ctx,info,1);
+		mbedtls_md_setup(&m_ctx,m_info,1);
 	}
 
 	hmac::~hmac() {
@@ -87,7 +87,7 @@ namespace crypto {
 	public:
 		explicit finish_async(hmac_ptr&& m) : hmac::async(std::move(m)) {}
 		virtual void on_work() {
-			size_t size = mbedtls_md_get_size(m_hmac->m_ctx.md_info);
+			size_t size = mbedtls_md_get_size(m_hmac->m_info);
 			m_digest = uv::buffer::alloc(size);
 			m_status = mbedtls_md_hmac_finish(&m_hmac->m_ctx,static_cast<unsigned char*>(m_digest->get_base()));
 		}

@@ -14,9 +14,9 @@ META_OBJECT_INFO(crypto::md,meta::object)
 namespace crypto {
 
 
-	md::md(const mbedtls_md_info_t* info) {
+	md::md(const mbedtls_md_info_t* info) : m_info(info) {
 		mbedtls_md_init(&m_ctx);
-		mbedtls_md_setup(&m_ctx,info,0);
+		mbedtls_md_setup(&m_ctx,m_info,0);
 	}
 
 	md::~md() {
@@ -67,7 +67,7 @@ namespace crypto {
 	public:
 		explicit finish_async(md_ptr&& m) : md::async(std::move(m)) {}
 		virtual void on_work() {
-			size_t size = mbedtls_md_get_size(m_md->m_ctx.md_info);
+			size_t size = mbedtls_md_get_size(m_md->m_info);
 			m_digest = uv::buffer::alloc(size);
 			m_status = mbedtls_md_finish(&m_md->m_ctx,static_cast<unsigned char*>(m_digest->get_base()));
 		}
