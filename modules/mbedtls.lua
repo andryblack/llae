@@ -57,6 +57,11 @@ function install()
 	end
 	install_files(includes)
 -- 
+
+	for _,v in ipairs(project:get_config(name,'uncomment') or {}) do
+		uncomment[v]=true
+	end 
+
 	preprocess{
 		src =  dir .. '/include/mbedtls/mbedtls_config.h',
 		dst = 'build/include/mbedtls/mbedtls_config.h',
@@ -65,6 +70,11 @@ function install()
 		replace_line = replace_line
 	}
 end
+
+project_config = {
+	{'uncomment',type='string',storage='list'},
+}
+
 
 build_lib = {
 	project = [[
