@@ -17,8 +17,16 @@ function web:_init( ... )
 	self._handlers = {}
 end
 
-function web:set_root(root)
-	self._root = root
+function web:set_fs_root(root)
+	self._fs_root = root
+end
+
+function web:get_fs_root()
+	return self._fs_root
+end
+
+function web:get_fs_path(fn)
+	return (self._fs_root and not path.isabsolute(fn)) and path.join(self._fs_root,fn) or fn
 end
 
 function web:handle_request( req, res )
@@ -29,10 +37,12 @@ function web:handle_request( req, res )
 	req.fragment = components.fragment
 	req.path = components.path
 
-	local osend_static_file = res.send_static_file
-	function res:send_static_file(p,conf)
-		local full_path = (path.isabsolute(p) or not self._root) and p or path.join(self._root,p)
-		osend_static_file(self,full_path,conf)
+	if self._fs_root then
+		local sself = self
+		local osend_static_file = res.send_static_file
+		function res:send_static_file(p,conf)
+			osend_static_file(self,sself:get_fs_path(p),conf)
+		end
 	end
 
 	for _,f in ipairs(self._handlers) do
@@ -77,13 +87,11 @@ end
 
 function web.static( root, options )
 	local static = require 'web.static'
-	local full_root = (path.isabsolute(root) or not self._root) and root or path.join(self._root,root)
 	return static.new(full_root,options)
 end
 
 function web.views( root, data )
 	local views = require 'web.views'
-	local full_root = (path.isabsolute(root) or not self._root) and root or path.join(self._root,root)
 	return views.new(full_root,data)
 end
 

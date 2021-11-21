@@ -24,7 +24,7 @@ function views:get( view )
 	if t and not self._options.nocache then
 		return t
 	end
-	local fn = path.join(self._root,view .. '.' .. self._ext)
+	local fn = self._app:get_fs_path(path.join(self._root,view .. '.' .. self._ext))
 	log.debug('load template',fn)
 	t = template.load(fn,self._options)
 	self._cache[view] = t
