@@ -1,6 +1,10 @@
 
 local path = {}
 
+function path.isabsolute(p)
+	return string.sub(p,1,1) == '/'
+end
+
 local function findlast(s, pattern, plain)
 	local curr = 0
 	repeat

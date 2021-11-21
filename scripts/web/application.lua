@@ -1,6 +1,7 @@
 local class = require 'llae.class'
 local http = require 'net.http'
 local log = require 'llae.log'
+local path = require 'llae.path'
 
 local router = require 'web.router'
 local url = require 'net.url'
@@ -16,6 +17,10 @@ function web:_init( ... )
 	self._handlers = {}
 end
 
+function web:set_root(root)
+	self._root = root
+end
+
 function web:handle_request( req, res )
 	log.info('handle',req:get_method(),req:get_path())
 	
@@ -23,6 +28,12 @@ function web:handle_request( req, res )
 	req.query = components.query
 	req.fragment = components.fragment
 	req.path = components.path
+
+	local osend_static_file = res.send_static_file
+	function res:send_static_file(p,conf)
+		local full_path = (path.isabsolute(p) or not self._root) and p or path.join(self._root,p)
+		osend_static_file(self,full_path,conf)
+	end
 
 	for _,f in ipairs(self._handlers) do
 		f(req, res)
@@ -66,12 +77,14 @@ end
 
 function web.static( root, options )
 	local static = require 'web.static'
-	return static.new(root,options)
+	local full_root = (path.isabsolute(root) or not self._root) and root or path.join(self._root,root)
+	return static.new(full_root,options)
 end
 
 function web.views( root, data )
 	local views = require 'web.views'
-	return views.new(root,data)
+	local full_root = (path.isabsolute(root) or not self._root) and root or path.join(self._root,root)
+	return views.new(full_root,data)
 end
 
 function web.json( )
