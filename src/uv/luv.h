@@ -3,6 +3,7 @@
 
 #include "lua/state.h"
 #include "decl.h"
+#include <string>
 
 namespace uv {
 
@@ -14,6 +15,7 @@ namespace uv {
 #define UV_DIAG_CHECK(e) do{ if (e<0) ::uv::error(e,__FILE__,__LINE__); } while(false)
 	void push_error(lua::state& s,int r);
 	void print_error(int r);
+	std::string get_error(int r);
 }
 
 #endif /*__LLAE_UV_LUV_H_INCLUDED__*/

@@ -71,6 +71,12 @@ namespace uv {
         
         static lua::multiret lnew(lua::state& l);
         static void lbind(lua::state& l);
+
+        int do_bind(struct sockaddr* addr,int flags);
+        int do_set_broadcast(bool b);
+        int do_set_membership(const char *multicast_addr, const char *interface_addr, uv_membership membership);
+        int do_set_multicast_loop(bool on);
+        int do_set_multicast_ttl(int ttl);
         
         lua::multiret bind(lua::state& l);
         lua::multiret send(lua::state& l);

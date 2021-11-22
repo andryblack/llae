@@ -39,6 +39,12 @@ namespace uv {
         if (!err) err = "unknown";
         std::cout << "ERR: " << err << std::endl;
     }
+    std::string get_error(int r) {
+    	char uv_error_buf[1024];
+    	const char* err = uv_strerror_r(r, uv_error_buf, sizeof(uv_error_buf));
+    	if (err) return err;
+    	return "unknown";
+    }
 }
 
 static int lua_uv_exepath(lua_State* L) {

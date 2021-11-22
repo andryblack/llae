@@ -154,7 +154,7 @@ namespace uv {
               uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
             l.error("invalid IP address or port [%s:%d]", host, port);
            }
-        int res = uv_udp_bind(&m_udp,(struct sockaddr*)&addr,flags);
+        int res = do_bind((struct sockaddr*)&addr,flags);
         if (res < 0) {
             l.pushnil();
             uv::push_error(l,res);
@@ -164,7 +164,21 @@ namespace uv {
         return {1};
     }
 
-
+    int udp::do_bind(struct sockaddr* addr,int flags) {
+        return uv_udp_bind(&m_udp,addr,flags);
+    }
+    int udp::do_set_broadcast(bool b) {
+        return uv_udp_set_broadcast(&m_udp,b?1:0);
+    }
+    int udp::do_set_membership(const char *multicast_addr, const char *interface_addr, uv_membership membership) {
+        return uv_udp_set_membership(&m_udp, multicast_addr, interface_addr, membership);
+    }
+    int udp::do_set_multicast_loop(bool on) {
+        return uv_udp_set_multicast_loop(&m_udp,on);
+    }
+    int udp::do_set_multicast_ttl(int ttl) {
+        return uv_udp_set_multicast_ttl(&m_udp,ttl);
+    }
     lua::multiret udp::send(lua::state& l) {
         struct sockaddr_storage addr;
         bool with_addr = false;
