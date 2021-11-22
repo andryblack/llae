@@ -21,6 +21,15 @@ namespace llae {
         return 0;
     }
 
+    static int lua_release_object(lua_State* L) {
+        lua::state s(L);
+        auto holder = lua::object_holder_t::get(s,1);
+        if (holder) {
+            holder->hold.reset();
+        }
+        return 0;
+    }
+
     app::app(uv_loop_t* l) : m_loop(l) {
         *static_cast<app**>(lua_getextraspace(m_lua.native())) = this;
         uv_loop_set_data(m_loop.native(),this);
@@ -130,6 +139,7 @@ int luaopen_llae(lua_State* L) {
     lua::state s(L);
     luaL_Reg reg[] = {
         { "stop", llae::lua_stop },
+        { "release_object", llae::lua_release_object },
         { NULL, NULL }
     };
     lua_newtable(L);

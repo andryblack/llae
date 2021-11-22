@@ -37,7 +37,10 @@ namespace lua {
 			if (v != type_marker) {
 				return nullptr;
 			}
-			return static_cast<object_holder_t*>(data);
+			auto ret = static_cast<object_holder_t*>(data);
+            if (!ret->hold)
+                return nullptr;
+            return ret;
 		}
 	};
 
