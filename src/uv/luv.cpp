@@ -12,6 +12,7 @@
 #include "tty.h"
 #include "poll.h"
 #include "process.h"
+#include "timer.h"
 #include <iostream>
 #include <memory>
 
@@ -124,6 +125,7 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);
 	lua::bind::function(l,"cwd",&lua_uv_cwd);
 	lua::bind::function(l,"chdir",&lua_uv_chdir);
+	lua::bind::function(l,"pause",&uv::timer_pause::pause);
 	uv::fs::lbind(l);
 	uv::os::lbind(l);
 	return 1;
