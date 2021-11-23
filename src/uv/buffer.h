@@ -20,7 +20,7 @@ namespace uv {
         LLAE_NAMED_ALLOC(buffer)
     private:
         uv_buf_t m_buf;
-        size_t m_capacity;
+        const size_t m_capacity;
     protected:
         void destroy() override;
         struct buffer_alloc_tag {

@@ -29,8 +29,9 @@ namespace uv {
 
     void buffer::destroy() {
         void* mem = this;
+        auto size = get_capacity() + (m_buf.base-static_cast<char*>(mem));
         this->~buffer();
-        allocator_t::dealloc(mem,get_capacity());
+        allocator_t::dealloc(mem,size);
     }
 
     buffer* buffer::get(uv_buf_t* b) {

@@ -2,8 +2,8 @@
 #define __LLAE_UV_TIMER_H_INCLUDED__
 
 #include "handle.h"
-#include <lua/state.h>
-#include <lua/ref.h>
+#include "lua/state.h"
+#include "lua/ref.h"
 #include <functional>
 
 namespace uv {
