@@ -30,7 +30,7 @@ namespace uv {
     void buffer::destroy() {
         void* mem = this;
         this->~buffer();
-        std::free(mem);
+        allocator_t::dealloc(mem,get_capacity());
     }
 
     buffer* buffer::get(uv_buf_t* b) {
@@ -381,6 +381,7 @@ namespace uv {
 
     void buffer::lbind(lua::state& l) {
         lua::bind::function(l,"new",&buffer::lnew);
+        lua::bind::function(l,"get_allocated",&buffer::allocator_t::get_allocated);
         lua::bind::function(l,"get_len",&buffer::get_len);
         lua::bind::function(l,"__len",&buffer::get_len);
         lua::bind::function(l,"__concat",&buffer::lconcat);

@@ -6,16 +6,18 @@
 #include "meta/object.h"
 #include "lua/ref.h"
 #include "lua/state.h"
+#include "llae/memory.h"
 #include <vector>
 #include <cstdlib>
 
 
 namespace uv {
-
+    
     class buffer;
     typedef common::intrusive_ptr<buffer> buffer_ptr;
     class buffer : public meta::object {
         META_OBJECT
+        LLAE_NAMED_ALLOC(buffer)
     private:
         uv_buf_t m_buf;
         size_t m_capacity;
@@ -37,7 +39,7 @@ namespace uv {
         }
         template <class Extend,typename...Args>
         static common::intrusive_ptr<Extend> alloc_obj(size_t size,Args...args) {
-            void* mem = std::malloc(sizeof(Extend)+size);
+            void* mem = allocator_t::alloc(sizeof(Extend)+size);
             char* data = static_cast<char*>(mem) + sizeof(Extend);
             buffer_alloc_tag tag = {data,size};
             Extend* b = new (mem) Extend(tag,args...);
