@@ -6,6 +6,7 @@
 #include "lua/ref.h"
 #include "buffer.h"
 #include "req.h"
+#include <vector>
 
 namespace uv {
 
@@ -59,6 +60,7 @@ namespace uv {
         bool m_connected = false;
         static void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
         static void recv_cb(uv_udp_t* stream, ssize_t nread, const uv_buf_t* buf,const struct sockaddr* addr, unsigned flags);
+        std::vector<uv::buffer_ptr> m_buffers;
     public:
         virtual uv_handle_t* get_handle() override final { return reinterpret_cast<uv_handle_t*>(&m_udp); }
         uv_udp_t* get_udp() { return &m_udp; }
@@ -81,6 +83,7 @@ namespace uv {
         lua::multiret bind(lua::state& l);
         lua::multiret send(lua::state& l);
         lua::multiret connect(lua::state& l);
+        void add_buffer(uv::buffer_ptr&& buffer);
         void disconnect();
         lua::multiret recv(lua::state& l);
         int start_recv( const udp_recv_consumer_ptr& consumer );

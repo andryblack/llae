@@ -2,12 +2,13 @@
 #define __LLAE_MEMORY_H_INCLUDED__
 
 #include <new>
+#include <atomic>
 
 namespace llae {
 	template <class tag>
 	class named_alloc {
 	private:
-		static inline size_t m_allocated = 0;
+		static inline std::atomic<size_t> m_allocated = 0;
 	public:
         static size_t get_allocated() { return m_allocated; }
 		static void* alloc(size_t size) {

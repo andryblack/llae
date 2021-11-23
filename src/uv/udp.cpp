@@ -283,10 +283,25 @@ namespace uv {
     }
 
     void udp::alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-        auto b = buffer::alloc(suggested_size);
+        udp* self = static_cast<udp*>(handle->data);
+        uv::buffer_ptr b;
+        if (!self->m_buffers.empty()) {
+            b = std::move(self->m_buffers.back());
+            self->m_buffers.pop_back();
+        } else {
+            b = buffer::alloc(suggested_size);
+        }
         buf->base = static_cast<char*>(b->get_base());
         buf->len = b->get_capacity();
         b->add_ref();
+    }
+
+    void udp::add_buffer(uv::buffer_ptr&& buffer) {
+        if (buffer) {
+            m_buffers.emplace_back(std::move(buffer));
+        } else {
+            
+        }
     }
 
     void udp::recv_cb(uv_udp_t* u, ssize_t nread, const uv_buf_t* buf,const struct sockaddr* addr, unsigned flags) {
@@ -354,6 +369,7 @@ namespace uv {
         lua::bind::function(l,"connect",&udp::connect);
         lua::bind::function(l,"disconnect", &udp::disconnect);
         lua::bind::function(l,"stop_recv",&udp::stop_recv);
+        lua::bind::function(l,"add_buffer",&udp::add_buffer);
         lua::bind::function(l,"close",&udp::close);
         
         l.pushinteger(UV_UDP_IPV6ONLY);
