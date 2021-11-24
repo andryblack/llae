@@ -18,7 +18,7 @@ function web:_init( ... )
 end
 
 function web:set_fs_root(root)
-	self._fs_root = root
+	self._fs_root = path.getabsolute(root)
 end
 
 function web:get_fs_root()
@@ -87,12 +87,12 @@ end
 
 function web.static( root, options )
 	local static = require 'web.static'
-	return static.new(full_root,options)
+	return static.new(root,options)
 end
 
 function web.views( root, data )
 	local views = require 'web.views'
-	return views.new(full_root,data)
+	return views.new(root,data)
 end
 
 function web.json( )

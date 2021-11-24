@@ -46,7 +46,7 @@ function path.extension( path )
 end
 
 function path.getabsolute( fn )
-	if string.sub(fn,1,1) == '/' then
+	if path.isabsolute(fn) then
 		return fn
 	end
 	local fs = require 'llae.fs'

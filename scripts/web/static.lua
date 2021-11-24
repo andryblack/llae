@@ -32,7 +32,7 @@ end
 function static:use( app )
 	self._app = app
 	app:get(self._route,function(req,res,next)
-		local fn = path.join(self._root,req.params.path)
+		local fn = self._app:get_fs_path(path.join(self._root,req.params.path))
 		if self:check(fn) then
 			return res:send_static_file(fn)
 		end
