@@ -84,6 +84,7 @@ function _M.lib( root )
 				path.join(_M.root,'src','unix','random-getrandom.c'),
 				path.join(_M.root,'src','unix','random-sysctl-linux.c'),
 				path.join(_M.root,'src','unix','sysinfo-loadavg.c'),
+				path.join(_M.root,'src','unix','epoll.c')
 			}
 		filter "system:windows"
 			defines {

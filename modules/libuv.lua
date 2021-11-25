@@ -39,7 +39,7 @@ build_lib = {
 					'bsd-ifaddrs.c','kqueue.c'},
 	linux_files = {'linux-core.c','linux-inotify.c','linux-syscalls.c','linux-syscalls.h',
 					'procfs-exepath.c','random-getrandom.c','random-sysctl-linux.c',
-					'sysinfo-loadavg.c'},
+					'sysinfo-loadavg.c','epoll.c'},
 	windows_files = {'async.c','core.c','detect-wakeup.c','dl.c','error.c','fs.c',
 					'fs-event.c','getaddrinfo.c','getnameinfo.c','handle.c','loop-watcher.c',
 					'pipe.c','thread.c','poll.c','process.c','process-stdio.c','signal.c',
