@@ -46,7 +46,7 @@ namespace uv {
 
     class udp_recv_consumer : public meta::object {
     public:
-        virtual bool on_recv(udp* s,ssize_t nread, const buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags) = 0;
+        virtual bool on_recv(udp* s,ssize_t nread, buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags) = 0;
         virtual void on_udp_closed(udp* s) {}
         virtual void on_stop_recv(udp* s) {}
     };
@@ -67,7 +67,7 @@ namespace uv {
     protected:
         virtual ~udp() override;
         virtual void on_closed() override;
-        bool on_recv(ssize_t nread, const buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags);
+        bool on_recv(ssize_t nread, buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags);
     public:
         explicit udp(uv::loop& loop);
         
@@ -79,9 +79,11 @@ namespace uv {
         int do_set_membership(const char *multicast_addr, const char *interface_addr, uv_membership membership);
         int do_set_multicast_loop(bool on);
         int do_set_multicast_ttl(int ttl);
+        int do_try_send(const buffer_ptr& buffer,const struct sockaddr *addr);
         
         lua::multiret bind(lua::state& l);
         lua::multiret send(lua::state& l);
+        lua::multiret try_send(lua::state& l);
         lua::multiret connect(lua::state& l);
         void add_buffer(uv::buffer_ptr&& buffer);
         void disconnect();

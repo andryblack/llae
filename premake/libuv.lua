@@ -2,8 +2,8 @@ local utils = require 'utils'
 
 local _M = {
 	name = 'libuv',
-	version = 'v1.35.0',
-	url = 'https://dist.libuv.org/dist/v1.35.0/libuv-v1.35.0.tar.gz',
+	version = 'v1.42.0',
+	url = 'https://dist.libuv.org/dist/v1.42.0/libuv-v1.42.0.tar.gz',
 	archive = 'tar.gz',
 }
 

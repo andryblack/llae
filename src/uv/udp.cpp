@@ -81,7 +81,7 @@ namespace uv {
         lua_recv_consumer(lua::ref && cont) : m_recv_cont(std::move(cont)) {}
         virtual bool on_recv(udp* s,
                              ssize_t nread,
-                             const buffer_ptr&& buffer,
+                             buffer_ptr&& buffer,
                              const struct sockaddr* addr, unsigned flags) override final {
             auto& l = llae::app::get(s->get_udp()->loop).lua();
             if (m_recv_cont.valid()) {
@@ -91,7 +91,7 @@ namespace uv {
                 int args;
                 if (nread >= 0) {
                     buffer->set_len(nread);
-                    lua::push(toth,buffer);
+                    lua::push(toth,std::move(buffer));
                     toth.pushnil();
                     args = 2;
                     if (addr) {
@@ -316,7 +316,7 @@ namespace uv {
         }
     }
 
-    bool udp::on_recv(ssize_t nread, const buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags) {
+    bool udp::on_recv(ssize_t nread, buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags) {
         if (m_recv_consumer) {
             auto consumer = std::move(m_recv_consumer);
             bool res = consumer->on_recv(this,
@@ -347,6 +347,36 @@ namespace uv {
         }
         return res;
     }
+    int udp::do_try_send(const buffer_ptr& buffer,const struct sockaddr *addr) {
+        return uv_udp_try_send(get_udp(),buffer->get(),1,addr);
+    }
+
+    lua::multiret udp::try_send(lua::state& l) {
+        struct sockaddr_storage addr;
+        bool with_addr = false;
+        if (l.gettop()>2) {
+            const char* host = l.checkstring(3);
+            int port = l.checkinteger(4);
+            if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
+                  uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
+                l.error("udp::try_send invalid IP address or port [%s:%d]", host, port);
+            }
+            with_addr = true;
+        }
+        auto buf = buffer::get(l,2);
+        if (!buf) {
+            l.argerror(2,"need buffer");
+        }
+        auto r = do_try_send(buf,(struct sockaddr*)(with_addr ? &addr : nullptr));
+        if (r < 0) {
+            l.pushnil();
+            uv::push_error(l,r);
+            return {2};
+        } else {
+            l.pushinteger(r);
+            return {1};
+        }
+    }
 
     void udp::stop_recv() {
         uv_udp_recv_stop(get_udp());
@@ -365,6 +395,7 @@ namespace uv {
         lua::bind::function(l,"new",&udp::lnew);
         lua::bind::function(l,"bind",&udp::bind);
         lua::bind::function(l,"send",&udp::send);
+        lua::bind::function(l,"try_send",&udp::try_send);
         lua::bind::function(l,"recv",&udp::recv);
         lua::bind::function(l,"connect",&udp::connect);
         lua::bind::function(l,"disconnect", &udp::disconnect);
@@ -376,5 +407,7 @@ namespace uv {
         l.setfield(-2,"IPV6ONLY");
         l.pushinteger(UV_UDP_REUSEADDR);
         l.setfield(-2,"REUSEADDR");
+        l.pushinteger(UV_UDP_PARTIAL);
+        l.setfield(-2,"PARTIAL");
     }
 }
