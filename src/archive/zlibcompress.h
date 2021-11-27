@@ -9,12 +9,12 @@ namespace uv {
 
 namespace archive {
 
-	class zlibcompress : public impl::zlibstream<zlibcompress> {
+	class zlibcompress : public impl::compressionstream<zlibcompress,impl::ZLib> {
 		META_OBJECT
 	private:
 		
 	public:
-        static int process(z_stream* z,int flush,impl::zlibstream<zlibcompress>&) {
+        static int process(z_stream* z,int flush,impl::compressionstream<zlibcompress,impl::ZLib>&) {
             return deflate(z,flush);
         }
 		zlibcompress();
@@ -26,7 +26,7 @@ namespace archive {
 	};
 	using zlibcompress_ptr = common::intrusive_ptr<zlibcompress>; 
 
-	class zlibcompress_deflate_read : public impl::zlibstream_read<zlibcompress> {
+	class zlibcompress_deflate_read : public impl::compressionstream_read<zlibcompress> {
 		META_OBJECT
 	public:
         zlibcompress_deflate_read();
@@ -46,7 +46,7 @@ namespace archive {
     };
     using zlibcompress_gzip_read_ptr = common::intrusive_ptr<zlibcompress_gzip_read>;
 
-	class zlibcompress_to_stream : public impl::zlibstream_to_stream<zlibcompress> {
+	class zlibcompress_to_stream : public impl::compressionstream_to_stream<zlibcompress> {
 		META_OBJECT
 	private:
 	public:

@@ -74,6 +74,9 @@ solution '<%= project:name() %>'
 			<%= template.compile(mod.build_lib.project,{env=...}){
 				module = mod,
 				lib = mod.build_lib,
+				format_mod_file = function(m,...)
+					return make_path(m,m.dir,...)
+				end,
 				format_file = function (...)
 					return make_path(mod,...)
 				end  

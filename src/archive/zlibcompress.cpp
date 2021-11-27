@@ -186,7 +186,7 @@ namespace archive {
 	}
 
 
-	zlibcompress_to_stream::zlibcompress_to_stream( uv::stream_ptr&& stream ) : zlibstream_to_stream<zlibcompress>(std::move(stream)) {
+	zlibcompress_to_stream::zlibcompress_to_stream( uv::stream_ptr&& stream ) : compressionstream_to_stream<zlibcompress>(std::move(stream)) {
 
 	}
 

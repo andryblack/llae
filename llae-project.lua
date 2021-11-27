@@ -1,6 +1,7 @@
 project 'llae'
 
 module 'llae'
+module 'bzip2'
 
 if cmdargs.inplace then
 	config('llae','embed_scripts','scripts')

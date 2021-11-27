@@ -159,9 +159,7 @@ function untar:write( data )
 	end
 end
 
-function untar.unpack_tgz( fn, dir , strip )
-	local f = assert(fs.open(fn,fs.O_RDONLY))
-	local u = (require 'archive').new_gunzip_read()
+local function do_unpack(f,u, dir , strip)
 	local t = untar.new()
 	if dir or strip then
 		local path = require 'llae.path'
@@ -202,6 +200,18 @@ function untar.unpack_tgz( fn, dir , strip )
 			break
 		end
 	end
+end
+
+function untar.unpack_tgz( fn, dir , strip )
+	local f = assert(fs.open(fn,fs.O_RDONLY))
+	local u = (require 'archive').new_gunzip_read()
+	return do_unpack(f,u,dir,strip)
+end
+
+function untar.unpack_tbz2( fn, dir , strip )
+	local f = assert(fs.open(fn,fs.O_RDONLY))
+	local u = (require 'archive.bzip2').new_bz_read()
+	return do_unpack(f,u,dir,strip)
 end
 
 return untar

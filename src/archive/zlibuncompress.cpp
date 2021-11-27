@@ -19,7 +19,7 @@ namespace archive {
         m_try_raw = false;
   	}
 
-    int zlibuncompress::process(z_stream* z,int flush,impl::zlibstream<zlibuncompress>& s) {
+    int zlibuncompress::process(z_stream* z,int flush,impl::compressionstream<zlibuncompress,impl::ZLib>& s) {
         auto& self(static_cast<zlibuncompress&>(s));
         auto origin = z->next_in;
         int r = ::inflate(z, flush);
@@ -121,7 +121,7 @@ namespace archive {
     }
 
 
-    zlibuncompress_to_stream::zlibuncompress_to_stream( uv::stream_ptr&& stream ) : zlibstream_to_stream<zlibuncompress>(std::move(stream)) {
+    zlibuncompress_to_stream::zlibuncompress_to_stream( uv::stream_ptr&& stream ) : compressionstream_to_stream<zlibuncompress>(std::move(stream)) {
 
     }
 

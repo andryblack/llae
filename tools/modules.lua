@@ -136,6 +136,13 @@ function m:unpack_tgz( file , todir , strip)
 	untar.unpack_tgz(src,dst,strip)
 end
 
+function m:unpack_tbz2( file , todir , strip)
+	local src = path.join(self._project:get_dl_dir(),file)
+	local dst = todir and path.join(self.location,todir) or self.location
+	log.info('unpack',file)
+	untar.unpack_tbz2(src,dst,strip)
+end
+
 function m:unpack_zip( file , todir )
 	local src = path.join(self._project:get_dl_dir(),file)
 	local dst = todir and path.join(self.location,todir) or self.location

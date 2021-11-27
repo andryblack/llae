@@ -10,12 +10,12 @@ namespace uv {
 
 namespace archive {
 
-	class zlibuncompress : public impl::zlibstream<zlibuncompress> {
+	class zlibuncompress : public impl::compressionstream<zlibuncompress,impl::ZLib> {
 		META_OBJECT
 	private:
         std::atomic<bool> m_try_raw;
 	public:
-        static int process(z_stream* z,int flush,impl::zlibstream<zlibuncompress>&);
+        static int process(z_stream* z,int flush,impl::compressionstream<zlibuncompress,impl::ZLib>&);
 		zlibuncompress();
 		~zlibuncompress();
 		int init(uv::loop& l,int windowBits);
@@ -29,7 +29,7 @@ namespace archive {
 	};
 	using zlibuncompress_ptr = common::intrusive_ptr<zlibuncompress>; 
 
-    class zlibuncompress_inflate_read : public impl::zlibstream_read<zlibuncompress> {
+    class zlibuncompress_inflate_read : public impl::compressionstream_read<zlibuncompress> {
         META_OBJECT
     public:
         zlibuncompress_inflate_read();
@@ -48,7 +48,7 @@ namespace archive {
     };
     using zlibuncompress_gzip_read_ptr = common::intrusive_ptr<zlibuncompress_gzip_read>;
 
-    class zlibuncompress_to_stream : public impl::zlibstream_to_stream<zlibuncompress> {
+    class zlibuncompress_to_stream : public impl::compressionstream_to_stream<zlibuncompress> {
         META_OBJECT
     private:
     public:

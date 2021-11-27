@@ -38,7 +38,7 @@ function Project.env:cmodule( data )
 		self.cmodules = {}
 	end 
 	if type(data) == 'string' then
-		table.insert(self.cmodules,{name=data,func='luaopen_' .. data})
+		table.insert(self.cmodules,{name=data,func='luaopen_' .. string.gsub(data,'%.','_')})
 	else
 		table.insert(self.cmodules,{name=data[1],func=data[2]})
 	end
@@ -139,7 +139,7 @@ function Project:add_module( name )
 	if m.cmodules then
 		for _,cmod in ipairs(m.cmodules) do
 			if type(cmod) == 'string' then
-				table.insert(self._cmodules,{name=cmod,func='luaopen_' .. cmod})
+				table.insert(self._cmodules,{name=cmod,func='luaopen_' .. string.gsub(cmod,'%.','_')})
 			else
 				table.insert(self._cmodules,{name=cmod[1],func=cmod[2]})
 			end
