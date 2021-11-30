@@ -123,6 +123,10 @@ function fs.read_file( fn )
 	end,f
 end
 
+function fs.open_write( fn )
+	return fs.open(fn,fs.O_WRONLY|fs.O_CREAT)
+end
+
 function fs.write_file( fn , ... )
 	fs.unlink(fn)
 	local f = assert(fs.open(fn,fs.O_WRONLY|fs.O_CREAT))

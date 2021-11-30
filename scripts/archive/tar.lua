@@ -94,7 +94,7 @@ function untar:prepare_file(  )
 		self._state = 'align'
 		self._next = 'header'
 	else
-		log.debug('start file',self._file.name,self._file.size)
+		--log.debug('start file',self._file.name,self._file.size)
 		self._next = 'file'
 		self._state = 'align'
 		local fn = self:get_path(self._file.name)
@@ -174,7 +174,7 @@ local function do_unpack(f,u, dir , strip)
 			if dir then
 				fn = path.join(dir,fn)
 			end
-			log.debug(sfn,'->',fn)
+			--log.debug(sfn,'->',fn)
 			return fn
 		end
 	end

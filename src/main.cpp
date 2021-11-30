@@ -52,15 +52,19 @@ int main(int argc,char** argv) {
 			err = L.pcall(1,0,-3);
 			if (err != lua::status::ok) {
 				app.show_error(L,err);
-			} else {
-				app.run();
+                app.stop();
 			}
+            app.run();
 		}
 	}
 
+	size_t wait_cnt = 0;
     while (uv_loop_close(loop) == UV_EBUSY) {
         uv_run(loop, UV_RUN_ONCE);
         uv_print_all_handles(loop, stderr);
+        if (++wait_cnt > 31) {
+        	break;
+        }
     }
 
 	LLAE_DIAG(std::cout << "meta objects:  " << meta::object::get_total_count() << std::endl;)

@@ -18,8 +18,10 @@ namespace uv {
 		META_OBJECT
 	private:
 		uv_process_t m_process;
-		lua::ref m_on_exit;
-		bool m_on_exit_cont = false;
+		lua::ref m_cont;
+        bool m_completed = false;
+        int64_t m_exit_status = 0;
+        int m_term_signal = 0;
 		static void on_exit_cb(uv_process_t*, int64_t exit_status, int term_signal);
 		void on_exit(int64_t exit_status, int term_signal);
 	public:
@@ -34,6 +36,7 @@ namespace uv {
 		
 		static lua::multiret spawn(lua::state& l);
 		lua::multiret kill(lua::state& l,int signal);
+        lua::multiret wait_exit(lua::state& l);
 	};
 	typedef common::intrusive_ptr<process> process_ptr;
 

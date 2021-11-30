@@ -202,7 +202,7 @@ namespace lua {
     }
     template <class T>
     static void push(state& s, T&& val) {
-        stack<T>::push(s,std::move(val));
+        stack<T>::push(s,std::forward<T>(val));
     }
 }
 

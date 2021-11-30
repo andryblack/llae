@@ -13,6 +13,7 @@
 #include "poll.h"
 #include "process.h"
 #include "timer.h"
+#include "pipe.h"
 #include <iostream>
 #include <memory>
 
@@ -80,6 +81,20 @@ static int lua_uv_cwd(lua_State* L) {
 	return 2;
 }
 
+std::string uv::get_cwd() {
+    size_t size = 1;
+    char dummy;
+    auto r = uv_cwd(&dummy,&size);
+    if (r == UV_ENOBUFS) {
+        std::unique_ptr<char[]> data(new char[size]);
+        r = uv_cwd(data.get(),&size);
+        if (r>=0) {
+            return data.get();
+        }
+    }
+    return "";
+}
+
 static int lua_uv_chdir(lua_State* L) {
 	lua::state l(L);
 	const char* dir = l.checkstring(1);
@@ -105,6 +120,7 @@ int luaopen_uv(lua_State* L) {
     lua::bind::object<uv::tty>::register_metatable(l,&uv::tty::lbind);
     lua::bind::object<uv::poll>::register_metatable(l,&uv::poll::lbind);
     lua::bind::object<uv::process>::register_metatable(l,&uv::process::lbind);
+    lua::bind::object<uv::pipe>::register_metatable(l,&uv::pipe::lbind);
 
 	l.createtable();
 	lua::bind::object<uv::buffer>::get_metatable(l);
@@ -121,6 +137,9 @@ int luaopen_uv(lua_State* L) {
     l.setfield(-2,"poll");
     lua::bind::object<uv::process>::get_metatable(l);
     l.setfield(-2,"process");
+    lua::bind::object<uv::pipe>::get_metatable(l);
+    l.setfield(-2,"pipe");
+    
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
 	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);
 	lua::bind::function(l,"cwd",&lua_uv_cwd);

@@ -592,6 +592,7 @@ namespace uv {
         lua::bind::function(l,"read",&file::read);
         lua::bind::function(l,"seek",&file::seek);
         lua::bind::function(l,"tell",&file::tell);
+        lua::bind::function(l,"get_handle",&file::get);
 	}
 
 	void fs::lbind(lua::state& l) {

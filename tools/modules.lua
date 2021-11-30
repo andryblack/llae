@@ -8,39 +8,67 @@ local untar = require 'archive.tar'
 local unzip = require 'archive.zip'
 local tool = require 'tool'
 local crypto = require 'llae.crypto'
+local uv = require 'uv'
 
 local m = {}
 
-local function exec_cmd(cmd)
-	log.info('CMD:',cmd)
-	
-	local res,status,code = os.execute(cmd)
-	if not res or status ~= 'exit' then
-		error(status .. ' ' .. code or 'failed exec ' .. cmd)
-	end
-	if code ~= 0 then
-		error('code ' .. code .. ' ' .. cmd)
-	end
+local function redirect_pipe(pipe,file)
+	utils.run(function()
+		while true do
+			local ch,err = pipe:read()
+			if not ch then
+				if err then
+					error(err)
+				else
+					break
+				end
+			else
+				file:write(ch)
+			end
+		end
+	end)
+end
 
+local function exec_git(args,logfile)
+	log.debug('git',table.concat(args,' '))
+	logfile:write('$ git ' .. table.concat(args,' ') .. '\n')
+	local rpipe = uv.pipe.new(1)
+	local epipe = uv.pipe.new(1)
+	local p = assert(uv.process.spawn{
+		file = 'git',
+		args = args,
+		streams = {
+			{uv.process.IGNORE},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,epipe}
+		}
+	})
+	redirect_pipe(rpipe,logfile)
+	redirect_pipe(epipe,logfile)
+	
+	local code,sig = p:wait_exit()
+	if code ~= 0 or sig ~= 0 then
+		error(string.format('git code:%d sig:%d',code,sig))
+	end
 end
 
 function m:download_git(url,config)
 	log.info('download_git',self.name,url)
 	local dst = path.join(self.location,config.dir or 'src')
 	local tag = config.tag or config.branch or 'master'
+	local logfilename = path.join(self.location,'update_git_log.txt')
+	fs.unlink(logfilename)
+	local logfile = assert(fs.open_write(logfilename))
 
 	if fs.isdir(dst) and fs.isdir(path.join(dst,'.git')) and not config.tag then
-		local cmd = 'git -C ' .. dst .. ' reset --hard'
-		exec_cmd(cmd .. ' > ' .. path.join(self.location,'update_git_log.txt') .. ' 2>&1')
-		cmd = 'git -C ' .. dst .. ' fetch origin ' .. tag 
-		exec_cmd(cmd .. ' >> ' .. path.join(self.location,'update_git_log.txt') .. ' 2>&1')
-		cmd = 'git -C ' .. dst .. ' reset --hard origin/' .. tag 
-		exec_cmd(cmd .. ' >> ' .. path.join(self.location,'update_git_log.txt') .. ' 2>&1')
+		exec_git({'-C',dst,'reset','--hard'},logfile)
+		exec_git({'-C',dst,'fetch','origin',tag},logfile)
+		exec_git({'-C',dst,'reset','--hard','origin/' .. tag},logfile)
 		return
 	end
 	fs.rmdir_r(dst)
-	local cmd = 'git clone --depth 1 --branch ' .. tag .. ' --single-branch ' .. url .. ' ' .. dst
-	exec_cmd(cmd .. ' > ' .. path.join(self.location,'download_git_log.txt') .. ' 2>&1')
+	exec_git({'clone','--depth','1','--branch',tag,'--single-branch',url,dst},logfile)
+	logfile:close()
 end
 
 function m:download(url,file,hash)
@@ -153,7 +181,7 @@ end
 function m:shell( text )
 	local script = path.join(self.location,'temp.sh')
 	fs.unlink(script)
-	local f = io.open(script,'w')
+	local f = assert(fs.open_write(script))
 	local template = require 'llae.template'
 	f:write('#!/bin/sh\n')
 	f:write('LLAE_PROJECT_ROOT=' .. self.root .. '\n')
@@ -161,8 +189,32 @@ function m:shell( text )
 	f:write('cd $(dirname $0)\n')
 	f:write(template.compile(text,{env={escape=tostring}})(self))
 	f:close()
-	local cmd = '/bin/sh "' .. script .. '"' 
-	exec_cmd(cmd .. ' > ' .. path.join(self.location,'shell_script_log.txt'))
+	local logfilename = path.join(self.location,'shell_script_log.txt')
+	
+	log.debug('cmd:',script,'>',logfilename)
+	fs.unlink(logfilename)
+	local logfile = assert(fs.open_write(logfilename))
+	local rpipe = uv.pipe.new(1)
+	local epipe = uv.pipe.new(1)
+	local p = assert(uv.process.spawn{
+		file = '/bin/sh',
+		args = {script},
+		streams = {
+			{uv.process.IGNORE},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,epipe}
+		}
+	})
+	redirect_pipe(rpipe,logfile)
+	redirect_pipe(epipe,logfile)
+	
+	local code,sig = p:wait_exit()
+	if code ~= 0 or sig ~= 0 then
+		error(string.format('shell code:%d sig:%d',code,sig))
+	end
+	logfile:close()
+	rpipe:close()
+	epipe:close()
 end
 
 function m:install_bin( fn )
