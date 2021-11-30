@@ -118,7 +118,7 @@ function _M.exe(  )
 	}
 	filter {'configurations:release','toolset:gcc or clang'}
 		postbuildcommands{
-			(premake.tools.gcc.gccprefix or '') .. 'strip' .. ' %{cfg.targetdir}/%{cfg.targetname}'
+			(premake.tools.gcc.gccprefix or '') .. 'strip' .. ' %{cfg.targetdir}/%{cfg.targetname}%{cfg.targetextension}'
 		}
 	filter{}
 	_M.link()
