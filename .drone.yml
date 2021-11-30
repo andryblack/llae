@@ -20,6 +20,7 @@ steps:
   image: build-llae
   pull: never
   commands:
+    - premake5 unpack
     - premake5 gmake2
 - name: build
   image: build-llae
