@@ -1,4 +1,4 @@
-[![Build Status](https://ci.sandboxgames.ru/api/badges/andry/llae1/status.svg?ref=refs/heads/develop)](https://ci.sandboxgames.ru/andry/llae1)
+[![Build Status](https://ci.sandboxgames.ru/api/badges/andry/llae/status.svg?ref=refs/heads/develop)](https://ci.sandboxgames.ru/andry/llae)
 
 ## LLAE
 

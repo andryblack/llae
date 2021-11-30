@@ -191,7 +191,7 @@ function m:shell( text )
 	f:close()
 	local logfilename = path.join(self.location,'shell_script_log.txt')
 	
-	log.debug('cmd:',script,'>',logfilename)
+	log.info('cmd:',script,'>',logfilename)
 	fs.unlink(logfilename)
 	local logfile = assert(fs.open_write(logfilename))
 	local rpipe = uv.pipe.new(1)
