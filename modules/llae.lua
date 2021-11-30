@@ -82,10 +82,14 @@ solution = [[
 ]]
 
 build_lib = {
+	components = {
+		'archive','common','crypto','llae','meta','parsers','posix','ssl','uv'
+	},
 	project = project:get_cmdargs().inplace  and [[
 		files {
-			'<%= path.join('..','src','*/**.h') %>',
-			'<%= path.join('..','src','*/**.cpp') %>',
+			<% for _,f in ipairs(lib.components) do %>
+			'<%= path.join('..','src',f,'**.h') %>',
+			'<%= path.join('..','src',f,'**.cpp') %>',<% end %>
 		}
 		sysincludedirs {
 			'include',
@@ -95,8 +99,9 @@ build_lib = {
 		}
 	]] or [[
 		files {
-			<%= format_file(module.dir,'src','*/**.h') %>,
-			<%= format_file(module.dir,'src','*/**.cpp') %>,
+			<% for _,f in ipairs(lib.components) do %>
+			<%= format_file(module.dir,'src',f,'**.h') %>,
+			<%= format_file(module.dir,'src',f,'**.cpp') %>,<% end %>
 		}
 		sysincludedirs {
 			'include',
