@@ -12,6 +12,7 @@
 
 #ifndef WIN32
 #include <signal.h>
+#include <sys/resource.h>
 #endif
 
 static void createargtable (lua::state& lua, char **argv, int argc) {
@@ -32,6 +33,13 @@ static int err_handler(lua_State* L) {
 int main(int argc,char** argv) {
 #ifndef WIN32
 	signal(SIGPIPE,SIG_IGN);
+
+	// reduce uv threads stack size
+	struct rlimit lim;
+	if (0 == getrlimit(RLIMIT_STACK, &lim) && lim.rlim_cur != RLIM_INFINITY) {
+		lim.rlim_cur = 1 << 20;
+		setrlimit(RLIMIT_STACK,&lim);
+	}
 #endif
 	auto loop = uv_default_loop();
     {
