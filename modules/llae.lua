@@ -83,7 +83,7 @@ solution = [[
 
 build_lib = {
 	components = {
-		'archive','common','crypto','llae','meta','parsers','posix','ssl','uv'
+		'archive','common','crypto','llae','meta','parsers','posix','ssl','uv','lua'
 	},
 	project = project:get_cmdargs().inplace  and [[
 		files {
