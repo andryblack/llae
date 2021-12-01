@@ -74,7 +74,9 @@ namespace archive {
 		return true;
 	}
     zlibuncompress::~zlibuncompress() {
-		inflateEnd(&m_z);
+		if (inflateEnd(&m_z) != Z_OK) {
+            llae::report_diag_error("failed inflateEnd",__FILE__,__LINE__);
+        }
 	}
 
 	

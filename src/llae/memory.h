@@ -24,6 +24,7 @@ namespace llae {
 		}
 	};
 #define LLAE_NAMED_ALLOC(tag) \
+	public: \
 	using allocator_t = ::llae::named_alloc<tag>; \
 	static void* operator new(size_t size) { \
 		return allocator_t::alloc(size); \

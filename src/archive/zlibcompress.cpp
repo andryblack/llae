@@ -5,6 +5,7 @@
 #include "uv/async.h"
 #include "uv/fs.h"
 #include "llae/app.h"
+#include "llae/diag.h"
 #include "lua/bind.h"
 
 META_OBJECT_INFO(archive::zlibcompress,meta::object)
@@ -141,7 +142,9 @@ namespace archive {
 		return true;
 	}
 	zlibcompress::~zlibcompress() {
-		deflateEnd(&m_z);
+		if (deflateEnd(&m_z) != Z_OK) {
+			llae::report_diag_error("failed deflateEnd",__FILE__,__LINE__);
+		}
 	}
 
 

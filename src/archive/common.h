@@ -13,19 +13,28 @@
 #include "lua/state.h"
 #include "lua/stack.h"
 #include "llae/app.h"
+#include "llae/memory.h"
 
 #include <vector>
 
 
-namespace archive { namespace impl {
+namespace archive { 
+
+	struct alloc_tag {};
+
+	namespace impl {
 	
 	static const size_t COMPRESSED_BLOCK_SIZE = 1024 * 16;
 
+
+
 	template <class T,class Lib>
 	class compressionstream : public meta::object {
+		LLAE_NAMED_ALLOC(alloc_tag)
 		using compressionstream_ptr = common::intrusive_ptr<compressionstream> ;
 		
 		class compress_work : public uv::work {
+			LLAE_NAMED_ALLOC(alloc_tag)
 		protected:
             compressionstream_ptr m_stream;
 			int m_z_status = Lib::OK;
@@ -48,6 +57,7 @@ namespace archive { namespace impl {
 
 
 		class compress_buffers : public compress_work {
+			LLAE_NAMED_ALLOC(alloc_tag)
 		private:
 			uv::write_buffers m_buffers;
 		protected:
@@ -95,6 +105,7 @@ namespace archive { namespace impl {
 		};
 
 		class compress_finish : public compress_buffers {
+			LLAE_NAMED_ALLOC(alloc_tag)
 		protected:
 			virtual void on_work() override {
 				compress_buffers::on_work();
@@ -131,6 +142,7 @@ namespace archive { namespace impl {
 
 
 		class write_file_pipe : public compress_work {
+			LLAE_NAMED_ALLOC(alloc_tag)
 		private:
 			static const size_t BUFFER_SIZE = 1024 * 8;
 			uv::file_ptr m_file;
@@ -277,6 +289,7 @@ namespace archive { namespace impl {
 
 		class async_resume_read : public uv::async {
             compressionstream* m_self;
+            LLAE_NAMED_ALLOC(alloc_tag)
 		public:
 			async_resume_read(uv::loop& l,compressionstream* s) : uv::async(l),m_self(s) {}
 			virtual void on_async() override {

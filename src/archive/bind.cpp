@@ -42,6 +42,6 @@ int luaopen_archive(lua_State* L) {
     lua::bind::function(l,"new_gunzip_read",&archive::zlibuncompress_gzip_read::new_gzip);
     lua::bind::function(l,"new_inflate_to_stream",&archive::zlibuncompress_to_stream::new_inflate);
 
-
+    lua::bind::function(l,"get_allocated",&llae::named_alloc<archive::alloc_tag>::get_allocated);
 	return 1;
 } 
