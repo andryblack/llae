@@ -218,13 +218,13 @@ namespace lua {
         struct helper<R,void,Args...> {
             typedef R (*func_t)(Args ... args);
             template <size_t... Is>
-            static R apply(func_t func,const std::index_sequence<Is...>) {
-                return (*func)(stack<Args>::get(1+Is)...);
+            static R apply(state&l,func_t func,const std::index_sequence<Is...>) {
+                return (*func)(stack<Args>::get(l,1+Is)...);
             }
             static int function(lua_State* L) {
                 auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
                 state l(L);
-                stack<R>::push(l,apply(*f,std::index_sequence_for<Args...>()));
+                stack<R>::push(l,apply(l,*f,std::index_sequence_for<Args...>()));
                 return 1;
             }
         };
