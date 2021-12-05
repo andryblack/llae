@@ -30,6 +30,8 @@ function upgrade:exec( args )
 		local p = project.new({},install_dir)
 		p:add_module('llae')
 		p:install_modules(true)
+		p = project.new({},install_dir)
+		p:add_module('llae')
 		for _,m in p:foreach_module() do
 			if m.upgrade then
 				m.upgrade{
