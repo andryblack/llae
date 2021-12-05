@@ -12,7 +12,7 @@ namespace lua {
 		none = LUA_TNONE,
 		boolean = LUA_TBOOLEAN,
 		lightuserdata = LUA_TLIGHTUSERDATA,
-		nil = LUA_TNIL,
+		lnil = LUA_TNIL,
 		number = LUA_TNUMBER,
 		string = LUA_TSTRING,
 		table = LUA_TTABLE,

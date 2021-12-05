@@ -18,7 +18,7 @@ namespace lua {
 		}
 		const meta::info_t* parent = info->parent;
 		if (parent) {
-			if (s.getmetatable(parent->name) == value_type::nil ) {
+			if (s.getmetatable(parent->name) == value_type::lnil ) {
 				s.error("unregistered parent metatable %s",parent->name);
 			}
 			s.setmetatable(-2);
@@ -32,7 +32,7 @@ namespace lua {
 	}
 
 	void set_metatable(state& s,const meta::info_t* info) {
-		if (s.getmetatable(info->name) == value_type::nil) {
+		if (s.getmetatable(info->name) == value_type::lnil) {
 			s.error("not registered metatable %s",info->name);
 		}
 		s.setmetatable(-2);

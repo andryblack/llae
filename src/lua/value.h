@@ -16,7 +16,7 @@ namespace lua {
 		state& get_state() { return m_state; }
 		value_type get_type() const { return m_state.get_type(m_idx); }
 		bool is_none() const 	{ return get_type() == value_type::none; }
-		bool is_nil() const 	{ return get_type() == value_type::nil; }
+		bool is_nil() const 	{ return get_type() == value_type::lnil; }
 		bool is_number() const 	{ return get_type() == value_type::number; }
 		bool is_boolean() const { return get_type() == value_type::boolean; }
 		bool is_string() const 	{ return get_type() == value_type::string; }
