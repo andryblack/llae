@@ -218,7 +218,7 @@ function Project:get_config( module, config )
 end
 
 function Project:get_config_value( module, config )
-	local l = self:get_config()
+	local l = self:get_config(module,config)
 	return l and l[1]
 end
 
