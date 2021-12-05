@@ -167,19 +167,24 @@ generate_src = {{
 		end
 	end
 	if not installed_scripts._main then
+		local content = template.render_file(path.join(location,dir,'data','main-template.lua'),{
+			project = project
+			})
+		log.debug('embed','_main',content)
 		table.insert(scripts,{
 			name = '_main',
-			content = template.render_file(path.join(location,dir,'data','main-template.lua'),{
-			})
+			content = content,	
 		})
 	end
 	if not installed_scripts['llae.utils'] then
+		log.debug('embed','llae.utils')
 		table.insert(scripts,{
 			name = 'llae.utils',
 			content = fs.load_file(path.join(location,dir,'scripts','llae/utils.lua'))
 		})
 	end
 	if not installed_scripts['llae.path'] then
+		log.debug('embed','llae.path')
 		table.insert(scripts,{
 			name = 'llae.path',
 			content = fs.load_file(path.join(location,dir,'scripts','llae/path.lua'))

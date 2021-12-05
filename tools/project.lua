@@ -208,10 +208,12 @@ end
 
 function Project:get_config( module, config )
 	if not self._env.module_config then
+		log.debug('get_config','empty module_config')
 		return nil
 	end
 	local mc = self._env.module_config[module]
 	if not mc then
+		log.debug('get_config','empty module_config for ',module)
 		return nil
 	end
 	return mc[config]

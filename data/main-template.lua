@@ -6,10 +6,10 @@ args = utils.parse_args(...)
 	local uv = require 'uv'
 	local path = require 'llae.path'
 	local tokens = {
-		pwd = uv.pwd(),
+		cwd = uv.cwd(),
 		exedir = path.dirname(uv.exepath()),
 	}
-	package.path = utils.replace_tokens('<%= table.concat(project:get_config('llae','lua_path'),';') %>',tokens)
+	package.path = utils.replace_tokens('<%- table.concat(project:get_config('llae','lua_path'),';') %>',tokens)
 	table.remove(package.searchers,1)
 <% else %>
 if args.dev then
