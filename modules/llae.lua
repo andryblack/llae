@@ -64,8 +64,8 @@ function upgrade()
 CURDIR=$PWD
 export LUA_PATH="$CURDIR/<%= dir %>/tools/?.lua;$CURDIR/<%= dir %>/scripts/?.lua"
 cd $LLAE_PROJECT_ROOT
-$CURDIR/<%= dir %>/bin/llae --root=. install || exit 1
-$CURDIR/<%= dir %>/bin/llae --root=. init || exit 1
+./bin/llae --root=. install || exit 1
+./bin/llae --root=. init || exit 1
 export LUA_PATH='?.lua'
 premake5$LLAE_EXE --file=build/premake5.lua gmake2 || exit 1
 make -C build config=release verbose=1 || exit 1
