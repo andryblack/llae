@@ -42,6 +42,7 @@ int main(int argc,char** argv) {
 	}
 #endif
 	auto loop = uv_default_loop();
+	int retcode = 0;
     {
 		llae::app app{loop};
 
@@ -55,12 +56,14 @@ int main(int argc,char** argv) {
 		auto err = lua::load_embedded(L,"_main");
 		if (err!=lua::status::ok) {
 			app.show_error(L,err);
+			retcode = 1;
 		} else {
 			createargtable(L,argv,argc);
 			err = L.pcall(1,0,-3);
 			if (err != lua::status::ok) {
 				app.show_error(L,err);
                 app.stop();
+                retcode = 1;
 			}
             app.run();
 		}
@@ -78,5 +81,5 @@ int main(int argc,char** argv) {
 	LLAE_DIAG(std::cout << "meta objects:  " << meta::object::get_total_count() << std::endl;)
 	LLAE_DIAG(std::cout << "buffers alloc: " << llae::named_alloc<uv::buffer>::get_allocated() << std::endl;)
 
-	return 0;
+	return retcode;
 }
