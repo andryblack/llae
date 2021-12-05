@@ -236,6 +236,8 @@ function Project:write_premake(  )
 		project=self,
 		template = template,
 		path = path,
+		fs = fs,
+		log = log
 	}))
 	f:close()
 end

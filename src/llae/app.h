@@ -14,8 +14,11 @@ namespace llae {
 		lua::main_state m_lua;
 		uv::loop 	m_loop;
 		common::intrusive_ptr<uv::signal> m_stop_sig;
+	protected:
+		void end_run(int res);
+		void close();
 	public:
-		explicit app(uv_loop_t* l);
+		explicit app(uv_loop_t* l,bool need_signal=true);
 		~app();
 
 		lua::state& lua() { return m_lua; }
