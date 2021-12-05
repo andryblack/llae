@@ -51,6 +51,27 @@ make -C build config=release verbose=1 || exit 1
 	]]
 end
 
+function upgrade()
+	
+	local all_files = {}
+	for fn in foreach_file(dir .. '/data') do
+		all_files['data/' .. fn] = dir .. '/data/' .. fn
+	end
+	all_files['llae-project.lua'] = dir .. '/llae-project.lua' 
+	install_files(all_files)
+
+	shell [[
+CURDIR=$PWD
+export LUA_PATH="$CURDIR/<%= dir %>/tools/?.lua;$CURDIR/<%= dir %>/scripts/?.lua"
+cd $LLAE_PROJECT_ROOT
+$CURDIR/<%= dir %>/bin/llae --root=. install || exit 1
+$CURDIR/<%= dir %>/bin/llae --root=. init || exit 1
+export LUA_PATH='?.lua'
+premake5$LLAE_EXE --file=build/premake5.lua gmake2 || exit 1
+make -C build config=release verbose=1 || exit 1
+	]]
+end
+
 project_config = {
 	{'embed_sctipts',type='string',storage='list'},
 	{'extern_main',type='boolean'},

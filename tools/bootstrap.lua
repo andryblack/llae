@@ -9,7 +9,6 @@ local uv = require 'uv'
 
 local install = class(tool)
 install.descr = 'bootstrap llae installation'
-local default_dir = path.join(assert(fs.home()),'.llae') 
 
 local embedded_modules = {
 	'premake',
@@ -18,9 +17,7 @@ local embedded_modules = {
 
 function install:exec( args )
 	
-	local install_dir = default_dir
-
-	install_dir = utils.replace_env(install_dir)
+	local install_dir = self.get_default_root()
 	log.info('start bootstapping at',install_dir)
 
 	utils.run(function()
