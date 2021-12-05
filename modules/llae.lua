@@ -53,6 +53,7 @@ end
 
 project_config = {
 	{'embed_sctipts',type='string',storage='list'},
+	{'extern_main',type='boolean'},
 	{'cmodule',type='string',storage='list'}
 }
 
@@ -113,9 +114,11 @@ build_lib = {
 }
 
 project_main = [[
+	<% if not project:get_config_value('llae','extern_main') then %>
 	files {
 		<%= format_file(module.dir,'src/main.cpp') %>
 	}
+	<% end %>
 	sysincludedirs {
 		<%= format_file(module.dir,'src') %>
 	}

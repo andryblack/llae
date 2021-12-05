@@ -217,6 +217,11 @@ function Project:get_config( module, config )
 	return mc[config]
 end
 
+function Project:get_config_value( module, config )
+	local l = self:get_config()
+	return l and l[1]
+end
+
 function Project:write_premake(  )
 	local template_source_filename = tool.get_llae_path('data','premake5-template.lua')
 	local filename = path.join(self._root,'build','premake5.lua')
