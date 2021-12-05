@@ -73,7 +73,8 @@ end
 project_config = {
 	{'embed_sctipts',type='string',storage='list'},
 	{'extern_main',type='boolean'},
-	{'cmodule',type='string',storage='list'}
+	{'cmodule',type='string',storage='list'},
+	{'lua_path',type='string',storage='list'},
 }
 
 cmodules = {
@@ -176,6 +177,12 @@ generate_src = {{
 		table.insert(scripts,{
 			name = 'llae.utils',
 			content = fs.load_file(path.join(location,dir,'scripts','llae/utils.lua'))
+		})
+	end
+	if not installed_scripts['llae.path'] then
+		table.insert(scripts,{
+			name = 'llae.path',
+			content = fs.load_file(path.join(location,dir,'scripts','llae/path.lua'))
 		})
 	end
 
