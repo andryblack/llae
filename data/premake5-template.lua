@@ -20,6 +20,9 @@ solution '<%= project:name() %>'
 	filter{'system:macosx','gmake'}
 		buildoptions { "-mmacosx-version-min=10.14" }
    		linkoptions  { "-mmacosx-version-min=10.14" }
+   		xcodebuildsettings{
+   			MACOSX_DEPLOYMENT_TARGET='10.14'
+   		}
    	filter{}
 
 	configuration{ 'debug'}
@@ -98,9 +101,6 @@ solution '<%= project:name() %>'
 			location 'project'
 		filter{}
 
-		xcodebuildsettings{
-   			MACOSX_DEPLOYMENT_TARGET='10.14'
-   		}
 
 		sysincludedirs {
 			'include'
