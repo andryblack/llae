@@ -20,6 +20,7 @@ solution '<%= project:name() %>'
 	filter{'system:macosx','gmake'}
 		buildoptions { "-mmacosx-version-min=10.14" }
    		linkoptions  { "-mmacosx-version-min=10.14" }
+   	filter{'system:macosx','xcode4'}
    		xcodebuildsettings{
    			MACOSX_DEPLOYMENT_TARGET='10.14'
    		}
