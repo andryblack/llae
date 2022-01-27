@@ -13,15 +13,30 @@ function run:exec( args )
 	if not script then
 		error('need script argument')
 	end
-	local run_args = {}
-	run_args[0] = this
-	local i = 3
-	while args[i] do
-		run_args[i-2] = args[i]
-		i = i + 1
-	end
-	_G.args = run_args
-	dofile(script)
+
+	utils.run(function()
+		local Project = require 'project'
+		local prj,err = Project.load( )
+		if prj then
+			for _,v in ipairs(prj:get_commands()) do
+				if v.name == script then
+					script = v.script
+				end
+			end
+		end
+		
+		local run_args = {}
+		run_args[0] = this
+		local i = 3
+		while args[i] do
+			run_args[i-2] = args[i]
+			i = i + 1
+		end
+		_G.args = run_args
+		dofile(script)
+	end)
+
+	
 end
 
 return run

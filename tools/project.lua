@@ -72,6 +72,22 @@ function Project.env:generate_src( data )
 	end
 end
 
+function Project.env:command(data)
+	if type(data) ~= 'table' then
+		error('command must be table')
+	end
+	if not data.name then
+		error('command need name')
+	end
+	if not data.script then
+		error('command need script')
+	end
+	if not self.commands then
+		self.commands = { data }
+	else
+		table.insert(self.commands,data)
+	end
+end
 function Project:_init( env , root, cmdargs )
 	log.debug('Project:_init',root,cmdargs)
 	self._env = env
@@ -106,6 +122,10 @@ end
 
 function Project:get_cmdargs(  )
 	return self._cmdargs
+end
+
+function Project:get_commands( )
+	return self._env.commands
 end
 
 function Project:add_modules_location( loc )
