@@ -84,7 +84,8 @@ cmodules = {
 	'llae',
 	'archive',
 	'crypto',
-	'xml'
+	'xml',
+	'posix'
 }
 
 includedir = dir .. '/src' 

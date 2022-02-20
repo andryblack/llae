@@ -19,7 +19,7 @@ function run:exec( args )
 		local Project = require 'project'
 		local prj,err = Project.load( )
 		if prj then
-			for _,v in ipairs(prj:get_commands()) do
+			for _,v in ipairs(prj:get_commands() or {}) do
 				if v.name == script then
 					script = v.script
 				end
@@ -35,7 +35,7 @@ function run:exec( args )
 		end
 		_G.args = run_args
 		dofile(script)
-	end)
+	end,true)
 
 	
 end
