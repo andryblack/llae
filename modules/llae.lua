@@ -85,7 +85,8 @@ cmodules = {
 	'archive',
 	'crypto',
 	'xml',
-	'posix'
+	'posix',
+	'posix.termios'
 }
 
 includedir = dir .. '/src' 
