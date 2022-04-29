@@ -66,4 +66,6 @@ function _M.progress( width )
 	return p
 end
 
+_M.restart_line = _M._prev_line.._M._clear_line
+
 return _M

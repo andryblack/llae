@@ -2,6 +2,9 @@ package.path = package.path .. ';scripts/?.lua'
 
 local utils = require 'llae.utils'
 local log = require 'llae.log'
+
+log.info('111')
+
 local serial = require 'posix.serial'
 
 local uv = require 'uv'
@@ -9,11 +12,13 @@ local uv = require 'uv'
 local cin = assert(uv.tty.new(0))
 local cout = assert(uv.tty.new(0))
 
-
-local path = '/dev/tty.usbmodem00000000001C1'
+local args = utils.parse_args(_G.args)
+--log.info(args[1],args[2],args[3],args[4])
+local path = args.dev or args[1]
+local baudrate = tonumber(args.baudrate or args[2])
 
 utils.run(function()
-	local s = assert(serial.open(path,{baudrate=115200}))
+	local s = assert(serial.open(path,{baudrate=baudrate or 115200}),'failed open serial ' .. tostring(path))
 	log.info('opened serial connection to',path)
 	utils.run(function()
 		while true do
