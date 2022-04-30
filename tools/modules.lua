@@ -241,8 +241,8 @@ function m:write_file( filename , content)
 		filename = path.join(self.root,filename)
 	end
 	fs.mkdir(path.dirname(filename))
-	fs.unlink(dst)
-	fs.write_file(dst,content)
+	fs.unlink(filename)
+	fs.write_file(filename,content)
 end
 
 function m:move_files( files )
