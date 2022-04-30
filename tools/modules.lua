@@ -237,8 +237,10 @@ function m:install_files( files )
 end
 
 function m:write_file( filename , content)
-	local dst = path.join(self.root,filename)
-	fs.mkdir(path.dirname(dst))
+	if not path.isabsolute(filename) then
+		filename = path.join(self.root,filename)
+	end
+	fs.mkdir(path.dirname(filename))
 	fs.unlink(dst)
 	fs.write_file(dst,content)
 end
@@ -382,7 +384,7 @@ end
 function _M.install( env , root , tosystem)
 	
 	log.info('install module',env.name,env.version)
-	env.root = root or env.root or utils.replace_env(fs.pwd())
+	env.root = path.getabsolute(root or env.root or utils.replace_env(fs.pwd()))
 	os.setenv('LLAE_PROJECT_ROOT',env.root)
 	env.location = path.join(env.root,'build','modules', env.name)
 	env.tosystem = tosystem
