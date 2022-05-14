@@ -2,6 +2,7 @@
 #include "md.h"
 #include "hmac.h"
 #include "bignum.h"
+#include "ecp.h"
 #include "lua/bind.h"
 #include <mbedtls/error.h>
 #include <zlib.h>
@@ -79,6 +80,8 @@ int luaopen_crypto(lua_State* L) {
 	lua::bind::object<crypto::md>::register_metatable(l,&crypto::md::lbind);
 	lua::bind::object<crypto::hmac>::register_metatable(l,&crypto::hmac::lbind);
     lua::bind::object<crypto::bignum>::register_metatable(l,&crypto::bignum::lbind);
+    lua::bind::object<crypto::ecp>::register_metatable(l,&crypto::ecp::lbind);
+    lua::bind::object<crypto::ecp_point>::register_metatable(l,&crypto::ecp_point::lbind);
 	l.createtable();
 	lua::bind::function(l,"crc32",&crypto::lcrc32);
 	lua::bind::object<crypto::md>::get_metatable(l);
@@ -87,6 +90,14 @@ int luaopen_crypto(lua_State* L) {
 	l.setfield(-2,"hmac");
     lua::bind::object<crypto::bignum>::get_metatable(l);
     l.setfield(-2,"bignum");
+    lua::bind::object<crypto::ecp>::get_metatable(l);
+    l.setfield(-2,"ecp");
+    lua::bind::object<crypto::ecp_point>::get_metatable(l);
+    l.setfield(-2,"ecp_point");
 
+#define BIND_M(M) l.pushinteger(MBEDTLS_ ## M);l.setfield(-2,#M);
+    BIND_M(ECP_PF_COMPRESSED)
+    BIND_M(ECP_PF_UNCOMPRESSED)
+    
 	return 1;
 }

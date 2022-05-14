@@ -1,9 +1,9 @@
 name = 'mbedtls'
-version = '3.0.0'
+version = '3.1.0'
 dir = name .. '-' .. version 
 archive = dir .. '.tar.gz'
 url = 'https://github.com/ARMmbed/mbedtls/archive/refs/tags/v'..version..'.tar.gz'
-hash = 'badb5372a698b7f3c593456a66260036'
+hash = 'a228170fbedd1202edcc1bf13d83b1a3'
 
 local uncomment = {
 	['MBEDTLS_DEPRECATED_REMOVED'] = true,

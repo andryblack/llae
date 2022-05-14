@@ -8,9 +8,6 @@ local root = cmdargs.root
 if root then
 	print('use scripts at',root)
 	table.remove(package.searchers,1)
-	local store_packages = {
-		'json','llae','uv','ssl','archive','crypto'
-	}
 	package.loaded['llae.utils'] = nil
 	package.path = root .. '/scripts/?.lua;' .. root .. '/tools/?.lua'
 	local tool = require 'tool'

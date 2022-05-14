@@ -19,6 +19,9 @@ namespace crypto {
         bignum();
         ~bignum();
         
+        const mbedtls_mpi* get() const { return &m_mpi;}
+        mbedtls_mpi* get() { return &m_mpi;}
+        
         void set(mbedtls_mpi_sint val);
         void set(const bignum& val);
 
