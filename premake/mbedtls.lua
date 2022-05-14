@@ -2,7 +2,7 @@ local utils = require 'utils'
 
 local _M = {
 	name = 'mbedtls',
-	version = '3.0.0',
+	version = '3.1.0',
 	url = 'https://github.com/ARMmbed/mbedtls/archive/refs/tags/v3.0.0.tar.gz',
 	archive = 'tar.gz',
 }
