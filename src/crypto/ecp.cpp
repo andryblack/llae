@@ -199,10 +199,32 @@ namespace crypto {
     }
 
     int ecp::rng_func(void *ctx, unsigned char * buf, size_t len) {
-        for (size_t i=0;i<len;++i) {
-            buf[i] = rand();
-        }
+        static_cast<ecp*>(ctx)->rng_gen(buf,len);
         return 0;
+    }
+    void ecp::rng_gen(unsigned char * buffer, size_t size) {
+        if (m_random_data && size) {
+            size_t len = std::min(size,m_random_data->get_len());
+            memcpy(buffer,static_cast<const char*>(m_random_data->get_base())+m_random_data->get_len()-len,len);
+            buffer += len;
+            size -= len;
+            m_random_data->set_len(m_random_data->get_len()-len);
+            if (m_random_data->get_len() == 0) {
+                m_random_data.reset();
+            }
+        }
+        for (size_t i=0;i<size;++i) {
+            buffer[i] = rand();
+        }
+    }
+
+    lua::multiret ecp::set_random_data(lua::state& l) {
+        uv::buffer_ptr b = uv::buffer::get(l,2,true);
+        if (!b) {
+            l.argerror(2, "need hased data");
+        }
+        m_random_data = b;
+        return {0};
     }
 
     lua::multiret ecp::ecdsa_sign(lua::state& l) {
@@ -263,6 +285,7 @@ namespace crypto {
         lua::bind::function(l,"gen_privkey",&ecp::gen_privkey);
         lua::bind::function(l,"gen_pubkey",&ecp::gen_pubkey);
         lua::bind::function(l,"gen_keypair",&ecp::gen_keypair);
+        lua::bind::function(l,"set_random_data",&ecp::set_random_data);
 	}
 
 	lua::multiret ecp::lnew(lua::state& l) {

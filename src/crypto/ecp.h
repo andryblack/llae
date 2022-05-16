@@ -48,6 +48,8 @@ namespace crypto {
 		ecp();
 		int load_group(mbedtls_ecp_group_id grp_id);
         static int rng_func(void *, unsigned char *, size_t);
+        void rng_gen(unsigned char * buffer, size_t size);
+        uv::buffer_ptr m_random_data;
 	public:
 		~ecp();
 
@@ -60,6 +62,7 @@ namespace crypto {
         lua::multiret gen_keypair(lua::state& l);
         lua::multiret gen_privkey(lua::state& l);
         lua::multiret gen_pubkey(lua::state& l);
+        lua::multiret set_random_data(lua::state& l);
         
 		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& l);
