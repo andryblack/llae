@@ -1,8 +1,8 @@
 local utils = require 'utils'
 local _M = {
 	name = 'zlib',
-	version = '1.2.11',
-	url = 'https://zlib.net/zlib-1.2.11.tar.gz',
+	version = '1.2.12',
+	url = 'https://zlib.net/zlib-1.2.12.tar.gz',
 	archive = 'tar.gz',
 }
 
