@@ -178,8 +178,8 @@ function m:unpack_zip( file , todir )
 	unzip.unpack_zip(src,dst)
 end
 
-function m:shell( text )
-	local script = path.join(self.location,'temp.sh')
+function m:shell( text , name)
+	local script = path.join(self.location,(name or 'temp') .. '.sh')
 	fs.unlink(script)
 	local f = assert(fs.open_write(script))
 	local template = require 'llae.template'
@@ -189,7 +189,7 @@ function m:shell( text )
 	f:write('cd $(dirname $0)\n')
 	f:write(template.compile(text,{env={escape=tostring}})(self))
 	f:close()
-	local logfilename = path.join(self.location,'shell_script_log.txt')
+	local logfilename = path.join(self.location, (name or 'shell_script') .. '_log.txt')
 	
 	log.info('cmd:',script,'>',logfilename)
 	fs.unlink(logfilename)

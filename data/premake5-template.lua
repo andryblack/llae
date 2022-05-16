@@ -32,14 +32,6 @@ solution '<%= project:name() %>'
 		visibility 'Hidden'
 	filter{}
 
-	configuration{ 'debug'}
-		symbols "On"
-	configuration{ 'release'}
-		optimize 'Speed'
-		symbols 'Off'
-		visibility 'Hidden'
-	configuration{}
-
 	
 	filter{'action:xcode4'}
 	location '../project'

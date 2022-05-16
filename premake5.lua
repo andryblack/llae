@@ -30,11 +30,11 @@ if _ACTION ~= 'download' and _ACTION ~= 'unpack' then
 		llae.solution()
 
 		
-		configuration{ 'debug'}
+		filter{ 'configurations:debug'}
 			symbols "On"
-		configuration{ 'release'}
+		filter{ 'configurations:release'}
 			optimize "On"
-		configuration{}
+		filter{}
 
 
 		llae.dependencies()

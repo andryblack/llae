@@ -21,7 +21,7 @@ function install(tosystem)
 end
 
 function bootstrap()
-	shell [[
+	shell ([[
 echo "build llae-bootstrap at $PWD/<%= dir %>"
 cd <%= dir %>
 export LUA_PATH='?.lua'
@@ -31,7 +31,7 @@ premake5$LLAE_EXE unpack || exit 1
 premake5$LLAE_EXE gmake2 || exit 1
 make -C build config=release verbose=1 || exit 1
 	
-	]]
+	]],'bootstrap1')
 
 	local all_files = {}
 	for fn in foreach_file(dir .. '/data') do
@@ -40,7 +40,7 @@ make -C build config=release verbose=1 || exit 1
 	all_files['llae-project.lua'] = dir .. '/llae-project.lua' 
 	install_files(all_files)
 
-	shell [[
+	shell ([[
 CURDIR=$PWD
 export LUA_PATH="$CURDIR/<%= dir %>/tools/?.lua;$CURDIR/<%= dir %>/scripts/?.lua"
 cd $LLAE_PROJECT_ROOT
@@ -49,7 +49,7 @@ $CURDIR/<%= dir %>/bin/llae-bootstrap init || exit 1
 export LUA_PATH='?.lua'
 premake5$LLAE_EXE --file=build/premake5.lua gmake2 || exit 1
 make -C build config=release verbose=1 || exit 1
-	]]
+	]],'bootstrap2')
 end
 
 function upgrade()

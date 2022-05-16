@@ -57,13 +57,13 @@ function _M.solution(  )
 	configurations { 'debug', 'release' }
 	language 'c++'
 	cppdialect "C++17"
-	configuration 'release'
+	filter{ 'configurations:release'}
 		optimize 'Speed'
 		symbols 'Off'
 		visibility 'Hidden'
-	configuration 'debug'
+	filter{ 'configurations:debug'}
 		symbols 'On'
-	configuration {}	
+	filter{}
 	filter{'system:macosx','gmake'}
 	buildoptions { "-mmacosx-version-min=10.14" }
    	linkoptions  { "-mmacosx-version-min=10.14" }
