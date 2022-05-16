@@ -25,6 +25,7 @@ function bootstrap()
 echo "build llae-bootstrap at $PWD/<%= dir %>"
 cd <%= dir %>
 export LUA_PATH='?.lua'
+export LLAE_DL_DIR="<%= project:get_dl_dir() %>"
 premake5$LLAE_EXE download || exit 1
 premake5$LLAE_EXE unpack || exit 1
 premake5$LLAE_EXE gmake2 || exit 1
