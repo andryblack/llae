@@ -14,6 +14,7 @@ namespace llae {
 		lua::main_state m_lua;
 		uv::loop 	m_loop;
 		common::intrusive_ptr<uv::signal> m_stop_sig;
+		int m_res = 0;
 	protected:
 		void end_run(int res);
 		void close();
@@ -24,8 +25,8 @@ namespace llae {
 		lua::state& lua() { return m_lua; }
 		uv::loop& loop() { return m_loop; }
 
-		void run();
-		void stop();
+		int run();
+		void stop(int code);
 		static void show_error(lua::state& l,lua::status e);
 		
         static bool closed(uv_loop_t* l);

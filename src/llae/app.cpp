@@ -17,7 +17,7 @@ namespace llae {
         } else {
             std::cout << "unknown" << std::endl;
         }
-        app::get(L).stop();
+        app::get(L).stop(1);
         return 0;
     }
 
@@ -87,13 +87,14 @@ namespace llae {
             }
         }
     }
-    void app::run() {
+    int app::run() {
         int v = m_loop.run(UV_RUN_DEFAULT);
         end_run(v);
-        return;
+        return m_res;
     }
 
-    void app::stop() {
+    void app::stop(int res) {
+        m_res = res;
         loop().stop();
     }
 
@@ -131,10 +132,11 @@ namespace llae {
         luaL_traceback(ms.native(),l.native(),NULL,1);
         std::cout << lua::value(ms,-1).tostring() << std::endl;
         ms.pop(1);
+        get(l).stop(1);
     }
 
     static int lua_stop(lua_State* L) {
-        app::get(L).stop();
+        app::get(L).stop(luaL_optinteger(L,1,0));
         return 0;
     }
     

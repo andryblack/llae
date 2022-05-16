@@ -62,10 +62,9 @@ int main(int argc,char** argv) {
 			err = L.pcall(1,0,-3);
 			if (err != lua::status::ok) {
 				app.show_error(L,err);
-                app.stop();
-                retcode = 1;
+                app.stop(1);
 			}
-            app.run();
+            retcode = app.run();
 		}
 	}
 

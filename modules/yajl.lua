@@ -2,20 +2,14 @@
 name = 'yajl'
 revision = '66cb08c'
 version = '2.1.0'
-url = 'https://github.com/lloyd/yajl/tarball/'..version
+url = 'https://github.com/lloyd/yajl/archive/refs/tags/'..version..'.tar.gz'
 dir =  name .. '-' .. version 
 archive = dir ..  '.tar.gz'
-hash = '8df8a92a2799bc949577e8e7a9f43670'
-
+hash = '6887e0ed7479d2549761a4d284d3ecb0'
 
 function install()
 	download(url,archive,hash)
 	unpack_tgz(archive)
-	shell([[
-rm -rf ]] .. dir .. [[
-
-mv lloyd-yajl-]] .. revision .. ' ' .. dir .. [[ || exit 1
-	]])
 	install_files{ 
 		['build/include/yajl/yajl_common.h'] = 		dir..'/src/api/yajl_common.h',
 		['build/include/yajl/yajl_gen.h'] = 		dir..'/src/api/yajl_gen.h',
