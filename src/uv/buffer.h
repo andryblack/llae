@@ -69,6 +69,7 @@ namespace uv {
         buffer_ptr realloc(size_t len);
         static lua::multiret lconcat(lua::state& l);
         static lua::multiret lnew(lua::state& l);
+        static lua::multiret lalloc(lua::state& l);
         static void lbind(lua::state& l);
         static buffer_ptr get(lua::state& l,int idx,bool check=false);
     };

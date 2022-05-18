@@ -59,6 +59,13 @@ namespace uv {
         return {1};
     }
 
+    lua::multiret buffer::lalloc(lua::state& l) {
+        size_t len = l.checkinteger(1);
+        auto res = buffer::alloc(len);
+        lua::push(l,std::move(res));
+        return {1};
+    }
+
 
     lua::multiret buffer::sub(lua::state& l) {
         if (get_len()==0) {
@@ -382,6 +389,7 @@ namespace uv {
 
     void buffer::lbind(lua::state& l) {
         lua::bind::function(l,"new",&buffer::lnew);
+        lua::bind::function(l,"alloc",&buffer::lalloc);
         lua::bind::function(l,"get_allocated",&buffer::allocator_t::get_allocated);
         lua::bind::function(l,"get_len",&buffer::get_len);
         lua::bind::function(l,"__len",&buffer::get_len);
