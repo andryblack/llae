@@ -196,7 +196,7 @@ namespace crypto {
             nres = 2;
         } else if (mbedlsstatus!=0) {
             toth.pushnil();
-            push_error(toth,"update failed, code:%d, %s",mbedlsstatus);
+            push_error(toth,"finish failed, code:%d, %s",mbedlsstatus);
             nres = 2;
         } else {
             lua::push(toth,std::move(digest));
