@@ -81,6 +81,15 @@ static int lua_uv_cwd(lua_State* L) {
 	return 2;
 }
 
+static int lua_uv_gettimeofday(lua_State* L) {
+	lua::state l(L);
+	uv_timeval64_t tv;
+	uv_gettimeofday(&tv);
+	l.pushnumber(tv.tv_sec);
+	l.pushinteger(tv.tv_usec);
+	return 2;
+}
+
 std::string uv::get_cwd() {
     size_t size = 1;
     char dummy;
@@ -106,6 +115,44 @@ static int lua_uv_chdir(lua_State* L) {
 	l.pushnil();
 	uv::push_error(l,r);
 	return 2;
+}
+
+static int lua_uv_interface_addresses(lua_State* L) {
+	lua::state l(L);
+	uv_interface_address_t *addresses = nullptr;
+	int count = 0;
+	auto r = uv_interface_addresses(&addresses,&count);
+	if (r < 0) {
+		l.pushnil();
+		uv::push_error(l,r);
+		return 2;
+	}
+	l.createtable(count,0);
+	char buf[64];
+	for (int i=0;i<count;++i) {
+		l.createtable(0,4);
+		l.pushstring(addresses[i].name);
+		l.setfield(-2,"name");
+		l.pushboolean(addresses[i].is_internal);
+		l.setfield(-2,"internal");
+		if (addresses[i].address.address4.sin_family == AF_INET) {
+	      	uv_ip4_name(&addresses[i].address.address4, buf, sizeof(buf));
+	    } else {
+	    	uv_ip6_name(&addresses[i].address.address6, buf, sizeof(buf));
+	    }
+	    l.pushstring(buf);
+	    l.setfield(-2,"address");
+	    if (addresses[i].netmask.netmask4.sin_family == AF_INET) {
+	      	uv_ip4_name(&addresses[i].netmask.netmask4, buf, sizeof(buf));
+	    } else {
+	    	uv_ip6_name(&addresses[i].netmask.netmask6, buf, sizeof(buf));
+	    }
+	    l.pushstring(buf);
+	    l.setfield(-2,"netmask");
+	    l.seti(-2,i+1);
+	}
+	uv_free_interface_addresses(addresses,count);
+	return 1;
 }
 
 int luaopen_uv(lua_State* L) {
@@ -145,6 +192,9 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"cwd",&lua_uv_cwd);
 	lua::bind::function(l,"chdir",&lua_uv_chdir);
 	lua::bind::function(l,"pause",&uv::timer_pause::pause);
+	lua::bind::function(l,"gettimeofday",&lua_uv_gettimeofday);
+	lua::bind::function(l,"interface_addresses",&lua_uv_interface_addresses);
+
 	uv::fs::lbind(l);
 	uv::os::lbind(l);
 	return 1;

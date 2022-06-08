@@ -440,4 +440,7 @@ function M:normalize()
 	return self
 end
 
+M.encode = encode
+M.decode = decode
+
 return M

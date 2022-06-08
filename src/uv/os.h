@@ -12,6 +12,9 @@ namespace uv {
 		static int unsetenv(lua_State* L);
 		static int gethostname(lua_State* L);
 		static int uname(lua_State* L);
+		static int getpriority(lua_State* L);
+		static int setpriority(lua_State* L);
+		static int getpid(lua_State* L);
 		static void lbind(lua::state& l);
 	};
 }

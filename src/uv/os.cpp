@@ -121,6 +121,47 @@ namespace uv {
 		return 1;
 	}
 
+	int os::getpid(lua_State* L) {
+		lua::state l(L);
+		l.pushinteger(uv_os_getpid());
+		return 1;
+	}
+
+	int os::getpriority(lua_State* L) {
+		lua::state l(L);
+		int prio = 0;
+		auto r = uv_os_getpriority(static_cast<uv_pid_t>(l.optinteger(1,uv_os_getpid())),&prio);
+		if (r<0) {
+			l.pushnil();
+			uv::push_error(l,r);
+			return 2;
+		}
+		l.pushinteger(prio);
+		return 1;
+	}
+
+	int os::setpriority(lua_State* L) {
+		lua::state l(L);
+		int prio = 0;
+		uv_pid_t p = 0;
+		if (l.gettop() > 1) {
+			p = static_cast<uv_pid_t>(l.checkinteger(1));
+			prio = l.checkinteger(2);
+		} else {
+			p = uv_os_getpid();
+			prio = l.checkinteger(1);
+		}
+
+		auto r = uv_os_setpriority(p,prio);
+		if (r<0) {
+			l.pushnil();
+			uv::push_error(l,r);
+			return 2;
+		}
+		l.pushboolean(true);
+		return 1;
+	}
+
 	void os::lbind(lua::state& l) {
 		l.createtable();
 		lua::bind::function(l,"homedir",&uv::os::homedir);
@@ -130,6 +171,9 @@ namespace uv {
 		lua::bind::function(l,"unsetenv",&uv::os::unsetenv);
 		lua::bind::function(l,"gethostname",&uv::os::gethostname);
 		lua::bind::function(l,"uname",&uv::os::uname);
+		lua::bind::function(l,"getpid",&uv::os::getpid);
+		lua::bind::function(l,"getpriority",&uv::os::getpriority);
+		lua::bind::function(l,"setpriority",&uv::os::setpriority);
 		l.setfield(-2,"os");
 	}
 
