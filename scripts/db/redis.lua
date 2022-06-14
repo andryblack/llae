@@ -91,19 +91,23 @@ local function gen_req( args )
 	return table.concat(data,'\r\n')
 end 
 
-local function do_cmd( self, ... )
+function redis:cmd(  ... )
 	local args = {...}
 	local req = gen_req(args)
 	--print('send: ',req)
-	self._conn:write{req,'\r\n'}
+	local res,err = self._conn:write{req,'\r\n'}
+	if not res then
+		return nil,err
+	end
 	return read_reply(self)
 end
 
 local function common_cmd( cmd )
 	redis[cmd] = function(self,...)
-		return do_cmd(self,cmd,...)
+		return redis.cmd(self,cmd,...)
 	end
 end
+
 
 common_cmd('get')
 common_cmd('set')
@@ -122,9 +126,17 @@ common_cmd('linsert')
 
 common_cmd('hexists')
 common_cmd('hget')
+common_cmd('hgetall')
 common_cmd('hset')
+common_cmd('hsetnx')
 common_cmd('hmget')
+common_cmd('hmset')
 common_cmd('hdel')
+common_cmd('hincrby')
+common_cmd('hkeys')
+common_cmd('hlen')
+common_cmd('hstrlen')
+common_cmd('hvals')
 
 common_cmd('smembers')
 common_cmd('sismember')
@@ -147,5 +159,6 @@ common_cmd('expire')
 common_cmd('script')
 common_cmd('sort')
 
+common_cmd('scan')
 
 return redis
