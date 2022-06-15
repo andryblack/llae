@@ -77,6 +77,7 @@ end
 
 function web:use( middl )
 	middl:use(self)
+	return middl
 end
 
 function web:listen( options )
