@@ -44,33 +44,35 @@ function cookie:handle_request(req,res)
 		return self._cookies and self._cookies[name]
 	end
 
-	function res:set_cookie(name,data_)
-		local data = type(data_) == 'table' and data_ or {value=data_}
+	function res:set_cookie(name,value,data)
+		
 		local cooks = self._cookies or {}
 		self._cookies = cooks
-		local value = data.value
-		if data.SameSite then
-			value = value .. '; SameSite=' .. data.SameSite
-		end
-		if data.Secure then
-			value = value .. '; Secure'
-		end
-		if data.HttpOnly then
-			value = value .. '; HttpOnly'
-		end
-		if data.Domain then
-			value = value .. '; Domain=' .. data.Domain
-		end
-		if data.Path then
-			value = value .. '; Path=' .. data.Path
-		end
-		if data.Age or data['Max-Age'] then
-			value = value .. '; Max-Age=' .. tostring(data.Age or data['Max-Age'])
-		elseif data.Expires then
-			if type(data.Expires) == 'string' then
-				value = value .. '; Expires=' .. data.Expires
-			else
-				value = value .. '; Expires=' .. timestamp.format(data.Expires)
+		
+		if data then
+			if data.SameSite then
+				value = value .. '; SameSite=' .. data.SameSite
+			end
+			if data.Secure then
+				value = value .. '; Secure'
+			end
+			if data.HttpOnly then
+				value = value .. '; HttpOnly'
+			end
+			if data.Domain then
+				value = value .. '; Domain=' .. data.Domain
+			end
+			if data.Path then
+				value = value .. '; Path=' .. data.Path
+			end
+			if data.Age or data['Max-Age'] then
+				value = value .. '; Max-Age=' .. tostring(data.Age or data['Max-Age'])
+			elseif data.Expires then
+				if type(data.Expires) == 'string' then
+					value = value .. '; Expires=' .. data.Expires
+				else
+					value = value .. '; Expires=' .. timestamp.format(data.Expires)
+				end
 			end
 		end
 		cooks[name] = value
