@@ -3,7 +3,7 @@ local fs = require 'llae.fs'
 local path = require 'llae.path'
 local log = require 'llae.log'
 
-local static = class(nil,'static')
+local static = class(require 'web.middle','static')
 
 
 function static:_init( root, options )

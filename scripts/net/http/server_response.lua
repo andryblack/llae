@@ -60,6 +60,22 @@ function response:_init( client , req)
 	end
 end
 
+function response:add_header( name, value )
+	local n = string.lower(name)
+	for hn,hv in pairs(self._headers) do
+		if string.lower(hn) == n then
+			if type(self._headers[hn]) ~= 'table' then
+				self._headers[hn] = {self._headers[hn],value}
+			else
+				table.insert(self._headers[hn],value)
+			end
+			return
+		end
+	end
+	self._headers[name] = {value}
+end
+
+
 local function get_len(d)
 	if type(d) == 'string' then
 		return #d
@@ -68,8 +84,12 @@ local function get_len(d)
 	end
 end
 
+function response:finish_headers()
+end
+
 function response:_send_response( with_data )
 	log.debug('response:_send_response',with_data)
+	self:finish_headers()
 	if self._status and (self._status ~= 200) then
 		log.debug('reset compression for status',self._status)
 		self._compress = nil
@@ -130,7 +150,15 @@ function response:_send_response( with_data )
 			' ' .. (self._code or 200) .. ' ' .. (self._status or 'OK')
 	}
 	for hn,hv in pairs(self._headers) do
-		table.insert(r,hn..': ' .. hv)
+		if type(hv) == 'table' then
+			for _,v in ipairs(hv) do
+				table.insert(r,hn..': ' .. v)
+				log.debug('header',hn,v)
+			end
+		else
+			table.insert(r,hn..': ' .. hv)
+			log.debug('header',hn,hv)
+		end
 	end
 
 	local headers_data = table.concat(r,'\r\n') .. '\r\n\r\n'
@@ -331,6 +359,12 @@ function response:send_static_file( fpath , conf )
 			f:close()
 		end
 	end
+end
+
+function response:redirect(url)
+	self:status(302,'Found')
+	self:set_header('Location',url)
+	return self:finish()
 end
 
 return response

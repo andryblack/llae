@@ -36,11 +36,11 @@ local function match_one_path(node, path, f)
 end
 
 local function resolve(path, node, params, handler)
-	--log.debug('resolve begin for',path)
+	log.debug('resolve begin for',path)
 	
 	local _, _, current_token, rest = path:find("([^/.]+)(.*)")
 	if not current_token then 
-		--log.debug('resolve end')
+		log.debug('resolve end')
 		local f = node[_handler]
 		if f then
 			if handler(f,params) then
@@ -52,7 +52,7 @@ local function resolve(path, node, params, handler)
 
 	local n = node[current_token]
 	if n then
-		--log.debug('resolve continue for',current_token)
+		log.debug('resolve continue for',current_token)
 		if resolve(rest, n, params, handler) then
 			return true
 		end

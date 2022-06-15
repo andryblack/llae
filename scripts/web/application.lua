@@ -74,6 +74,7 @@ function web:register_handler( f )
 	table.insert(self._handlers, f)
 end
 
+
 function web:use( middl )
 	middl:use(self)
 end
@@ -99,5 +100,16 @@ function web.json( )
 	local json = require 'web.json'
 	return json.new()
 end
+
+function web.cookie( )
+	local cookie = require 'web.cookie'
+	return cookie.new()
+end
+
+function web.formparser( )
+	local formparser = require 'web.formparser'
+	return formparser.new()
+end
+
 
 return web
