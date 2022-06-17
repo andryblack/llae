@@ -1,13 +1,17 @@
 local llae = require 'llae'
 local class = require 'llae.class'
 local url = require 'net.url'
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 local redis = class(nil,'db.redis')
 
 
 function redis:_init( )
 	self._conn = uv.tcp_connection.new()
+	self._lock = uv.lock.new()
+	self._subscribe = {}
+	self._unsubscribe = {}
+	self._subhandlers = {}
 end
 
 function redis:connect( addr , port )
@@ -30,7 +34,7 @@ local function read( self )
 		--print('start read')
 		local ch,e = self._conn:read()
 		if not ch then
-			--print(e)
+			print(e)
 			return nil,e
 		end
 		--print(ch)
@@ -78,6 +82,8 @@ local function read_reply( self )
 		return tonumber(string.sub(data,2))
 	elseif prefix == '-' then
 		return false,string.sub(data,2)
+	else
+		return false ,'unexpected'..prefix
 	end
 end
 
@@ -92,73 +98,146 @@ local function gen_req( args )
 end 
 
 function redis:cmd(  ... )
+	self._lock:lock()
 	local args = {...}
 	local req = gen_req(args)
 	--print('send: ',req)
 	local res,err = self._conn:write{req,'\r\n'}
 	if not res then
+		self._lock:unlock()
 		return nil,err
 	end
-	return read_reply(self)
+	res,err = read_reply(self)
+	self._lock:unlock()
+	return res,err
 end
 
-local function common_cmd( cmd )
+function redis:pubsubcmd( ...)
+	local args = {...}
+	local req = gen_req(args)
+	--print('send: ',req)
+	local res,err = self._conn:write{req,'\r\n'}
+	return res,err
+end
+
+local commands = {
+	'get','set','del',
+	'incr','decr',
+	'mget','mset',
+	'llen','lindex','lpop','lpush','lrange','linsert',
+	'hexists','hget','hgetall','hset','hsetnx',
+	'hmget','hmset','hdel','hincrby','hkeys','hlen',
+	'hstrlen','hvals',
+	'smembers','smismember','sadd','srem','sdiff','sinter','sunion',
+	'zrange','zrangebyscore','zrank','zadd','zrem','zincrby',
+	'auth','eval','script','sort','scan',
+	'expire','persist',
+	'publish',
+}
+
+for _,cmd in ipairs(commands) do
+	local ucmd = string.upper(cmd)
 	redis[cmd] = function(self,...)
-		return redis.cmd(self,cmd,...)
+		return redis.cmd(self,ucmd,...)
 	end
 end
 
+function redis:unsubscribe(...)
+	local res,err = self:pubsubcmd('UNSUBSCRIBE',...)
+	local cor = assert(coroutine.running())
+	local channels = {...}
+	if not next(channels) then
+		for k,v in pairs(self._subhandlers) do
+			self._unsubscribe[k] = cor
+		end
+	else
+		for _,v in pairs(channels) do
+			self._unsubscribe[v] = cor
+		end
+	end
+	while next(self._unsubscribe) do
+		coroutine.yield(cor)
+	end
+	return true
+end
 
-common_cmd('get')
-common_cmd('set')
-common_cmd('mget')
-common_cmd('mset')
-common_cmd('del')
-common_cmd('incr')
-common_cmd('decr')
+function redis:try_start_subscribe()
+	if self._sub_thread then
+		return true
+	end
+	self._sub_thread = coroutine.create(function(this)
+		--print('start sub')
+		while next(this._subscribe) or next(this._subhandlers) or next(this._unsubscribe) do
+			local data,err = read_reply(self)
+			if not data then
+				return false,err
+			end
+			--print('sub',data[1],data[2],data[3],e)
+			if data[1] == 'message' then
+				local handler = self._subhandlers[data[2]]
+				if handler then
+					handler(data[2],data[3])
+				end
+			elseif data[1] == 'unsubscribe' then
+				local th = self._unsubscribe[data[2]]
+				if th then
+					self._unsubscribe[data[2]] = nil
+					self._subhandlers[data[2]] = nil
+					assert(coroutine.resume(th,true))
+				else
+					print('not found',data[2])
+				end
+			elseif data[1] == 'subscribe' then
+				local th = self._subscribe[data[2]]
+				if th then
+					self._subscribe[data[2]] = nil
+					assert(coroutine.resume(th,true))
+				else
+					print('not found',data[2])
+				end
+			end
+		end
+	end)
+	assert(coroutine.resume(self._sub_thread,self))
+end
 
-common_cmd('llen')
-common_cmd('lindex')
-common_cmd('lpop')
-common_cmd('lpush')
-common_cmd('lrange')
-common_cmd('linsert')
+function redis:subscribe( ... )
+	local args = {...}
+	local handler = table.remove(args,#args)
+	local channels = {}
+	for _,v in ipairs(args) do
+		channels[v] = handler
+	end
+	if not handler or not next(channels) then
+		return nil, 'invalid arguments'
+	end
+	self._lock:lock()
+	table.insert(args,1,'SUBSCRIBE')
+	local req = gen_req(args)
+	--print('send: ',req)
+	local res,err = self._conn:write{req,'\r\n'}
+	if not res then
+		self._lock:unlock()
+		return nil,err
+	end
 
-common_cmd('hexists')
-common_cmd('hget')
-common_cmd('hgetall')
-common_cmd('hset')
-common_cmd('hsetnx')
-common_cmd('hmget')
-common_cmd('hmset')
-common_cmd('hdel')
-common_cmd('hincrby')
-common_cmd('hkeys')
-common_cmd('hlen')
-common_cmd('hstrlen')
-common_cmd('hvals')
+	local cor = assert(coroutine.running())
 
-common_cmd('smembers')
-common_cmd('sismember')
-common_cmd('sadd')
-common_cmd('srem')
-common_cmd('sdiff')
-common_cmd('sinter')
-common_cmd('sunion')
+	for k,v in pairs(channels) do
+		--print('++subscribe : ',k,v)
+		self._subhandlers[k]=v
+		self._subscribe[k]=cor
+	end
+	self:try_start_subscribe()
+	
+	while next(self._subscribe) do
+		--print('>wait subscibe')
+		coroutine.yield(cor)
+		--print('<wait subscibe')
+	end
 
-common_cmd('zrange')
-common_cmd('zrangebyscore')
-common_cmd('zrank')
-common_cmd('zadd')
-common_cmd('zrem')
-common_cmd('zincrby')
-
-common_cmd('auth')
-common_cmd('eval')
-common_cmd('expire')
-common_cmd('script')
-common_cmd('sort')
-
-common_cmd('scan')
+	self._lock:unlock()
+	return true
+end
 
 return redis
