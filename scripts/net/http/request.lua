@@ -74,7 +74,7 @@ function request:resolve()
 	local cached = self.resolve_cache[self._url.host]
 	local now = os.time()
 	if cached and (os.difftime(now,cached.time) < 30) then
-		self._ip_list = { cached }
+		self._ip_list = cached.ip_list
 		return true,nil
 	end
 	log.debug('resolve',self._url.host)
