@@ -12,6 +12,8 @@ local request = class(require 'net.http.headers','http.request')
 request.parser = require 'net.http.request_parser'
 request.response = require 'net.http.request_response'
 
+request.resolve_cache = {}
+
 function request.get_ssl_ctx() 
 	if not request._ssl_ctx then
 		request._ssl_ctx = ssl.ctx.new()
@@ -53,7 +55,7 @@ function request:_connect( port )
 	for _,v in ipairs(self._ip_list) do
 		if v.addr and v.socktype=='tcp' then
 			local ip = v.addr
-			log.debug('connect to',ip,port)
+			--log.debug('connect to',ip,port)
 			self._connection = uv.tcp_connection.new()
 			local res,err = self._connection:connect(ip,port)
 			if not res then
@@ -67,20 +69,40 @@ function request:_connect( port )
 	return nil,'failed connect to ' .. self._url.host
 end
 
-function request:exec(  )
+function request:resolve()
 	local err = nil
+	local cached = self.resolve_cache[self._url.host]
+	local now = os.time()
+	if cached and (os.difftime(now,cached.time) < 30) then
+		self._ip_list = { cached }
+		return true,nil
+	end
 	log.debug('resolve',self._url.host)
 	self._ip_list,err = uv.getaddrinfo(self._url.host)
 	if not self._ip_list then
 		return nil,err
 	end
+	if next(self._ip_list) then
+		self.resolve_cache[self._url.host] = {
+			time = now,
+			ip_list = self._ip_list
+		}
+	end
+	return true,nil
+end
+
+function request:exec(  )
+	local res,err = self:resolve()
+	if not res then
+		return nil,err
+	end
 	local port = self._url.port or url.services[self._url.scheme]
-	local res,err = self:_connect(port)
+	res,err = self:_connect(port)
 	if not res then
 		return nil,err
 	end
 	
-	log.debug('connected')
+	--log.debug('connected')
 
 	self._headers['Content-Length'] = #self._body
 	if not self:get_header('Connection') then
@@ -99,7 +121,7 @@ function request:exec(  )
 	end
 
 	if self._url.scheme == 'https' then
-		log.debug('open ssl connection')
+		--log.debug('open ssl connection')
 		self._tcp = self._connection
 		self._ssl = ssl.connection.new( request.get_ssl_ctx(), self._connection)
 		self._connection = self._ssl
@@ -111,12 +133,12 @@ function request:exec(  )
 		if not res then
 			return res,err
 		end
-		log.debug('handshake')
+		--log.debug('handshake')
 		res,err = self._ssl:handshake()
 		if not res then
 			return res,err
 		end
-		log.debug('handshake success')
+		--log.debug('handshake success')
 	end
 	-- print(self._method .. ' ' .. (self._url.path or '/') .. ' HTTP/' .. self._version .. '\r\n',
 	-- 	table.concat(headers,'\r\n'),

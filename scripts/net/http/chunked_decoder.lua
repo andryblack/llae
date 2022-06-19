@@ -29,7 +29,7 @@ function decoder:read( )
 				return nil,'invlid chunk size "' .. line .. '"'
 			end
 			self._data = tail
-			log.debug('begin chunk:',self._len,line,#tail)
+			--log.debug('begin chunk:',self._len,line,#tail)
 			break
 		else
 			local ch,e = self._upstream:read()
@@ -55,7 +55,7 @@ function decoder:read( )
 	self._len = self._len - #ch
 	if self._len <= 0 then
 		self._len = nil
-		log.debug('end chunk')
+		--log.debug('end chunk')
 		while #self._data < 2 do
 			local ch,e = self._upstream:read()
 			if not ch then
@@ -72,7 +72,7 @@ function decoder:read( )
 			return nil,'invalid chunk tail'
 		end
 	end
-	log.debug('readed from chunk',#ch)
+	--log.debug('readed from chunk',#ch)
 	return ch
 end
 

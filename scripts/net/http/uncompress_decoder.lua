@@ -21,11 +21,11 @@ function decoder:read( )
 	local ch,e = self._upstream:read()
 	if ch then
 		if #ch > 0 then
-			log.debug('write to uncompress',#ch)
+			--log.debug('write to uncompress',#ch)
 			self._uncompress:write(ch)
 		end
 	elseif not self._finished then
-		log.debug('finish uncompress')
+		--log.debug('finish uncompress')
 		self._uncompress:finish()
 		self._finished = true
 	end
@@ -35,10 +35,10 @@ function decoder:read( )
 
 	ch,e = self._uncompress:read(not not self._finished)
 	if not ch then
-		log.debug('uncompress finished read',e,self._total)
+		--log.debug('uncompress finished read',e,self._total)
 		self._uncompress = nil
 	else
-		log.debug('readed from uncompress:',#ch)
+		--log.debug('readed from uncompress:',#ch)
 		self._total = self._total + #ch
 	end
 	return ch,e

@@ -23,16 +23,16 @@ function response:_init( data  )
 		self._decoder = (require 'net.http.chunked_decoder').new(self)
 	end
 	if encoding then
-		log.debug('use compression',encoding)
-		for n,v in self:foreach_header() do
-			log.debug('header',n,':',v)
-		end
+		-- log.debug('use compression',encoding)
+		-- for n,v in self:foreach_header() do
+		-- 	log.debug('header',n,':',v)
+		-- end
 		local uncompress
 		if encoding == 'gzip' then
 			uncompress = archive.new_gunzip_read()
 		elseif encoding == 'deflate' then
 			uncompress = archive.new_inflate_read(true)
-			log.debug('deflate encoding',self._length)
+			--log.debug('deflate encoding',self._length)
 		else
 			error('unsupported encoding ' .. encoding)
 		end
@@ -57,7 +57,7 @@ function response:read(  )
 		return nil
 	end
 	if self._decoder:is_end() then
-		log.debug('stream end')
+		--log.debug('stream end')
 		self:on_closed()
 		self._closed = true
 		return nil
@@ -66,7 +66,7 @@ function response:read(  )
 	local ch,e = self._decoder:read()
 	
 	if not ch then
-		log.debug('response end')
+		--log.debug('response end')
 		self._error = e
 		self:on_closed()
 		self._closed = true
@@ -97,7 +97,7 @@ end
 
 function response:close_connection( closed )
 	if self._connection then
-		log.debug('close_connection')
+		--log.debug('close_connection')
 		if self._uncompress then
 			self._uncompress:finish()
 			self._uncompress = nil

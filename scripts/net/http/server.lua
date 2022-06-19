@@ -37,7 +37,7 @@ end
 function server:_read_function( client , cb )
 	--connection_num = connection_num + 1
 	--local self_num = connection_num
-	log.debug('start connection')
+	--log.debug('start connection')
 	while true do
 		--print('start load',self_num)
 		local p = self.parser.new(cb)
@@ -46,7 +46,7 @@ function server:_read_function( client , cb )
 			break
 		end
 	end
-	log.debug('close')
+	--log.debug('close')
 	client:shutdown()
 	client:close()
 end
