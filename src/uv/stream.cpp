@@ -104,6 +104,7 @@ namespace uv {
 	void shutdown_req::shutdown_cb(uv_shutdown_t* req, int status) {
 		shutdown_req* self = static_cast<shutdown_req*>(uv_req_get_data(reinterpret_cast<uv_req_t*>(req)));
 		self->on_shutdown(status);
+		self->release();
 		self->remove_ref();
 	}
 
@@ -113,6 +114,7 @@ namespace uv {
 		add_ref();
 		int r = uv_shutdown(&m_shutdown,m_stream->get_stream(),&shutdown_req::shutdown_cb);
 		if (r < 0) {
+			release();
 			remove_ref();
 		}
 		return r;
@@ -121,6 +123,15 @@ namespace uv {
 	shutdown_lua_req::shutdown_lua_req(stream_ptr&& s,lua::ref&& cont) : shutdown_req(std::move(s)), m_cont(std::move(cont)) {
 	}
 
+	void shutdown_lua_req::release() {
+		auto& l = llae::app::get(get_loop()).lua();
+		if (!l.native()) {
+            m_cont.release();
+        }
+		if (m_cont.valid()) {
+			m_cont.reset(l);
+		}
+	}
 	void shutdown_lua_req::on_shutdown(int status) {
 		auto& l = llae::app::get(get_loop()).lua();
 		if (m_cont.valid()) {

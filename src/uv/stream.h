@@ -62,6 +62,7 @@ namespace uv {
 		uv_loop_t* get_loop() { return m_shutdown.handle->loop; }
 		static void shutdown_cb(uv_shutdown_t* req, int status);
 		virtual void on_shutdown(int status) = 0;
+		virtual void release() {}
 	public:
 		shutdown_req(stream_ptr&& stream);
 		~shutdown_req();
@@ -73,6 +74,7 @@ namespace uv {
 		lua::ref m_cont;
 	protected:
 		virtual void on_shutdown(int status) override;
+		virtual void release() override;
 	public:
 		shutdown_lua_req(stream_ptr&& stream,lua::ref&& cont);
 	};
