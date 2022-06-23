@@ -305,7 +305,7 @@ namespace ssl {
             int args;
 			if (is_error()) {
 				toth.pushnil();
-				push_error(l);
+				push_error(toth);
 				args = 2;
 			} else {
 				toth.pushboolean(true);
