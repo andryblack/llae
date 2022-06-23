@@ -194,6 +194,11 @@ namespace uv {
         lua::ref m_read_cont;
     public:
         lua_read_consumer(lua::ref && cont) : m_read_cont(std::move(cont)) {}
+        void reset(lua::state& l) {
+        	if (m_read_cont.valid()) {
+        		m_read_cont.reset(l);
+        	}
+        }
         virtual bool on_read(stream* s,
                              ssize_t nread,
                              const buffer_ptr&& buffer) override final {
@@ -295,6 +300,7 @@ namespace uv {
             common::intrusive_ptr<lua_read_consumer> consume(new lua_read_consumer(std::move(read_cont)));
             int res = start_read(consume);
             if (res < 0) {
+            	consume->reset(l);
                 l.pushnil();
                 uv::push_error(l,res);
                 return {2};
