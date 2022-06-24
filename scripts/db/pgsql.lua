@@ -4,6 +4,7 @@ local url = require 'net.url'
 local uv = require 'llae.uv'
 local log = require 'llae.log'
 local json = require 'llae.json'
+local crypto = require 'llae.crypto'
 
 local pgsql = class(nil,'db.pgsql')
 
@@ -105,6 +106,27 @@ function pgsql:cleartext_auth(msg)
 	end
 	self:send_message(self.message_type_f.password,{
 		self._config.password,
+		self.NULL
+	})
+	return self:check_auth()
+end
+
+local function md5(str)
+	local md = crypto.md5()
+	assert(md:update(str))
+	return assert(md:finish()):hex_encode()
+end
+
+function pgsql:md5_auth(msg)
+	if not self._config.password then
+		return nil,'need password for auth'
+	end
+	local salt = msg:sub(5, 8)
+	local pass = md5(self._config.password .. self._config.user)
+	pass = md5(pass .. salt)
+	self:send_message(self.message_type_f.password,{
+		"md5",
+		tostring(pass),
 		self.NULL
 	})
 	return self:check_auth()
