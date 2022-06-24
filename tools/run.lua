@@ -27,6 +27,11 @@ function run:exec( args )
 		end
 		
 		local run_args = {}
+		for k,v in pairs(args) do
+			if type(k) == 'string' then
+				run_args[k]=v
+			end
+		end
 		run_args[0] = this
 		local i = 3
 		while args[i] do
