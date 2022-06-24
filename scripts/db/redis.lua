@@ -133,6 +133,7 @@ local commands = {
 	'auth','eval','script','sort','scan',
 	'expire','persist',
 	'publish',
+	'rename',
 }
 
 for _,cmd in ipairs(commands) do
