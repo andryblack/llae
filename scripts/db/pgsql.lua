@@ -354,7 +354,8 @@ function pgsql:receive_query_result()
         	if not notices then
         		notices = {}
         	end
-        	table.insert(notices,self:parse_error(msg))
+        	local err_msg = self:parse_error(msg)
+        	table.insert(notices,err_msg)
         elseif t == self.message_type_b.command_complete then
         	command_complete = msg
         	local next_result = self:format_query_result(row_desc,data_rows,command_complete)
