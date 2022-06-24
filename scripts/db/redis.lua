@@ -124,7 +124,7 @@ local commands = {
 	'get','set','del',
 	'incr','decr',
 	'mget','mset',
-	'llen','lindex','lpop','lpush','lrange','linsert',
+	'llen','lindex','lpop','rpop','lpush','rpush','lrange','linsert','ltrim','lrem','lset',
 	'hexists','hget','hgetall','hset','hsetnx',
 	'hmget','hmset','hdel','hincrby','hkeys','hlen',
 	'hstrlen','hvals',
