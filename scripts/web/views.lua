@@ -56,7 +56,8 @@ function views:get_parts( view )
 	local pos = 1
 	local name = 'base'
 	while true do
-		local npos,epos = string.find(data,'-{.+}%-',pos)
+		local npos,epos = string.find(data,'%-{.-}%-',pos)
+		--log.info('found part:',npos,epos)
 		local part = string.sub(data,pos,npos and npos-1)
 		local r = template.compile(part,self._options)
 		--log.info('compile part',name)
@@ -66,7 +67,7 @@ function views:get_parts( view )
 		if not npos then
 			break
 		end
-		name = string.match(string.sub(data,npos,epos),'-{(.+)}%-')
+		name = string.match(string.sub(data,npos,epos),'%-{(.+)}%-')
 		pos = epos + 1
 	end
 
