@@ -7,6 +7,7 @@ local log = require 'llae.log'
 local fs = require 'llae.fs'
 
 
+
 local request = class(require 'net.http.headers','http.request')
 
 request.parser = require 'net.http.request_parser'
@@ -28,12 +29,41 @@ end
 function request:_init( args )
 	assert(args.url,'need url')
 	request.baseclass._init(self,args.headers or {})
+	if args.proxy then
+		local type,data= string.match(args.proxy,'([^:]+)://(.+)')
+		if not type or type ~= 'socks5' then
+			error('unsupported proxy ' .. tostring(type))
+		end
+		local addr,port,data = string.match(data,'([%d%.]+):(%d+):?(.*)')
+		local user,pass
+		if data then
+			user,pass = string.match(data,'([^:]+):(.+)')
+		end
+		log.debug('use socks5 proxy:',addr,port)
+		self._proxy = {
+			addr = addr,
+			port = tonumber(port),
+			user = user,
+			pass = pass,
+			create = function(self)
+				local net = require 'net'
+				return assert(net.socks5.tcp_connection.new(self.addr,self.port,self.user,self.pass))
+			end
+		}
+	end
 	log.debug('new request to',args.url)
 	local comp = url.parse(args.url)
 	self._url = comp
 	self._method = args.method or 'GET'
 	self._version = args.version or '1.1'
 	self._body = args.body or ''
+end
+
+function request:_create_connection()
+	if self._proxy then
+		return self._proxy:create()
+	end
+	return uv.tcp_connection.new()
 end
 
 function request:get_path(  )
@@ -56,7 +86,7 @@ function request:_connect( port )
 		if v.addr and v.socktype=='tcp' then
 			local ip = v.addr
 			--log.debug('connect to',ip,port)
-			self._connection = uv.tcp_connection.new()
+			self._connection = self:_create_connection()
 			local res,err = self._connection:connect(ip,port)
 			if not res then
 				log.debug('failed connect to',ip,port,err)

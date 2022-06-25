@@ -87,7 +87,8 @@ cmodules = {
 	'crypto',
 	'xml',
 	'posix',
-	'posix.termios'
+	'posix.termios',
+	'net',
 }
 
 includedir = dir .. '/src' 
@@ -107,7 +108,7 @@ solution = [[
 
 build_lib = {
 	components = {
-		'archive','common','crypto','llae','meta','parsers','posix','ssl','uv','lua'
+		'archive','common','crypto','llae','meta','parsers','posix','ssl','uv','lua','net'
 	},
 	project = project:get_cmdargs().inplace  and [[
 		files {
