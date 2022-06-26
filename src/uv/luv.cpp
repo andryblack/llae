@@ -155,6 +155,49 @@ static int lua_uv_interface_addresses(lua_State* L) {
 	return 1;
 }
 
+static int lua_uv_set_process_title(lua_State* L) {
+	lua::state l(L);
+	const char* name = l.checkstring(1);
+	int r = uv_set_process_title(name);
+	if (r>0) {
+		l.pushboolean(true);
+		return 1;
+	}
+	l.pushnil();
+	uv::push_error(l,r);
+	return 2;
+}
+
+static int lua_uv_get_free_memory(lua_State* L) {
+	lua::state l(L);
+	l.pushinteger(uv_get_free_memory());
+	return 1;
+}
+
+static int lua_uv_get_total_memory(lua_State* L) {
+	lua::state l(L);
+	l.pushinteger(uv_get_total_memory());
+	return 1;
+}
+
+static int lua_uv_get_constrained_memory(lua_State* L) {
+	lua::state l(L);
+	l.pushinteger(uv_get_constrained_memory());
+	return 1;
+}
+
+static int lua_uv_hrtime(lua_State* L) {
+	lua::state l(L);
+	l.pushinteger(uv_hrtime());
+	return 1;
+}
+
+static int lua_uv_sleep(lua_State* L) {
+	lua::state l(L);
+	uv_sleep(l.checkinteger(1));
+	return 0;
+}
+
 int luaopen_uv(lua_State* L) {
 	lua::state l(L);
 
@@ -194,6 +237,12 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"pause",&uv::timer_pause::pause);
 	lua::bind::function(l,"gettimeofday",&lua_uv_gettimeofday);
 	lua::bind::function(l,"interface_addresses",&lua_uv_interface_addresses);
+	lua::bind::function(l,"set_process_title",&lua_uv_set_process_title);
+	lua::bind::function(l,"get_free_memory",&lua_uv_get_free_memory);
+	lua::bind::function(l,"get_total_memory",&lua_uv_get_total_memory);
+	lua::bind::function(l,"get_constrained_memory",&lua_uv_get_constrained_memory);
+	lua::bind::function(l,"hrtime",&lua_uv_hrtime);
+	lua::bind::function(l,"sleep",&lua_uv_sleep);
 
 	uv::fs::lbind(l);
 	uv::os::lbind(l);
