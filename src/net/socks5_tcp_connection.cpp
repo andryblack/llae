@@ -1,6 +1,6 @@
 #include "socks5_tcp_connection.h"
 #include "llae/app.h"
-#include "luv.h"
+#include "uv/luv.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
 #include "lua/bind.h"
