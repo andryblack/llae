@@ -128,7 +128,7 @@ local commands = {
 	'hexists','hget','hgetall','hset','hsetnx',
 	'hmget','hmset','hdel','hincrby','hkeys','hlen',
 	'hstrlen','hvals',
-	'smembers','sismember','sadd','srem','sdiff','sinter','sunion',
+	'smembers','sismember','sadd','srem','sdiff','sinter','sunion','srandmember',
 	'zrange','zrangebyscore','zrank','zadd','zrem','zincrby',
 	'auth','eval','script','sort','scan',
 	'expire','persist',
