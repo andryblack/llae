@@ -157,6 +157,7 @@ function pgsql:receive_message()
 	if not msg then
 		return nil,err
 	end
+	log.info(t,self.message_type_b[t],#msg,uv.buffer.hex_encode(msg))
 	return t,msg
 end
 
@@ -292,35 +293,38 @@ function pgsql:parse_data_row(data_row,fields)
 	local offset = 3
 	local out = {}
 	for i=1,num_fields do
-		local field = fields[i]
-		if not field then
-			break
-		end
-		local field_name,field_type = field[1],field[2]
-		local len = string.unpack('>I4',data_row,offset)
-		offset = offset + 4
-		if len < 0 then
-			if self.convert_null then
-				out[field_name] = self.NULL
-			else
+		while true do
+			local field = fields[i]
+			if not field then
 				break
 			end
-		end
-		local value = data_row:sub(offset,offset+len-1)
-		offset = offset + len
-		if field_type == 'number' then
-			value = tonumber(value)
-		elseif field_type == 'boolean' then
-			value = value == 't'
-		elseif field_type == 'string' then
-			value = tostring(value)
-		else
-			local fn = self.type_deserializers[field_type]
-			if fn then
-				value = fn(self, value, field_type)
+			local field_name,field_type = field[1],field[2]
+			local len = string.unpack('>I4',data_row,offset)
+			offset = offset + 4
+			if len == 0xffffffff then
+				if self.convert_null then
+					out[field_name] = self.NULL
+				else
+					break
+				end
 			end
+			local value = data_row:sub(offset,offset+len-1)
+			offset = offset + len
+			if field_type == 'number' then
+				value = tonumber(value)
+			elseif field_type == 'boolean' then
+				value = value == 't'
+			elseif field_type == 'string' then
+				value = tostring(value)
+			else
+				local fn = self.type_deserializers[field_type]
+				if fn then
+					value = fn(self, value, field_type)
+				end
+			end
+			out[field_name] = value
+			break
 		end
-		out[field_name] = value
 	end
 	return out
 end
