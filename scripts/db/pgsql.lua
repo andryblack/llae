@@ -157,7 +157,7 @@ function pgsql:receive_message()
 	if not msg then
 		return nil,err
 	end
-	log.info(t,self.message_type_b[t],#msg,uv.buffer.hex_encode(msg))
+	--log.info(t,self.message_type_b[t],#msg,uv.buffer.hex_encode(msg))
 	return t,msg
 end
 
