@@ -65,9 +65,10 @@ assert(LH_size == SIZEZIPLOCALHEADER)
 
 local file_info = class(nil,'zip file')
 
-function file_info:_init( cd, lh )
+function file_info:_init( cd, lh , ci)
 	self._cd = cd
 	self._lh = lh
+	self._ci = ci
 	-- body
 end
 
@@ -92,6 +93,9 @@ function file_info:get_uncompressed_size(  )
 end
 
 function file_info:match( filename )
+	if self._ci then
+		return string.upper(self._cd.name) == string.upper(filename)
+	end
 	return self._cd.name == filename
 end
 
@@ -99,10 +103,11 @@ function file_info:is_deflated(  )
 	return self._cd.compression == Z_DEFLATED
 end
 
-function zip:_init( reader , size )
+function zip:_init( reader , size , options)
 	self._reader = reader
 	self._size = size
 	self._files_list = {}
+	self._case_insensitive = options and options.caseinsensitive
 end
 
 function zip:_search_central_dir(  )
@@ -170,7 +175,7 @@ function zip:_get_file_info(  )
 		return nil,'invalid local file'
 	end
 
-	return file_info.new(cd,lh)
+	return file_info.new(cd,lh,self._case_insensitive)
 end
 
 function zip:_goto_first_file(  )
@@ -363,10 +368,10 @@ function zip:open_file( filename )
 	end
 end
 
-function zip.open( filename  )
+function zip.open( filename , options )
 	local st = assert(fs.stat(filename))
 	local f = assert(fs.open(filename,fs.O_RDONLY))
-	local z = zip.new(f,st.size)
+	local z = zip.new(f,st.size,options)
 	local files = {}
 	assert(z:scan())
 	return z
