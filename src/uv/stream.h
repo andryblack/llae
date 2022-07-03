@@ -92,6 +92,8 @@ namespace uv {
 	private:
         stream_read_consumer_ptr m_read_consumer;
 		bool m_closed = false;
+		std::vector<uv::buffer_ptr> m_read_buffers;
+		uv::buffer_ptr get_read_buffer(size_t size);
 	protected:
 		explicit stream();
 		virtual ~stream() override;
@@ -109,6 +111,7 @@ namespace uv {
 		lua::multiret write(lua::state& l);
 		lua::multiret shutdown(lua::state& l);
 		lua::multiret send(lua::state& l);
+		void add_read_buffer(uv::buffer_ptr&& b);
         int start_read( const stream_read_consumer_ptr& consumer );
         void stop_read();
 		void close();

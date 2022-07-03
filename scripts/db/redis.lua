@@ -34,11 +34,12 @@ local function read( self )
 		--print('start read')
 		local ch,e = self._conn:read()
 		if not ch then
-			print(e)
+			--print(e)
 			return nil,e
 		end
 		--print(ch)
 		self._data = self._data .. ch
+		self._conn:add_read_buffer(ch)
 	end
 end
 

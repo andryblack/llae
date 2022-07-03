@@ -170,9 +170,22 @@ namespace uv {
         handle::on_closed();
 	}
 
+	uv::buffer_ptr stream::get_read_buffer(size_t size) {
+		while (!m_read_buffers.empty()) {
+			auto res = std::move(m_read_buffers.back());
+			m_read_buffers.pop_back();
+			if (res && res->get_capacity() >= size) {
+				res->set_len(res->get_capacity());
+				return res;
+			}
+		}
+		return buffer::alloc(size);
+	}
+
 	void stream::alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-        auto b = buffer::alloc(suggested_size);
-        buf->base = static_cast<char*>(b->get_base());
+		stream* self = static_cast<stream*>(handle->data);
+		auto b = self->get_read_buffer(suggested_size);
+		buf->base = static_cast<char*>(b->get_base());
         buf->len = b->get_capacity();
         b->add_ref();
 	}
@@ -187,7 +200,9 @@ namespace uv {
             b->remove_ref();
         }
 	}
-
+	void stream::add_read_buffer(uv::buffer_ptr&& b) {
+		m_read_buffers.emplace_back(std::move(b));
+	}
     class lua_read_consumer : public stream_read_consumer {
     private:
         lua::ref m_read_cont;
@@ -444,5 +459,6 @@ namespace uv {
 		lua::bind::function(l,"shutdown",&stream::shutdown);
 		lua::bind::function(l,"close",&stream::close);
         lua::bind::function(l,"stop_read",&stream::stop_read);
+        lua::bind::function(l,"add_read_buffer",&stream::add_read_buffer);
 	}
 }
