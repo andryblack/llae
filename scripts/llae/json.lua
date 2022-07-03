@@ -41,8 +41,8 @@ encode_impl = function (gen,data)
 	end
 end
 
-function _M.encode_sorted(data)
-	local gen = json.gen.new()
+function _M.encode_sorted(data,formatted)
+	local gen = json.gen.new(formatted)
 	encode_impl(gen,data)
 	local res = gen:get_buffer()
 	gen:free()

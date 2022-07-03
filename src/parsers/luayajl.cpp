@@ -384,7 +384,11 @@ static int json_gen_free(lua_State* L) {
 
 
 static int json_gen_new(lua_State* L) {
-    lua_pushlightuserdata(L,yajl_gen_alloc(0));
+    yajl_gen g = yajl_gen_alloc(0);
+    lua_pushlightuserdata(L,g);
+    if (lua_isboolean(L, 1) && lua_toboolean(L, 1)) {
+        yajl_gen_config(g,yajl_gen_beautify, 1);
+    }
     luaL_getmetatable(L,"json_gen");
     lua_setmetatable(L,-2);
     return 1;
