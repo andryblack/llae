@@ -496,6 +496,21 @@ static int json_array(lua_State* L) {
     return 1;
 }
 
+static int is_json_array(lua_State* L) {
+    bool is_array = false;
+    if (lua_type(L,1) == LUA_TTABLE) {
+        if (lua_getmetatable(L,1)) {
+            if (lua_getfield(L,-1,"__json_type")==LUA_TLIGHTUSERDATA) {
+                is_array = lua_touserdata(L,-1) == &json_array_marker;
+            }
+            lua_pop(L,2);
+        }
+    }
+    lua_pushboolean(L,is_array ? 1 : 0);
+    return 1;
+}
+
+
 int luaopen_json(lua_State* L) {
 
     luaL_Reg reg[] = {
@@ -534,6 +549,8 @@ int luaopen_json(lua_State* L) {
     lua_pop(L,1);
     lua_pushcfunction(L,&json_array);
     lua_setfield(L,-2,"array");
+    lua_pushcfunction(L,&is_json_array);
+    lua_setfield(L,-2,"is_array");
 
     return 1;
 }
