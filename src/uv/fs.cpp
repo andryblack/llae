@@ -46,6 +46,7 @@ namespace uv {
             }
 			l.checkstack(2);
 			m_cont.push(l);
+			m_cont.reset(l);
 			auto toth = l.tothread(-1);
 			toth.checkstack(3);
 			int nargs = on_cont(toth);
@@ -54,8 +55,7 @@ namespace uv {
 				llae::app::show_error(toth,s);
 			}
 			l.pop(1);// thread
-            reset(l);
-		}
+      	}
         void reset(lua::state& l) {
             m_cont.reset(l);
         }

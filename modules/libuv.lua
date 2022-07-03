@@ -34,7 +34,7 @@ build_lib = {
 					'uv-common.h','uv-data-getter-setters.c','version.c'},
 	unix_files = {'async.c','loop.c','fs.c','core.c','pipe.c','poll.c','signal.c',
 					'stream.c','thread.c','process.c','proctitle.c','tcp.c','udp.c',
-					'tty.c', 'getaddrinfo.c', 'loop-watcher.c' },
+					'tty.c', 'getaddrinfo.c', 'loop-watcher.c', 'random-devurandom.c' },
 	macosx_files = {'darwin.c','fsevents.c','darwin-proctitle.c','random-getentropy.c',
 					'bsd-ifaddrs.c','kqueue.c'},
 	linux_files = {'linux-core.c','linux-inotify.c','linux-syscalls.c','linux-syscalls.h',

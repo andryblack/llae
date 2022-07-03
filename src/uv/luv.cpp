@@ -14,6 +14,7 @@
 #include "process.h"
 #include "timer.h"
 #include "pipe.h"
+#include "llae/app.h"
 #include <iostream>
 #include <memory>
 
@@ -198,6 +199,102 @@ static int lua_uv_sleep(lua_State* L) {
 	return 0;
 }
 
+class rand_req : public uv::req {
+private:
+	uv_random_t	m_random;
+	uv::buffer_ptr m_buffer;
+	lua::ref m_cont;
+protected:
+	static rand_req* get(uv_random_t* req) {
+		return static_cast<rand_req*>(uv_req_get_data(reinterpret_cast<uv_req_t*>(req)));
+	}
+protected:
+	void on_cb(int status, void *buf, size_t buflen) {
+		auto& l = llae::app::get(get()->loop).lua();
+        if (!l.native()) {
+            release();
+            return;
+        }
+		l.checkstack(2);
+		m_cont.push(l);
+		auto toth = l.tothread(-1);
+		m_cont.reset(l);
+		toth.checkstack(3);
+		int nargs;
+		if (status < 0) {
+			toth.pushnil();
+			uv::push_error(toth,status);
+			nargs = 2;
+		} else {
+			toth.pushlstring(static_cast<const char*>(buf),buflen);
+			nargs = 1;
+		}
+		auto s = toth.resume(l,nargs);
+		if (s != lua::status::ok && s != lua::status::yield) {
+			llae::app::show_error(toth,s);
+		}
+		l.pop(1);// thread
+	}
+	
+public:
+	void release() {
+        m_cont.release();
+    }
+    void reset(lua::state& l) {
+        m_cont.reset(l);
+    }
+	uv_random_t* get() { return &m_random; }
+	static void on_random_cb(uv_random_t* req,int status, void *buf, size_t buflen) {
+		auto self = get(req);
+		if (self) {
+			self->on_cb(status,buf,buflen);
+			self->remove_ref();
+		}
+	}
+	explicit rand_req(lua::ref&& cont) : m_cont(std::move(cont)) {
+		uv_req_set_data(reinterpret_cast<uv_req_t*>(&m_random),this);
+	}
+	~rand_req() {
+		uv_req_set_data(reinterpret_cast<uv_req_t*>(&m_random),nullptr);
+	}
+	int start(uv::loop& loop,size_t len) {
+		m_buffer = uv::buffer::alloc(len);
+		auto res = uv_random(loop.native(),&m_random,m_buffer->get_base(),len,0,&rand_req::on_random_cb);
+		if (res < 0) {
+
+		} else {
+			add_ref();
+		}
+		return res;
+	}
+};
+
+static int lua_uv_random(lua_State* L) {
+	lua::state l(L);
+	if (!l.isyieldable()) {
+		l.pushnil();
+		l.pushstring("uv_random is async");
+		return 2;
+	}
+	size_t size = l.checkinteger(1);
+	{
+		llae::app& app(llae::app::get(l));
+		lua::ref cont;
+		l.pushthread();
+		cont.set(l);
+		common::intrusive_ptr<rand_req> req{new rand_req(std::move(cont))};
+		auto r = req->start(app.loop(),size);
+		if (r < 0) {
+			req->reset(l);
+			l.pushnil();
+			uv::push_error(l,r);
+			return 2;
+		} 
+	}
+	l.yield(0);
+	return 0;
+}
+
 int luaopen_uv(lua_State* L) {
 	lua::state l(L);
 
@@ -243,6 +340,7 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"get_constrained_memory",&lua_uv_get_constrained_memory);
 	lua::bind::function(l,"hrtime",&lua_uv_hrtime);
 	lua::bind::function(l,"sleep",&lua_uv_sleep);
+	lua::bind::function(l,"random",&lua_uv_random);
 
 	uv::fs::lbind(l);
 	uv::os::lbind(l);

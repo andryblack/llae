@@ -56,6 +56,7 @@ function _M.lib( root )
 				path.join(_M.root,'src','unix','tty.c'),
 				path.join(_M.root,'src','unix','getaddrinfo.c'),
 				path.join(_M.root,'src','unix','loop-watcher.c'),
+				path.join(_M.root,'src','unix','random-devurandom.c'),
 			}
 		filter "system:macosx"
 			defines {
