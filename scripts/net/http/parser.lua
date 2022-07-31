@@ -14,12 +14,12 @@ end
 
 function http_parser:read( client )
 	local ch,e = client:read()
-	assert(not e,e)
+	--assert(not e,e)
 	if ch then
 		self._data = self._data .. ch
 		--print('parser_read',ch)
 	end
-	return ch
+	return ch,e
 end
 
 function http_parser:parse_header( client )
