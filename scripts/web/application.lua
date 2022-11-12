@@ -30,7 +30,7 @@ function web:get_fs_path(fn)
 end
 
 function web:handle_request( req, res )
-	log.info('handle',req:get_method(),req:get_path())
+	--log.info('handle',req:get_method(),req:get_path())
 	
 	local components = url.parse(req:get_path())
 	req.query = components.query
