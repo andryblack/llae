@@ -84,7 +84,7 @@ function web:listen( options )
 	local port = options and options.port or 8080
 	local host = options and options.host or '127.0.0.1'
 	log.info('listen at:','http://'..host..':'..port)
-	assert(self._server:listen(port,host))
+	assert(self._server:listen(port,host,options and options.backlog))
 end
 
 function web.static( root, options )

@@ -15,17 +15,15 @@ server.defaults = {
 	backlog = 128
 }
 
-function server:_init( cb , config )
-	config = config or server.defaults
+function server:_init( cb  )
 	self._server = uv.tcp_server.new()
-	self._backlog = config.backlog or server.defaults.backlog
 	self._cb = cb
 end
 
-function server:listen( port, addr )
+function server:listen( port, addr , backlog )
 	local res,err = self._server:bind(addr,port)
 	if not res then return nil,err end
-	return self._server:listen(self._backlog,function(err)
+	return self._server:listen(backlog or server.defaults.backlog,function(err)
 		self:on_connection(err)
 	end)
 end
