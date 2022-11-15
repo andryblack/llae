@@ -2,7 +2,7 @@ name = 'zlib'
 version = '1.2.13'
 archive = 'zlib-' .. version .. '.tar.gz'
 url = 'https://zlib.net/' .. archive
-hash = '5fc414a9726be31427b440b434d05f78'
+hash = '9b8aa094c4e5765dabf4da391f00d15c'
 dir = name .. '-' .. version
 
 function install()
