@@ -15,9 +15,10 @@ server.defaults = {
 	backlog = 128
 }
 
-function server:_init( cb )
+function server:_init( cb , config )
+	config = config or server.defaults
 	self._server = uv.tcp_server.new()
-	self._backlog = server.defaults.backlog
+	self._backlog = config.backlog or server.defaults.backlog
 	self._cb = cb
 end
 

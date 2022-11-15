@@ -15,8 +15,8 @@ function http.createRequest( args )
 end
 
 
-function http.createServer( cb )
-	return http.server.new(cb)
+function http.createServer( cb , config )
+	return http.server.new(cb, config )
 end
 
 return http
