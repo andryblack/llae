@@ -1,5 +1,5 @@
 name = 'zlib'
-version = '1.2.12'
+version = '1.2.13'
 archive = 'zlib-' .. version .. '.tar.gz'
 url = 'https://zlib.net/' .. archive
 hash = '5fc414a9726be31427b440b434d05f78'
