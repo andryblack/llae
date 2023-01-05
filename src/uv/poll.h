@@ -33,9 +33,10 @@ namespace uv {
 	protected:
 		virtual ~poll() override;
 		virtual void on_closed() override;
-		explicit poll(uv::loop& loop,posix::fd_ptr && fd );
+		
 	public:
 		explicit poll(uv::loop& loop,int fd );
+		explicit poll(uv::loop& loop,posix::fd_ptr && fd );
 		static void lbind(lua::state& l);
 		static lua::multiret lnew(lua::state& l);
 
