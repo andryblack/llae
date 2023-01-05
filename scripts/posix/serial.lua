@@ -86,7 +86,7 @@ function serial:set_flowcontrol(flowcontrol)
 	local options = self._options or assert(termios.tcgetattr(self._fd))
 	if flowcontrol then
         --// with flow control
-        options.c_cflag = toptions.c_cflag | CRTSCTS
+        options.c_cflag = options.c_cflag | CRTSCTS
     else
         --// no flow control
         options.c_cflag = options.c_cflag & ~termios.CRTSCTS

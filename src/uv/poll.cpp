@@ -119,6 +119,9 @@ namespace uv {
         return res;
 	}
 	int poll::stop_poll() {
+		if (m_consumer) {
+            m_consumer.reset();
+        }
 		return uv_poll_stop(&m_poll);
 	}
 
