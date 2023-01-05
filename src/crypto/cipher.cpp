@@ -28,7 +28,7 @@ namespace crypto {
 			size_t blocksize = mbedtls_cipher_get_block_size(&m_cipher->m_ctx);
 			uv::buffer_ptr enc_buffer;
 			for (auto& b:m_buffers.get_buffers()) {
-				unsigned long osize = b.len + blocksize;
+				size_t osize = b.len + blocksize;
 				if (!enc_buffer || enc_buffer->get_capacity() < osize) {
 					enc_buffer = uv::buffer::alloc(osize);
 				}
@@ -72,7 +72,7 @@ namespace crypto {
 		virtual void on_work() override {
 			size_t size = mbedtls_cipher_get_block_size(&m_cipher->m_ctx);
 			m_data = uv::buffer::alloc(size);
-			unsigned long osize = 0;
+			size_t osize = 0;
 			m_status = mbedtls_cipher_finish(&m_cipher->m_ctx,
 				static_cast<unsigned char*>(m_data->get_base()),&osize);
 			if (m_status == 0) {
