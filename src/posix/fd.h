@@ -17,9 +17,13 @@ namespace posix {
 		explicit fd(int f) : m_fd(f) {}
 		~fd();
 		int get() const { return m_fd; }
-		lua::multiret close(lua::state& l);
-		lua::multiret read(lua::state& l);
-		lua::multiret write(lua::state& l);
+		int close();
+		ssize_t read(void* data,size_t size);
+		ssize_t write(const void* data,size_t size);
+
+		lua::multiret lclose(lua::state& l);
+		lua::multiret lread(lua::state& l);
+		lua::multiret lwrite(lua::state& l);
 		lua::multiret fcntl(lua::state& l);
 
 		static void lbind(lua::state& l);

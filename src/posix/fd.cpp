@@ -10,13 +10,22 @@ META_OBJECT_INFO(posix::fd,meta::object)
 namespace posix {
 
 	fd::~fd() {
-		if (m_fd != -1) {
-			::close(m_fd);
-		}
+		close();
 	}
 
-	lua::multiret fd::close(lua::state& l) {
-		int r = ::close(m_fd);
+	int fd::close() {
+		if (m_fd != -1) {
+			auto res = ::close(m_fd);
+			if (res == 0) {
+				m_fd = -1;
+			}
+			return res;
+		}
+		return -1;
+	}
+
+	lua::multiret fd::lclose(lua::state& l) {
+		int r = close();
 		if (r == -1) {
 			l.pushnil();
 			push_error_errno(l);
@@ -26,12 +35,16 @@ namespace posix {
 		return {1};
 	}
 
-	lua::multiret fd::read(lua::state& l) {
+	ssize_t fd::read(void* data,size_t size) {
+		return ::read(m_fd,data,size);
+	}
+
+	lua::multiret fd::lread(lua::state& l) {
 		uv::buffer_ptr buffer = lua::stack<uv::buffer_ptr>::get(l,2);
 		if (!buffer) {
 			buffer = uv::buffer::alloc(l.checkinteger(2));
 		}
-		auto readed = ::read(m_fd,buffer->get_base(),buffer->get_capacity());
+		auto readed = read(buffer->get_base(),buffer->get_capacity());
 		if (readed < 0) {
 			l.pushnil();
 			push_error_errno(l);
@@ -41,7 +54,12 @@ namespace posix {
 		lua::push(l,buffer);
 		return {1};
 	}
-	lua::multiret fd::write(lua::state& l) {
+
+	ssize_t fd::write(const void* data,size_t size) {
+		return ::write(m_fd,data,size);
+	}
+
+	lua::multiret fd::lwrite(lua::state& l) {
 		uv::buffer_ptr buffer = lua::stack<uv::buffer_ptr>::get(l,2);
 		const void* data = nullptr;
 		size_t len = 0;
@@ -52,7 +70,7 @@ namespace posix {
 			len = buffer->get_len();
 		}
 
-		auto writed = ::write(m_fd,data,len);
+		auto writed = write(data,len);
 		if (writed < 0) {
 			l.pushnil();
 			push_error_errno(l);
@@ -113,9 +131,9 @@ namespace posix {
 	}
 
 	void fd::lbind(lua::state& l) {
-		lua::bind::function(l,"close",&fd::close);
-		lua::bind::function(l,"read",&fd::read);
-		lua::bind::function(l,"write",&fd::write);
+		lua::bind::function(l,"close",&fd::lclose);
+		lua::bind::function(l,"read",&fd::lread);
+		lua::bind::function(l,"write",&fd::lwrite);
 		lua::bind::function(l,"fcntl",&fd::fcntl);
 	}
 
