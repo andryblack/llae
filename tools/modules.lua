@@ -335,6 +335,35 @@ function m:preprocess( config )
 	end
 end
 
+function m:preprocess_am( config )
+	local src_file = path.join(self.location,config.src)
+	local dst_file = config.insource and path.join(self.location,config.dst) or path.join(self.root,config.dst)
+
+	local data = {}
+	local defines = config.defines or {}
+	local replace_line = config.replace_line or {}
+	local skip = config.skip or {}
+	for line in io.lines(src_file) do 
+		--print('process line',line)
+		local d,o = string.match(line,'^#undef%s+([A-Z_]+)(.*)$')
+		if d and not skip[d] then
+			local def = defines[d]
+			if def then
+				if type(def) == 'boolean' then
+					line = '#define ' .. d .. o
+				else
+					line = '#define ' .. d .. ' ' .. def
+				end
+			else
+				line = '//' .. line
+			end
+		end
+		table.insert(data,replace_line[line] or line)
+	end
+	fs.mkdir_r(path.dirname(dst_file))
+	fs.write_file(dst_file,table.concat(data,'\n'))
+end
+
 
 local _M = {}
 
