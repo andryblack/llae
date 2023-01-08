@@ -37,6 +37,15 @@ namespace uv {
         if (!err) err = "unknown";
         l.pushstring(err);
     }
+    lua::multiret return_status_error(lua::state& s,int r) {
+    	if (r<0) {
+    		s.pushnil();
+    		push_error(s,r);
+    		return {2};
+    	}
+    	s.pushinteger(r);
+    	return {1};
+    }
     void print_error(int e) {
         const char* err = uv_strerror_r(e, uv_error_buf, sizeof(uv_error_buf));
         if (!err) err = "unknown";
@@ -308,6 +317,8 @@ int luaopen_uv(lua_State* L) {
     lua::bind::object<uv::poll>::register_metatable(l,&uv::poll::lbind);
     lua::bind::object<uv::process>::register_metatable(l,&uv::process::lbind);
     lua::bind::object<uv::pipe>::register_metatable(l,&uv::pipe::lbind);
+    lua::bind::object<uv::timer>::register_metatable(l);
+    lua::bind::object<uv::timer_lcb>::register_metatable(l,&uv::timer_lcb::lbind);
 
 	l.createtable();
 	lua::bind::object<uv::buffer>::get_metatable(l);
@@ -326,6 +337,8 @@ int luaopen_uv(lua_State* L) {
     l.setfield(-2,"process");
     lua::bind::object<uv::pipe>::get_metatable(l);
     l.setfield(-2,"pipe");
+     lua::bind::object<uv::timer_lcb>::get_metatable(l);
+    l.setfield(-2,"timer");
     
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
 	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);

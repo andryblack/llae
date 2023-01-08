@@ -11,3 +11,16 @@ utils.run(function()
 		log.info('pause',i)
 	end
 end)
+
+
+do
+	local d = 1
+	local tmr = uv.timer.new()
+	tmr:start(function(t)
+		log.info('on_timer',d)
+		d = d + 1
+		if d > 10 then
+			t:stop()
+		end
+	end,3000,200)
+end

@@ -14,6 +14,7 @@ namespace uv {
 	}
 #define UV_DIAG_CHECK(e) do{ if (e<0) ::uv::error(e,__FILE__,__LINE__); } while(false)
 	void push_error(lua::state& s,int r);
+	lua::multiret return_status_error(lua::state& s,int r);
 	void print_error(int r);
 	std::string get_error(int r);
     std::string get_cwd();
