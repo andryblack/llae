@@ -256,6 +256,17 @@ function m:move_files( files )
 	end
 end
 
+function m:install_script( src_in , dst )
+	local src = path.join(self.location,src_in)
+	self._project:check_script(dst,self)
+	local fdst = self.tosystem and path.join(self.root,'scripts',dst) or 
+			path.join(self.root,'build','scripts',dst)
+	fs.mkdir_r(path.dirname(fdst))
+	log.debug('install',src,'->',fdst)
+	fs.unlink(fdst)
+	assert(fs.copyfile(src,fdst))
+end
+
 function m:install_scripts( dir )
 	local src = path.join(self.location,dir)
 	local files,err = fs.scanfiles_r(src)
