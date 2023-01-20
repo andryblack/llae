@@ -127,15 +127,16 @@ function serial:read(buf_or_len)
 end
 
 function serial:write(data)
+	local total = #data
 	while true do
-		local flags,err = self._poll:poll(uv.poll.WRITABLE)
-		if not flags then
+		local len,err = self._fd:write(data)
+		if not len then
 			return nil,err
 		end
-		--print('****',flags,err)
-		if flags & uv.poll.WRITABLE then
-			return self._fd:write(data)
+		if len == #data then
+			return total
 		end
+		data = data:sub(len+1)
 	end
 end
 

@@ -43,6 +43,11 @@ end
 
 function utils.parse_args( args )
 	local res = {[0]=args[0]}
+	for k,v in pairs(args) do
+		if type(k) == 'string' then
+			res[k]=v
+		end
+	end
 	local idx = 1
 	local oidx = 1
 	while true do
