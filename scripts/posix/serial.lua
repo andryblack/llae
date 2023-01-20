@@ -140,5 +140,13 @@ function serial:write(data)
 	end
 end
 
+function serial:raw_read(len)
+	return self._fd:read(len)
+end
+
+function serial:stop_read()
+	return self._poll:stop()
+end
+
 
 return serial
