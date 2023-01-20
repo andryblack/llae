@@ -421,6 +421,10 @@ namespace uv {
     }
 
     void buffer::lbind(lua::state& l) {
+        lua::bind::function(l,"__len",&buffer_base::get_len);
+        lua::bind::function(l,"__concat",&buffer_base::lconcat);
+        lua::bind::function(l,"__tostring",&buffer_base::ltostring);
+        lua::bind::function(l,"__eq",&buffer_base::leq);
         lua::bind::function(l,"new",&buffer::lnew);
         lua::bind::function(l,"alloc",&buffer::lalloc);
         lua::bind::function(l,"get_allocated",&buffer::allocator_t::get_allocated);
