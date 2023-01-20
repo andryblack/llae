@@ -76,7 +76,7 @@ namespace uv {
 		return start_write(m_buffers.get_buffers().data(),m_buffers.get_buffers().size());
 	}
 
-	write_buffer_req::write_buffer_req(stream_ptr&& s,buffer_ptr&& b) : write_req(std::move(s)),m_buffer(std::move(b)) {
+	write_buffer_req::write_buffer_req(stream_ptr&& s,buffer_base_ptr&& b) : write_req(std::move(s)),m_buffer(std::move(b)) {
 	}
 	write_buffer_req::~write_buffer_req() {
 	}
@@ -379,7 +379,7 @@ namespace uv {
 		return {0};
 	}
 
-	bool stream::write(buffer_ptr&& buf) {
+	bool stream::write(buffer_base_ptr&& buf) {
 		common::intrusive_ptr<write_buffer_req> req{new write_buffer_req(stream_ptr(this),std::move(buf))};
 		int r = req->write();
 		if (r < 0) {

@@ -63,9 +63,9 @@ namespace crypto {
 
 	class hmac::start_async : public hmac::async {
 	private:
-		uv::buffer_ptr m_key;
+		uv::buffer_base_ptr m_key;
 	public:
-		explicit start_async(hmac_ptr&& m,uv::buffer_ptr&& key) : hmac::async(std::move(m)),m_key(std::move(key)) {}
+		explicit start_async(hmac_ptr&& m,uv::buffer_base_ptr&& key) : hmac::async(std::move(m)),m_key(std::move(key)) {}
 		virtual void on_work() {
 			m_status = mbedtls_md_hmac_starts(&m_hmac->m_ctx,
 				reinterpret_cast<const unsigned char*>(m_key->get_base()),m_key->get_len());
@@ -110,7 +110,7 @@ namespace crypto {
 			return {2};
 		}
 		{
-			auto key = uv::buffer::get(l,2);
+			auto key = uv::buffer_base::get(l,2);
 			if (!key) {
 				l.pushnil();
 				l.pushstring("hmac::start need key");

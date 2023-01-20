@@ -63,7 +63,7 @@ namespace ssl {
 	}
 
 	lua::multiret ctx::load_cert(lua::state& l) {
-		uv::buffer_ptr data = uv::buffer::get(l,2,true);
+		auto data = uv::buffer::get(l,2,true);
 		if (!data) {
 			l.pushnil();
 			l.pushstring("need buffer with cert");

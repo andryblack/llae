@@ -311,6 +311,7 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::object<uv::tcp_server>::register_metatable(l,&uv::tcp_server::lbind);
 	lua::bind::object<uv::stream>::register_metatable(l,&uv::stream::lbind);
 	lua::bind::object<uv::tcp_connection>::register_metatable(l,&uv::tcp_connection::lbind);
+	lua::bind::object<uv::buffer_base>::register_metatable(l,&uv::buffer_base::lbind);
 	lua::bind::object<uv::buffer>::register_metatable(l,&uv::buffer::lbind);
     lua::bind::object<uv::udp>::register_metatable(l,&uv::udp::lbind);
     lua::bind::object<uv::tty>::register_metatable(l,&uv::tty::lbind);

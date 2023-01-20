@@ -165,7 +165,7 @@ namespace crypto {
             int r = mbedtls_mpi_read_binary(&m_mpi,reinterpret_cast<const unsigned char*>(base),len);
             check_error(l,r);
         } else {
-            auto b = lua::stack<uv::buffer_ptr>::get(l,2);
+            auto b = lua::stack<uv::buffer_base_ptr>::get(l,2);
             if (!b) {
                 l.argerror(2,"need data");
             }

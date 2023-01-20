@@ -85,7 +85,7 @@ namespace crypto {
         if (l.isstring(2)) {
             data = reinterpret_cast<const unsigned char*>(l.tolstring(2, size));
         } else {
-            uv::buffer_ptr b = lua::stack<uv::buffer_ptr>::get(l,2);
+            uv::buffer_base_ptr b = lua::stack<uv::buffer_base_ptr>::get(l,2);
             if (!b) {
                 l.argerror(2, "need data");
             } else {
@@ -170,7 +170,7 @@ namespace crypto {
     }
 
     lua::multiret ecp::ecdsa_verify(lua::state& l) {
-        uv::buffer_ptr b = uv::buffer::get(l,2,true);
+        auto b = uv::buffer_base::get(l,2,true);
         if (!b) {
             l.argerror(2, "need hased data");
         }
@@ -219,7 +219,7 @@ namespace crypto {
     }
 
     lua::multiret ecp::set_random_data(lua::state& l) {
-        uv::buffer_ptr b = uv::buffer::get(l,2,true);
+        auto b = uv::buffer::get(l,2,true);
         if (!b) {
             l.argerror(2, "need hased data");
         }
@@ -228,7 +228,7 @@ namespace crypto {
     }
 
     lua::multiret ecp::ecdsa_sign(lua::state& l) {
-        uv::buffer_ptr b = uv::buffer::get(l,2,true);
+        auto b = uv::buffer_base::get(l,2,true);
         if (!b) {
             l.argerror(2, "need hased data");
         }

@@ -60,7 +60,7 @@ namespace posix {
 	}
 
 	lua::multiret fd::lwrite(lua::state& l) {
-		uv::buffer_ptr buffer = lua::stack<uv::buffer_ptr>::get(l,2);
+		auto buffer = lua::stack<uv::buffer_base_ptr>::get(l,2);
 		const void* data = nullptr;
 		size_t len = 0;
 		if (!buffer) {

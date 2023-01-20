@@ -149,14 +149,29 @@ namespace lua {
 		template <class T,typename ... Args>
 		struct helper<multiret,T,state&,Args...> {
 			typedef multiret (T::*func_t)(state&,Args ... args);
+			typedef multiret (T::*cfunc_t)(state&,Args ... args)const;
 			template <size_t... Is>
 			static multiret apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
+				return (obj->*func)(l,stack<Args>::get(l,2+Is)...);
+			}
+			template <size_t... Is>
+			static multiret apply(state&l,const T* obj,cfunc_t func,const std::index_sequence<Is...>) {
 				return (obj->*func)(l,stack<Args>::get(l,2+Is)...);
 			}
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
 				auto obj = stack<T*>::get(l,1);
+				if (!obj) {
+					l.argerror(1,T::get_class_info()->name);
+				}
+				auto r = apply(l,obj,*f,std::index_sequence_for<Args...>());
+				return r.val;
+			}
+			static int cfunction(lua_State* L) {
+				auto f = static_cast<cfunc_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				auto obj = stack<const T*>::get(l,1);
 				if (!obj) {
 					l.argerror(1,T::get_class_info()->name);
 				}

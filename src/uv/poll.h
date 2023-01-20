@@ -43,6 +43,7 @@ namespace uv {
 		int start_poll(int events,const poll_consumer_ptr& poll);
 		int stop_poll();
 		lua::multiret lpoll(lua::state& l, int events);
+		lua::multiret lstop(lua::state& l);
 	};
 	typedef common::intrusive_ptr<poll> poll_ptr;
 

@@ -671,7 +671,7 @@ namespace archive {
         class write_buffer_req : public uv::write_buffer_req {
             compressionstream_to_stream_ptr m_self;
         public:
-            write_buffer_req(compressionstream_to_stream_ptr&& self,uv::buffer_ptr&& b) :
+            write_buffer_req(compressionstream_to_stream_ptr&& self,uv::buffer_base_ptr&& b) :
                 uv::write_buffer_req(uv::stream_ptr(self->m_stream),std::move(b)),
                 m_self(std::move(self)) {
 

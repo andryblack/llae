@@ -104,6 +104,23 @@ namespace uv {
 		return {0};
 	}
 
+	lua::multiret poll::lstop(lua::state& l) {
+		if (m_consumer) {
+			if (m_consumer) {
+	            m_consumer->on_poll_closed(this);
+	            m_consumer.reset();
+	        }
+		}
+		auto res = stop_poll();
+		if (res < 0) {
+			l.pushnil();
+	        uv::push_error(l,res);
+	        return {2};
+	    }
+	    l.pushboolean(true);
+		return {1};
+	}
+
 	int poll::start_poll(int events, const poll_consumer_ptr& consumer) {
 		if (m_consumer) {
             return -1;
@@ -171,6 +188,7 @@ namespace uv {
 		
 	void poll::lbind(lua::state& l) {
 		lua::bind::function(l,"poll",&poll::lpoll);
+		lua::bind::function(l,"stop",&poll::lstop);
 		lua::bind::function(l,"new",&poll::lnew);
 
 		l.pushinteger(UV_READABLE);

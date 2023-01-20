@@ -13,13 +13,44 @@
 
 namespace uv {
     
+    class buffer_base;
+    typedef common::intrusive_ptr<buffer_base> buffer_base_ptr;
     class buffer;
     typedef common::intrusive_ptr<buffer> buffer_ptr;
-    class buffer : public meta::object {
+
+    class buffer_base : public meta::object {
         META_OBJECT
-        LLAE_NAMED_ALLOC(buffer)
+        LLAE_NAMED_ALLOC(buffer_base)
+    protected:
+        uv_buf_t    m_buf;
+        buffer_base() {}
+        explicit buffer_base(const uv_buf_t& b) : m_buf(b) {}
+    public:
+        const uv_buf_t* get() const { return &m_buf;}
+        size_t get_len() const { return m_buf.len; }
+        lua::multiret sub(lua::state& l) const;
+        buffer_ptr reverse() const;
+        const void* get_base() const { return m_buf.base; }
+        lua::multiret lfind(lua::state& l) const;
+        lua::multiret lbyte(lua::state& l) const;
+        lua::multiret ltostring(lua::state& l) const;
+        lua::multiret leq(lua::state& l) const;
+        
+        static void lbind(lua::state& l);
+        static buffer_base_ptr get(lua::state& l,int idx,bool check=false);
+        static lua::multiret lconcat(lua::state& l);
+
+        static lua::multiret hex_decode(lua::state& l);
+        static lua::multiret hex_encode(lua::state& l);
+        static lua::multiret base64_decode(lua::state& l);
+        static lua::multiret base64_encode(lua::state& l);
+    };
+
+    
+    class buffer : public buffer_base {
+        META_OBJECT
+        LLAE_NAMED_ALLOC(buffer_base)
     private:
-        uv_buf_t m_buf;
         const size_t m_capacity;
     protected:
         void destroy() override;
@@ -45,29 +76,21 @@ namespace uv {
             Extend* b = new (mem) Extend(tag,args...);
             return common::intrusive_ptr<Extend>(b);
         }
-        size_t get_len() const { return m_buf.len; }
+        
         size_t get_capacity() const { return m_capacity; }
         void* get_base() { return m_buf.base; }
         void* get_end() { return m_buf.base + m_buf.len;}
         void set_len(size_t l){m_buf.len=l;}
-        lua::multiret sub(lua::state& l);
-        buffer_ptr reverse();
         void self_reverse();
-        const void* get_base() const { return m_buf.base; }
+        
         static buffer* get(uv_buf_t* b);
         static buffer* get(char* base);
         uv_buf_t* get() { return &m_buf;}
-        static lua::multiret hex_decode(lua::state& l);
-        static lua::multiret hex_encode(lua::state& l);
-        static lua::multiret base64_decode(lua::state& l);
-        static lua::multiret base64_encode(lua::state& l);
-        lua::multiret lfind(lua::state& l);
-        lua::multiret lbyte(lua::state& l);
-        lua::multiret ltostring(lua::state& l);
-        lua::multiret leq(lua::state& l);
+       
+        
         void* find(const char* str);
         buffer_ptr realloc(size_t len);
-        static lua::multiret lconcat(lua::state& l);
+       
         static lua::multiret lnew(lua::state& l);
         static lua::multiret lalloc(lua::state& l);
         static void lbind(lua::state& l);
@@ -78,7 +101,7 @@ namespace uv {
     private:
         std::vector<uv_buf_t> m_bufs;
         std::vector<lua::ref> m_refs;
-        std::vector<buffer_ptr> m_ext;
+        std::vector<buffer_base_ptr> m_ext;
         bool put_one(lua::state& s);
     public:
         bool put(lua::state& s);

@@ -45,11 +45,11 @@ namespace uv {
 
 	class write_buffer_req : public write_req {
 	private:
-		uv::buffer_ptr m_buffer;
+		uv::buffer_base_ptr m_buffer;
 	protected:
 		virtual void on_write(int status) override;
 	public:
-		explicit write_buffer_req(stream_ptr&& stream,uv::buffer_ptr&& s);
+		explicit write_buffer_req(stream_ptr&& stream,uv::buffer_base_ptr&& s);
 		~write_buffer_req();
 		int write();
 	};
@@ -106,7 +106,7 @@ namespace uv {
 	public:
 		virtual uv_stream_t* get_stream() = 0;
 		static void lbind(lua::state& l);
-		bool write(buffer_ptr&& buf);
+		bool write(buffer_base_ptr&& buf);
 		lua::multiret read(lua::state& l);
 		lua::multiret write(lua::state& l);
 		lua::multiret shutdown(lua::state& l);

@@ -25,10 +25,10 @@ namespace crypto {
 	class crc32_async : public uv::work {
 	protected:
 		uint32_t m_value;
-		uv::buffer_ptr m_data;
+		uv::buffer_base_ptr m_data;
 		lua::ref m_cont;
 	public:
-		explicit crc32_async(uint32_t start,uv::buffer_ptr&& data,lua::ref&& cont) : m_value(start),m_data(std::move(data)),m_cont(std::move(cont)) {}
+		explicit crc32_async(uint32_t start,uv::buffer_base_ptr&& data,lua::ref&& cont) : m_value(start),m_data(std::move(data)),m_cont(std::move(cont)) {}
 		virtual void on_work() {
 			m_value = crc32(m_value,static_cast<const Bytef *>(m_data->get_base()),m_data->get_len());
 		}
@@ -54,7 +54,7 @@ namespace crypto {
 		}
 		{
 			uint32_t start = l.checkinteger(1);
-			auto data = uv::buffer::get(l,2);
+			auto data = uv::buffer_base::get(l,2);
 
 			l.pushthread();
 			lua::ref cont;
