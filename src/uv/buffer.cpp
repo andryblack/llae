@@ -309,6 +309,7 @@ namespace uv {
         lua::bind::function(l,"__concat",&buffer_base::lconcat);
         lua::bind::function(l,"__tostring",&buffer_base::ltostring);
         lua::bind::function(l,"__eq",&buffer_base::leq);
+        lua::bind::function(l,"get_len",&buffer_base::get_len);
         lua::bind::function(l,"sub",&buffer_base::sub);
         lua::bind::function(l,"find",&buffer_base::lfind);
         lua::bind::function(l,"byte",&buffer_base::lbyte);
