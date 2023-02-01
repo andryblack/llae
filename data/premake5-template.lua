@@ -44,10 +44,11 @@ solution '<%= project:name() %>'
 	<%= template.compile(mod.solution,{env=...})(mod) %>
 <% end %>
 <% end %>
-<% local function make_path(mod,...)
-		local t = {
+<% local function make_path(mod,first,...)
+		local t = path.isabsolute(first) and {first} or {
 			"modules",
-			mod.name
+			mod.name,
+			first
 		}
 		for _,v in ipairs(table.pack(...)) do
 			table.insert(t, v )
@@ -113,7 +114,7 @@ solution '<%= project:name() %>'
 
 		includedirs {
 			<% for _,mod in project:foreach_module() do if mod.includedir then %>
-				'modules/<%=mod.name%>/<%= mod.includedir %>'<% end end %>
+				'<%= project.get_path(path.join('modules',mod.name),mod.includedir) %>'<% end end %>
 		}
 		
 		<% for _,mod in project:foreach_module() do if mod.project_main then %>
@@ -133,9 +134,10 @@ solution '<%= project:name() %>'
 <% if project:get_premake() and project:get_premake().project then %>
 	-- project premake project
 	<%= template.compile(project:get_premake().project,{env=...}){
-		format_file = function (...)
-			local t = {
-				'..'
+		format_file = function (first,...)
+			local t = path.isabsolute(first) and {first} or {
+				'..',
+				first
 			}
 			for _,v in ipairs(table.pack(...)) do
 				table.insert(t, v )

@@ -1,7 +1,16 @@
 name = 'llae'
 version = 'develop'
 
-dir = project:get_cmdargs().inplace and '../../..' or 'llae-src'
+dir = 'llae-src'
+
+local inplace = project:get_cmdargs().inplace
+if inplace and tostring(inplace) == 'true' then
+ 	dir = '../../..'
+ 	inplace_dir = '..'
+elseif inplace then
+	dir = inplace
+	inplace_dir = inplace
+end 
 
 function install(tosystem)
 	if not project:get_cmdargs().inplace then
@@ -110,17 +119,17 @@ build_lib = {
 	components = {
 		'archive','common','crypto','llae','meta','parsers','posix','ssl','uv','lua','net'
 	},
-	project = project:get_cmdargs().inplace  and [[
+	project = inplace and [[
 		files {
 			<% for _,f in ipairs(lib.components) do %>
-			'<%= path.join('..','src',f,'**.h') %>',
-			'<%= path.join('..','src',f,'**.cpp') %>',<% end %>
+			'<%= path.join(module.inplace_dir,'src',f,'**.h') %>',
+			'<%= path.join(module.inplace_dir,'src',f,'**.cpp') %>',<% end %>
 		}
 		sysincludedirs {
 			'include',
 		}
 		includedirs{
-			'<%= path.join('..','src') %>',
+			'<%= path.join(module.inplace_dir,'src') %>',
 		}
 	]] or [[
 		files {
@@ -171,7 +180,7 @@ generate_src = {{
 		end
 	end
 	if not installed_scripts._main then
-		local content = template.render_file(path.join(location,dir,'data','main-template.lua'),{
+		local content = template.render_file(path.join(project.get_path(location,dir),'data','main-template.lua'),{
 			project = project
 			})
 		log.debug('embed','_main',content)
@@ -184,14 +193,14 @@ generate_src = {{
 		log.debug('embed','llae.utils')
 		table.insert(scripts,{
 			name = 'llae.utils',
-			content = fs.load_file(path.join(location,dir,'scripts','llae/utils.lua'))
+			content = fs.load_file(path.join(project.get_path(location,dir),'scripts','llae/utils.lua'))
 		})
 	end
 	if not installed_scripts['llae.path'] then
 		log.debug('embed','llae.path')
 		table.insert(scripts,{
 			name = 'llae.path',
-			content = fs.load_file(path.join(location,dir,'scripts','llae/path.lua'))
+			content = fs.load_file(path.join(project.get_path(location,dir),'scripts','llae/path.lua'))
 		})
 	end
 

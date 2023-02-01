@@ -9,6 +9,15 @@ local tool = require 'tool'
 
 local Project = class(nil,'Project')
 
+
+function Project.get_path(base,part)
+	--print('get_path',base,part)
+	if path.isabsolute(part) then
+		return part
+	end
+	return path.join(base,part)
+end
+
 Project.__llae_root = path.join(fs.exepath(),'..')
 Project.env = {}
 
@@ -271,7 +280,7 @@ function Project:write_generated( )
 			m.location = path.join(m.root,'build','modules', m.name)
 			local template_f
 			if conf.template then
-				local template_source_filename = path.join(m.location,conf.template)
+				local template_source_filename = Project.get_path(m.location,conf.template)
 				template_f = template.load(template_source_filename)
 			else
 				template_f = template.compile(conf.template_content)
