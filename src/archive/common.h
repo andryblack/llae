@@ -99,8 +99,8 @@ namespace archive {
 		public:
 			compress_buffers(compressionstream_ptr&& stream) : compress_work(std::move(stream)) {
 			}
-			void put(lua::state& l) {
-				m_buffers.put(l);
+			bool put(lua::state& l) {
+				return m_buffers.put(l);
 			}
 		};
 
@@ -417,7 +417,10 @@ namespace archive {
 	            
 	            common::intrusive_ptr<compress_buffers> work(new compress_buffers(compressionstream_ptr(this)));
 	            l.pushvalue(2);
-	            work->put(l);
+                if (!work->put(l)) {
+                    l.argerror(2,"need data");
+                    return {0};
+                }
 	            int r = work->queue_work(llae::app::get(l).loop());
 	            if (r < 0) {
 					l.pushnil();
