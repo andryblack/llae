@@ -2,6 +2,8 @@
 #define __LLAE_UV_WORK_H_INCLUDED__
 
 #include "req.h"
+#include "lua/state.h"
+#include "lua/ref.h"
 
 namespace uv {
 
@@ -20,6 +22,19 @@ namespace uv {
 		~work();
 	public:
 		int queue_work(loop& loop);
+	};
+
+	class lua_cont_work : public work {
+	private:
+		lua::ref m_cont;
+		void release();
+		virtual void on_after_work(int satus) override;
+	protected:
+		virtual int resume_args(lua::state& l,int status) = 0;
+	public:
+		explicit lua_cont_work(lua::ref&& cont);
+		void reset(lua::state& l);
+		int queue_work(lua::state& l);
 	};
 
 }

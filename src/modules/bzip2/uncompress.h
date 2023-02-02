@@ -17,7 +17,6 @@ namespace archive {
         bool init_decompress(lua::state& l,int argbase);
         
 
-        static bool decompress(const void* src,size_t src_size,void* dst,size_t& dst_size);
         static void lbind(lua::state& l);
     };
     using bzlibuncompress_ptr = common::intrusive_ptr<bzlibuncompress>;
