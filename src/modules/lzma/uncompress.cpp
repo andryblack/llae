@@ -34,21 +34,28 @@ namespace archive {
 	    	m_z.next_out = static_cast<uint8_t*>(m_dst_data->get_base());
 	    	m_z.avail_out = m_dst_data->get_capacity();
 	    	size_t write_size = m_dst_data->get_capacity();
+            auto act = LZMA_RUN;
 	    	while(true) {
-	    		m_result = ::lzma_code(&m_z,LZMA_FINISH);
-	    		m_dst_data->set_len(m_dst_data->get_len()+write_size-m_z.avail_out);
+                if (m_z.avail_out == 0) {
+                    m_dst_data = m_dst_data->realloc(m_dst_data->get_capacity() * 2);
+                    write_size = m_dst_data->get_capacity() - m_dst_data->get_len();
+                    m_z.next_out = static_cast<uint8_t*>(m_dst_data->get_base())+m_dst_data->get_len();
+                    m_z.avail_out = write_size;
+                }
+	    		m_result = ::lzma_code(&m_z,LZMA_RUN);
+	    		m_dst_data->set_len(m_z.total_out);
 	    		if (m_result == LZMA_OK  || m_result == LZMA_STREAM_END) {
-	    			return;
-	    		}
-	    		if (m_result == LZMA_DATA_ERROR) {
-	    			if (m_z.avail_out == 0) {
-	    				auto crnt_pos = m_dst_data->get_len();
-	    				m_dst_data = m_dst_data->realloc(m_dst_data->get_capacity() * 2);
-	    				write_size = m_dst_data->get_capacity() - m_dst_data->get_len();
-	    				m_z.next_out = static_cast<uint8_t*>(m_dst_data->get_base())+m_dst_data->get_len();
-	    				m_z.avail_out = write_size;
-	    			}
-	    		}
+                    if (act == LZMA_FINISH) {
+                        m_result = LZMA_OK;
+                        return;
+                    }
+	    		} else {
+                    // error
+                    break;
+                }
+                if (m_z.avail_in == 0) {
+                    act = LZMA_FINISH;
+                }
 	    	}
 	    }
 	    virtual int resume_args(lua::state& l,int status) override {
