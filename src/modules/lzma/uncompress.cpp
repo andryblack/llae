@@ -15,20 +15,27 @@ META_OBJECT_INFO(archive::lzmauncompress_to_stream,archive::lzmauncompress)
 namespace archive {
 
 	class decompress_work : public uv::lua_cont_work {
-	private:
+	protected:
 	    uv::buffer_base_ptr m_src_data;
 	    uv::buffer_ptr m_dst_data;
 	    int m_result = 0;
 	    lzma_stream m_z;
 	protected:
+        virtual bool init_decoder() {
+            m_result = lzma_auto_decoder(&m_z,UINT64_MAX,0);
+            m_dst_data->set_len(0);
+            if (m_result !=0) {
+                return false;
+            }
+            return true;
+        }
 	    virtual void on_work() override {
 
+            if (!init_decoder()) {
+                return;
+            }
 	    	
-	    	m_result = lzma_auto_decoder(&m_z,UINT64_MAX,0);
-	    	m_dst_data->set_len(0);
-	    	if (m_result !=0) {
-	    		return;
-	    	}
+	    	
 	    	m_z.next_in = static_cast<const uint8_t*>(m_src_data->get_base());
 	    	m_z.avail_in = m_src_data->get_len();
 	    	m_z.next_out = static_cast<uint8_t*>(m_dst_data->get_base());
@@ -61,13 +68,13 @@ namespace archive {
 	    virtual int resume_args(lua::state& l,int status) override {
 	        int args;
 	        if (status < 0) {
+	        	printf("status failed %d\n", status);
 	            l.pushnil();
 	            uv::push_error(l,status);
 	            args = 2;
 	        } else if (m_result != LZMA_OK) {
 	            l.pushnil();
 	            impl::LZMA::pusherror(l,m_z,m_result);
-	            l.pushstring("decompress failed");
 	            args = 2;
 	        } else {
 	            lua::push(l,std::move(m_dst_data));
@@ -81,6 +88,38 @@ namespace archive {
 	        m_z = LZMA_STREAM_INIT;
 	    }
 	};
+
+    class decompress_params_work : public decompress_work {
+        uv::buffer_base_ptr m_params_data;
+        lzma_filter m_filters[LZMA_FILTERS_MAX + 1];
+    public:
+        explicit decompress_params_work(lua::ref&& cont,
+                                        uv::buffer_base_ptr&& params,
+                                        uv::buffer_base_ptr&& src,
+                                        size_t dst_buffer_size) :
+            decompress_work(std::move(cont),std::move(src),dst_buffer_size),
+            m_params_data(std::move(params)) {}
+        const char* load_config(const char* str) {
+            int pos;
+            const char *msg = lzma_str_to_filters(str, &pos, m_filters, LZMA_STR_ALL_FILTERS, NULL);
+            return msg;
+        }
+        virtual bool init_decoder() {
+            if (m_params_data) {
+                m_result = lzma_properties_decode(m_filters,NULL,
+                                                  static_cast<const uint8_t*>(m_params_data->get_base()),m_params_data->get_len());
+                if (m_result != 0) {
+                    return false;
+                }
+            }
+            m_result = lzma_raw_decoder(&m_z,m_filters);
+            m_dst_data->set_len(0);
+            if (m_result !=0) {
+                return false;
+            }
+            return true;
+        }
+    };
 
 
     lzmauncompress::lzmauncompress() {
@@ -140,6 +179,45 @@ namespace archive {
 	    
 	    l.yield(0);
 	    return {0};
+    }
+
+    lua::multiret lzmauncompress::decompress_params(lua::state& l) {
+        const char* config = l.checkstring(1);
+        auto buf = uv::buffer_base::get(l,2,true);
+        if (!buf) {
+            l.argerror(1,"need data");
+        }
+        auto dst_size = l.checkinteger(3);
+        auto params_buf = uv::buffer_base::get(l,4,false);
+        if (!l.isyieldable()) {
+            l.pushnil();
+            l.pushstring("decompress is async");
+            return {2};
+        }
+        
+        {
+            l.pushthread();
+            lua::ref cont;
+            cont.set(l);
+            common::intrusive_ptr<decompress_params_work> work(new decompress_params_work(std::move(cont),std::move(params_buf),std::move(buf),dst_size));
+            auto msg = work->load_config(config);
+            if (msg) {
+                work->reset(l);
+                l.pushnil();
+                l.pushstring(msg);
+                return {2};
+            }
+            int r = work->queue_work(l);
+            if (r < 0) {
+                work->reset(l);
+                l.pushnil();
+                uv::push_error(l,r);
+                return {2};
+            }
+        }
+        
+        l.yield(0);
+        return {0};
     }
 
 

@@ -47,6 +47,7 @@ namespace archive{
         bool init_decompress(lua::state& l,int argbase);
         
         static lua::multiret decompress(lua::state& l);
+        static lua::multiret decompress_params(lua::state& l);
         static void lbind(lua::state& l);
     };
     using lzmauncompress_ptr = common::intrusive_ptr<lzmauncompress>;
