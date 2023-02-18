@@ -39,8 +39,6 @@ build_lib = {
 		}
 		defines{
 			'LZ4LIB_VISIBILITY=',
-			'HAVE_DECODER_LZMA1=1',
-			'HAVE_DECODER_LZMA2=1',
 		}
 		sysincludedirs {
 			'include',

@@ -113,6 +113,8 @@ build_lib = {
 			'HAVE_INTTYPES_H=1',
 			'HAVE_STDBOOL_H=1',
 			'LZMA_API_STATIC=1',
+			'HAVE_DECODER_LZMA1=1',
+			'HAVE_DECODER_LZMA2=1',
 		}
 		sysincludedirs {
 			'include',
