@@ -24,11 +24,17 @@ function parser:load( client )
 		end
 	end
 	local _length = tonumber(self:get_header('Content-Length') or 0)
-	local req = self.request.new(self._method,self._protocol,self._path,self._headers,self._ver,_length)
-	if self._data and self._data ~= '' then
-		req._body = self._data
-		self._data = ''
-	end
+	local req = self.request.new{
+		method = self._method,
+		protocol = self._protocol,
+		path = self._path,
+		client = client,
+		headers = self._headers,
+		version = self._ver,
+		length = _length,
+		data = self._data
+	}
+	self._data = ''
 	--print('call handler')
 	local resp = self._cb(req)
 	if resp._closed then

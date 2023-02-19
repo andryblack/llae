@@ -112,5 +112,10 @@ function web.formparser( )
 	return formparser.new()
 end
 
+function web.multipart( )
+	local multipart = require 'web.multipart'
+	return multipart.new()
+end
+
 
 return web

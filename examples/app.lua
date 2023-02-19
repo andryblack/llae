@@ -3,13 +3,14 @@ package.path = package.path .. ';scripts/?.lua'
 local web = require 'web.application'
 local fs = require 'llae.fs'
 local path = require 'llae.path'
+local log = require 'llae.log'
 local app = web.new()
 
 app:use(web.static('./examples',{}))
 app:use(web.views('./examples',{
 	env = { title = 'Example' }
 }))
-
+app:use(web.multipart())
 app:get('/',function(req,res)
 	return res:render('app',{
 		content = [[
@@ -17,6 +18,14 @@ app:get('/',function(req,res)
 <a href="test1/test2">test2</a>
 <a href="test1/test3">test3</a>
 <a href="files">files</a>
+<form action="/upload" enctype="multipart/form-data" method="post">
+	<p><input type="text" name="text1" value="text default">
+	  <p><input type="text" name="text2" value="a&#x03C9;b">
+	  <p><input type="file" name="file1">
+	  <p><input type="file" name="file2">
+	  <p><input type="file" name="file3">
+	<p><button type="submit">Submit</button>
+</form>
 ]]
 	})
 end)
@@ -76,6 +85,16 @@ app:get('/files/*file',function(req,res)
 ]]..req.params.file..[[<p>
 		]]
 	})
+end)
+
+app:post('/upload',function(req,res,next)
+	log.info('post upload')
+	if req.multipart then
+		for _,v in ipairs(req.multipart) do
+			log.info('data:',v.name,v.filename,#v.data)
+		end
+	end
+	res:finish(200)
 end)
 
 app:listen{port=1337}
