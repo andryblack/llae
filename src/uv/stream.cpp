@@ -217,7 +217,13 @@ namespace uv {
                              ssize_t nread,
                              const buffer_ptr&& buffer) override final {
             auto& l = llae::app::get(s->get_stream()->loop).lua();
+            if (!l.native()) {
+                s->stop_read();
+                m_read_cont.release();
+                return false;
+            }
             if (m_read_cont.valid()) {
+                l.checkstack(2);
                 m_read_cont.push(l);
                 auto toth = l.tothread(-1);
                 l.pop(1);// thread

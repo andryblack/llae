@@ -298,6 +298,10 @@ namespace ssl {
 	void connection::finish_status(const char* state) {
         //std::cout << "finish_status " << m_uv_error << " / " << m_ssl_error << std::endl;
 		auto& l = llae::app::get(m_stream->get_stream()->loop).lua();
+        if (!l.native()) {
+            m_cont.release();
+            return;
+        }
         if (m_cont.valid()) {
 			m_cont.push(l);
 			auto toth = l.tothread(-1);

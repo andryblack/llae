@@ -87,7 +87,7 @@ function multipart.build(values)
 			end
 			hdrs:set_header('Content-Disposition',table.concat(disp,'; '))
 		end
-		for n,v in headers:foreach_header() do
+		for n,v in hdrs:foreach_header() do
 			table.insert(res,n..': ' .. v)
 		end
 		table.insert(res,'')
