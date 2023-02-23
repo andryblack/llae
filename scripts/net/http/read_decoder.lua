@@ -4,8 +4,8 @@ local log = require 'llae.log'
 local decoder = class(nil,'net.http.read_decoder')
 
 
-function decoder:_init( resp , connection , data )
-	self._length = tonumber(resp:get_header('Content-Length')) 
+function decoder:_init( resp , connection , data , default_length )
+	self._length = tonumber(resp:get_header('Content-Length') or default_length) 
 	--log.debug('decoder:',self._length)
 	self._connection = connection
 	self._data = data
@@ -34,6 +34,7 @@ function decoder:read(  )
 		end
 	end
 
+	--log.debug('connection start read')
 	local ch,e = self._connection:read()
 	if ch then
 		--log.debug('connection readed',#ch)
@@ -43,52 +44,5 @@ function decoder:read(  )
 	end
 	return ch,e
 end
--- 		log.debug('connection readed ',#ch)
--- 		if self._uncompress then
--- 			self:_write_to_uncompress(ch)
--- 			ch,e = self._uncompress:read(false)
--- 			if ch then
--- 				log.debug('uncompress read:',#ch,e)
--- 			else
--- 				log.debug('uncompress read end:',e)
--- 				self._uncompress = nil
--- 			end
--- 		else
--- 			if self._length then
--- 				self._length = self._length - #ch
--- 			end
--- 		end
--- 	elseif self._uncompress then
--- 		self._uncompress:finish()
--- 		ch,e = self._uncompress:read()
--- 		if ch then
--- 			log.debug('uncompress read:',#ch,e)
--- 		else
--- 			log.debug('uncompress read end:',e)
--- 			self._uncompress = nil
--- 		end
--- 	end
--- end
-
--- function decoder:write( data )
--- 	if data and data ~= '' then
--- 		if self._length then
--- 			self._length = self._length - #data
--- 			if self._length <= 0 then
--- 				local ch = data:sub(1,#data+self._length)
--- 				log.debug('uncompress finish',#data,#ch,self._length)
--- 				self._uncompress:finish(ch)
--- 				if self._length < 0 then
--- 					-- @todo to next requrst
--- 					--self._body = string:sub(self._length)
--- 				end
--- 			else
--- 				self._uncompress:write(data)
--- 			end
--- 		else
--- 			self._uncompress:write(data)
--- 		end
--- 	end
--- end
 
 return decoder

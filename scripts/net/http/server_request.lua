@@ -13,7 +13,9 @@ function request:_init( data )
 	self._version = data.version
 	self._client = data.client
 	local encoding = self:get_header('Content-Encoding')
-	self._decoder = (require 'net.http.read_decoder').new(self,self._client,data.data)
+	--log.debug('request:')
+	--self:_dump_headers()
+	self._decoder = (require 'net.http.read_decoder').new(self,self._client,data.data,0)
 	if encoding then
 		local uncompress
 		if encoding == 'gzip' then
@@ -60,41 +62,24 @@ function request:read(  )
 		return nil
 	end
 
+	--log.debug('decoder start read')
 	local ch,e = self._decoder:read()
+	--log.debug('decoder end read')
 	
 	if not ch then
-		log.debug('request end')
+		--log.debug('request end')
 		self._error = e
 		self:on_closed()
 		self._closed = true
 	end
 	return ch
-
-	-- if self._length <= 0 then
-	-- 	return nil
-	-- end
-	-- if self._body then
-	-- 	local b = self._body
-	-- 	self._length = self._length - #b
-	-- 	self._body = nil
-	-- 	return b
-	-- end
-	-- self._body = nil
-	-- local ch,e = self._client:read()
-	-- assert(not e,e)
-	-- if ch then
-	-- 	self._length = self._length - #ch
-	-- else
-	-- 	self:on_closed()
-	-- 	self._closed = true
-	-- end
-	-- return ch
 end
 
 function request:read_body( )
 	if not self._body then
 		local d = {}
 		while not self._closed do
+			--log.debug('read body')
 			local ch = self:read()
 			if not ch then
 				break

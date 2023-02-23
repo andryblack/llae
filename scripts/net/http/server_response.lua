@@ -88,7 +88,7 @@ function response:finish_headers()
 end
 
 function response:_send_response( with_data )
-	log.debug('response:_send_response',with_data)
+	--log.debug('response:_send_response',with_data)
 	self:finish_headers()
 	if self._status and (self._status ~= 200) then
 		log.debug('reset compression for status',self._status)
@@ -112,7 +112,7 @@ function response:_send_response( with_data )
 		local data_size = 0
 		if self._compress then
 			send_data = {}
-			log.debug('compress data',#self._data)
+			--log.debug('compress data',#self._data)
 			self._compress:finish(self._data)
 			while true do
 				local ch,er = self._compress:read_buffer()
@@ -149,17 +149,8 @@ function response:_send_response( with_data )
 		self._protocol .. '/' .. (self._version or self._req._version or '1.0') ..
 			' ' .. (self._code or 200) .. ' ' .. (self._status or 'OK')
 	}
-	for hn,hv in pairs(self._headers) do
-		if type(hv) == 'table' then
-			for _,v in ipairs(hv) do
-				table.insert(r,hn..': ' .. v)
-				log.debug('header',hn,v)
-			end
-		else
-			table.insert(r,hn..': ' .. hv)
-			log.debug('header',hn,hv)
-		end
-	end
+	--self:_dump_headers()
+	self:_write_headers(r)
 
 	local headers_data = table.concat(r,'\r\n') .. '\r\n\r\n'
 	self._headers = nil	
@@ -215,7 +206,7 @@ function response:_finish( )
 	self._client = nil
 end
 function response:finish( data )
-	log.debug('response:finish')
+	--log.debug('response:finish')
 	if data then
 		assert(self._data and self._client,'already finished')
 		table.insert(self._data,data)
