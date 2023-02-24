@@ -315,9 +315,11 @@ function m:preprocess( config )
 	local data = {}
 	local uncomment = config.uncomment or {}
 	local comment = config.comment or {}
+	local commentline = config.commentline or {}
 	local replace = config.replace or {}
 	local replace_line = config.replace_line or {}
 	local insert_before = config.insert_before or {}
+
 	for line in io.lines(src_file) do 
 		--print('process line',line)
 		local d,o = string.match(line,'^//#define%s+([A-Z_]+)(.*)$')
@@ -344,6 +346,9 @@ function m:preprocess( config )
 		local pre = insert_before[line]
 		if pre then
 			table.insert(data,pre)
+		end
+		if commentline[line] then
+			line = '//' .. line
 		end
 		table.insert(data,replace_line[line] or line)
 	end
