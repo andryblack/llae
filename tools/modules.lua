@@ -326,11 +326,19 @@ function m:preprocess( config )
 				line = '#define ' .. d .. o
 			end
 		else
-			d,o = string.match(line,'^#%s*define%s+([A-Z_]+)(.*)$')
-			if d and comment[d] then
-				line = '//#define ' .. d .. o
-			elseif d and replace[d] then
-				line = '#define ' .. d .. ' ' .. replace[d]
+			-- ft like
+			d,o = string.match(line,'^/%*%s*#define%s+([^%s]+)%s+%*/(.*)$')
+			if d then
+				if uncomment[d] then
+					line = '#define ' .. d .. o
+				end
+			else
+				d,o = string.match(line,'^#%s*define%s+([A-Z_]+)(.*)$')
+				if d and comment[d] then
+					line = '//#define ' .. d .. o
+				elseif d and replace[d] then
+					line = '#define ' .. d .. ' ' .. replace[d]
+				end
 			end
 		end
 		local pre = insert_before[line]
