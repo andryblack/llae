@@ -82,6 +82,7 @@ end
 
 project_config = {
 	{'embed_sctipts',type='string',storage='list'},
+	{'embed_sctipt',type='string',storage='list'},
 	{'extern_main',type='boolean'},
 	{'cmodule',type='string',storage='list'},
 	{'lua_path',type='string',storage='list'},
@@ -178,6 +179,17 @@ generate_src = {{
 					})
 			end
 		end
+	end
+	project_scripts = project:get_config('llae','embed_script')
+	for _,f in ipairs(project_scripts or {}) do
+		local name = string.gsub(f:sub(1,-5),'/','.')
+		installed_scripts[name] = true
+		local script_path = path.join(project:get_root(),f)
+		log.debug('embed',script_path,name)
+		table.insert(scripts,{
+			name = name,
+			content = fs.load_file(script_path)
+			})
 	end
 	if not installed_scripts._main then
 		local content = template.render_file(path.join(project.get_path(location,dir),'data','main-template.lua'),{

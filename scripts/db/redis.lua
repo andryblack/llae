@@ -5,6 +5,7 @@ local uv = require 'llae.uv'
 
 local redis = class(nil,'db.redis')
 
+redis.resp = require 'db.redis.resp'
 
 function redis:_init( )
 	self._conn = uv.tcp_connection.new()
@@ -13,6 +14,8 @@ function redis:_init( )
 	self._unsubscribe = {}
 	self._subhandlers = {}
 end
+
+--print('122')
 
 function redis:connect( addr , port )
 	self._data = ''
@@ -24,12 +27,16 @@ function redis:close(  )
 end
 
 local function read( self )
+	local i = 1
 	while true do
-		local line,tail = string.match(self._data,'^([^\r\n]*)\r\n(.*)$')
-		if line then
-			self._data = tail
-			return line
+		local rn = self._data:find('\r\n',i,true)
+		if rn then
+			local line = self._data:sub(1,rn-1)
+			self._data = self._data:sub(rn+2)
+			return tostring(line)
 		end
+
+		i = math.max(1,#self._data-2)
 
 		--print('start read')
 		local ch,e = self._conn:read()
@@ -43,13 +50,15 @@ local function read( self )
 	end
 end
 
+local marker_bulk,marker_simple,marker_array,marker_number,marker_error = string.byte('$+*:-',1,5)
+
 local function read_reply( self )
 	local data,e = read(self)
 	if not data then
 		return nil,e
 	end
-	local prefix = string.sub(data,1,1)
-	if prefix == '$' then
+	local marker = string.byte(data,1)
+	if marker == marker_bulk then
 		local len = tonumber(string.sub(data,2))
 		if len < 0 then
 			return nil
@@ -63,9 +72,9 @@ local function read_reply( self )
 			d = d .. '\r\n' .. ch
 		end
 		return d
-	elseif prefix == '+' then
+	elseif marker == marker_simple then
 		return string.sub(data,2)
-	elseif prefix == '*' then
+	elseif marker == marker_array then
 		local len = tonumber(string.sub(data,2))
 		if len < 0 then
 			return nil
@@ -79,31 +88,21 @@ local function read_reply( self )
 			vals[i] = v
 		end
 		return vals
-	elseif prefix == ':' then
+	elseif marker == marker_number then
 		return tonumber(string.sub(data,2))
-	elseif prefix == '-' then
-		return false,string.sub(data,2)
+	elseif marker == marker_error then
+		return false, string.sub(data,2)
 	else
-		return false ,'unexpected'..prefix
+		return false ,'unexpected'..marker
 	end
 end
 
-local function gen_req( args )
-	local data = {'*' .. tostring(#args) }
-	for i,v in ipairs(args) do
-		local a = tostring(v)
-		table.insert(data,'$' .. tostring(#a))
-		table.insert(data, a )
-	end
-	return table.concat(data,'\r\n')
-end 
 
 function redis:cmd(  ... )
 	self._lock:lock()
-	local args = {...}
-	local req = gen_req(args)
+	local req = redis.resp.gen_req(...)
 	--print('send: ',req)
-	local res,err = self._conn:write{req,'\r\n'}
+	local res,err = self._conn:write(req)
 	if not res then
 		self._lock:unlock()
 		return nil,err
@@ -114,10 +113,9 @@ function redis:cmd(  ... )
 end
 
 function redis:pubsubcmd( ...)
-	local args = {...}
-	local req = gen_req(args)
+	local req = redis.resp.gen_req(...)
 	--print('send: ',req)
-	local res,err = self._conn:write{req,'\r\n'}
+	local res,err = self._conn:write(req)
 	return res,err
 end
 
@@ -215,9 +213,9 @@ function redis:subscribe( ... )
 	end
 	self._lock:lock()
 	table.insert(args,1,'SUBSCRIBE')
-	local req = gen_req(args)
+	local req = redis.resp.gen_req(table.unpack(args))
 	--print('send: ',req)
-	local res,err = self._conn:write{req,'\r\n'}
+	local res,err = self._conn:write(req)
 	if not res then
 		self._lock:unlock()
 		return nil,err

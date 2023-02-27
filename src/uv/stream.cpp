@@ -68,8 +68,8 @@ namespace uv {
         m_cont.reset(l);
     }
 
-	bool write_lua_req::put(lua::state& l) {
-        return m_buffers.put(l);
+	bool write_lua_req::putm(lua::state& l,int base) {
+        return m_buffers.putm(l,base);
 	}
 
 	int write_lua_req::write() {
@@ -360,8 +360,7 @@ namespace uv {
 
 			common::intrusive_ptr<write_lua_req> req{new write_lua_req(stream_ptr(this),std::move(write_cont))};
 		
-			l.pushvalue(2);
-            if (!req->put(l)) {
+		  	if (!req->putm(l,2)) {
                 req->reset(l);
                 l.pushnil();
                 l.pushstring("stream::write invalid data");
@@ -384,6 +383,7 @@ namespace uv {
 		l.yield(0);
 		return {0};
 	}
+
 
 	bool stream::write(buffer_base_ptr&& buf) {
 		common::intrusive_ptr<write_buffer_req> req{new write_buffer_req(stream_ptr(this),std::move(buf))};
@@ -460,7 +460,7 @@ namespace uv {
 
 	void stream::lbind(lua::state& l) {
 		lua::bind::function(l,"read",&stream::read);
-		lua::bind::function(l,"write",&stream::write);
+		lua::bind::function(l,"write",static_cast<lua::multiret(stream::*)(lua::state&)>(&stream::write));
 		lua::bind::function(l,"send",&stream::send);
 		lua::bind::function(l,"shutdown",&stream::shutdown);
 		lua::bind::function(l,"close",&stream::close);

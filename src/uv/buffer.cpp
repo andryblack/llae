@@ -456,8 +456,8 @@ namespace uv {
         auto t = l.get_type(-1);
         if (t == lua::value_type::table) {
             size_t tl = l.rawlen(-1);
-            m_bufs.reserve(tl);
-            m_refs.reserve(tl);
+            m_bufs.reserve(m_bufs.size()+tl);
+            m_refs.reserve(m_refs.size()+tl);
             for (size_t j=0;j<tl;++j) {
                 l.rawgeti(-1,j+1);
                 if (!put_one(l)) {
@@ -469,6 +469,17 @@ namespace uv {
         } else {
             if (!put_one(l)) {
                 l.pop(1);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool write_buffers::putm(lua::state& s,int base) {
+        auto top = s.gettop();
+        for (int i=base;i<=top;++i) {
+            s.pushvalue(i);
+            if (!put(s)) {
                 return false;
             }
         }

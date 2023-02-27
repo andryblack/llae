@@ -63,6 +63,7 @@ function pgsql:read(len)
 			return ch,err
 		end
 		self._data = self._data .. ch
+		self._conn:add_read_buffer(ch)
 	end
 	local r = self._data:sub(1,len)
 	self._data = self._data:sub(len+1)
@@ -164,19 +165,16 @@ end
 function pgsql:send_message(t,smsg)
 	local msg = self:encode(smsg)
 	local data = string.pack('>I1I4',t,#msg + 4) .. msg
-	return self._conn:write(data)
+	return self._conn:write(data,msg)
 end
 
 function pgsql:encode(msg)
-	local r = {}
 	for _,v in ipairs(msg) do
-		if type(v) == 'string' then
-			table.insert(r,v)
-		else
+		if type(v) ~= 'string' then
 			error('unexpected data')
 		end
 	end
-	return table.concat(r,'')
+	return table.concat(msg,'')
 end
 
 function pgsql:send_startup_message()

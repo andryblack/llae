@@ -105,6 +105,7 @@ namespace uv {
         bool put_one(lua::state& s);
     public:
         bool put(lua::state& s);
+        bool putm(lua::state& s,int base);
         void reset(lua::state& l);
         void release();
         const std::vector<uv_buf_t>& get_buffers() const { return m_bufs; }
