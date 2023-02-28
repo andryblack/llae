@@ -164,7 +164,7 @@ end
 
 function pgsql:send_message(t,smsg)
 	local msg = self:encode(smsg)
-	local data = string.pack('>I1I4',t,#msg + 4) .. msg
+	local data = string.pack('>I1I4',t,#msg + 4) 
 	return self._conn:write(data,msg)
 end
 
