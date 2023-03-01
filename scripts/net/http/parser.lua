@@ -4,7 +4,7 @@ local http_parser = class(require 'net.http.headers','http.parser')
 
 
 http_parser.max_method_len = 1024
-http_parser.max_header_len = 2048
+http_parser.max_header_len = 1024*8
 http_parser.max_start_len = 1024
 
 function http_parser:_init(  )
@@ -46,7 +46,7 @@ function http_parser:parse_header( client )
 			end
 		else
 			if #self._data > self.max_header_len then
-				error('failed parse headers')
+				error('failed parse headers ' .. tostring(self._data))
 			end
 			return false
 		end
