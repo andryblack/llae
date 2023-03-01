@@ -58,6 +58,24 @@ namespace uv {
 		uv::push_error(l,r);
 		return 2;
 	}
+	int os::getallenv(lua_State* L) {
+		lua::state l(L);
+		uv_env_item_t* envs = nullptr;
+		int count = 0;
+		auto r = uv_os_environ(&envs,&count);
+		if (r<0) {
+			l.pushnil();
+			uv::push_error(l,r);
+			return 2;
+		}
+		l.createtable();
+		for (int i=0;i<count;++i) {
+			l.pushstring(envs[i].value);
+			l.setfield(-2,envs[i].name);
+		}
+		uv_os_free_environ(envs,count);
+		return 1;
+	}
 	int os::setenv(lua_State* L) {
 		lua::state l(L);
 		auto name = l.checkstring(1);
@@ -168,6 +186,7 @@ namespace uv {
 		lua::bind::function(l,"tmpdir",&uv::os::tmpdir);
 		lua::bind::function(l,"getenv",&uv::os::getenv);
 		lua::bind::function(l,"setenv",&uv::os::setenv);
+		lua::bind::function(l,"getallenv",&uv::os::getallenv);
 		lua::bind::function(l,"unsetenv",&uv::os::unsetenv);
 		lua::bind::function(l,"gethostname",&uv::os::gethostname);
 		lua::bind::function(l,"uname",&uv::os::uname);

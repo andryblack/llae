@@ -239,12 +239,19 @@ function m:exec(config)
 	log.info('at', cwd)
 	fs.unlink(logfilename)
 	local logfile = assert(fs.open_write(logfilename))
+	local env = nil
+	if config.env then
+		env = os.getallenv()
+		for k,v in pairs(config.env) do
+			env[k]=v
+		end
+	end
 	local rpipe = uv.pipe.new(1)
 	local epipe = uv.pipe.new(1)
 	local p = assert(uv.process.spawn{
 		file = exename,
 		args = args,
-		env = config.env,
+		env = env,
 		cwd = cwd,
 		streams = {
 			{uv.process.IGNORE},
