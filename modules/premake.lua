@@ -24,21 +24,14 @@ function bootstrap()
 		-- }
 	}
 
-	shell [[
-
-PLATFORM=`uname -s`
-
-if [ "$PLATFORM" = "Darwin" ]; then
-    xcode-select --install
-    PLATFORM=osx
-fi
-if [ "$PLATFORM" = "Linux" ]; then
-    PLATFORM=linux
-fi
-
-make -C <%= dir %> -f Bootstrap1.mak $PLATFORM
-
-	]]
+	local PLATFORM = exec_res('uname',{'-s'})
+	if PLATFORM == 'Darwin' then
+		exec('xcode-select',{'--install'})
+		PLATFORM = 'osx'
+	elseif PLATFORM == "Linux" then
+		PLATFORM = 'linux'
+	end
+	exec('make',{'-C','<%= dir %>','-f','Bootstap1.mak',PLATFORM},'build_premake5')
 
 	install_bin(dir .. '/bin/release/premake5')
 end

@@ -178,6 +178,116 @@ function m:unpack_zip( file , todir )
 	unzip.unpack_zip(src,dst)
 end
 
+local function do_exec_log(exename,args,logfilename)
+	log.info('cmd:',exename,table.concat( args, ' ' ),'>',logfilename)
+	fs.unlink(logfilename)
+	local logfile = assert(fs.open_write(logfilename))
+	local rpipe = uv.pipe.new(1)
+	local epipe = uv.pipe.new(1)
+	local p = assert(uv.process.spawn{
+		file = exename,
+		args = args or {},
+		streams = {
+			{uv.process.IGNORE},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,epipe}
+		}
+	})
+	redirect_pipe(rpipe,logfile)
+	redirect_pipe(epipe,logfile)
+	
+	local code,sig = p:wait_exit()
+	if code ~= 0 or sig ~= 0 then
+		error(string.format('shell code:%d sig:%d',code,sig))
+	end
+	logfile:close()
+	rpipe:close()
+	epipe:close()
+end
+
+local function find_exe(PATH,bin)
+	local from = 1
+	while true do
+		local e = string.find(PATH,':',from,true)
+		if not e then
+			break
+		end
+		local dir = string.sub(PATH,from,e-1)
+		local exename = path.join(dir,bin)
+		if os.isfile(exename) then
+			return exename
+		end
+		from = e + 1
+	end
+	local dir = string.sub(PATH,from)
+	local exename = path.join(dir,bin)
+	if os.isfile(exename) then
+		return exename
+	end
+end
+
+function m:_get_exename(bin)
+	local exename = path.join(self.root,'bin',bin)
+	if not fs.isfile(exename) then
+		exename = find_exe(os.env('PATH'),bin)
+		if not exename then
+			error('not found exe ' .. tostring(bin))
+		end
+	end
+	return exename
+end
+
+function m:exec(bin,args,name)
+	local exename = self:_get_exename(bin)
+	local logfilename = path.join(self.location, (name or ('exec_'..bin) ) .. '_log.txt')
+	do_exec_log(exename,args,logfilename)
+end
+
+function m:exec_res(bin,args)
+	local exename = self:_get_exename(bin)
+	local rpipe = uv.pipe.new(1)
+	local epipe = uv.pipe.new(1)
+	local p = assert(uv.process.spawn{
+		file = exename,
+		args = args or {},
+		streams = {
+			{uv.process.IGNORE},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,epipe}
+		}
+	})
+	local result = {}
+	local function read_pipe(pipe)
+		utils.run(function()
+			while true do
+				local ch,err = pipe:read()
+				if not ch then
+					if err then
+						error(err)
+					else
+						break
+					end
+				else
+					table.insert(result,tostring(ch))
+				end
+			end
+		end)
+	end
+	read_pipe(rpipe)
+	read_pipe(epipe)
+
+	
+	local code,sig = p:wait_exit()
+	if code ~= 0 or sig ~= 0 then
+		error(string.format('shell code:%d sig:%d',code,sig))
+	end
+	rpipe:close()
+	epipe:close()
+	result = table.concat(result,'')
+	log.info('cmd:',exename,table.concat( args, ' ' ),'>',result)
+	return result
+end
+
 function m:shell( text , name)
 	local script = path.join(self.location,(name or 'temp') .. '.sh')
 	fs.unlink(script)
