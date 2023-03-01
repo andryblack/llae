@@ -13,6 +13,7 @@ local uv = require 'uv'
 local m = {}
 
 local function redirect_pipe(pipe,file)
+	local d = ''
 	utils.run(function()
 		while true do
 			local ch,err = pipe:read()
@@ -23,6 +24,12 @@ local function redirect_pipe(pipe,file)
 					break
 				end
 			else
+				d = d .. 'ch'
+				local el = string.find(d,'\n',1,true)
+				if el then
+					log.debug(string.sub(d,1,el-1))
+					d = d:sub(d+1)
+				end
 				file:write(ch)
 			end
 		end
@@ -202,6 +209,9 @@ end
 
 local function get_exename(root,bin)
 	if path.isabsolute(bin) then
+		if not fs.isfile(bin) then
+			error('not found exe ' .. bin)
+		end
 		return bin
 	end
 	local exename = path.join(root,'bin',bin)
@@ -221,6 +231,8 @@ function m:exec(config)
 	local exename = get_exename(self.root,bin)
 	local logfilename = path.join(self.location, (name or ('exec_'..bin) ) .. '_log.txt')
 	log.info('cmd:',exename,table.concat( args, ' ' ),'>',logfilename)
+	local cwd = config.cwd or path.getabsolute(self.location)
+	log.info('at', cwd)
 	fs.unlink(logfilename)
 	local logfile = assert(fs.open_write(logfilename))
 	local rpipe = uv.pipe.new(1)
@@ -229,7 +241,7 @@ function m:exec(config)
 		file = exename,
 		args = args,
 		env = config.env,
-		cwd = config.cwd,
+		cwd = cwd,
 		streams = {
 			{uv.process.IGNORE},
 			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
@@ -241,7 +253,7 @@ function m:exec(config)
 	local err
 	local code,sig = p:wait_exit()
 	if code ~= 0 or sig ~= 0 then
-		err = string.format('shell code:%d sig:%d',code,sig)
+		err = string.format('process code:%d sig:%d',code,sig)
 	end
 	logfile:close()
 	rpipe:close()
@@ -286,7 +298,7 @@ function m:exec_res(bin,args)
 	
 	local code,sig = p:wait_exit()
 	if code ~= 0 or sig ~= 0 then
-		error(string.format('shell code:%d sig:%d',code,sig))
+		error(string.format('process code:%d sig:%d',code,sig))
 	end
 	rpipe:close()
 	epipe:close()
