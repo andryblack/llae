@@ -37,7 +37,9 @@ function bootstrap()
 	end
 	all_files['llae-project.lua'] = dir .. '/llae-project.lua' 
 	install_files(all_files)
-
+	local env = {
+		LLAE_DL_DIR=project:get_dl_dir()
+	}
 	env.LUA_PATH = get_absolute_location(dir,'tools','?.lua') .. ';' .. get_absolute_location(dir,'scripts','?.lua')
 	cwd = root
 	local bootstrap = get_self_exe()
