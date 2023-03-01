@@ -30,50 +30,6 @@ function install(tosystem)
 end
 
 function bootstrap()
--- 	shell ([[
--- echo "build llae-bootstrap at $PWD/<%= dir %>"
--- cd <%= dir %>
--- export LUA_PATH='?.lua'
--- export LLAE_DL_DIR="<%= project:get_dl_dir() %>"
--- premake5$LLAE_EXE download || exit 1
--- premake5$LLAE_EXE unpack || exit 1
--- premake5$LLAE_EXE gmake2 || exit 1
--- make -C build config=release verbose=1 || exit 1
-	
--- 	]],'bootstrap1')
-	local env = {
-		LUA_PATH='?.lua',
-		LLAE_DL_DIR=project:get_dl_dir()
-	}
-	local cwd = get_absolute_location(dir)
-	assert(exec{
-		bin = 'premake5',
-		args = {'download'},
-		name = 'bootstrap1_download',
-		env = env,
-		cwd = cwd,
-	})
-	assert(exec{
-		bin = 'premake5',
-		args = {'unpack'},
-		name = 'bootstrap1_unpack',
-		env = env,
-		cwd = cwd,
-	})
-	assert(exec{
-		bin = 'premake5',
-		args = {'gmake2'},
-		name = 'bootstrap1_gmake2',
-		env = env,
-		cwd = cwd,
-	})
-	assert(exec{
-		bin = 'make',
-		args = {'-C',get_absolute_location(dir,'build'),'config=release','verbose=1','-j4'},
-		name = 'bootstrap1_make',
-		env = env,
-		cwd = cwd,
-	})
 	
 	local all_files = {}
 	for fn in foreach_file(dir .. '/data') do
@@ -84,7 +40,7 @@ function bootstrap()
 
 	env.LUA_PATH = get_absolute_location(dir,'tools','?.lua') .. ';' .. get_absolute_location(dir,'scripts','?.lua')
 	cwd = root
-	local bootstrap = get_absolute_location(dir,'bin','llae-bootstrap')
+	local bootstrap = get_self_exe()
 	assert(exec{
 		bin = bootstrap,
 		args = {'install'},

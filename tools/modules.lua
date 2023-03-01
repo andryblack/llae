@@ -224,6 +224,10 @@ local function get_exename(root,bin)
 	return exename
 end
 
+function m:get_self_exe()
+	return fs.exepath()
+end
+
 function m:exec(config)
 	local bin = config.bin or error('need bin')
 	local args = config.args or {}
