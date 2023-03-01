@@ -178,32 +178,6 @@ function m:unpack_zip( file , todir )
 	unzip.unpack_zip(src,dst)
 end
 
-local function do_exec_log(exename,args,logfilename)
-	log.info('cmd:',exename,table.concat( args, ' ' ),'>',logfilename)
-	fs.unlink(logfilename)
-	local logfile = assert(fs.open_write(logfilename))
-	local rpipe = uv.pipe.new(1)
-	local epipe = uv.pipe.new(1)
-	local p = assert(uv.process.spawn{
-		file = exename,
-		args = args or {},
-		streams = {
-			{uv.process.IGNORE},
-			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
-			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,epipe}
-		}
-	})
-	redirect_pipe(rpipe,logfile)
-	redirect_pipe(epipe,logfile)
-	
-	local code,sig = p:wait_exit()
-	if code ~= 0 or sig ~= 0 then
-		error(string.format('shell code:%d sig:%d',code,sig))
-	end
-	logfile:close()
-	rpipe:close()
-	epipe:close()
-end
 
 local function find_exe(PATH,bin)
 	local from = 1
@@ -214,22 +188,25 @@ local function find_exe(PATH,bin)
 		end
 		local dir = string.sub(PATH,from,e-1)
 		local exename = path.join(dir,bin)
-		if os.isfile(exename) then
+		if fs.isfile(exename) then
 			return exename
 		end
 		from = e + 1
 	end
 	local dir = string.sub(PATH,from)
 	local exename = path.join(dir,bin)
-	if os.isfile(exename) then
+	if fs.isfile(exename) then
 		return exename
 	end
 end
 
 local function get_exename(root,bin)
+	if path.isabsolute(bin) then
+		return bin
+	end
 	local exename = path.join(root,'bin',bin)
 	if not fs.isfile(exename) then
-		exename = find_exe(os.env('PATH'),bin)
+		exename = find_exe(os.getenv('PATH'),bin)
 		if not exename then
 			error('not found exe ' .. tostring(bin))
 		end
@@ -237,19 +214,49 @@ local function get_exename(root,bin)
 	return exename
 end
 
-function m:exec(bin,args,name)
+function m:exec(config)
+	local bin = config.bin or error('need bin')
+	local args = config.args or {}
+	local name = config.name
 	local exename = get_exename(self.root,bin)
 	local logfilename = path.join(self.location, (name or ('exec_'..bin) ) .. '_log.txt')
-	do_exec_log(exename,args,logfilename)
-end
-
-function m:exec_res(bin,args)
-	local exename = get_exename(self.root,bin)
+	log.info('cmd:',exename,table.concat( args, ' ' ),'>',logfilename)
+	fs.unlink(logfilename)
+	local logfile = assert(fs.open_write(logfilename))
 	local rpipe = uv.pipe.new(1)
 	local epipe = uv.pipe.new(1)
 	local p = assert(uv.process.spawn{
 		file = exename,
-		args = args or {},
+		args = args,
+		env = config.env,
+		cwd = config.cwd,
+		streams = {
+			{uv.process.IGNORE},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
+			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,epipe}
+		}
+	})
+	redirect_pipe(rpipe,logfile)
+	redirect_pipe(epipe,logfile)
+	local err
+	local code,sig = p:wait_exit()
+	if code ~= 0 or sig ~= 0 then
+		err = string.format('shell code:%d sig:%d',code,sig)
+	end
+	logfile:close()
+	rpipe:close()
+	epipe:close()
+	return not err,err
+end
+
+function m:exec_res(bin,args)
+	local exename = get_exename(self.root,bin)
+	local eargs = args or {}
+	local rpipe = uv.pipe.new(1)
+	local epipe = uv.pipe.new(1)
+	local p = assert(uv.process.spawn{
+		file = exename,
+		args = eargs,
 		streams = {
 			{uv.process.IGNORE},
 			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
@@ -284,7 +291,7 @@ function m:exec_res(bin,args)
 	rpipe:close()
 	epipe:close()
 	result = table.concat(result,'')
-	log.info('cmd:',exename,table.concat( args, ' ' ),'>',result)
+	log.info('cmd:',exename,table.concat( eargs, ' ' ),'>',result)
 	return result
 end
 
@@ -325,6 +332,10 @@ function m:shell( text , name)
 	logfile:close()
 	rpipe:close()
 	epipe:close()
+end
+
+function m:get_absolute_location(...)
+	return path.getabsolute(path.join(self.location,...))
 end
 
 function m:install_bin( fn )

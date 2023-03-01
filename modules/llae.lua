@@ -30,18 +30,51 @@ function install(tosystem)
 end
 
 function bootstrap()
-	shell ([[
-echo "build llae-bootstrap at $PWD/<%= dir %>"
-cd <%= dir %>
-export LUA_PATH='?.lua'
-export LLAE_DL_DIR="<%= project:get_dl_dir() %>"
-premake5$LLAE_EXE download || exit 1
-premake5$LLAE_EXE unpack || exit 1
-premake5$LLAE_EXE gmake2 || exit 1
-make -C build config=release verbose=1 || exit 1
+-- 	shell ([[
+-- echo "build llae-bootstrap at $PWD/<%= dir %>"
+-- cd <%= dir %>
+-- export LUA_PATH='?.lua'
+-- export LLAE_DL_DIR="<%= project:get_dl_dir() %>"
+-- premake5$LLAE_EXE download || exit 1
+-- premake5$LLAE_EXE unpack || exit 1
+-- premake5$LLAE_EXE gmake2 || exit 1
+-- make -C build config=release verbose=1 || exit 1
 	
-	]],'bootstrap1')
-
+-- 	]],'bootstrap1')
+	local env = {
+		LUA_PATH='?.lua',
+		LLAE_DL_DIR=project:get_dl_dir()
+	}
+	local cwd = get_absolute_location(dir)
+	assert(exec{
+		bin = 'premake5',
+		args = {'download'},
+		name = 'bootstrap1_download',
+		env = env,
+		cwd = cwd,
+	})
+	assert(exec{
+		bin = 'premake5',
+		args = {'unpack'},
+		name = 'bootstrap1_unpack',
+		env = env,
+		cwd = cwd,
+	})
+	assert(exec{
+		bin = 'premake5',
+		args = {'gmake2'},
+		name = 'bootstrap1_gmake2',
+		env = env,
+		cwd = cwd,
+	})
+	assert(exec{
+		bin = 'make',
+		args = {'-C',get_absolute_location(dir,'build'),'config=release','verbose=1','-j4'},
+		name = 'bootstrap1_make',
+		env = env,
+		cwd = cwd,
+	})
+	
 	local all_files = {}
 	for fn in foreach_file(dir .. '/data') do
 		all_files['data/' .. fn] = dir .. '/data/' .. fn
@@ -49,16 +82,39 @@ make -C build config=release verbose=1 || exit 1
 	all_files['llae-project.lua'] = dir .. '/llae-project.lua' 
 	install_files(all_files)
 
-	shell ([[
-CURDIR=$PWD
-export LUA_PATH="$CURDIR/<%= dir %>/tools/?.lua;$CURDIR/<%= dir %>/scripts/?.lua"
-cd $LLAE_PROJECT_ROOT
-$CURDIR/<%= dir %>/bin/llae-bootstrap install || exit 1
-$CURDIR/<%= dir %>/bin/llae-bootstrap init || exit 1
-export LUA_PATH='?.lua'
-premake5$LLAE_EXE --file=build/premake5.lua gmake2 || exit 1
-make -C build config=release verbose=1 || exit 1
-	]],'bootstrap2')
+	env.LUA_PATH = get_absolute_location(dir,'tools','?.lua') .. ';' .. get_absolute_location(dir,'scripts','?.lua')
+	cwd = root
+	local bootstrap = get_absolute_location(dir,'bin','llae-bootstrap')
+	assert(exec{
+		bin = bootstrap,
+		args = {'install'},
+		name = 'bootstrap2_install',
+		env = env,
+		cwd = cwd,
+	})
+	assert(exec{
+		bin = bootstrap,
+		args = {'init'},
+		name = 'bootstrap2_init',
+		env = env,
+		cwd = cwd,
+	})
+	enc.LUA_PATH='?.lua'
+	assert(exec{
+		bin = 'premake5',
+		args = {'--file=build/premake5.lua','gmake2'},
+		name = 'bootstrap2_premake',
+		env = env,
+		cwd = cwd,
+	})
+	assert(exec{
+		bin = 'make',
+		args = {'-C','build','config=release','verbose=1','-j4'},
+		name = 'bootstrap2_make',
+		env = env,
+		cwd = cwd,
+	})
+
 end
 
 function upgrade()

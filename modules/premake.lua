@@ -25,13 +25,20 @@ function bootstrap()
 	}
 
 	local PLATFORM = exec_res('uname',{'-s'})
-	if PLATFORM == 'Darwin' then
-		exec('xcode-select',{'--install'})
+	if string.match(PLATFORM,'Darwin.*') then
+		exec{
+			bin = 'xcode-select',
+			args = {'--install'}
+		}
 		PLATFORM = 'osx'
-	elseif PLATFORM == "Linux" then
+	elseif string.match(PLATFORM,"Linux.*") then
 		PLATFORM = 'linux'
 	end
-	exec('make',{'-C','<%= dir %>','-f','Bootstap1.mak',PLATFORM},'build_premake5')
+	assert(exec{
+		bin = 'make',
+		args = {'-C',get_absolute_location(dir),'-f','Bootstrap1.mak',PLATFORM},
+		name = 'build_premake5'
+	})
 
 	install_bin(dir .. '/bin/release/premake5')
 end
