@@ -226,8 +226,8 @@ local function find_exe(PATH,bin)
 	end
 end
 
-function m:_get_exename(bin)
-	local exename = path.join(self.root,'bin',bin)
+local function get_exename(root,bin)
+	local exename = path.join(root,'bin',bin)
 	if not fs.isfile(exename) then
 		exename = find_exe(os.env('PATH'),bin)
 		if not exename then
@@ -238,13 +238,13 @@ function m:_get_exename(bin)
 end
 
 function m:exec(bin,args,name)
-	local exename = self:_get_exename(bin)
+	local exename = get_exename(self.root,bin)
 	local logfilename = path.join(self.location, (name or ('exec_'..bin) ) .. '_log.txt')
 	do_exec_log(exename,args,logfilename)
 end
 
 function m:exec_res(bin,args)
-	local exename = self:_get_exename(bin)
+	local exename = get_exename(self.root,bin)
 	local rpipe = uv.pipe.new(1)
 	local epipe = uv.pipe.new(1)
 	local p = assert(uv.process.spawn{
