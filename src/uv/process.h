@@ -6,7 +6,8 @@
 #include "lua/ref.h"
 #include "common/intrusive_ptr.h"
 
-
+#include <string>
+#include <vector>
 
 namespace uv {
 
@@ -22,6 +23,13 @@ namespace uv {
         bool m_completed = false;
         int64_t m_exit_status = 0;
         int m_term_signal = 0;
+        std::string m_cwd;
+        std::vector<std::string> m_env;
+        std::vector<char*> m_env_list;
+        std::vector<std::string> m_args;
+        std::vector<char*> m_args_list;
+        std::vector<uv_stdio_container_s> m_streams;
+        bool load_args(lua::state& l,uv_process_options_t& optrions,lua::multiret res);
 		static void on_exit_cb(uv_process_t*, int64_t exit_status, int term_signal);
 		void on_exit(int64_t exit_status, int term_signal);
 	public:

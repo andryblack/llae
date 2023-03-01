@@ -5,9 +5,6 @@
 #include "lua/bind.h"
 #include "stream.h"
 
-#include <string>
-#include <vector>
-
 META_OBJECT_INFO(uv::process,uv::handle)
 
 namespace uv {
@@ -66,15 +63,12 @@ namespace uv {
 		handle::on_closed();
 	}
 
-	lua::multiret process::spawn(lua::state& l) {
-		l.checktype(1,lua::value_type::table);
-		uv_process_options_t options;
-		process_ptr pr{new process()};
-		options.exit_cb = &process::on_exit_cb;
-		l.getfield(1,"file");
-		options.file = l.checkstring(-1);
-		l.pop(1);
-		
+    bool process::load_args(lua::state& l,uv_process_options_t& options,lua::multiret res) {
+    
+        l.getfield(1,"file");
+        options.file = l.checkstring(-1);
+        l.pop(1);
+        
         options.flags = 0;
         l.getfield(1,"flags");
         if (l.isnumber(-1)) {
@@ -82,77 +76,76 @@ namespace uv {
         }
         l.pop(1);
         
-		std::vector<std::string> args;
-		l.getfield(1,"args");
-		if (l.istable(-1)) {
-			lua_Integer i = 1;
-			while (true) {
-				l.geti(-1,i);
-				if (l.isnumber(-1) || l.isstring(-1)) {
-					args.emplace_back(l.tostring(-1));
-				} else {
-					break;
-				}
-				l.pop(1);
-                ++i;
-			}
-			l.pop(1);
-		} 
-		l.pop(1);
-
-		std::vector<std::string> env;
-		l.getfield(1,"env");
-		if (l.istable(-1)) {
-			l.pushnil();
-			while (l.next(-2)) {
-				std::pair<std::string,std::string> keyval;
-				if (l.isstring(-2)) {
-					keyval.first = l.tostring(-2);
-				} else {
-					l.pushvalue(-2);
-					keyval.first = l.tostring(-1);
-					l.pop(1);
-				}
-				keyval.second = l.tostring(-1);
-				l.pop(1);
-				env.emplace_back(keyval.first+"="+keyval.second);
-			}
-		} 
-		l.pop(1);
-
-		std::string cwd;
-		l.getfield(1,"cwd");
-		if (l.isstring(-1)) {
-			cwd = l.tostring(-1);
-        } else {
-            cwd = get_cwd();
-        }
-		l.pop(1);
         
-        std::vector<uv_stdio_container_s> streams;
+        l.getfield(1,"args");
+        if (l.istable(-1)) {
+            lua_Integer i = 1;
+            while (true) {
+                l.geti(-1,i);
+                if (l.isnumber(-1) || l.isstring(-1)) {
+                    m_args.emplace_back(l.tostring(-1));
+                } else {
+                    break;
+                }
+                l.pop(1);
+                ++i;
+            }
+            l.pop(1);
+        }
+        l.pop(1);
+
+        
+        l.getfield(1,"env");
+        if (l.istable(-1)) {
+            l.pushnil();
+            while (l.next(-2)) {
+                std::pair<std::string,std::string> keyval;
+                if (l.isstring(-2)) {
+                    keyval.first = l.tostring(-2);
+                } else {
+                    l.pushvalue(-2);
+                    keyval.first = l.tostring(-1);
+                    l.pop(1);
+                }
+                keyval.second = l.tostring(-1);
+                l.pop(1);
+                m_env.emplace_back(keyval.first+"="+keyval.second);
+            }
+        }
+        l.pop(1);
+
+        l.getfield(1,"cwd");
+        if (l.isstring(-1)) {
+            m_cwd = l.tostring(-1);
+        } else {
+            m_cwd = get_cwd();
+        }
+        l.pop(1);
+        
+        
         l.getfield(1,"streams");
         if (l.istable(-1)) {
             lua_Integer i = 1;
             while (true) {
                 l.geti(-1,i);
                 if (l.istable(-1)) {
-                    streams.emplace_back();
+                    m_streams.emplace_back();
                     l.geti(-1, 1);
-                    streams.back().flags = static_cast<uv_stdio_flags>(l.tointeger(-1));
-                    streams.back().data.fd = 0;
-                    streams.back().data.stream = nullptr;
+                    m_streams.back().flags = static_cast<uv_stdio_flags>(l.tointeger(-1));
+                    m_streams.back().data.fd = 0;
+                    m_streams.back().data.stream = nullptr;
                     
-                    if (streams.back().flags & UV_INHERIT_FD) {
+                    if (m_streams.back().flags & UV_INHERIT_FD) {
                         l.geti(-2, 2);
-                        streams.back().data.fd = l.tointeger(-1);
+                        m_streams.back().data.fd = l.tointeger(-1);
                         l.pop(1);
-                    } else if (streams.back().flags & (UV_INHERIT_STREAM | UV_CREATE_PIPE)) {
+                    } else if (m_streams.back().flags & (UV_INHERIT_STREAM | UV_CREATE_PIPE)) {
                         l.geti(-2, 2);
                         auto s = lua::stack<uv::stream_ptr>::get(l,-1);
                         if (!s) {
                             l.argerror(1, "invalid stream");
                         }
-                        streams.back().data.stream = s->get_stream();
+                        m_streams.back().data.stream = s->get_stream();
                         l.pop(1);
                     }
                     l.pop(1);
@@ -166,31 +159,45 @@ namespace uv {
         }
         l.pop(1);
 
-		std::vector<char*> args_list;
-		args_list.reserve(args.size()+1);
-		args_list.push_back(const_cast<char*>(options.file));
-		for (auto& s:args) {
-			args_list.push_back(const_cast<char*>(s.c_str()));
-		}
-        args_list.push_back(nullptr);
-		options.args = args_list.data();
+        
+        m_args_list.reserve(m_args.size()+2);
+        m_args_list.push_back(const_cast<char*>(options.file));
+        for (auto& s:m_args) {
+           m_args_list.push_back(const_cast<char*>(s.c_str()));
+        }
+        m_args_list.push_back(nullptr);
+        options.args = m_args_list.data();
 
-		std::vector<char*> env_list;
-		env_list.reserve(env.size());
-		if (!env.empty()) {
-			for (auto& kv:env) {
-				env_list.push_back(const_cast<char*>(kv.c_str()));
-			}
-			options.env = env_list.data();
-		} else {
-			options.env = nullptr;
-		}
-        options.cwd = cwd.c_str();
-		options.stdio_count = streams.size();
-        options.stdio = streams.data();
-		options.uid = 0;
-		options.gid = 0;
+        
+        if (!m_env.empty()) {
+            m_env_list.reserve(m_env.size()+1);
+            for (auto& kv:m_env) {
+                m_env_list.push_back(const_cast<char*>(kv.c_str()));
+            }
+            m_env_list.emplace_back(nullptr);
+            options.env = m_env_list.data();
+        } else {
+            options.env = nullptr;
+        }
+        options.cwd = m_cwd.c_str();
+        options.stdio_count = m_streams.size();
+        options.stdio = m_streams.data();
+        options.uid = 0;
+        options.gid = 0;
 
+        return true;
+    }
+
+	lua::multiret process::spawn(lua::state& l) {
+		l.checktype(1,lua::value_type::table);
+		uv_process_options_t options;
+        options.exit_cb = &process::on_exit_cb;
+		process_ptr pr{new process()};
+        lua::multiret mr;
+        if (!pr->load_args(l, options, mr)) {
+            return mr;
+        }
+		
 		auto r = pr->do_spawn(llae::app::get(l).loop(),&options);
 		if (r < 0) {
 			l.pushnil();
