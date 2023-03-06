@@ -1,7 +1,7 @@
 local tool = require 'tool'
 local class = require  'llae.class'
 local uv = require 'uv'
-local utils = require 'llae.utils'
+local async = require 'llae.async'
 
 
 local run = class(tool)
@@ -15,7 +15,7 @@ function run:exec( args )
 		error('need script argument')
 	end
 
-	utils.run(function()
+	async.run(function()
 		local Project = require 'project'
 		local prj,err = Project.load( )
 		if prj then

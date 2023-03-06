@@ -2,7 +2,7 @@ local class = require 'llae.class'
 local log = require 'llae.log'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
-local utils = require 'llae.utils'
+local async = require 'llae.async'
 local uv = require 'uv'
 
 
@@ -191,7 +191,7 @@ function ftp:getfile( name , to , cb)
 	fs.unlink(to)
 	local dst = assert(fs.open(to,fs.O_WRONLY|fs.O_CREAT))
 	local loaded = 0
-	utils.run(function()
+	async.run(function()
 		while true do
 			local ch,err = con:read()
 			if not ch then

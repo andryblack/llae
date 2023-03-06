@@ -3,9 +3,9 @@ package.path = package.path .. ';scripts/?.lua'
 local uv = require 'uv'
 local log = require 'llae.log'
 
-local utils = require 'llae.utils'
+local async = require 'llae.async'
 
-utils.run(function()
+async.run(function()
 	for i=1,10 do
 		uv.pause(1000)
 		log.info('pause',i)

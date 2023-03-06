@@ -2,6 +2,7 @@ local llae = require 'llae'
 local class = require 'llae.class'
 local url = require 'net.url'
 local uv = require 'llae.uv'
+local async = require 'llae.async'
 local log = require 'llae.log'
 local json = require 'llae.json'
 local crypto = require 'llae.crypto'
@@ -22,7 +23,7 @@ pgsql.default_config = {
 
 function pgsql:_init(conf)
 	self._config = conf or self.default_config
-	self._lock = uv.lock.new()
+	self._lock = async.lock.new()
 	self._conn = uv.tcp_connection.new()
 end
 

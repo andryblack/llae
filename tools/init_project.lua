@@ -1,6 +1,7 @@
 local tool = require 'tool'
 local class = require  'llae.class'
 local utils = require 'llae.utils'
+local async = require 'llae.async'
 local path = require 'llae.path'
 local log = require 'llae.log'
 local fs = require 'llae.fs'
@@ -19,7 +20,7 @@ function cmd:exec( args )
 
 	local proj_name = args[2]
 	if not proj_name then
-		utils.run(function()
+		async.run(function()
 			local Project = require 'project'
 			local prj,err = Project.load( args['project-dir'] , args )
 			if not prj then
@@ -37,7 +38,7 @@ function cmd:exec( args )
 		install_dir = utils.replace_env(install_dir)
 		log.init('start init project at',install_dir)
 
-		utils.run(function()
+		async.run(function()
 			fs.mkdir(install_dir)
 
 			fs.mkdir(path.join(install_dir,'bin'))

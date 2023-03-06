@@ -1,6 +1,7 @@
 local path = require 'llae.path'
 local fs = require 'llae.fs'
 local utils = require 'llae.utils'
+local async = require 'llae.async'
 local os = require 'llae.os'
 local http = require 'net.http'
 local log = require 'llae.log'
@@ -13,8 +14,8 @@ local uv = require 'uv'
 local m = {}
 
 local function redirect_pipe(pipe,file)
-	local d = ''
-	utils.run(function()
+	async.run(function()
+		local d = ''
 		while true do
 			local ch,err = pipe:read()
 			if not ch then
@@ -24,11 +25,11 @@ local function redirect_pipe(pipe,file)
 					break
 				end
 			else
-				d = d .. 'ch'
-				local el = string.find(d,'\n',1,true)
+				d = d .. ch
+				local el = d:find('\n',1,true)
 				if el then
-					log.debug(string.sub(d,1,el-1))
-					d = d:sub(d+1)
+					log.debug(d:sub(1,el-1))
+					d = d:sub(el+1)
 				end
 				file:write(ch)
 			end
@@ -288,7 +289,7 @@ function m:exec_res(bin,args)
 	})
 	local result = {}
 	local function read_pipe(pipe)
-		utils.run(function()
+		async.run(function()
 			while true do
 				local ch,err = pipe:read()
 				if not ch then

@@ -3,7 +3,7 @@ local path = require 'llae.path'
 local fs = require 'llae.fs'
 local archive = require 'archive'
 local log = require 'llae.log'
-local utils = require 'llae.utils'
+local async = require 'llae.async'
 local timestamp = require 'net.http.timestamp'
 
 
@@ -39,7 +39,7 @@ function compress_encoding:finish(...)
 	return self._stream:finish(...)
 end
 function compress_encoding:send_async( file )
-	utils.run(function()
+	async.run(function()
 		assert(self._stream:send(file))
 	end,true)
 end

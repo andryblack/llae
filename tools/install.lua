@@ -16,11 +16,12 @@ install.args = {
 
 function install:exec( args )
 	log.info('install:',args)
-	local utils = require 'llae.utils'
+	local async = require 'llae.async'
 	if args.file then
 		log.info('install file:',args.file)
 		local m = require 'modules'
-		utils.run(function()
+		local utils = require 'llae.utils'
+		async.run(function()
 			m.install_file(args.file,utils.replace_env(fs.pwd()))
 		end)
 		return
@@ -34,7 +35,7 @@ function install:exec( args )
 	if args.modules then
 		prj:add_modules_location(args.modules)
 	end
-	utils.run(function()
+	async.run(function()
 		if modname and modname ~= '' then
 			log.info('install module')
 			prj:install_module(modname)

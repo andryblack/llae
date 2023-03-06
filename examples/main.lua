@@ -1,6 +1,6 @@
 
 local uv = require 'uv'
-local utils = require 'llae.utils'
+local async = require 'llae.async'
 
 
 local cmdargs = args
@@ -18,7 +18,7 @@ if not script then
 	error('need script argument')
 end
 
-utils.run(function()
+async.run(function()
 	local run_args = {}
 	for k,v in pairs(cmdargs) do
 		if type(k) == 'string' then

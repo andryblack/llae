@@ -5,9 +5,9 @@ package.path = package.path .. ';scripts/?.lua'
 local llae = require 'llae'
 local http = require 'net.http'
 local template = require 'llae.template'
-local utils = require 'llae.utils'
+local async = require 'llae.async'
 
-utils.run(function()
+async.run(function()
 
 	local t = template.load('examples/index.thtml')
 

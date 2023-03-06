@@ -2,6 +2,7 @@ local llae = require 'llae'
 local class = require 'llae.class'
 local url = require 'net.url'
 local uv = require 'llae.uv'
+local async = require 'llae.async'
 
 local redis = class(nil,'db.redis')
 
@@ -9,7 +10,7 @@ redis.resp = require 'db.redis.resp'
 
 function redis:_init( )
 	self._conn = uv.tcp_connection.new()
-	self._lock = uv.lock.new()
+	self._lock = async.lock.new()
 	self._subscribe = {}
 	self._unsubscribe = {}
 	self._subhandlers = {}

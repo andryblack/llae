@@ -1,6 +1,6 @@
 local tool = require 'tool'
 local class = require  'llae.class'
-local utils = require 'llae.utils'
+local async = require 'llae.async'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
 local log = require 'llae.log'
@@ -20,7 +20,7 @@ function install:exec( args )
 	local install_dir = self.get_default_root()
 	log.info('start bootstapping at',install_dir)
 
-	utils.run(function()
+	async.run(function()
 		fs.mkdir(install_dir)
 
 		fs.mkdir(path.join(install_dir,'bin'))

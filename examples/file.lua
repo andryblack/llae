@@ -2,12 +2,12 @@
 package.path = package.path .. ';scripts/?.lua'
 
 local fs = require 'llae.fs'
-local utils = require 'llae.utils'
+local async = require 'llae.async'
 local os = require 'llae.os'
 local path = require 'llae.path'
 
 for file_no=1,4 do
-	utils.run(function()
+	async.run(function()
 
 		local fn = path.join(os.tmpdir(),'test-write-' .. file_no .. '.bin')
 		print('start write file',fn)

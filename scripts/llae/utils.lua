@@ -18,19 +18,6 @@ function utils.replace_env( str )
 	return res
 end
 
-function utils.run( fn , handle_error )
-	local th = coroutine.create( handle_error and function() 
-		local res,err = xpcall(fn,debug.traceback)
-		if not res then
-			error(err or 'unknown')
-		end
-	end or fn )
-	local res, err = coroutine.resume( th )
-	if not res then
-		error(err or 'unknown')
-	end
-end
-
 function utils.replace_tokens( text, tokens )
 	local res = string.gsub(text,'%$(%b{})',function(str)
 		local env = string.match(str,'^{(.+)}$')

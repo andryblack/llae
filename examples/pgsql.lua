@@ -1,6 +1,7 @@
 package.path = package.path .. ';scripts/?.lua'
 
 local utils = require 'llae.utils'
+local async = require 'llae.async'
 local log = require 'llae.log'
 local pgsql = require 'db.pgsql'
 local json = require 'llae.json'
@@ -11,7 +12,7 @@ local cin = assert(uv.tty.new(0))
 
 local args = utils.parse_args(_G.args)
 
-utils.run(function()
+async.run(function()
 	local pg = pgsql.new()
 	assert(pg:connect())
 	while true do

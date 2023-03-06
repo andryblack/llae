@@ -4,7 +4,7 @@ package.path = package.path .. ';scripts/?.lua'
 local llae = require 'llae'
 local log = require 'llae.log'
 local redis = require 'db.redis'
-local utils = require 'llae.utils'
+local async = require 'llae.async'
 local json = require 'json'
 local uv = require 'llae.uv'
 
@@ -14,7 +14,7 @@ local function create_redis()
 	return rds
 end
 
-utils.run(function()
+async.run(function()
 	local res,err = pcall(function()
 		local rds = create_redis()
 
@@ -44,7 +44,7 @@ utils.run(function()
 end)
 
 -- pub
-utils.run(function()
+async.run(function()
 	uv.pause(500)
 	local rds = create_redis()
 	for i = 1,20 do
@@ -56,7 +56,7 @@ utils.run(function()
 end)
 
 -- sub
-utils.run(function()
+async.run(function()
 	local rds = create_redis()
 	log.info('subscribe')
 	assert(rds:subscribe('ping',function(ch,msg)

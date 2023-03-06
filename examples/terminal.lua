@@ -1,6 +1,7 @@
 package.path = package.path .. ';scripts/?.lua'
 
 local utils = require 'llae.utils'
+local async = require 'llae.async'
 local log = require 'llae.log'
 
 local serial = require 'posix.serial'
@@ -19,10 +20,10 @@ if not path then
 end
 local baudrate = tonumber(args.baudrate or args[2])
 
-utils.run(function()
+async.run(function()
 	local s = assert(serial.open(path,{baudrate=baudrate or 115200}),'failed open serial ' .. tostring(path))
 	log.info('opened serial connection to',path)
-	utils.run(function()
+	async.run(function()
 		while true do
 			local line = assert(cin:read())
 			assert(s:write(line))
