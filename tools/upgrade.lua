@@ -4,7 +4,6 @@ local async = require 'llae.async'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
 local log = require 'llae.log'
-local uv = require 'uv'
 
 
 local upgrade = class(tool)
@@ -22,7 +21,7 @@ function upgrade:exec( args )
 			error('not found installation dir')
 		end
 
-		local src = assert(uv.exepath())
+		local src = assert(fs.exepath())
 		local fn = path.basename(src)
 
 		local modules = require 'modules'

@@ -1,6 +1,6 @@
 local tool = require 'tool'
 local class = require  'llae.class'
-local uv = require 'uv'
+local fs = require 'llae.fs'
 local async = require 'llae.async'
 
 
@@ -9,7 +9,7 @@ run.descr = 'run script'
 
 
 function run:exec( args )
-	local this = assert(uv.exepath())
+	local this = assert(fs.exepath())
 	local script = args[2]
 	if not script then
 		error('need script argument')

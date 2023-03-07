@@ -1,5 +1,4 @@
 
-local uv = require 'uv'
 local utils = require 'llae.utils'
 
 

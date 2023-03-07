@@ -1,6 +1,9 @@
 local class = require 'llae.class'
+local uv = require 'uv'
 
 local _M = {}
+
+_M.pause = uv.pause
 
 function _M.run( fn , handle_error )
 	local th = coroutine.create( handle_error and function() 

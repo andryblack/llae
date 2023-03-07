@@ -6,7 +6,6 @@ local log = require 'llae.log'
 local redis = require 'db.redis'
 local async = require 'llae.async'
 local json = require 'json'
-local uv = require 'llae.uv'
 
 local function create_redis()
 	local rds = redis.new()
@@ -45,13 +44,13 @@ end)
 
 -- pub
 async.run(function()
-	uv.pause(500)
+	async.pause(500)
 	local rds = create_redis()
 	for i = 1,20 do
 		rds:publish('ping','msg'..i)
-		uv.pause(500)
+		async.pause(500)
 	end
-	uv.pause(1500)
+	async.pause(1500)
 	rds:publish('exit','')
 end)
 

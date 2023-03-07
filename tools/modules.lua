@@ -187,46 +187,20 @@ function m:unpack_zip( file , todir )
 end
 
 
-local function find_exe(PATH,bin)
-	local from = 1
-	while true do
-		local e = string.find(PATH,':',from,true)
-		if not e then
-			break
-		end
-		local dir = string.sub(PATH,from,e-1)
-		local exename = path.join(dir,bin)
-		if fs.isfile(exename) then
-			return exename
-		end
-		from = e + 1
-	end
-	local dir = string.sub(PATH,from)
-	local exename = path.join(dir,bin)
-	if fs.isfile(exename) then
-		return exename
-	end
+
+function m:get_self_exe()
+	return fs.exepath()
 end
 
 local function get_exename(root,bin)
 	if path.isabsolute(bin) then
-		if not fs.isfile(bin) then
-			error('not found exe ' .. bin)
-		end
 		return bin
 	end
-	local exename = path.join(root,'bin',bin)
-	if not fs.isfile(exename) then
-		exename = find_exe(os.getenv('PATH'),bin)
-		if not exename then
-			error('not found exe ' .. tostring(bin))
-		end
+	local exename = path.join(root,bin)
+	if fs.isfile(exename) then
+		return exename
 	end
-	return exename
-end
-
-function m:get_self_exe()
-	return fs.exepath()
+	return fs.find_exe(bin)
 end
 
 function m:exec(config)

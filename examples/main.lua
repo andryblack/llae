@@ -1,5 +1,5 @@
 
-local uv = require 'uv'
+local fs = require 'llae.fs'
 local async = require 'llae.async'
 
 
@@ -12,7 +12,7 @@ if cmdargs.ssldebug then
 	ssl.ctx.set_debug_threshold(tonumber(cmdargs.ssldebug))
 end
 
-local this = assert(uv.exepath())
+local this = assert(fs.exepath())
 local script = cmdargs[1]
 if not script then
 	error('need script argument')

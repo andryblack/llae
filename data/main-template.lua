@@ -3,11 +3,11 @@ local utils = require 'llae.utils'
 args = utils.parse_args(...)
 
 <% if project:get_config('llae','lua_path') then %>
-	local uv = require 'uv'
+	local fs = require 'llae.fs'
 	local path = require 'llae.path'
 	local tokens = {
-		cwd = uv.cwd(),
-		exedir = path.dirname(uv.exepath()),
+		cwd = fs.cwd(),
+		exedir = path.dirname(fs.exepath()),
 	}
 	package.path = utils.replace_tokens('<%- table.concat(project:get_config('llae','lua_path'),';') %>',tokens)
 	table.remove(package.searchers,1)

@@ -4,7 +4,6 @@ local async = require 'llae.async'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
 local log = require 'llae.log'
-local uv = require 'uv'
 
 
 local install = class(tool)
@@ -28,7 +27,7 @@ function install:exec( args )
 		fs.mkdir(path.join(install_dir,'scripts'))
 		fs.mkdir(path.join(install_dir,'data'))
 
-		local src = assert(uv.exepath())
+		local src = assert(fs.exepath())
 		local fn = path.basename(src)
 
 		--assert(fs.copyfile(src,path.join(install_dir,'bin',fn)))

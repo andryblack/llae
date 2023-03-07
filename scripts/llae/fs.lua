@@ -5,6 +5,7 @@ local fs = setmetatable({},{__index=uv.fs})
 
 fs.home = uv.os.homedir
 fs.pwd = uv.cwd
+fs.cwd = uv.cwd
 fs.chdir = uv.chdir
 fs.exepath = uv.exepath
 
@@ -132,6 +133,42 @@ function fs.write_file( fn , ... )
 	local f = assert(fs.open(fn,fs.O_WRONLY|fs.O_CREAT))
 	f:write(...)
 	f:close()
+end
+
+
+local function find_exe(PATH,bin)
+	local from = 1
+	while true do
+		local e = string.find(PATH,':',from,true)
+		if not e then
+			break
+		end
+		local dir = string.sub(PATH,from,e-1)
+		local exename = path.join(dir,bin)
+		if fs.isfile(exename) then
+			return exename
+		end
+		from = e + 1
+	end
+	local dir = string.sub(PATH,from)
+	local exename = path.join(dir,bin)
+	if fs.isfile(exename) then
+		return exename
+	end
+end
+
+function fs.find_exe(bin)
+	if path.isabsolute(bin) then
+		if not fs.isfile(bin) then
+			error('not found exe ' .. bin)
+		end
+		return bin
+	end
+	local exename = find_exe(os.getenv('PATH'),bin)
+	if not exename then
+		error('not found exe ' .. tostring(bin))
+	end
+	return exename
 end
 
 return fs
