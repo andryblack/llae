@@ -167,11 +167,18 @@ namespace uv {
     int udp::do_bind(struct sockaddr* addr,int flags) {
         return uv_udp_bind(&m_udp,addr,flags);
     }
+    int udp::do_set_ttl(int ttl) {
+        return uv_udp_set_ttl(&m_udp,ttl);
+    }
     int udp::do_set_broadcast(bool b) {
         return uv_udp_set_broadcast(&m_udp,b?1:0);
     }
     int udp::do_set_membership(const char *multicast_addr, const char *interface_addr, uv_membership membership) {
         return uv_udp_set_membership(&m_udp, multicast_addr, interface_addr, membership);
+    }
+    int udp::do_set_source_membership(const char *multicast_addr, const char *interface_addr, 
+            const char* source_addr, uv_membership membership) {
+        return uv_udp_set_source_membership(&m_udp, multicast_addr, interface_addr, source_addr, membership);
     }
     int udp::do_set_multicast_loop(bool on) {
         return uv_udp_set_multicast_loop(&m_udp,on);
@@ -179,6 +186,46 @@ namespace uv {
     int udp::do_set_multicast_ttl(int ttl) {
         return uv_udp_set_multicast_ttl(&m_udp,ttl);
     }
+    int udp::do_set_multicast_interface(const char* interface_addr) {
+        return uv_udp_set_multicast_interface(&m_udp,interface_addr);
+    }
+
+    lua::multiret udp::set_ttl(lua::state& l,int ttl) {
+        auto res = do_set_ttl(ttl);
+        return return_status_error(l,res);
+    }
+
+    lua::multiret udp::set_broadcast(lua::state& l,bool b) {
+        auto res = do_set_broadcast(b);
+        return return_status_error(l,res);
+    }
+    
+    lua::multiret udp::set_membership(lua::state& l,const char *multicast_addr, const char *interface_addr, uv_membership membership) {
+        auto res = do_set_membership(multicast_addr,interface_addr,membership);
+        return return_status_error(l,res);
+    }
+
+    lua::multiret udp::set_source_membership(lua::state& l,const char *multicast_addr, const char *interface_addr, 
+            const char* source_addr, uv_membership membership) {
+        auto res = do_set_source_membership(multicast_addr,interface_addr,source_addr,membership);
+        return return_status_error(l,res);
+    }
+    
+    lua::multiret udp::set_multicast_loop(lua::state& l,bool on) {
+        auto res = do_set_multicast_loop(on);
+        return return_status_error(l,res);
+    }
+    
+    lua::multiret udp::set_multicast_ttl(lua::state& l,int ttl) {
+        auto res = do_set_multicast_ttl(ttl);
+        return return_status_error(l,res);
+    }
+
+    lua::multiret udp::set_multicast_interface(lua::state& l,const char* interface_addr) {
+        auto res = do_set_multicast_interface(interface_addr);
+        return return_status_error(l,res);
+    }
+
     lua::multiret udp::send(lua::state& l) {
         struct sockaddr_storage addr;
         bool with_addr = false;
@@ -378,6 +425,54 @@ namespace uv {
         }
     }
 
+    lua::multiret udp::getpeername(lua::state& l) {
+        struct sockaddr_storage addr;
+        int namelen = sizeof(addr);
+        auto r = uv_udp_getpeername(&m_udp,(struct sockaddr*)&addr,&namelen);
+        if (r < 0) {
+            l.pushnil();
+            uv::push_error(l,r);
+            return {2};
+        }
+        char name[64];
+        if (uv_ip4_name((const struct sockaddr_in*)&addr,name,sizeof(name)) == 0) {
+            l.pushstring(name);
+            l.pushinteger(ntohs(((const struct sockaddr_in*)&addr)->sin_port));
+        } else if (uv_ip6_name((const struct sockaddr_in6*)&addr,name,sizeof(name))==0) {
+            l.pushstring(name);
+            l.pushinteger(ntohs(((const struct sockaddr_in6*)&addr)->sin6_port));
+        } else {
+            l.pushnil();
+            l.pushstring("unknown");
+            return {2};
+        }
+        return {2};
+    }
+
+    lua::multiret udp::getsockname(lua::state& l) {
+        struct sockaddr_storage addr;
+        int namelen = sizeof(addr);
+        auto r = uv_udp_getpeername(&m_udp,(struct sockaddr*)&addr,&namelen);
+        if (r < 0) {
+            l.pushnil();
+            uv::push_error(l,r);
+            return {2};
+        }
+        char name[64];
+        if (uv_ip4_name((const struct sockaddr_in*)&addr,name,sizeof(name)) == 0) {
+            l.pushstring(name);
+            l.pushinteger(ntohs(((const struct sockaddr_in*)&addr)->sin_port));
+        } else if (uv_ip6_name((const struct sockaddr_in6*)&addr,name,sizeof(name))==0) {
+            l.pushstring(name);
+            l.pushinteger(ntohs(((const struct sockaddr_in6*)&addr)->sin6_port));
+        } else {
+            l.pushnil();
+            l.pushstring("unknown");
+            return {2};
+        }
+        return {2};
+    }
+
     void udp::stop_recv() {
         uv_udp_recv_stop(get_udp());
         if (m_recv_consumer) {
@@ -402,12 +497,25 @@ namespace uv {
         lua::bind::function(l,"stop_recv",&udp::stop_recv);
         lua::bind::function(l,"add_buffer",&udp::add_buffer);
         lua::bind::function(l,"close",&udp::close);
-        
+        lua::bind::function(l,"set_ttl",&udp::set_ttl);
+        lua::bind::function(l,"set_broadcast",&udp::set_broadcast);
+        lua::bind::function(l,"set_membership",&udp::set_membership);
+        lua::bind::function(l,"set_source_membership",&udp::set_source_membership);
+        lua::bind::function(l,"set_multicast_loop",&udp::set_multicast_loop);
+        lua::bind::function(l,"set_multicast_ttl",&udp::set_multicast_ttl);
+        lua::bind::function(l,"set_multicast_interface",&udp::set_multicast_interface);
+        lua::bind::function(l,"getpeername",&udp::getpeername);
+        lua::bind::function(l,"getsockname",&udp::getsockname);
+
         l.pushinteger(UV_UDP_IPV6ONLY);
         l.setfield(-2,"IPV6ONLY");
         l.pushinteger(UV_UDP_REUSEADDR);
         l.setfield(-2,"REUSEADDR");
         l.pushinteger(UV_UDP_PARTIAL);
         l.setfield(-2,"PARTIAL");
+        l.pushinteger(UV_LEAVE_GROUP);
+        l.setfield(-2,"LEAVE_GROUP");
+        l.pushinteger(UV_JOIN_GROUP);
+        l.setfield(-2,"JOIN_GROUP");
     }
 }

@@ -75,16 +75,30 @@ namespace uv {
         static void lbind(lua::state& l);
 
         int do_bind(struct sockaddr* addr,int flags);
+        int do_set_ttl(int ttl);
         int do_set_broadcast(bool b);
         int do_set_membership(const char *multicast_addr, const char *interface_addr, uv_membership membership);
+        int do_set_source_membership(const char *multicast_addr, const char *interface_addr, 
+            const char* source_addr, uv_membership membership);
         int do_set_multicast_loop(bool on);
         int do_set_multicast_ttl(int ttl);
+        int do_set_multicast_interface(const char* interface_addr);
         int do_try_send(const buffer_ptr& buffer,const struct sockaddr *addr);
         
         lua::multiret bind(lua::state& l);
         lua::multiret send(lua::state& l);
         lua::multiret try_send(lua::state& l);
         lua::multiret connect(lua::state& l);
+        lua::multiret set_ttl(lua::state& l,int ttl);
+        lua::multiret set_broadcast(lua::state& l,bool b);
+        lua::multiret set_membership(lua::state& l,const char *multicast_addr, const char *interface_addr, uv_membership membership);
+        lua::multiret set_source_membership(lua::state& l,const char *multicast_addr, const char *interface_addr, 
+                const char* source_addr, uv_membership membership);
+        lua::multiret set_multicast_loop(lua::state& l,bool on);
+        lua::multiret set_multicast_ttl(lua::state& l,int ttl);
+        lua::multiret set_multicast_interface(lua::state& l,const char* interface_addr);
+        lua::multiret getpeername(lua::state& l);
+        lua::multiret getsockname(lua::state& l);
         void add_buffer(uv::buffer_ptr&& buffer);
         void disconnect();
         lua::multiret recv(lua::state& l);
