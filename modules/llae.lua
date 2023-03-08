@@ -215,11 +215,11 @@ generate_src = {{
 			content = content,	
 		})
 	end
-	if not installed_scripts['llae.utils'] then
-		log.debug('embed','llae.utils')
+	if not installed_scripts['llae.fs'] then
+		log.debug('embed','llae.fs')
 		table.insert(scripts,{
-			name = 'llae.utils',
-			content = fs.load_file(path.join(project.get_path(location,dir),'scripts','llae/utils.lua'))
+			name = 'llae.fs',
+			content = fs.load_file(path.join(project.get_path(location,dir),'scripts','llae/fs.lua'))
 		})
 	end
 	if not installed_scripts['llae.path'] then
