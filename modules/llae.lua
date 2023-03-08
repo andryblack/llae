@@ -229,6 +229,13 @@ generate_src = {{
 			content = fs.load_file(path.join(project.get_path(location,dir),'scripts','llae/path.lua'))
 		})
 	end
+	if not installed_scripts['llae.utils'] then
+		log.debug('embed','llae.utils')
+		table.insert(scripts,{
+			name = 'llae.utils',
+			content = fs.load_file(path.join(project.get_path(location,dir),'scripts','llae/utils.lua'))
+		})
+	end
 
 	]]
 },{
