@@ -145,13 +145,17 @@ static int lua_uv_interface_addresses(lua_State* L) {
 		l.setfield(-2,"name");
 		l.pushboolean(addresses[i].is_internal);
 		l.setfield(-2,"internal");
+		l.pushinteger(addresses[i].address.address4.sin_family);
+		l.setfield(-2,"family");
+		buf[0] = 0;
 		if (addresses[i].address.address4.sin_family == AF_INET) {
-	      	uv_ip4_name(&addresses[i].address.address4, buf, sizeof(buf));
+			uv_ip4_name(&addresses[i].address.address4, buf, sizeof(buf));
 	    } else {
 	    	uv_ip6_name(&addresses[i].address.address6, buf, sizeof(buf));
 	    }
 	    l.pushstring(buf);
 	    l.setfield(-2,"address");
+	    buf[0] = 0;
 	    if (addresses[i].netmask.netmask4.sin_family == AF_INET) {
 	      	uv_ip4_name(&addresses[i].netmask.netmask4, buf, sizeof(buf));
 	    } else {
@@ -355,6 +359,11 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"hrtime",&lua_uv_hrtime);
 	lua::bind::function(l,"sleep",&lua_uv_sleep);
 	lua::bind::function(l,"random",&lua_uv_random);
+
+	l.pushinteger(AF_INET);
+    l.setfield(-2,"AF_INET");
+    l.pushinteger(AF_INET6);
+    l.setfield(-2,"AF_INET6");
 
 	uv::fs::lbind(l);
 	uv::os::lbind(l);
