@@ -13,6 +13,7 @@ local uncomment = {
 	['MBEDTLS_KEY_EXCHANGE_PSK_ENABLED'] = true,
 	['MBEDTLS_SSL_PROTO_TLS1_2'] = true,
 	['MBEDTLS_SSL_PROTO_TLS1_3'] = true,
+	['MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE'] = true,
 }
 local comment = {
 	['MBEDTLS_NO_UDBL_DIVISION'] = true,
@@ -21,6 +22,7 @@ local comment = {
 	['MBEDTLS_PSA_ITS_FILE_C'] = true,
 	['MBEDTLS_PSA_CRYPTO_STORAGE_C'] = true,
 	['MBEDTLS_AESCE_C'] = true,
+	['MBEDTLS_SSL_SRV_C'] = true,
 }
 local replace_line = {
 	['#define MBEDTLS_HAVE_ASM'] = [[

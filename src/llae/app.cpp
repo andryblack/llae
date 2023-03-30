@@ -3,6 +3,7 @@
 #include "meta/object.h"
 #include "lua/bind.h"
 #include "uv/handle.h"
+#include <psa/crypto.h>
 
 #include <iostream>
 
@@ -31,6 +32,7 @@ namespace llae {
     }
 
     app::app(uv_loop_t* l,bool need_signal) : m_loop(l) {
+        psa_crypto_init();
         *static_cast<app**>(lua_getextraspace(m_lua.native())) = this;
         uv_loop_set_data(m_loop.native(),this);
         m_lua.open_libs();

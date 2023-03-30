@@ -17,12 +17,14 @@ namespace ssl {
         
         mbedtls_ssl_init( &m_ssl );
 		mbedtls_ssl_config_init( &m_conf );
+        mbedtls_ssl_session_init( &m_session );
 		m_write_req.data = this;
 		m_write_buf = uv_buf_init(m_write_data_buf,CONN_BUFFER_SIZE);
         //std::cout << "ssl::connection::connection" << std::endl;
 	}
 
 	connection::~connection() {
+        mbedtls_ssl_session_free( &m_session );
 		mbedtls_ssl_free( &m_ssl );
 		mbedtls_ssl_config_free( &m_conf );
         if (m_stream) {
@@ -262,37 +264,60 @@ namespace ssl {
 
     bool connection::do_read(lua::state& l) {
         //std::cout << "do_read " << std::endl;
-        
-        m_state = S_READ;
-        unsigned char* data = reinterpret_cast<unsigned char*>(m_read_data_buf);
-        int r = mbedtls_ssl_read(&m_ssl, data, CONN_BUFFER_SIZE);
-        if (r >= 0) {
-            m_state = S_CONNECTED;
-            //std::cout << "do_read end, has data " << r << std::endl;
-            if (r) {
-                l.pushlstring(m_read_data_buf, r);
-            } else {
+        while (true) {
+            
+            m_state = S_READ;
+            unsigned char* data = reinterpret_cast<unsigned char*>(m_read_data_buf);
+            int r = mbedtls_ssl_read(&m_ssl, data, CONN_BUFFER_SIZE);
+            if (r >= 0) {
+                m_state = S_CONNECTED;
+                //std::cout << "do_read end, has data " << r << std::endl;
+                if (r) {
+                    l.pushlstring(m_read_data_buf, r);
+                } else {
+                    l.pushnil();
+                }
                 l.pushnil();
+                return true;
+            } else if( r == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
+                m_state = S_CLOSED;
+                m_stream->stop_read();
+                m_stream->close();
+                l.pushnil();
+                l.pushnil();
+                return true;
+            } else if( r == MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET) {
+                auto ret = mbedtls_ssl_get_session(&m_ssl, &m_session);
+                if (ret != 0) {
+                    m_stream->stop_read();
+                    m_ssl_error = ret;
+                    l.pushnil();
+                    push_error(l);
+                    return true;
+                }
+                if (m_read_state == RS_EOF) {
+                    if (m_readed_data.empty()) {
+                        m_stream->stop_read();
+                        m_ssl_error = MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET;
+                        l.pushnil();
+                        push_error(l);
+                        return true;
+                    }
+                }
+                continue;
+            } else if (r != MBEDTLS_ERR_SSL_WANT_READ && r!= MBEDTLS_ERR_SSL_WANT_WRITE) {
+                m_stream->stop_read();
+                m_ssl_error = r;
+                l.pushnil();
+                push_error(l);
+                return true;
             }
-            l.pushnil();
-            return true;
-        } else if( r == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) {
-            m_state = S_CLOSED;
-            m_stream->stop_read();
-            m_stream->close();
-            l.pushnil();
-            l.pushnil();
-            return true;
-        } else if (r != MBEDTLS_ERR_SSL_WANT_READ && r!= MBEDTLS_ERR_SSL_WANT_WRITE) {
-            m_stream->stop_read();
-            m_ssl_error = r;
-            l.pushnil();
-            push_error(l);
-            return true;
+            if (!m_readed_data.empty() && r==MBEDTLS_ERR_SSL_WANT_READ)
+                continue;
+            //std::cout << "do_read continue" << std::endl;
+            /* need read */
+            return false;
         }
-        //std::cout << "do_read continue" << std::endl;
-        /* need read */
-        return false;
     }
 
 	void connection::finish_status(const char* state) {

@@ -441,7 +441,7 @@ function m:preprocess( config )
 
 	for line in io.lines(src_file) do 
 		--print('process line',line)
-		local d,o = string.match(line,'^//#define%s+([A-Z_]+)(.*)$')
+		local d,o = string.match(line,'^//#define%s+([^%s]+)(.*)$')
 		if d then
 			if uncomment[d] then
 				line = '#define ' .. d .. o
@@ -454,7 +454,7 @@ function m:preprocess( config )
 					line = '#define ' .. d .. o
 				end
 			else
-				d,o = string.match(line,'^#%s*define%s+([A-Z_]+)(.*)$')
+				d,o = string.match(line,'^#%s*define%s+([^%s]+)(.*)$')
 				if d and comment[d] then
 					line = '//#define ' .. d .. o
 				elseif d and replace[d] then

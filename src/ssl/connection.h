@@ -15,6 +15,7 @@ namespace ssl {
 		ctx_ptr m_ctx;
 		mbedtls_ssl_context m_ssl;
 		mbedtls_ssl_config m_conf;
+        mbedtls_ssl_session m_session;
 		static void dbg_cb(void *ctx, int level,
                       const char *file, int line,
                       const char *str);
