@@ -1,9 +1,10 @@
 name = 'mbedtls'
-version = '3.1.0'
+version = '3.4.0'
 dir = name .. '-' .. version 
 archive = dir .. '.tar.gz'
-url = 'https://github.com/ARMmbed/mbedtls/archive/refs/tags/v'..version..'.tar.gz'
-hash = 'a228170fbedd1202edcc1bf13d83b1a3'
+url = 'https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v'..version..'.tar.gz'
+hash = '3f6c2eadc1243e9895d65c67b46eb890'
+
 
 local uncomment = {
 	['MBEDTLS_DEPRECATED_REMOVED'] = true,
@@ -18,6 +19,7 @@ local comment = {
 	['MBEDTLS_FS_IO'] = true,
 	['MBEDTLS_PSA_ITS_FILE_C'] = true,
 	['MBEDTLS_PSA_CRYPTO_STORAGE_C'] = true,
+	['MBEDTLS_AESCE_C'] = true,
 }
 local replace_line = {
 	['#define MBEDTLS_HAVE_ASM'] = [[
