@@ -12,6 +12,7 @@ local uncomment = {
 	['MBEDTLS_PLATFORM_PRINTF_ALT'] = true,
 	['MBEDTLS_KEY_EXCHANGE_PSK_ENABLED'] = true,
 	['MBEDTLS_SSL_PROTO_TLS1_2'] = true,
+	['MBEDTLS_SSL_PROTO_TLS1_3'] = true,
 }
 local comment = {
 	['MBEDTLS_NO_UDBL_DIVISION'] = true,
