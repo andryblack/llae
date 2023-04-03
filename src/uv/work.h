@@ -32,9 +32,12 @@ namespace uv {
 	protected:
 		virtual int resume_args(lua::state& l,int status) = 0;
 	public:
+		lua_cont_work() {}
 		explicit lua_cont_work(lua::ref&& cont);
+		bool is_acive() const { return m_cont.valid(); }
 		void reset(lua::state& l);
 		int queue_work(lua::state& l);
+		int queue_work_thread(lua::state& l);
 	};
 
 }

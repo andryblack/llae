@@ -46,6 +46,16 @@ namespace uv {
 		return work::queue_work(llae::app::get(l).loop());
 	}
 
+	int lua_cont_work::queue_work_thread(lua::state& l) {
+		l.pushthread();
+        m_cont.set(l);
+        auto r = work::queue_work(llae::app::get(l).loop());
+        if (r < 0) {
+        	reset(l);
+        }
+        return r;
+	}
+
 	void lua_cont_work::on_after_work(int status) {
 		auto& l(llae::app::get(get_loop()).lua());
         if (!l.native()) {
@@ -54,18 +64,20 @@ namespace uv {
         }
         if (m_cont.valid()) {
             m_cont.push(l);
+            
             auto toth = l.tothread(-1);
+            lua::ref rref = std::move(m_cont);
             l.pop(1);// thread
 
             auto args = resume_args(toth,status);
 
             auto s = toth.resume(l,args);
-
-            m_cont.reset(l);
-
+            
             if (s != lua::status::ok && s != lua::status::yield) {
                 llae::app::show_error(toth,s);
             }
+
+            
         }
 	}
 }
