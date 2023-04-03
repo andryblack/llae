@@ -77,7 +77,7 @@ namespace uv {
                 llae::app::show_error(toth,s);
             }
 
-            
+            rref.reset(l);
         }
 	}
 }

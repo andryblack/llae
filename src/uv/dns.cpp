@@ -70,6 +70,10 @@ namespace uv {
 
 	void getaddrinfo_req::on_end(int status,struct addrinfo* res) {
 		auto& l = llae::app::get(get()->loop).lua();
+		if (!l.native()) {
+			m_cont.release();
+			return;
+		}
 		l.checkstack(2);
 		m_cont.push(l);
 		auto toth = l.tothread(-1);
