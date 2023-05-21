@@ -166,6 +166,7 @@ namespace uv {
         if (m_read_consumer) {
             m_read_consumer->on_stream_closed(this);
             m_read_consumer.reset();
+            remove_ref();
         }
         handle::on_closed();
 	}
@@ -292,6 +293,7 @@ namespace uv {
         uv_read_stop(get_stream());
         if (m_read_consumer) {
         	m_read_consumer->on_stop_read(this);
+            remove_ref();
         }
         m_read_consumer.reset();
     }
