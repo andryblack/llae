@@ -76,4 +76,11 @@ function decoder:read( )
 	return ch
 end
 
+function decoder:finish()
+	if self._upstream then
+		self._upstream:finish()
+		self._upstream = nil
+	end
+end
+
 return decoder

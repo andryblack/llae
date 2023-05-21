@@ -45,4 +45,8 @@ function decoder:read(  )
 	return ch,e
 end
 
+function decoder:finish()
+	self._connection = nil
+end
+
 return decoder

@@ -98,9 +98,9 @@ end
 function response:close_connection( closed )
 	if self._connection then
 		--log.debug('close_connection')
-		if self._uncompress then
-			self._uncompress:finish()
-			self._uncompress = nil
+		if self._decoder then
+			self._decoder:finish()
+			self._decoder = nil
 		end
 		if not closed then
 			local r,err = self._connection:shutdown()

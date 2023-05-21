@@ -38,7 +38,8 @@ namespace uv {
 	void handle::destroy() {
 		handle* self = static_cast<handle*>(uv_handle_get_data(get_handle()));
 		if (!self) {
-			return;
+            meta::object::destroy();
+            return;
 		}
 		if (!uv_is_closing(get_handle())) {
             on_closed();

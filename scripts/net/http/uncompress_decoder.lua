@@ -44,4 +44,16 @@ function decoder:read( )
 	return ch,e
 end
 
+function decoder:finish()
+	if self._uncompress and not self._finished then
+		self._uncompress:finish()
+		self._finished = true
+	end
+	self._uncompress = nil
+	if self._upstream then
+		self._upstream:finish()
+		self._upstream = nil
+	end
+end
+
 return decoder
