@@ -20,25 +20,24 @@ static int lua_redis_resp_gen_req(lua_State* L) {
     }
     auto res = uv::buffer::alloc(1+number_len(top)+2+2+top*16); // euristic
     res->set_len(0);
-    auto write_ch = [&res](char c) {
-        if (res->get_len() >= res->get_capacity()) {
+    auto require_size = [&res](size_t size) {
+        while ((res->get_len()+size) > res->get_capacity()) {
             res = res->realloc(res->get_capacity()*3/2);
         }
+    }
+    auto write_ch = [&res,&require_size](char c) {
+        require_size(0);
         static_cast<char*>(res->get_base())[res->get_len()] = c;
         res->set_len(res->get_len()+1);
     };
     auto write_rn = [&res]() {
-        while ((res->get_len()+2) > res->get_capacity()) {
-            res = res->realloc(res->get_capacity()*3/2);
-        }
+        require_size(2);
         static_cast<char*>(res->get_base())[res->get_len()] = '\r';
         static_cast<char*>(res->get_base())[res->get_len()+1] = '\n';
         res->set_len(res->get_len()+2);
     };
     auto write_data = [&res](const void* data,size_t size) {
-        while ((res->get_len()+size) > res->get_capacity()) {
-            res = res->realloc(res->get_capacity()*3/2);
-        }
+        require_size(size);
         memcpy(static_cast<char*>(res->get_base())+res->get_len(),data,size);
         res->set_len(res->get_len()+size);
     };
@@ -46,9 +45,7 @@ static int lua_redis_resp_gen_req(lua_State* L) {
         char buf[16];
         ::snprintf(buf,sizeof(buf)-1,"%d",int(number));
         size_t sz = ::strlen(buf);
-        while ((res->get_len()+sz) > res->get_capacity()) {
-            res = res->realloc(res->get_capacity()*3/2);
-        }
+        require_size(sz);
         memcpy(static_cast<char*>(res->get_base())+res->get_len(),buf,sz);
         res->set_len(res->get_len()+sz);
     };
