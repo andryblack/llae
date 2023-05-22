@@ -143,9 +143,27 @@ namespace uv {
         return {2};
     }
 
+	lua::multiret tcp_connection::keepalive(lua::state& l) {
+		int enable = l.toboolean(2);
+		int delay = 0;
+		if (enable) {
+			delay = l.checkinteger(3);
+		}
+		auto r = uv_tcp_keepalive(&m_tcp,enable,delay);
+		return return_status_error(l,r);
+	}
+
+	lua::multiret tcp_connection::nodelay(lua::state& l) {
+		int enable = l.toboolean(2);
+		auto r = uv_tcp_nodelay(&m_tcp,enable);
+		return return_status_error(l,r);
+	}
+
 	void tcp_connection::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&tcp_connection::lnew);
 		lua::bind::function(l,"connect",&tcp_connection::connect);
         lua::bind::function(l,"getpeername",&tcp_connection::getpeername);
+        lua::bind::function(l,"keepalive",&tcp_connection::keepalive);
+        lua::bind::function(l,"nodelay",&tcp_connection::nodelay);
 	}
 }
