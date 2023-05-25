@@ -2,8 +2,8 @@ local utils = require 'utils'
 
 local _M = {
 	name = 'mbedtls',
-	version = '3.1.0',
-	url = 'https://github.com/ARMmbed/mbedtls/archive/refs/tags/v3.1.0.tar.gz',
+	version = '3.4.0',
+	url = 'https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v3.4.0.tar.gz',
 	archive = 'tar.gz',
 }
 
@@ -13,6 +13,8 @@ local uncomment = {
 	['MBEDTLS_PLATFORM_PRINTF_ALT'] = true,
 	['MBEDTLS_KEY_EXCHANGE_PSK_ENABLED'] = true,
 	['MBEDTLS_SSL_PROTO_TLS1_2'] = true,
+	['MBEDTLS_SSL_PROTO_TLS1_3'] = true,
+	['MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE'] = true,
 }
 local comment = {
 	['MBEDTLS_NO_UDBL_DIVISION'] = true,
@@ -20,11 +22,9 @@ local comment = {
 	['MBEDTLS_FS_IO'] = true,
 	['MBEDTLS_PSA_ITS_FILE_C'] = true,
 	['MBEDTLS_PSA_CRYPTO_STORAGE_C'] = true,
-	['MBEDTLS_HAVE_ASM'] = true,
-	['MBEDTLS_AESNI_C'] = true,
-	['MBEDTLS_PADLOCK_C'] = true,
+	['MBEDTLS_AESCE_C'] = true,
+	['MBEDTLS_SSL_SRV_C'] = true,
 }
-
 
 function _M.lib( root )
 	_M.root = path.join(root,'build','extlibs','mbedtls-'.._M.version)

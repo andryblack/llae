@@ -404,8 +404,22 @@ function m:install_scripts( dir )
 	end
 end
 
+function m:foreach_file_r(dir)
+	local src = path.join(self.location,dir)
+	local files,err = fs.scanfiles_r(src)
+	if not files then
+		error('failed scan dir ' .. src ..' '.. err)
+	end
+	local idx = 0
+	return function(files)
+		while true do		
+			idx = idx + 1
+			return files[idx]
+		end
+	end, files
+end
 
-function m:foreach_file( dir )
+function m:foreach_file( dir , recursive )
 	local src = path.join(self.location,dir)
 	local files,err = fs.scandir(src)
 	if not files then
