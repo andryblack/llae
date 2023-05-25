@@ -14,11 +14,11 @@ function parser:parse_start( client )
 	local line,tail = string.match(self._data,'^([^\r\n]*)\r\n(.*)$')
 	if not line then
 		if #self._data > self.max_start_len then
-			error('failed parse method\n' .. self._data)
+			error('http start line too long\n' .. self._data)
 		end
 		return false
 	end
-	local ver,code,message = string.match(line,'^HTTP/(%d%.%d)%s(%d+)%s(.+)$')
+	local ver,code,message = string.match(line,'^HTTP/(%d%.%d)%s(%d+)%s*(.+)$')
 	if ver then
 		self._version = ver
 		self._code = code
@@ -26,7 +26,7 @@ function parser:parse_start( client )
 		self._data = tail
 		return true
 	else
-		error('failed parse method\n' .. line)
+		error('failed parse http response\n' .. line)
 	end
 end
 
