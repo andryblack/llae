@@ -24,24 +24,24 @@ static int lua_redis_resp_gen_req(lua_State* L) {
         while ((res->get_len()+size) > res->get_capacity()) {
             res = res->realloc(res->get_capacity()*3/2);
         }
-    }
+    };
     auto write_ch = [&res,&require_size](char c) {
         require_size(0);
         static_cast<char*>(res->get_base())[res->get_len()] = c;
         res->set_len(res->get_len()+1);
     };
-    auto write_rn = [&res]() {
+    auto write_rn = [&res,&require_size]() {
         require_size(2);
         static_cast<char*>(res->get_base())[res->get_len()] = '\r';
         static_cast<char*>(res->get_base())[res->get_len()+1] = '\n';
         res->set_len(res->get_len()+2);
     };
-    auto write_data = [&res](const void* data,size_t size) {
+    auto write_data = [&res,&require_size](const void* data,size_t size) {
         require_size(size);
         memcpy(static_cast<char*>(res->get_base())+res->get_len(),data,size);
         res->set_len(res->get_len()+size);
     };
-    auto write_number = [&res](size_t number) {
+    auto write_number = [&res,&require_size](size_t number) {
         char buf[16];
         ::snprintf(buf,sizeof(buf)-1,"%d",int(number));
         size_t sz = ::strlen(buf);
