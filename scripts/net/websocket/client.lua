@@ -92,7 +92,8 @@ end
 
 function client:_close()
 	if self._connection then
-		self._connection:disconnect()
+		self._connection:shutdown()
+		self._connection:close()
 		self._connection = nil
 		self._closed = true
 	end
