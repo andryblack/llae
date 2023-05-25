@@ -32,13 +32,22 @@ end
 function protocol:_handle_msg(opcode)
 	local payload = table.concat(self._rc_fragments,'')
 	self._rc_fragments = {}
-	log.info(string.format('RX: msg %02x',opcode),payload)
+	--log.info(string.format('RX: msg %02x',opcode),payload)
+	if opcode == protocol.opcode.text then
+		self._handler:on_text(payload)
+	elseif opcode == protocol.opcode.binary then
+		self._handler:on_binary(payload)
+	elseif opcode == protocol.opcode.close then
+		local reason = string.unpack('>I2',payload)
+		self:_close()
+		self._handler:on_close(opcode)
+	end
 end
 
 function protocol:_process_rc(data)
 	self._rc_data = self._rc_data .. data
 	local rc_len = #self._rc_data
-	if #self._rc_data >= 2 then
+	if rc_len >= 2 then
 		local h1,h2 = string.unpack('<I1I1',self._rc_data,1)
 		local FIN = h1 & 0x80
 		local opcode = h1 & 0x0f
@@ -62,7 +71,7 @@ function protocol:_process_rc(data)
 		if mask ~= 0 then
 			extra = extra + 4
 		end
-		if #self._rc_data < (length + 2 + extra) then
+		if rc_len < (length + 2 + extra) then
 			return
 		end
 		if length ~= 0 then
@@ -72,22 +81,27 @@ function protocol:_process_rc(data)
 			self._rc_data = string.sub(self._rc_data,payload_end)
 			table.insert(self._rc_fragments,payload)
 		end
+		if opcode ~= protocol.opcode.cont then
+			self._rc_opcode = opcode
+		end
 		if FIN then
-			self:_handle_msg(opcode)
+			self:_handle_msg(self._rc_opcode)
 		end
 	end
 end
 
-function protocol:write(data)
+function protocol:binary(data)
 	return self:write_msg(data,true,protocol.opcode.binary)
 end
 
-function protocol:write_text(data)
+function protocol:text(data)
 	return self:write_msg(data,true,protocol.opcode.text)
 end
 
 function protocol:close()
-	return self:write_msg(string.pack('<I2',0),true,protocol.opcode.close)
+	local res, err = self:write_msg(string.pack('<I2',0),true,protocol.opcode.close)
+	self:_close()
+	return res,err
 end
 
 function protocol:write_msg(data,fin,opcode)

@@ -9,6 +9,7 @@ local json = require 'json'
 local uv = require 'uv'
 local async = require 'llae.async'
 
+
 local th = coroutine.create(function()
 	
 	local ws = websocket.createClient{
@@ -19,7 +20,7 @@ local th = coroutine.create(function()
 		local len = 1
 		while true do
 			async.pause(1000)
-			ws:write(string.rep('PING',len))
+			ws:text(string.rep('PING',len))
 			len = len + 1
 			if len > 32 then
 				len = 1
@@ -27,7 +28,13 @@ local th = coroutine.create(function()
 		end
 	end)
 
-	assert(ws:start())
+	assert(ws:start(function(msg,err)
+		if msg then
+			log.info('RX:',msg)
+		else
+			log.error(err)
+		end
+	end))
 
 	ws:close()
 	print('finished request')

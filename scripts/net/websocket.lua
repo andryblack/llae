@@ -1,6 +1,7 @@
 
 
 local websocket = {
+	handler = require 'net.websocket.handler',
 	--server = require 'net.websocket.server',
 	client = require 'net.websocket.client'
 }

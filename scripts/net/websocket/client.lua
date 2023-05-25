@@ -3,6 +3,7 @@ local class = require 'llae.class'
 local url = require 'net.url'
 local uv = require 'llae.uv'
 local log = require 'llae.log'
+local handler = require 'net.websocket.handler'
 
 local client = class(require 'net.websocket.protocol')
 
@@ -16,8 +17,11 @@ function client:_init(args)
 	self._version = 13
 end
 
-function client:start( handler )
-	self._handler = handler
+function client:start( cb )
+	self._handler = cb
+	if type(cb) == 'function' then
+		self._handler = handler.wrap(cb)
+	end
 	local comp = url.parse(self._args.url)
 	if comp.scheme == 'ws' then
 		comp.scheme = 'http'
@@ -85,6 +89,15 @@ function client:_process_read()
 		self._error = err
 	end
 end
+
+function client:_close()
+	if self._connection then
+		self._connection:disconnect()
+		self._connection = nil
+		self._closed = true
+	end
+end
+
 
 
 return client
