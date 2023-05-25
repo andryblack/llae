@@ -126,18 +126,18 @@ namespace ssl {
 		}
 		{
 			l.pushthread();
-			m_cont.set(l);
+			m_write_cont.set(l);
 
             //std::cout << "begin handshake" << std::endl;
             begin_op("HANDSHAKE");
 			if (!do_handshake()) {
-				m_cont.reset(l);
+				m_write_cont.reset(l);
 				l.pushnil();
 				push_error(l);
                 end_op("HANDSHAKE");
 				return {2};
             } else if (m_state == S_CONNECTED) {
-                m_cont.reset(l);
+                m_write_cont.reset(l);
                 end_op("HANDSHAKE");
                 l.pushboolean(true);
                 return {1};
@@ -224,7 +224,7 @@ namespace ssl {
         }
         
         m_state = S_CLOSED;
-        finish_status("SHUTDOWN");
+        finish_status("SHUTDOWN",false);
         
         m_stream->close();
         m_stream.reset();
@@ -320,17 +320,19 @@ namespace ssl {
         }
     }
 
-	void connection::finish_status(const char* state) {
+	void connection::finish_status(const char* state,bool isread) {
         //std::cout << "finish_status " << m_uv_error << " / " << m_ssl_error << std::endl;
 		auto& l = llae::app::get(m_stream->get_stream()->loop).lua();
         if (!l.native()) {
-            m_cont.release();
+            m_write_cont.release();
+            m_read_cont.release();
             return;
         }
-        if (m_cont.valid()) {
-			m_cont.push(l);
+        lua::ref& cont = isread ? m_read_cont : m_write_cont;
+        if (cont.valid()) {
+			cont.push(l);
 			auto toth = l.tothread(-1);
-			m_cont.reset(l);
+			cont.reset(l);
             int args;
 			if (is_error()) {
 				toth.pushnil();
@@ -359,9 +361,9 @@ namespace ssl {
 		if (m_state == S_HANDSHAKE) {
             //std::cout << "do_continue S_HANDSHAKE" << std::endl;
 			if (m_uv_error || m_ssl_error || !do_handshake()) {
-				finish_status("HANDSHAKE");
+				finish_status("HANDSHAKE",false);
 			} else if (m_state == S_CONNECTED) {
-				finish_status("HANDSHAKE");
+				finish_status("HANDSHAKE",false);
 			} else {
 				// continue handshake
 				return;
@@ -369,9 +371,9 @@ namespace ssl {
 		} else if (m_state == S_WRITE) {
             //std::cout << "do_continue S_WRITE" << std::endl;
             if (m_uv_error || m_ssl_error || !do_write()) {
-                finish_status("WRITE");
+                finish_status("WRITE",false);
             } else if (m_state == S_CONNECTED) {
-                finish_status("WRITE");
+                finish_status("WRITE",false);
             } else {
                 // continue write
                 return;
@@ -379,13 +381,13 @@ namespace ssl {
         } else if (m_state == S_READ) {
             //std::cout << "do_continue S_READ" << std::endl;
             if (m_uv_error || m_ssl_error) {
-                finish_status("READ");
+                finish_status("READ",true);
             } else {
                 auto& l = llae::app::get(m_stream->get_stream()->loop).lua();
-                m_cont.push(l);
+                m_read_cont.push(l);
                 auto toth = l.tothread(-1);
                 if (do_read(toth)) {
-                    m_cont.reset(l);
+                    m_read_cont.reset(l);
                     common::intrusive_ptr<connection> lock(std::move(m_active_op_lock));
                     lock->end_op("READ");
                     auto s = toth.resume(l,2);
@@ -401,9 +403,9 @@ namespace ssl {
         } else if (m_state == S_SHUTDOWN) {
             //std::cout << "do_continue S_SHUTDOWN" << std::endl;
             if (m_uv_error || m_ssl_error || !do_shutdown()) {
-                finish_status("SHUTDOWN");
+                finish_status("SHUTDOWN",false);
             } else if (m_state == S_CLOSED) {
-                finish_status("SHUTDOWN");
+                finish_status("SHUTDOWN",false);
             } else {
                 // continue close
                 return;
@@ -527,21 +529,21 @@ namespace ssl {
             l.pushstring("connection::write is async");
             return {2};
         }
-        if (m_cont.valid()) {
+        if (m_write_cont.valid()) {
             l.pushnil();
             l.pushstring("connection::write async not completed");
             return {2};
         }
         {
             l.pushthread();
-            m_cont.set(l);
+            m_write_cont.set(l);
             
             l.pushvalue(2);
             m_write_buffers.put(l);
             
             begin_op("WRITE");
             if (!do_write()) {
-                m_cont.reset(l);
+                m_write_cont.reset(l);
                 l.pushnil();
                 push_error(l);
                 end_op("WRITE");
@@ -585,7 +587,7 @@ namespace ssl {
             l.pushstring("connection::read is async");
             return {2};
         }
-        if (m_cont.valid()) {
+        if (m_read_cont.valid()) {
             l.pushnil();
             l.pushstring("connection::read async not completed");
             return {2};
@@ -602,7 +604,7 @@ namespace ssl {
             }
             begin_op("READ");
             l.pushthread();
-            m_cont.set(l);
+            m_read_cont.set(l);
         }
         l.yield(0);
         return {0};
@@ -626,7 +628,7 @@ namespace ssl {
             l.pushstring("connection::shutdown is async");
             return {2};
         }
-        if (m_cont.valid()) {
+        if (m_write_cont.valid()) {
             l.pushnil();
             l.pushstring("connection::shutdown async not completed");
             return {2};
@@ -639,11 +641,11 @@ namespace ssl {
             }
             
             l.pushthread();
-            m_cont.set(l);
+            m_write_cont.set(l);
             
             begin_op("SHUTDOWN");
             if (!do_shutdown()) {
-                m_cont.reset(l);
+                m_write_cont.reset(l);
                 l.pushnil();
                 push_error(l);
                 end_op("SHUTDOWN");

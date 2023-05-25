@@ -55,13 +55,14 @@ namespace ssl {
             S_CLOSED,
 		} m_state = S_NONE;
 		void do_continue();
-		lua::ref m_cont;
+		lua::ref m_read_cont;
+        lua::ref m_write_cont;
 		bool do_handshake();
         bool do_write();
         bool do_shutdown();
         bool do_shutdown_stream();
         bool do_read(lua::state& l);
-		void finish_status(const char* state_point);
+		void finish_status(const char* state_point,bool read);
 		void push_error(lua::state& l);
         enum {
             RS_NONE,
