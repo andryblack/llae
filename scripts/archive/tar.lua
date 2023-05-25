@@ -78,12 +78,17 @@ function untar:prepare_file(  )
 	if prefix and #prefix > 0 then
 		name = prefix .. '/' .. name
 	end
+	local prev_file = self._file
 	self._file = {
 		name = name,
 		size = tonumber(parse_name(self._header.size),8),
 		mtime = tonumber(parse_name(self._header.mtime)),
 		readed = 0
 	}
+	if prev_file and prev_file.long_name then
+		self._file.name = prev_file.long_name
+		--log.debug('long name',self._file.name,#prev_file.long_name,name)
+	end
 	if self._header.typeflag == string.byte('5') then
 		--log.debug('found dir',self._file.name)
 		assert(self._file.size == 0)
@@ -93,6 +98,11 @@ function untar:prepare_file(  )
 		end
 		self._state = 'align'
 		self._next = 'header'
+	elseif self._header.typeflag == string.byte('L') then
+		--log.debug('start long',self._file.name,self._file.size)
+		self._next = 'long_name'
+		self._state = 'align'
+		self._file.long_name = ''
 	else
 		--log.debug('start file',self._file.name,self._file.size)
 		self._next = 'file'
@@ -125,6 +135,24 @@ function untar:process_file( data )
 		if self._file.f then
 			self._file.f:close()
 		end
+		self._state = 'align'
+		self._next = 'header'
+		return true
+	end
+	return false
+end
+
+function untar:process_long_name( data )
+	self._data = self._data .. data
+	local cnt = math.min(#self._data,(self._file.size-self._file.readed))
+	if cnt ~= 0 then
+		local d = string.sub(self._data,1,cnt)
+		self._data = string.sub(self._data,cnt+1)
+		self._file.readed = self._file.readed + cnt
+		self._processed = self._processed + cnt
+		self._file.long_name = self._file.long_name .. d
+	end
+	if self._file.readed >= self._file.size then
 		self._state = 'align'
 		self._next = 'header'
 		return true
