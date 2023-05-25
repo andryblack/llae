@@ -75,6 +75,9 @@ function client:start( cb )
 end
 
 function client:_write_packet(p)
+	if not self._connection then
+		return nil,'closed'
+	end
 	return self._connection:write(p)
 end
 
