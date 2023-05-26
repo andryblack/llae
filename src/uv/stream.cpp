@@ -160,14 +160,18 @@ namespace uv {
 	stream::~stream() {
 	}
 
-	void stream::on_closed() {
-		//LLAE_DIAG(std::cout << "stream::on_closed" << std::endl;)
-		m_closed = true;
+    void readable_stream::on_closed() {
+        set_closed();
         if (m_read_consumer) {
             m_read_consumer->on_stream_closed(this);
             m_read_consumer.reset();
-            remove_ref();
+            unhold_ref();
         }
+    }
+
+	void stream::on_closed() {
+		//LLAE_DIAG(std::cout << "stream::on_closed" << std::endl;)
+        readable_stream::on_closed();
         handle::on_closed();
 	}
 
@@ -193,10 +197,7 @@ namespace uv {
 	void stream::read_cb(uv_stream_t* s, ssize_t nread, const uv_buf_t* buf) {
 		stream* self = static_cast<stream*>(s->data);
         auto b = buffer::get(buf->base);
-        if (self->on_read(nread,buffer_ptr(b))) {
-            //std::cout << "stream read_cb remove_ref" << std::endl;
-            self->remove_ref();
-		}
+        self->consume_read(nread,buffer_ptr(b));
         if (b) {
             b->remove_ref();
         }
@@ -214,10 +215,10 @@ namespace uv {
         		m_read_cont.reset(l);
         	}
         }
-        virtual bool on_read(stream* s,
+        virtual bool on_read(readable_stream* s,
                              ssize_t nread,
                              const buffer_ptr&& buffer) override final {
-            auto& l = llae::app::get(s->get_stream()->loop).lua();
+            auto& l = s->get_lua();
             if (!l.native()) {
                 s->stop_read();
                 m_read_cont.release();
@@ -252,8 +253,8 @@ namespace uv {
             }
             return true;
         }
-        void on_stream_closed(stream* s) override final {
-        	auto& l = llae::app::get(s->get_stream()->loop).lua();
+        void on_stream_closed(readable_stream* s) override final {
+            auto& l = s->get_lua();
             if (!l.native()) {
                 m_read_cont.release();
             }
@@ -273,7 +274,7 @@ namespace uv {
         }
     };
 
-	bool stream::on_read(ssize_t nread, const buffer_ptr&& buffer) {
+	void readable_stream::consume_read(ssize_t nread, const buffer_ptr&& buffer) {
         if (m_read_consumer) {
             auto consumer = std::move(m_read_consumer);
             bool res = consumer->on_read(this,
@@ -281,24 +282,31 @@ namespace uv {
             if (!res) {
                 m_read_consumer = std::move(consumer);
             }
-            return res;
         } else {
             LLAE_DIAG(std::cout << "read without consumer" << std::endl;)
             stop_read();
         }
-        return true;
+    }
+
+    void readable_stream::stop_read() {
+        bool release = m_read_consumer;
+        m_read_consumer.reset();
+        if (release) {
+            return unhold_ref();
+        }
+    }
+
+
+    lua::state& stream::get_lua() {
+        return llae::app::get(get_stream()->loop).lua();
     }
         
     void stream::stop_read() {
         uv_read_stop(get_stream());
-        if (m_read_consumer) {
-        	m_read_consumer->on_stop_read(this);
-            remove_ref();
-        }
-        m_read_consumer.reset();
+        readable_stream::stop_read();
     }
 
-	lua::multiret stream::read(lua::state& l) {
+	lua::multiret readable_stream::read(lua::state& l) {
 		if (!l.isyieldable()) {
 			l.pushnil();
 			l.pushstring("stream::read is async");
@@ -333,18 +341,25 @@ namespace uv {
 		return {0};
 	}
 
-    int stream::start_read( const stream_read_consumer_ptr& consumer ) {
+    int readable_stream::start_read( const stream_read_consumer_ptr& consumer ) {
         if (m_read_consumer) {
             return -1;
         }
         m_read_consumer = consumer;
-        //std::cout << "stream start_read add_ref" << std::endl;
-        add_ref();
-        int res = uv_read_start(get_stream(), &stream::alloc_cb, &stream::read_cb);
+        hold_ref();
+        return 0;
+    }
+
+    int stream::start_read( const stream_read_consumer_ptr& consumer ) {
+        auto res = readable_stream::start_read( consumer );
         if (res < 0) {
-            m_read_consumer.reset();
-            //std::cout << "stream start_read error remove_ref" << std::endl;
-            remove_ref();
+            return res;
+        }
+        //std::cout << "stream start_read add_ref" << std::endl;
+        
+        res = uv_read_start(get_stream(), &stream::alloc_cb, &stream::read_cb);
+        if (res < 0) {
+            readable_stream::stop_read();
         }
         return res;
     }

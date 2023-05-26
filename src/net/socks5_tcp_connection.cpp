@@ -77,21 +77,15 @@ namespace net { namespace socks5 {
         tcp_connection_ptr m_conn;
     public:
         explicit connect_read_consumer(tcp_connection_ptr&& con) : m_conn(std::move(con)) {}
-        virtual bool on_read(uv::stream* s,ssize_t nread, const uv::buffer_ptr&& buffer) override {
+        virtual bool on_read(uv::readable_stream* s,ssize_t nread, const uv::buffer_ptr&& buffer) override {
             if (m_conn) {
                 return m_conn->on_connect_read(nread,std::move(buffer));
             }
             return true;
         }
-        virtual void on_stream_closed(stream* s) override {
+        virtual void on_stream_closed(uv::readable_stream* s) override {
             if (m_conn) {
                 m_conn->on_connect_stream_closed();
-                m_conn.reset();
-            }
-        }
-        virtual void on_stop_read(stream* s) override {
-            if (m_conn) {
-                m_conn->on_connect_stop_read();
                 m_conn.reset();
             }
         }
@@ -164,12 +158,6 @@ namespace net { namespace socks5 {
 		}
 		l.pop(1);// thread
 	}
-
-    void tcp_connection::on_connect_stop_read() {
-        if (!m_connect_cont.valid() || m_state==st_none) {
-            return; // wtf?
-        }
-    }
 
     void tcp_connection::on_connect_stream_closed() {
         if (!m_connect_cont.valid() || m_state==st_none) {

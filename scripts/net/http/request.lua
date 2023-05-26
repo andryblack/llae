@@ -5,6 +5,7 @@ local ssl = require 'ssl'
 local class = require 'llae.class'
 local log = require 'llae.log'
 local fs = require 'llae.fs'
+local dns = require 'net.dns'
 
 
 
@@ -13,17 +14,10 @@ local request = class(require 'net.http.headers','http.request')
 request.parser = require 'net.http.request_parser'
 request.response = require 'net.http.request_response'
 
-request.resolve_cache = {}
 
 function request.get_ssl_ctx() 
-	if not request._ssl_ctx then
-		request._ssl_ctx = ssl.ctx.new()
-		assert(request._ssl_ctx:init())
-		log.debug('load cert from',ssl.ctx.default_cafile)
-		local cert = assert(fs.load_file(ssl.ctx.default_cafile))
-		assert(request._ssl_ctx:load_cert(cert))
-	end
-	return request._ssl_ctx
+	local http = require 'net.http'
+	return http.get_ssl_ctx()
 end
 
 function request:_init( args )
@@ -100,24 +94,12 @@ function request:_connect( port )
 end
 
 function request:resolve()
-	local err = nil
-	local cached = self.resolve_cache[self._url.host]
-	local now = os.time()
-	if cached and (os.difftime(now,cached.time) < 30) then
-		self._ip_list = cached.ip_list
-		return true,nil
-	end
-	log.debug('resolve',self._url.host)
-	self._ip_list,err = uv.getaddrinfo(self._url.host)
+	local err
+	self._ip_list,err = dns.resolve(self._url.host)
 	if not self._ip_list then
 		return nil,err
 	end
-	if next(self._ip_list) then
-		self.resolve_cache[self._url.host] = {
-			time = now,
-			ip_list = self._ip_list
-		}
-	end
+
 	return true,nil
 end
 

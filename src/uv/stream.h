@@ -78,43 +78,64 @@ namespace uv {
 		shutdown_lua_req(stream_ptr&& stream,lua::ref&& cont);
 	};
 
-   
+
+    class readable_stream;
     class stream_read_consumer : public meta::object {
     public:
-        virtual bool on_read(stream* s,ssize_t nread, const buffer_ptr&& buffer) = 0;
-        virtual void on_stream_closed(stream* s) {}
-        virtual void on_stop_read(stream* s) {}
+        virtual bool on_read(readable_stream* s,ssize_t nread, const buffer_ptr&& buffer) = 0;
+        virtual void on_stream_closed(readable_stream* s) {}
     };
     typedef common::intrusive_ptr<stream_read_consumer> stream_read_consumer_ptr;
 
-	class stream : public handle {
+    class readable_stream {
+    private:
+        stream_read_consumer_ptr m_read_consumer;
+        bool m_closed = false;
+    protected:
+        bool is_closed() const { return m_closed; }
+        void set_closed() { m_closed = true; }
+        bool is_read_active() { return m_read_consumer; }
+        void consume_read(ssize_t nread, const buffer_ptr&& buffer);
+        void on_closed();
+        virtual void hold_ref() = 0;
+        virtual void unhold_ref() = 0;
+    public:
+        virtual int start_read( const stream_read_consumer_ptr& consumer );
+        virtual void stop_read();
+        lua::multiret read(lua::state& l);
+        virtual lua::state& get_lua() = 0;
+    };
+
+	class stream : public handle, public readable_stream {
 		META_OBJECT
 	private:
-        stream_read_consumer_ptr m_read_consumer;
-		bool m_closed = false;
+        bool m_closed = false;
 		std::vector<uv::buffer_ptr> m_read_buffers;
 		uv::buffer_ptr get_read_buffer(size_t size);
 	protected:
 		explicit stream();
 		virtual ~stream() override;
 		virtual void on_closed() override;
+        virtual void hold_ref() override final { add_ref(); }
+        virtual void unhold_ref() override final { remove_ref(); }
 	private:
 		static void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
 		static void read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf);
 	protected:
-		bool on_read(ssize_t nread, const buffer_ptr&& buffer);
+        virtual lua::state& get_lua() override final;
 	public:
 		virtual uv_stream_t* get_stream() = 0;
 		static void lbind(lua::state& l);
 		bool write(buffer_base_ptr&& buf);
-		lua::multiret read(lua::state& l);
 		lua::multiret write(lua::state& l);
+        lua::multiret read(lua::state& l) { return readable_stream::read(l); }
 		lua::multiret shutdown(lua::state& l);
 		lua::multiret send(lua::state& l);
 		void add_read_buffer(uv::buffer_ptr&& b);
-        int start_read( const stream_read_consumer_ptr& consumer );
-        void stop_read();
 		void close();
+        int start_read( const stream_read_consumer_ptr& consumer ) override;
+        void stop_read() override;
+        
 	};
 
 }

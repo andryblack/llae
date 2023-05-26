@@ -30,7 +30,6 @@ namespace net {
             class write_connect_req;
             class connect_read_consumer;
             void on_connect_writed(int status);
-            void on_connect_stop_read();
             void on_connect_stream_closed();
             bool on_connect_read(ssize_t nread, const uv::buffer_ptr&& buffer);
 		public:
