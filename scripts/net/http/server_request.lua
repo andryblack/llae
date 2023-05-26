@@ -85,7 +85,7 @@ function request:read_body( )
 				break
 			end
 			--log.debug('body readed:',#ch)
-			table.insert(d,ch)
+			table.insert(d,tostring(ch))
 		end
 		self._body = table.concat(d,'')
 		--log.debug('total body readed:',#self._body)
