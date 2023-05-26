@@ -16,7 +16,8 @@ function http_parser:read( client )
 	local ch,e = client:read()
 	--assert(not e,e)
 	if ch then
-		self._data = self._data .. ch
+		self._data = self._data .. tostring(ch)
+		client:add_read_buffer(ch)
 		--print('parser_read',ch)
 	end
 	return ch,e

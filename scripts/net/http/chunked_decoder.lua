@@ -37,7 +37,7 @@ function decoder:read( )
 				self._finished = true
 				return ch,e
 			end
-			self._data = self._data .. ch
+			self._data = self._data .. tostring(ch)
 		end
 	end
 
@@ -47,7 +47,7 @@ function decoder:read( )
 			self._finished = true
 			return ch,e
 		end
-		self._data = ch
+		self._data = tostring(ch)
 	end
 	local l = math.min(#self._data,self._len)
 	local ch = string.sub(self._data,1,l)
@@ -63,7 +63,7 @@ function decoder:read( )
 				self._finished = true
 				return ch,e
 			end
-			self._data = self._data .. ch
+			self._data = self._data .. tostring(ch)
 		end
 		local rn = string.sub(self._data,1,2)
 		self._data = string.sub(self._data,3)

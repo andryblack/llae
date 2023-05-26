@@ -1,6 +1,7 @@
 local class = require 'llae.class'
 local log = require 'llae.log'
 local uv = require 'llae.uv'
+local async = require 'llae.async'
 
 local protocol = class()
 
@@ -27,6 +28,7 @@ function protocol:_init(mask)
 	self._rc_data = ''
 	self._rc_fragments = {}
 	self._mask = mask
+	self._wr_lock = async.lock.new()
 end
 
 function protocol:_handle_msg(opcode)
@@ -105,6 +107,7 @@ function protocol:close()
 end
 
 function protocol:write_msg(data,fin,opcode)
+	self._wr_lock:lock()
 	if self._mask then
 		if not self._mask_data or 
 			self._mask >= #self._mask_data then
@@ -149,7 +152,9 @@ function protocol:write_msg(data,fin,opcode)
 	end
 	res[1] = string.pack('<I1I1',h1,h2)
 	table.insert(res,data)
-	return self:_write_packet(res)
+	local res,err =  self:_write_packet(res)
+	self._wr_lock:unlock()
+	return res,err
 end
 
 return protocol

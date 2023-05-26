@@ -77,9 +77,9 @@ namespace net { namespace socks5 {
         tcp_connection_ptr m_conn;
     public:
         explicit connect_read_consumer(tcp_connection_ptr&& con) : m_conn(std::move(con)) {}
-        virtual bool on_read(uv::readable_stream* s,ssize_t nread, const uv::buffer_ptr&& buffer) override {
+        virtual bool on_read(uv::readable_stream* s,ssize_t nread, uv::buffer_ptr& buffer) override {
             if (m_conn) {
-                return m_conn->on_connect_read(nread,std::move(buffer));
+                return m_conn->on_connect_read(nread,buffer);
             }
             return true;
         }
@@ -168,7 +168,7 @@ namespace net { namespace socks5 {
         });
     }
 
-    bool tcp_connection::on_connect_read(ssize_t nread, const uv::buffer_ptr&& buffer) {
+    bool tcp_connection::on_connect_read(ssize_t nread, uv::buffer_ptr& buffer) {
         if (!m_connect_cont.valid() || m_state==st_none) {
             return true; // wtf?
         }

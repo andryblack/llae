@@ -36,12 +36,10 @@ namespace ssl {
                                 size_t len);
 
 		bool m_write_active = false;
-		bool m_read_active = false;
 		uv_write_t m_write_req;
 		static const size_t CONN_BUFFER_SIZE = 1024 * 16;
 		char m_write_data_buf[CONN_BUFFER_SIZE];
-        uv::buffer_ptr m_read_data_buf;
-		uv_buf_t m_write_buf;
+        uv_buf_t m_write_buf;
 		static void write_cb(uv_write_t* req, int status);
 		void on_write_complete(int status);
 		int m_uv_error = 0;
@@ -107,7 +105,7 @@ namespace ssl {
         void on_shutdown(int status);
         
         virtual bool on_read(uv::readable_stream* stream,ssize_t nread,
-                             const uv::buffer_ptr&& buffer) override final;
+                            uv::buffer_ptr& buffer) override final;
         virtual void on_stream_closed(uv::readable_stream* s) override final;
         const char* m_active_op = nullptr;
         void begin_op(const char* op);
@@ -126,6 +124,7 @@ namespace ssl {
         lua::multiret close(lua::state& l);
         lua::multiret shutdown(lua::state& l);
         
+        void add_read_buffer(uv::buffer_ptr&& b) { readable_stream::add_read_buffer(std::move(b)); }
         int start_read( const uv::stream_read_consumer_ptr& consumer ) override;
         void stop_read() override;
 	};

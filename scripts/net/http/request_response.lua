@@ -82,17 +82,13 @@ function response:read_body(  )
 			break
 		end
 		--log.debug('read body',#ch)
-		table.insert(d,ch)
+		table.insert(d,tostring(ch))
 	end
 	return table.concat(d)
 end
 
 function response:on_closed(  )
-	local connection = self:get_header('Connection')
-	if not connection or
-		connection == 'close' then
-		self:close_connection(true)
-	end
+	self:close_connection(true)
 end
 
 function response:close_connection( closed )

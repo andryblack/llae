@@ -175,7 +175,7 @@ namespace uv {
         handle::on_closed();
 	}
 
-	uv::buffer_ptr stream::get_read_buffer(size_t size) {
+	uv::buffer_ptr readable_stream::get_read_buffer(size_t size) {
 		while (!m_read_buffers.empty()) {
 			auto res = std::move(m_read_buffers.back());
 			m_read_buffers.pop_back();
@@ -196,13 +196,17 @@ namespace uv {
 	}
 	void stream::read_cb(uv_stream_t* s, ssize_t nread, const uv_buf_t* buf) {
 		stream* self = static_cast<stream*>(s->data);
-        auto b = buffer::get(buf->base);
-        self->consume_read(nread,buffer_ptr(b));
+        buffer_ptr b{buffer::get(buf->base)};
         if (b) {
             b->remove_ref();
         }
+        self->consume_read(nread,b);
+        if (b) {
+            self->add_read_buffer(std::move(b));
+        }
 	}
-	void stream::add_read_buffer(uv::buffer_ptr&& b) {
+	void readable_stream::add_read_buffer(uv::buffer_ptr&& b) {
+        if (!b) return;
 		m_read_buffers.emplace_back(std::move(b));
 	}
     class lua_read_consumer : public stream_read_consumer {
@@ -217,7 +221,7 @@ namespace uv {
         }
         virtual bool on_read(readable_stream* s,
                              ssize_t nread,
-                             const buffer_ptr&& buffer) override final {
+                             buffer_ptr& buffer) override final {
             auto& l = s->get_lua();
             if (!l.native()) {
                 s->stop_read();
@@ -230,7 +234,8 @@ namespace uv {
                 auto toth = l.tothread(-1);
                 l.pop(1);// thread
                 if (nread > 0) {
-                    toth.pushlstring(static_cast<const char*>(buffer->get_base()),nread);
+                    buffer->set_len(nread);
+                    lua::push(toth,std::move(buffer));
                     toth.pushnil();
                 } else if (nread == UV_EOF) {
                     toth.pushnil();
@@ -274,13 +279,14 @@ namespace uv {
         }
     };
 
-	void readable_stream::consume_read(ssize_t nread, const buffer_ptr&& buffer) {
+	void readable_stream::consume_read(ssize_t nread,  buffer_ptr& buffer) {
         if (m_read_consumer) {
             auto consumer = std::move(m_read_consumer);
-            bool res = consumer->on_read(this,
-                                                nread, std::move(buffer));
+            bool res = consumer->on_read(this, nread, buffer);
             if (!res) {
                 m_read_consumer = std::move(consumer);
+            } else {
+                unhold_ref();
             }
         } else {
             LLAE_DIAG(std::cout << "read without consumer" << std::endl;)
@@ -447,7 +453,7 @@ namespace uv {
 			l.pushstring("stream::shutdown is async");
 			return {2};
 		}
-		if (m_closed) {
+		if (is_closed()) {
 			l.pushnil();
 			l.pushstring("stream::shutdown stream closed");
 			return {2};
