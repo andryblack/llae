@@ -55,6 +55,8 @@ local function exec_git(args,logfile)
 	redirect_pipe(epipe,logfile)
 	
 	local code,sig = p:wait_exit()
+	rpipe:close()
+	epipe:close()
 	if code ~= 0 or sig ~= 0 then
 		error(string.format('git code:%d sig:%d',code,sig))
 	end
