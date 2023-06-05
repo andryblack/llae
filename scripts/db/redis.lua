@@ -27,7 +27,7 @@ function redis:close(  )
 	self._conn:close()
 end
 
-local function read( self )
+local function read_line( self )
 	local i = 1
 	while true do
 		local rn = self._data:find('\r\n',i,true)
@@ -39,10 +39,8 @@ local function read( self )
 
 		i = math.max(1,#self._data-2)
 
-		--print('start read')
 		local ch,e = self._conn:read()
 		if not ch then
-			--print(e)
 			return nil,e
 		end
 		--print(ch)
@@ -54,7 +52,7 @@ end
 local marker_bulk,marker_simple,marker_array,marker_number,marker_error = string.byte('$+*:-',1,5)
 
 local function read_reply( self )
-	local data,e = read(self)
+	local data,e = read_line(self)
 	if not data then
 		return nil,e
 	end
@@ -64,9 +62,12 @@ local function read_reply( self )
 		if len < 0 then
 			return nil
 		end
-		local d = read(self)
+		local d,err = read_line(self)
+		if not d then
+			return nil,err
+		end
 		while #d < len do
-			local ch,err = read(self)
+			local ch,err = read_line(self)
 			if not ch then
 				return nil,err
 			end
@@ -169,11 +170,13 @@ function redis:try_start_subscribe()
 	self._sub_thread = coroutine.create(function(this)
 		--print('start sub')
 		while next(this._subscribe) or next(this._subhandlers) or next(this._unsubscribe) do
+			--print('sub read')
 			local data,err = read_reply(self)
 			if not data then
+				error(err)
 				return false,err
 			end
-			--print('sub',data[1],data[2],data[3],e)
+			--print('sub',data[1],data[2],data[3])
 			if data[1] == 'message' then
 				local handler = self._subhandlers[data[2]]
 				if handler then
@@ -192,12 +195,14 @@ function redis:try_start_subscribe()
 				local th = self._subscribe[data[2]]
 				if th then
 					self._subscribe[data[2]] = nil
+					--print('resume subscriber:',th)
 					assert(coroutine.resume(th,true))
 				else
 					print('not found',data[2])
 				end
 			end
 		end
+		this._sub_thread = nil
 	end)
 	assert(coroutine.resume(self._sub_thread,self))
 end
@@ -232,7 +237,7 @@ function redis:subscribe( ... )
 	self:try_start_subscribe()
 	
 	while next(self._subscribe) do
-		--print('>wait subscibe')
+		--print('>wait subscibe',cor)
 		coroutine.yield(cor)
 		--print('<wait subscibe')
 	end

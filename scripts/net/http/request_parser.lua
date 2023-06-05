@@ -33,13 +33,15 @@ end
 
 function parser:load( client )
 	while not self:parse_start(client) do 
-		if not self:read(client) then
-			return nil,'unexpected end'
+		local ch,err = self:read(client)
+		if not ch then
+			return nil,'unexpected end in parse response: ' .. tostring(err)
 		end
 	end
 	while not self:parse_header(client) do 
-		if not self:read(client) then
-			return nil,'unexpected end'
+		local ch,err = self:read(client)
+		if not ch then
+			return nil,'unexpected end in parse headers: ' .. tostring(err)
 		end
 	end
 	local resp = self.response.new{

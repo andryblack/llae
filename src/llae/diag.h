@@ -21,4 +21,6 @@ namespace llae {
 #define LLAE_CHECK(X)
 #endif
 
+#define LLAE_DIAG_ERROR(X) X
+
 #endif /*__LLAE_DIAG_H_INCLUDED__*/

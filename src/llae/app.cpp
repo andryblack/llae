@@ -100,7 +100,7 @@ namespace llae {
         loop().stop();
     }
 
-    void app::show_error(lua::state& l,lua::status e) {
+    void app::show_error(lua::state& l,lua::status e, bool pop) {
         switch(e) {
             case lua::status::yield:
                 std::cout << "YIELD:\t";

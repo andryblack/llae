@@ -27,7 +27,7 @@ namespace llae {
 
 		int run();
 		void stop(int code);
-		static void show_error(lua::state& l,lua::status e);
+		static void show_error(lua::state& l,lua::status e,bool pop=false);
 		
         static bool closed(uv_loop_t* l);
 		static app& get(lua_State* L);

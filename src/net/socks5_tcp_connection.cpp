@@ -83,12 +83,6 @@ namespace net { namespace socks5 {
             }
             return true;
         }
-        virtual void on_stream_closed(uv::readable_stream* s) override {
-            if (m_conn) {
-                m_conn->on_connect_stream_closed();
-                m_conn.reset();
-            }
-        }
     };
 
 	tcp_connection::tcp_connection(uv::loop& loop,const struct sockaddr_storage& addr,

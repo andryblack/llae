@@ -35,6 +35,7 @@ async.run(function()
 			end
 			r = assert(rds:scan(r[1],'MATCH','test.*'))
 		end
+		rds:close()
 	end)
 	if not res then
 		print('failed exec thread',err)
@@ -42,16 +43,19 @@ async.run(function()
 	end
 end)
 
--- pub
+-- -- pub
 async.run(function()
 	async.pause(500)
 	local rds = create_redis()
 	for i = 1,20 do
+		log.info('PING')
 		rds:publish('ping','msg'..i)
 		async.pause(500)
 	end
 	async.pause(1500)
 	rds:publish('exit','')
+	rds:close()
+	log.info('pub end')
 end)
 
 -- sub
@@ -64,7 +68,11 @@ async.run(function()
 
 	assert(rds:subscribe('exit',function(ch,msg)
 		log.info('SUB:',ch,msg)
-		assert(rds:unsubscribe())
+		log.info('unsubscribe, close')
+		async.run(function()
+			assert(rds:unsubscribe())
+			rds:close()
+		end)
 	end))
 	log.info('subscribed')
 end)

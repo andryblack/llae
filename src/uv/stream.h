@@ -84,7 +84,6 @@ namespace uv {
     class stream_read_consumer : public meta::object {
     public:
         virtual bool on_read(readable_stream* s,ssize_t nread, buffer_ptr& buffer) = 0;
-        virtual void on_stream_closed(readable_stream* s) {}
     };
     typedef common::intrusive_ptr<stream_read_consumer> stream_read_consumer_ptr;
 
@@ -92,8 +91,12 @@ namespace uv {
     private:
         stream_read_consumer_ptr m_read_consumer;
         std::vector<uv::buffer_ptr> m_read_buffers;
+        class lua_read_consumer;
+        common::intrusive_ptr<lua_read_consumer> m_lua_reader;
         bool m_closed = false;
     protected:
+        readable_stream();
+        ~readable_stream();
         bool is_closed() const { return m_closed; }
         void set_closed() { m_closed = true; }
         bool is_read_active() { return m_read_consumer; }
@@ -130,7 +133,7 @@ namespace uv {
 		bool write(buffer_base_ptr&& buf);
 		lua::multiret write(lua::state& l);
         lua::multiret read(lua::state& l) { return readable_stream::read(l); }
-		lua::multiret shutdown(lua::state& l);
+        lua::multiret shutdown(lua::state& l);
 		lua::multiret send(lua::state& l);
         void add_read_buffer(uv::buffer_ptr&& b) { readable_stream::add_read_buffer(std::move(b)); }
 		void close();

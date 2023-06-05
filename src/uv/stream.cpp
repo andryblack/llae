@@ -41,6 +41,11 @@ namespace uv {
 
 	void write_lua_req::on_write(int status) {
 		auto& l = llae::app::get(get_loop()).lua();
+        if (!l.native()) {
+            m_cont.release();
+            m_buffers.release();
+            return;
+        }
         m_buffers.reset(l);
 		if (m_cont.valid()) {
 			m_cont.push(l);
@@ -163,7 +168,6 @@ namespace uv {
     void readable_stream::on_closed() {
         set_closed();
         if (m_read_consumer) {
-            m_read_consumer->on_stream_closed(this);
             m_read_consumer.reset();
             unhold_ref();
         }
@@ -209,87 +213,149 @@ namespace uv {
         if (!b) return;
 		m_read_buffers.emplace_back(std::move(b));
 	}
-    class lua_read_consumer : public stream_read_consumer {
+
+   
+
+	class lua_read_consumer_base : public stream_read_consumer {
+	protected:
+		static bool push_read( lua::state& toth, ssize_t nread,  buffer_ptr& buffer ) {
+			if (nread > 0) {
+                buffer->set_len(nread);
+                lua::push(toth,std::move(buffer));
+                toth.pushnil();
+            } else if (nread == UV_EOF) {
+                toth.pushnil();
+                toth.pushnil();
+            } else if (nread < 0) {
+                toth.pushnil();
+                uv::push_error(toth,nread);
+            } else { // == 0
+                return false;
+            }
+            return true;
+		}
+	};
+    class readable_stream::lua_read_consumer : public lua_read_consumer_base {
     private:
         lua::ref m_read_cont;
+        std::vector<uv::buffer_ptr> m_readed;
+        size_t m_readed_size = 0;
+        ssize_t m_read_status = 0;
+        bool m_read_status_consumed = false;
     public:
-        lua_read_consumer(lua::ref && cont) : m_read_cont(std::move(cont)) {}
+        lua_read_consumer() {}
+        
         void reset(lua::state& l) {
         	if (m_read_cont.valid()) {
         		m_read_cont.reset(l);
         	}
+        }
+        bool is_active() const {
+            return m_read_cont.valid();
+        }
+        void start(lua::ref&& cont) {
+            assert(!m_read_cont.valid());
+            m_read_cont = std::move(cont);
+        }
+        bool try_read(lua::state& l) {
+            if (!m_readed.empty()) {
+                //std::cout << this << " pop stored buffer " << m_readed.front()->get_base() << " " << m_readed.front()->get_len() << std::endl;
+                m_readed_size -= m_readed.front()->get_len();
+                lua::push(l,std::move(m_readed.front()));
+                l.pushnil();
+                m_readed.erase(m_readed.begin());
+                return true;
+            }
+            if (!m_read_status_consumed) {
+                m_read_status_consumed = true;
+                if (m_read_status==UV_EOF) {
+                    l.pushnil();
+                    l.pushnil();
+                    return true;
+                }
+                if (m_read_status<0) {
+                    l.pushnil();
+                    uv::push_error(l,m_read_status);
+                    return true;
+                }
+            }
+            return false;
         }
         virtual bool on_read(readable_stream* s,
                              ssize_t nread,
                              buffer_ptr& buffer) override final {
             auto& l = s->get_lua();
             if (!l.native()) {
-                s->stop_read();
                 m_read_cont.release();
-                return false;
+                return true;
             }
             if (m_read_cont.valid()) {
                 l.checkstack(2);
                 m_read_cont.push(l);
                 auto toth = l.tothread(-1);
                 l.pop(1);// thread
-                if (nread > 0) {
-                    buffer->set_len(nread);
-                    lua::push(toth,std::move(buffer));
-                    toth.pushnil();
-                } else if (nread == UV_EOF) {
-                    toth.pushnil();
-                    toth.pushnil();
-                } else if (nread < 0) {
-                    toth.pushnil();
-                    uv::push_error(toth,nread);
-                } else { // == 0
-                    return false;
+                if (!push_read(toth,nread,buffer)) {
+                	return false;
                 }
+                
                 lua::ref ref(std::move(m_read_cont));
-                s->stop_read();
+                
                 auto s = toth.resume(l,2);
                 if (s != lua::status::ok && s != lua::status::yield) {
+                    ref.reset(l);
                     llae::app::show_error(toth,s);
+                    return true;
                 }
                 ref.reset(l);
-            } else {
-                s->stop_read();
-            }
-            return true;
-        }
-        void on_stream_closed(readable_stream* s) override final {
-            auto& l = s->get_lua();
-            if (!l.native()) {
-                m_read_cont.release();
-            }
-        	if (m_read_cont.valid()) {
-        		m_read_cont.push(l);
-                auto toth = l.tothread(-1);
-                l.pop(1);// thread
-                toth.pushnil();
-                toth.pushnil();
-                lua::ref ref(std::move(m_read_cont));
-                auto s = toth.resume(l,2);
-                if (s != lua::status::ok && s != lua::status::yield) {
-                    llae::app::show_error(toth,s);
+            } else if (nread > 0) {
+                buffer->set_len(nread);
+                m_readed_size += nread;
+                if (m_readed.empty()) {
+                    //std::cout << this << " push buffer " << buffer->get_base() << " " << buffer->get_len() << std::endl;
+                    m_readed.emplace_back(std::move(buffer));
+                    
+                } else {
+                    auto& last{m_readed.back()};
+                    size_t last_tail = last->get_capacity() - last->get_len();
+                    if (last_tail >= nread) {
+                        //std::cout << this << " add buffer " << buffer->get_base() << " " << buffer->get_len() << std::endl;
+                        ::memcpy(last->get_end(),buffer->get_base(),nread);
+                        last->set_len(last->get_len()+buffer->get_len());
+                        buffer->set_len(buffer->get_capacity());
+                        s->add_read_buffer(std::move(buffer));
+                    } else {
+                        //std::cout << this << " push buffer " << buffer->get_base() << " " << buffer->get_len() << std::endl;
+                        m_readed.emplace_back(std::move(buffer));
+                    }
                 }
-                ref.reset(l);
-        	}
+                if (m_readed_size >= 1024*1024) {
+                    return true;
+                }
+            } else if (nread != 0) {
+                m_read_status_consumed = false;
+                m_read_status = nread;
+                return true;
+            }
+            return false;
         }
     };
 
+    readable_stream::readable_stream() {
+        
+    }
+
+    readable_stream::~readable_stream() {
+        
+    }
+
 	void readable_stream::consume_read(ssize_t nread,  buffer_ptr& buffer) {
         if (m_read_consumer) {
-            auto consumer = std::move(m_read_consumer);
-            bool res = consumer->on_read(this, nread, buffer);
-            if (!res) {
-                m_read_consumer = std::move(consumer);
-            } else {
-                unhold_ref();
+            bool res = m_read_consumer->on_read(this, nread, buffer);
+            if (res) {
+                stop_read();
             }
         } else {
-            LLAE_DIAG(std::cout << "read without consumer" << std::endl;)
+            LLAE_DIAG_ERROR(std::cout << "read without consumer" << std::endl;)
             stop_read();
         }
     }
@@ -302,12 +368,13 @@ namespace uv {
         }
     }
 
-
+    
     lua::state& stream::get_lua() {
         return llae::app::get(get_stream()->loop).lua();
     }
         
     void stream::stop_read() {
+        //std::cout << "stop read " << this << std::endl;
         uv_read_stop(get_stream());
         readable_stream::stop_read();
     }
@@ -318,7 +385,7 @@ namespace uv {
 			l.pushstring("stream::read is async");
 			return {2};
 		}
-		if (m_read_consumer) {
+		if (m_read_consumer && (m_read_consumer.get()!=m_lua_reader.get() || m_lua_reader->is_active()) ) {
 			l.pushnil();
 			l.pushstring("stream::read already read");
 			return {2};
@@ -328,20 +395,29 @@ namespace uv {
 			l.pushstring("stream::read closed");
 			return {2};
 		}
+        {
+            if (m_lua_reader) {
+                if (m_lua_reader->try_read(l)) {
+                    return {2};
+                }
+            } else {
+                m_lua_reader.reset(new lua_read_consumer());
+            }
+        }
 		{
 			l.pushthread();
             lua::ref read_cont;
 			read_cont.set(l);
-
-            common::intrusive_ptr<lua_read_consumer> consume(new lua_read_consumer(std::move(read_cont)));
-            int res = start_read(consume);
-            if (res < 0) {
-            	consume->reset(l);
-                l.pushnil();
-                uv::push_error(l,res);
-                return {2};
+            m_lua_reader->start(std::move(read_cont));
+            if (!m_read_consumer) {
+                int res = start_read(m_lua_reader);
+                if (res < 0) {
+                    m_lua_reader->reset(l);
+                    l.pushnil();
+                    uv::push_error(l,res);
+                    return {2};
+                }
             }
-			
 		}
 		l.yield(0);
 		return {0};
@@ -362,7 +438,7 @@ namespace uv {
             return res;
         }
         //std::cout << "stream start_read add_ref" << std::endl;
-        
+        //std::cout << "start read " << this << std::endl;
         res = uv_read_start(get_stream(), &stream::alloc_cb, &stream::read_cb);
         if (res < 0) {
             readable_stream::stop_read();
@@ -458,6 +534,9 @@ namespace uv {
 			l.pushstring("stream::shutdown stream closed");
 			return {2};
 		}
+        {
+            stop_read();
+        }
 		{
 			l.pushthread();
 			lua::ref shutdown_cont;
@@ -478,6 +557,7 @@ namespace uv {
 	}
 
 	void stream::close() {
+        stop_read();
 		handle::close();
 	}
 

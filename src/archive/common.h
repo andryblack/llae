@@ -317,10 +317,12 @@ namespace archive {
                 }
 			}
 			if (m_write_cont.valid()) {
+                l.checkstack(2);
 				m_write_cont.push(l);
 				auto toth = l.tothread(-1);
 				l.pop(1);// thread
 				int args;
+                toth.checkstack(2);
 				if (status < 0) {
 					toth.pushnil();
 					uv::push_error(toth,status);

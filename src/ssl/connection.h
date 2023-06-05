@@ -64,7 +64,7 @@ namespace ssl {
         
         void process_read();
         template <typename Handle>
-        bool do_read(Handle handle);
+        void do_read(Handle handle);
 		void finish_status(const char* state_point);
 		void push_error(lua::state& l);
         enum {
@@ -106,7 +106,6 @@ namespace ssl {
         
         virtual bool on_read(uv::readable_stream* stream,ssize_t nread,
                             uv::buffer_ptr& buffer) override final;
-        virtual void on_stream_closed(uv::readable_stream* s) override final;
         const char* m_active_op = nullptr;
         void begin_op(const char* op);
         void end_op(const char* op);
