@@ -18,6 +18,7 @@ server.defaults = {
 function server:_init( cb  )
 	self._server = uv.tcp_server.new()
 	self._cb = cb
+	self.active_connections = 0
 end
 
 function server:listen( port, addr , backlog )
@@ -37,6 +38,7 @@ function server:_read_function( client , cb )
 	--connection_num = connection_num + 1
 	--local self_num = connection_num
 	--log.debug('start connection')
+	self.active_connections = self.active_connections + 1
 	while true do
 		--print('start load',self_num)
 		local p = self.parser.new(cb)
@@ -45,6 +47,7 @@ function server:_read_function( client , cb )
 			break
 		end
 	end
+	self.active_connections = self.active_connections - 1
 	--log.debug('close')
 	client:shutdown()
 	client:close()
@@ -53,7 +56,12 @@ end
 function server:on_connection( err )
 	assert(not err, err)
 	local client = uv.tcp_connection.new()
-	self._server:accept(client)
+	local res,err = self._server:accept(client)
+	if not res then
+		log.error('failed accept',err)
+		error(err)
+	end
+
 	local connection_thread = coroutine.create(self._read_function)
 	local res,err = coroutine.resume(connection_thread,self,client,function(req) 
 		req._client = client

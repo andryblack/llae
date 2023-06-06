@@ -95,8 +95,8 @@ make -C build config=release verbose=1 || exit 1
 end
 
 project_config = {
-	{'embed_sctipts',type='string',storage='list'},
-	{'embed_sctipt',type='string',storage='list'},
+	{'embed_scripts',type='string',storage='list'},
+	{'embed_script',type='string',storage='list'},
 	{'extern_main',type='boolean'},
 	{'cmodule',type='string',storage='list'},
 	{'lua_path',type='string',storage='list'},
@@ -178,7 +178,7 @@ generate_src = {{
 	config = [[
 	scripts = {}
 	local installed_scripts = {}
-	local project_scripts = project:get_config('llae','embed_scripts')
+	local project_scripts = project:get_config_value('llae','embed_scripts')
 	for _,v in ipairs(project_scripts or {}) do
 		local files = fs.scanfiles_r(path.join(project:get_root(),v))
 		for __,f in ipairs(files) do
@@ -194,7 +194,7 @@ generate_src = {{
 			end
 		end
 	end
-	project_scripts = project:get_config('llae','embed_script')
+	project_scripts = project:get_config_value('llae','embed_script')
 	for _,f in ipairs(project_scripts or {}) do
 		local name = string.gsub(f:sub(1,-5),'/','.')
 		installed_scripts[name] = true

@@ -53,21 +53,15 @@ function Project.env:cmodule( data )
 	end
 end
 
-function Project.env:config( module, config, value )
+function Project.env:config( module, name, value )
 	if not self.module_config then
 		self.module_config = {}
-	end 
-	local mod = self.module_config[module]
-	if not mod then
-		mod = {}
-		self.module_config[module] = mod
 	end
-	local conf = mod[config]
-	if not conf then
-		conf = {}
-		mod[config] = conf
-	end
-	table.insert(conf,value)
+	table.insert(self.module_config,{
+		module = assert(module),
+		name = assert(name),
+		value = value
+	})
 end
 
 function Project.env:generate_src( data )
@@ -107,6 +101,8 @@ function Project:_init( env , root, cmdargs )
 	self._modules_list = {}
 	self._cmodules = {}
 	self._cmdargs = cmdargs or {}
+	self._module_config = env.module_config or {}
+	
 	if root then
 		self:add_modules_location(path.join(root,'modules'))
 	end
@@ -174,6 +170,36 @@ function Project:add_module( name )
 			end
 		end
 	end
+	self:resolve_module_configs(m)
+end
+
+function Project:resolve_module_configs(m)
+	local configs = {}
+	m.configs = configs
+	for _,v in ipairs(m.project_config or {}) do
+		local name = assert(v[1],'need config name')
+		if configs[name] then
+			error('dublicate module config ' .. name)
+		end
+		configs[name] = v
+		if v.storage and v.storage == 'list' then
+			v.value = {}
+			for __,cv in ipairs(self._module_config) do
+				if cv.module == m.name and cv.name == name then
+					table.insert(v.value,cv.value)
+				end
+			end
+		else
+			for __,cv in ipairs(self._module_config) do
+				if cv.module == m.name and cv.name == name then
+					if v.type and type(cv.value) ~= v.type then
+						error('invalid config value type')
+					end
+					v.value = cv.value
+				end
+			end
+		end
+	end
 end
 
 function Project:load_modules(  )
@@ -235,22 +261,17 @@ function Project:get_cmodules(  )
 	return utils.list_concat(self._cmodules,self._env.cmodules or {})
 end
 
-function Project:get_config( module, config )
-	if not self._env.module_config then
-		log.debug('get_config','empty module_config')
+function Project:get_config_value( module_name, config_name )
+	local module = self:get_module(module_name)
+	if not module then
+		error('module not connected: ' .. tostring(module_name))
 		return nil
 	end
-	local mc = self._env.module_config[module]
-	if not mc then
-		log.debug('get_config','empty module_config for ',module)
-		return nil
+	local config = module.configs[config_name]
+	if not config then
+		error('module ' .. module.name .. ' dnt declare config: ' .. tostring(config_name))
 	end
-	return mc[config]
-end
-
-function Project:get_config_value( module, config )
-	local l = self:get_config(module,config)
-	return l and l[1]
+	return config.value
 end
 
 function Project:write_premake(  )

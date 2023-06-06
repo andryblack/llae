@@ -316,6 +316,10 @@ namespace archive {
                     m_is_error = true;
                 }
 			}
+            if (!l.native()) {
+                m_write_cont.release();
+                return;
+            }
 			if (m_write_cont.valid()) {
                 l.checkstack(2);
 				m_write_cont.push(l);

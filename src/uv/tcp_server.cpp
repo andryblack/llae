@@ -69,11 +69,16 @@ namespace uv {
 	}
 
 	lua::multiret tcp_server::listen(lua::state& l) {
-		int backlog = l.checkinteger(2);
+        if (m_conn_cb.valid()) {
+            l.pushnil();
+            l.pushstring("already listen");
+            return {2};
+        }
+		auto backlog = l.checkinteger(2);
 		l.checktype(3,lua::value_type::function);
 		l.pushvalue(3);
 		m_conn_cb.set(l);
-		int res = uv_listen(get_stream(),backlog,&tcp_server::connection_cb);
+		int res = uv_listen(get_stream(),int(backlog),&tcp_server::connection_cb);
 		if (res < 0) {
 			l.pushnil();
 			uv::push_error(l,res);

@@ -254,6 +254,7 @@ namespace uv {
         void start(lua::ref&& cont) {
             assert(!m_read_cont.valid());
             m_read_cont = std::move(cont);
+            m_read_status_consumed = false;
         }
         bool try_read(lua::state& l) {
             if (!m_readed.empty()) {
@@ -340,9 +341,22 @@ namespace uv {
             auto& l = s->get_lua();
             if (!l.native()) {
                 m_read_cont.release();
-            } else {
-                /// todo, try resume first
-                m_read_cont.reset(l);
+            } else if (m_read_cont.valid()) {
+                l.checkstack(2);
+                m_read_cont.push(l);
+                auto toth = l.tothread(-1);
+                l.pop(1);// thread
+                if (!try_read(toth)) {
+                    l.pushnil();
+                    l.pushnil();
+                }
+                lua::ref ref(std::move(m_read_cont));
+                auto s = toth.resume(l,2);
+                if (s != lua::status::ok && s != lua::status::yield) {
+                    ref.reset(l);
+                    llae::app::show_error(toth,s);
+                }
+                ref.reset(l);
             }
         }
     };

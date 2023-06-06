@@ -57,10 +57,10 @@ namespace uv {
 				uv::push_error(toth,status);
 				nargs = 2;
 			} else {
-				l.pushboolean(true);
+                toth.pushboolean(true);
 				nargs = 1;
 			}
-			auto s = toth.resume(l,nargs);
+			auto s = toth.resume(toth,nargs);
 			if (s != lua::status::ok && s != lua::status::yield) {
 				llae::app::show_error(toth,s);
 			}

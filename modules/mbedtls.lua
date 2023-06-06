@@ -63,7 +63,7 @@ function install()
 	install_files(includes)
 -- 
 
-	for _,v in ipairs(project:get_config(name,'uncomment') or {}) do
+	for _,v in ipairs(project:get_config_value(name,'uncomment') or {}) do
 		uncomment[v]=true
 	end 
 
