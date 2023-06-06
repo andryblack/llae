@@ -411,7 +411,7 @@ namespace uv {
 		}
 		if (m_closed) {
 			l.pushnil();
-			l.pushstring("stream::read closed");
+			l.pushnil();
 			return {2};
 		}
         {
