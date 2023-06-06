@@ -2,7 +2,7 @@
 local utils = require 'llae.utils'
 args = utils.parse_args(...)
 
-<% if project:get_config_value('llae','lua_path') then %>
+<% if next(project:get_config_value('llae','lua_path') or {}) then %>
 	local fs = require 'llae.fs'
 	local path = require 'llae.path'
 	local tokens = {
