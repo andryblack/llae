@@ -165,13 +165,7 @@ namespace uv {
 	stream::~stream() {
 	}
 
-    void readable_stream::on_closed() {
-        set_closed();
-        if (m_read_consumer) {
-            m_read_consumer.reset();
-            unhold_ref();
-        }
-    }
+    
 
 	void stream::on_closed() {
 		//LLAE_DIAG(std::cout << "stream::on_closed" << std::endl;)
@@ -244,6 +238,10 @@ namespace uv {
         bool m_read_status_consumed = false;
     public:
         lua_read_consumer() {}
+        
+        void on_closed() {
+            m_read_cont.release();
+        }
         
         void reset(lua::state& l) {
         	if (m_read_cont.valid()) {
@@ -338,6 +336,15 @@ namespace uv {
             }
             return false;
         }
+        virtual void on_stop_read(readable_stream* s) override final {
+            auto& l = s->get_lua();
+            if (!l.native()) {
+                m_read_cont.release();
+            } else {
+                /// todo, try resume first
+                m_read_cont.reset(l);
+            }
+        }
     };
 
     readable_stream::readable_stream() {
@@ -348,11 +355,23 @@ namespace uv {
         
     }
 
+    void readable_stream::on_closed() {
+        set_closed();
+        stop_read();
+        if (m_lua_reader) {
+            m_lua_reader->on_closed();
+            m_lua_reader.reset();
+        }
+    }
+
 	void readable_stream::consume_read(ssize_t nread,  buffer_ptr& buffer) {
         if (m_read_consumer) {
-            bool res = m_read_consumer->on_read(this, nread, buffer);
+            auto consumer = m_read_consumer;
+            bool res = consumer->on_read(this, nread, buffer);
             if (res) {
-                stop_read();
+                if (consumer.get() == m_read_consumer.get()) {
+                    stop_read();
+                }
             }
         } else {
             LLAE_DIAG_ERROR(std::cout << "read without consumer" << std::endl;)
@@ -361,10 +380,10 @@ namespace uv {
     }
 
     void readable_stream::stop_read() {
-        bool release = m_read_consumer;
-        m_read_consumer.reset();
-        if (release) {
-            return unhold_ref();
+        stream_read_consumer_ptr consumer = std::move(m_read_consumer);
+        if (consumer) {
+            consumer->on_stop_read(this);
+            unhold_ref();
         }
     }
 
@@ -426,6 +445,9 @@ namespace uv {
     int readable_stream::start_read( const stream_read_consumer_ptr& consumer ) {
         if (m_read_consumer) {
             return -1;
+        }
+        if (is_closed()) {
+            return -2;
         }
         m_read_consumer = consumer;
         hold_ref();

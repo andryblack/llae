@@ -83,6 +83,12 @@ namespace net { namespace socks5 {
             }
             return true;
         }
+        virtual void on_stop_read(uv::readable_stream* s) override {
+            if (m_conn) {
+                m_conn->on_connect_stop_read();
+                m_conn.reset();
+            }
+        }
     };
 
 	tcp_connection::tcp_connection(uv::loop& loop,const struct sockaddr_storage& addr,
@@ -139,37 +145,38 @@ namespace net { namespace socks5 {
             m_connect_cont.release();
             return;
         }
-        l.checkstack(2);
-		m_connect_cont.push(l);
-		m_connect_cont.reset(l); // on stack
-		auto toth = l.tothread(-1);
-		toth.checkstack(3);
-		toth.pushnil();
-		report(toth);
-		auto s = toth.resume(l,2);
-		if (s != lua::status::ok && s != lua::status::yield) {
-			llae::app::show_error(toth,s);
-		}
-		l.pop(1);// thread
+        if (m_connect_cont.valid()) {
+            l.checkstack(2);
+            m_connect_cont.push(l);
+            m_connect_cont.reset(l); // on stack
+            auto toth = l.tothread(-1);
+            toth.checkstack(3);
+            toth.pushnil();
+            report(toth);
+            auto s = toth.resume(l,2);
+            if (s != lua::status::ok && s != lua::status::yield) {
+                llae::app::show_error(toth,s);
+            }
+            l.pop(1);// thread
+        }
 	}
 
-    void tcp_connection::on_connect_stream_closed() {
-        if (!m_connect_cont.valid() || m_state==st_none) {
-            return; // wtf?
-        }
-        report_connect_error([](lua::state&l){
-            l.pushstring("SOCKS5: connection closed");
-        });
+    void tcp_connection::on_connect_stop_read() {
+        
     }
-
     bool tcp_connection::on_connect_read(ssize_t nread, uv::buffer_ptr& buffer) {
         if (!m_connect_cont.valid() || m_state==st_none) {
             return true; // wtf?
         }
         if (st_select_method == m_state) {
             if (nread < 2) {
-                report_connect_error([](lua::state&l){
+                report_connect_error([nread](lua::state&l){
                     l.pushstring("SOCKS5: auth failed");
+                    if (nread < 0) {
+                        l.pushstring(" ");
+                        uv::push_error(l, nread);
+                        l.concat(3);
+                    }
                 });
                 return true;
             }
@@ -212,8 +219,13 @@ namespace net { namespace socks5 {
             }
         } else if (st_username_password == m_state) {
             if (nread < 2) {
-                report_connect_error([](lua::state&l){
+                report_connect_error([nread](lua::state&l){
                     l.pushstring("SOCKS5: auth failed");
+                    if (nread < 0) {
+                        l.pushstring(" ");
+                        uv::push_error(l, nread);
+                        l.concat(3);
+                    }
                 });
                 return true;
             }
@@ -255,8 +267,13 @@ namespace net { namespace socks5 {
             return false;
         } else if (st_open_connection == m_state) {
             if (nread < 4) {
-                report_connect_error([](lua::state&l){
+                report_connect_error([nread](lua::state&l){
                     l.pushstring("SOCKS5: auth failed");
+                    if (nread < 0) {
+                        l.pushstring(" ");
+                        uv::push_error(l, nread);
+                        l.concat(3);
+                    }
                 });
                 return true;
             }

@@ -84,6 +84,7 @@ namespace uv {
     class stream_read_consumer : public meta::object {
     public:
         virtual bool on_read(readable_stream* s,ssize_t nread, buffer_ptr& buffer) = 0;
+        virtual void on_stop_read(readable_stream* s) {}
     };
     typedef common::intrusive_ptr<stream_read_consumer> stream_read_consumer_ptr;
 

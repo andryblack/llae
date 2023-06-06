@@ -30,8 +30,8 @@ namespace net {
             class write_connect_req;
             class connect_read_consumer;
             void on_connect_writed(int status);
-            void on_connect_stream_closed();
             bool on_connect_read(ssize_t nread, uv::buffer_ptr& buffer);
+            void on_connect_stop_read();
 		public:
 			explicit tcp_connection(uv::loop& loop,
 				const struct sockaddr_storage& addr,
