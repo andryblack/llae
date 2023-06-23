@@ -114,7 +114,7 @@ solution '<%= project:name() %>'
 
 		includedirs {
 			<% for _,mod in project:foreach_module() do if mod.includedir then %>
-				'<%= project.get_path(path.join('modules',mod.name),mod.includedir) %>'<% end end %>
+				'<%= project.get_path(path.join('modules',mod.name),mod.includedir) %>',<% end end %>
 		}
 		
 		<% for _,mod in project:foreach_module() do if mod.project_main then %>
