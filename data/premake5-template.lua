@@ -106,6 +106,10 @@ solution '<%= project:name() %>'
 			'include'
 		}
 
+		libdirs {
+			'lib'
+		}
+
 		files {
 			'src/*.cpp',--generated
 		}
@@ -132,6 +136,7 @@ solution '<%= project:name() %>'
 		links {
 		<% for _,mod in project:foreach_module_rev() do %>
 			<% if mod.build_lib and not mod.build_lib.noautolink then %>"module-<%= mod.name %>",<%end%>
+			<% if mod.libs then for __,l in ipairs(mod.libs) do %>"<%= l %>",<%end end%>
 		<% end %>
 		}
 
