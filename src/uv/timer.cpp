@@ -36,6 +36,8 @@ namespace uv {
 			if (is_last) {
 				self->unref();
 			}
+		} else {
+			uv_timer_stop(t);
 		}
 	}
 
