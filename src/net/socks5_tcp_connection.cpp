@@ -103,7 +103,12 @@ namespace net { namespace socks5 {
         if (llae::app::closed(get_stream()->loop)) {
             m_connect_cont.release();
         } else {
-            m_connect_cont.reset(llae::app::get(get_stream()->loop).lua());
+            if (m_connect_cont.valid()) {
+                report_connect_error([](lua::state&l){
+                        l.pushstring("SOCKS5: closed");
+                    });
+                m_connect_cont.reset(llae::app::get(get_stream()->loop).lua());
+            }   
         }
         uv::tcp_connection::on_closed();
     }
@@ -396,11 +401,11 @@ namespace net { namespace socks5 {
 		return {0};
 	}
 
- 
 
 	void tcp_connection::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&tcp_connection::lnew);
 		lua::bind::function(l,"connect",&tcp_connection::connect);
+        lua::bind::function(l,"close",&tcp_connection::close);
 	}
 
 }}

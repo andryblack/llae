@@ -20,6 +20,11 @@ function static:_init( root, options )
 	end
 end
 
+function static:get_fs_path(rpath)
+	local apath = self._root and path.join(self._root,rpath) or rpath
+	return self._app:get_fs_path(apath)
+end
+
 function static:check( fn )
 	local v = self._check_cache[fn]
 	if type(v) ~= 'nil' then

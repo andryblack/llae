@@ -40,7 +40,7 @@ namespace net {
 			static lua::multiret lnew(lua::state& l);
 			lua::multiret connect(lua::state& l);
 	      	static void lbind(lua::state& l);
-		};
+	  	};
     
         using tcp_connection_ptr = common::intrusive_ptr<tcp_connection>;
 
