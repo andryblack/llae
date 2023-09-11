@@ -11,7 +11,7 @@ META_OBJECT_INFO(uv::tcp_connection,uv::stream)
 
 namespace uv {
 
-	class connect_req : public req {
+	class tcp_connection::connect_req : public req {
 	private:
 		uv_connect_t m_req;
 		tcp_connection_ptr m_conn;
@@ -26,9 +26,9 @@ namespace uv {
 			self->on_end(status);
 			self->remove_ref();
 		}
-        int connect(uv_tcp_t* tcp,struct sockaddr * addr) {
+        int connect(struct sockaddr * addr) {
             add_ref();
-            int r = uv_tcp_connect(&m_req,tcp,addr,&connect_req::connect_cb);
+            int r = uv_tcp_connect(&m_req,m_conn->get_tcp(),addr,&connect_req::connect_cb);
             if (r < 0) {
                 remove_ref();
             }
@@ -107,7 +107,7 @@ namespace uv {
 		
 			common::intrusive_ptr<connect_req> req{new connect_req(tcp_connection_ptr(this),
 				std::move(connect_cont))};
-            int r = req->connect(&m_tcp,(struct sockaddr *)&addr);
+            int r = req->connect((struct sockaddr *)&addr);
 			if (r < 0) {
                 req->reset(l);
 				l.pushnil();

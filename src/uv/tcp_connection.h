@@ -13,6 +13,7 @@ namespace uv {
 		META_OBJECT
 	private:
 		uv_tcp_t m_tcp;
+		class connect_req;
 	public:
 		virtual uv_handle_t* get_handle() override final { return reinterpret_cast<uv_handle_t*>(&m_tcp); }
 		virtual uv_stream_t* get_stream() override final { return reinterpret_cast<uv_stream_t*>(&m_tcp); }

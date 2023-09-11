@@ -14,6 +14,7 @@
 #include "process.h"
 #include "timer.h"
 #include "pipe.h"
+#include "pipe_server.h"
 #include "llae/app.h"
 #include <iostream>
 #include <memory>
@@ -312,6 +313,7 @@ int luaopen_uv(lua_State* L) {
 	lua::state l(L);
 
 	lua::bind::object<uv::handle>::register_metatable(l);
+	lua::bind::object<uv::server>::register_metatable(l,&uv::server::lbind);
 	lua::bind::object<uv::tcp_server>::register_metatable(l,&uv::tcp_server::lbind);
 	lua::bind::object<uv::stream>::register_metatable(l,&uv::stream::lbind);
 	lua::bind::object<uv::tcp_connection>::register_metatable(l,&uv::tcp_connection::lbind);
@@ -322,6 +324,7 @@ int luaopen_uv(lua_State* L) {
     lua::bind::object<uv::poll>::register_metatable(l,&uv::poll::lbind);
     lua::bind::object<uv::process>::register_metatable(l,&uv::process::lbind);
     lua::bind::object<uv::pipe>::register_metatable(l,&uv::pipe::lbind);
+    lua::bind::object<uv::pipe_server>::register_metatable(l,&uv::pipe_server::lbind);
     lua::bind::object<uv::timer>::register_metatable(l);
     lua::bind::object<uv::timer_lcb>::register_metatable(l,&uv::timer_lcb::lbind);
 
@@ -342,6 +345,8 @@ int luaopen_uv(lua_State* L) {
     l.setfield(-2,"process");
     lua::bind::object<uv::pipe>::get_metatable(l);
     l.setfield(-2,"pipe");
+    lua::bind::object<uv::pipe_server>::get_metatable(l);
+	l.setfield(-2,"pipe_server");
      lua::bind::object<uv::timer_lcb>::get_metatable(l);
     l.setfield(-2,"timer");
     
