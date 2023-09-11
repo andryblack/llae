@@ -9,7 +9,6 @@ local redis = class(nil,'db.redis')
 redis.resp = require 'db.redis.resp'
 
 function redis:_init( )
-	self._conn = uv.tcp_connection.new()
 	self._lock = async.lock.new()
 	self._subscribe = {}
 	self._unsubscribe = {}
@@ -19,12 +18,23 @@ end
 --print('122')
 
 function redis:connect( addr , port )
-	self._data = ''
-	return self._conn:connect(addr,port)
+	if self._conn then
+		return false, 'already'
+	end
+	if not port then
+		self._conn = uv.pipe.new()
+		self._data = ''
+		return self._conn:connect(addr)
+	else
+		self._conn = uv.tcp_connection.new()
+		self._data = ''
+		return self._conn:connect(addr,port)
+	end
 end
 
 function redis:close(  )
-	self._conn:close()
+	self._conn:shutdown()
+	self._conn = nil
 end
 
 local function read_line( self )
@@ -112,6 +122,26 @@ function redis:cmd(  ... )
 	res,err = read_reply(self)
 	self._lock:unlock()
 	return res,err
+end
+
+function redis:pipelining( encoded_commands )
+	self._lock:lock()
+	--print('send: ',req)
+	local res,err = self._conn:write(encoded_commands)
+	if not res then
+		self._lock:unlock()
+		return nil,err
+	end
+	local result = {}
+	for _,v in ipairs(encoded_commands) do
+		table.insert(result,{read_reply(self)})
+	end
+	self._lock:unlock()
+	return result
+end
+
+function redis.encode( ... )
+	return redis.resp.gen_req(...)
 end
 
 function redis:pubsubcmd( ...)

@@ -35,6 +35,17 @@ async.run(function()
 			end
 			r = assert(rds:scan(r[1],'MATCH','test.*'))
 		end
+
+		local requests = {}
+		for i=1,100 do
+			table.insert(requests,rds.encode('INCR','foo'))
+		end
+		table.insert(requests,rds.encode('HGETALL','foo'))
+		local responses = assert(rds:pipelining(requests))
+		for _,r in ipairs(responses) do
+			log.info(table.unpack(r))
+		end
+
 		rds:close()
 	end)
 	if not res then
@@ -42,6 +53,7 @@ async.run(function()
 		error(err)
 	end
 end)
+
 
 -- -- pub
 async.run(function()
