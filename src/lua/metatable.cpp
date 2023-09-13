@@ -1,5 +1,6 @@
 #include "metatable.h"
 #include "stack.h"
+#include "bind.h"
 
 namespace lua {
 
@@ -9,6 +10,22 @@ namespace lua {
 			hdr->~object_holder_t();
 		}
 		return 0;
+	}
+
+	static int metaobject_reset_ref(lua_State* L) {
+		auto hdr = static_cast<object_holder_t*>(state(L).touserdata(1));
+		if (hdr) {
+			hdr->hold.reset();
+		}
+		return 0;
+	}
+
+	static void metaobject_bind(state& s) {
+		bind::function(s,"free",&metaobject_reset_ref);
+	}
+
+	void register_meta_object_metatable(state& s) {
+        bind::object<meta::object>::register_metatable(s,&metaobject_bind);
 	}
 
 	void create_metatable(state& s,const meta::info_t* info) {
@@ -27,8 +44,6 @@ namespace lua {
 		s.setfield(-2,"__index");
 		s.pushcclosure(&metaobject_destroy,0);
 		s.setfield(-2,"__gc");
-		s.pushinteger(object_holder_t::type_marker);
-		s.setfield(-2,"__llae_type");
 	}
 
 	void set_metatable(state& s,const meta::info_t* info) {

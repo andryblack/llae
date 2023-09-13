@@ -1,7 +1,7 @@
 #include "app.h"
 #include "lua/value.h"
 #include "meta/object.h"
-#include "lua/bind.h"
+#include "lua/metatable.h"
 #include "uv/handle.h"
 #include <psa/crypto.h>
 
@@ -37,7 +37,7 @@ namespace llae {
         uv_loop_set_data(m_loop.native(),this);
         m_lua.open_libs();
         lua_atpanic(lua().native(),&at_panic);
-        lua::bind::object<meta::object>::register_metatable(lua());
+        lua::register_meta_object_metatable(lua());
         if (need_signal) {
             m_stop_sig.reset( new uv::signal(loop()) );
             m_stop_sig->start_oneshot(SIGINT,[this]() {
