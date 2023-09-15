@@ -31,7 +31,6 @@ namespace lua {
 		void* newuserdata(size_t size) { return lua_newuserdata(m_L,size); }
 		void createtable(int narr=0,int nset=0) { lua_createtable(m_L,narr,nset); }
 		void newtable() { lua_newtable(m_L); }
-        bool isboolean(int idx) { return lua_type(m_L,idx) == LUA_TBOOLEAN; }
 		void pushboolean(bool v) { lua_pushboolean(m_L,v?1:0);}
 		void pushinteger(lua_Integer val) { lua_pushinteger(m_L,val); }
 		void pushnumber(lua_Number val) { lua_pushnumber(m_L,val); }
@@ -119,6 +118,8 @@ namespace lua {
         bool isthread(int idx) const { return lua_isthread(m_L,idx); }
         bool isuserdata(int idx) const { return lua_isuserdata(m_L,idx); }
         bool isfunction(int idx) const { return lua_isfunction(m_L,idx); }
+        bool isboolean(int idx) { return lua_type(m_L,idx) == LUA_TBOOLEAN; }
+        bool isinteger(int idx) { return lua_isinteger(m_L,idx); }
 
         bool isyieldable() const { return lua_isyieldable(m_L); }
         
