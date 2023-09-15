@@ -1,12 +1,14 @@
 local llae = require 'llae'
 local class = require 'llae.class'
 local url = require 'net.url'
+local log = require 'llae.log'
 local uv = require 'llae.uv'
 local async = require 'llae.async'
 
 local redis = class(nil,'db.redis')
 
-redis.resp = require 'db.redis.resp'
+redis.native = require 'db.redis.native'
+redis.resp = redis.native.resp3
 
 function redis:_init( )
 	self._lock = async.lock.new()
@@ -24,17 +26,28 @@ function redis:connect( addr , port )
 	if not port then
 		self._conn = uv.pipe.new()
 		self._data = ''
-		return self._conn:connect(addr)
+		local res, err = self._conn:connect(addr)
+		if not res then
+			return res,err
+		end
 	else
 		self._conn = uv.tcp_connection.new()
 		self._data = ''
-		return self._conn:connect(addr,port)
+		local res, err = self._conn:connect(addr,port)
+		if not res then
+			return res,err
+		end
 	end
+	return self:_do_hello()
 end
 
 function redis:close(  )
 	self._conn:shutdown()
 	self._conn = nil
+	if self._resp then
+		self._resp:close()
+		self._resp = nil
+	end
 end
 
 local function read_line( self )
@@ -59,7 +72,13 @@ local function read_line( self )
 	end
 end
 
-local marker_bulk,marker_simple,marker_array,marker_number,marker_error = string.byte('$+*:-',1,5)
+local marker_bulk,
+		marker_simple,
+		marker_array,
+		marker_number,
+		marker_error,
+		marker_map,
+		marker_pub = string.byte('$+*:-%>',1,7)
 
 local function read_reply( self )
 	local data,e = read_line(self)
@@ -86,7 +105,7 @@ local function read_reply( self )
 		return d
 	elseif marker == marker_simple then
 		return string.sub(data,2)
-	elseif marker == marker_array then
+	elseif marker == marker_array or marker == marker_pub then
 		local len = tonumber(string.sub(data,2))
 		if len < 0 then
 			return nil
@@ -100,21 +119,55 @@ local function read_reply( self )
 			vals[i] = v
 		end
 		return vals
+	elseif marker == marker_map then
+		local len = tonumber(string.sub(data,2))
+		if len < 0 then
+			return nil
+		end
+		local vals = {}
+		for i = 1, len do
+			local k,e = read_reply(self)
+			if not k then
+				return nil,e
+			end
+			local v,e = read_reply(self)
+			if not v then
+				return nil,e
+			end
+			vals[k] = v
+		end
+		return vals
 	elseif marker == marker_number then
 		return tonumber(string.sub(data,2))
 	elseif marker == marker_error then
 		return false, string.sub(data,2)
 	else
-		return false ,'unexpected'..marker
+		return false ,'unexpected'..marker .. '"' .. string.char(marker) .. '"'
 	end
+end
+
+function redis:_do_hello()
+	log.debug('HELLO>>')
+	local res,err = self._conn:write('HELLO 3\r\n')
+	if not res then
+		return nil,err
+	end
+	res,err = read_reply(self)
+	if not res then
+		return err
+	end
+	for k,v in pairs(res) do
+		log.debug(k,v)
+	end
+	self._info = res
+	self._resp = redis.resp.new(self._conn)
+	return true
 end
 
 
 function redis:cmd(  ... )
 	self._lock:lock()
-	local req = redis.resp.gen_req(...)
-	--print('send: ',req)
-	local res,err = self._conn:write(req)
+	local res,err = self._resp:cmd(...)
 	if not res then
 		self._lock:unlock()
 		return nil,err
@@ -127,7 +180,7 @@ end
 function redis:pipelining( encoded_commands )
 	self._lock:lock()
 	--print('send: ',req)
-	local res,err = self._conn:write(encoded_commands)
+	local res,err = self._resp:pipelining(encoded_commands)
 	if not res then
 		self._lock:unlock()
 		return nil,err
@@ -145,9 +198,8 @@ function redis.encode( ... )
 end
 
 function redis:pubsubcmd( ...)
-	local req = redis.resp.gen_req(...)
 	--print('send: ',req)
-	local res,err = self._conn:write(req)
+	local res,err = self._resp:cmd(...)
 	return res,err
 end
 
@@ -249,9 +301,8 @@ function redis:subscribe( ... )
 	end
 	self._lock:lock()
 	table.insert(args,1,'SUBSCRIBE')
-	local req = redis.resp.gen_req(table.unpack(args))
 	--print('send: ',req)
-	local res,err = self._conn:write(req)
+	local res,err = self._resp:cmd(table.unpack(args))
 	if not res then
 		self._lock:unlock()
 		return nil,err

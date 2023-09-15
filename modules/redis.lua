@@ -9,7 +9,7 @@ function install()
 end
 
 cmodules = {
-	'db.redis.resp',
+	'db.redis.native',
 }
 
 build_lib = {

@@ -17,12 +17,15 @@ async.run(function()
 	local res,err = pcall(function()
 		local rds = create_redis()
 
-		log.info('SET:',assert(rds:set('test.a.1',100)))
+		log.info('SET:',assert(rds:set('test.a.1','100')))
 		log.info('INCR:',assert(rds:incr('test.a.1')))
 		log.info('GET:',rds:get('test.a.1'))
 
 		log.info('HGETALL:',rds:hgetall('test.not.exist'))
 		log.info('HGETALL:',rds:hgetall('test.a.1'))
+
+		log.info('HSET',rds:hset('set','key',1))
+		log.info('HGET',rds:hget('set','key'))
 
 		local r = assert(rds:scan("0",'MATCH','test.*'))
 		log.info(json.encode(r))
