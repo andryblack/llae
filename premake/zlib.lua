@@ -2,7 +2,7 @@ local utils = require 'utils'
 local _M = {
 	name = 'zlib',
 	version = '1.2.13',
-	url = 'https://zlib.net/zlib-1.2.13.tar.gz',
+	url = 'https://zlib.net/fossils/zlib-1.2.13.tar.gz',
 	archive = 'tar.gz',
 }
 

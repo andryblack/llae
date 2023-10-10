@@ -1,7 +1,7 @@
 name = 'zlib'
 version = '1.2.13'
 archive = 'zlib-' .. version .. '.tar.gz'
-url = 'https://zlib.net/' .. archive
+url = 'https://zlib.net/fossils/' .. archive
 hash = '9b8aa094c4e5765dabf4da391f00d15c'
 dir = name .. '-' .. version
 
