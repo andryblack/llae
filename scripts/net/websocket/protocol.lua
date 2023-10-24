@@ -48,8 +48,12 @@ end
 
 function protocol:_process_rc(data)
 	self._rc_data = self._rc_data .. data
-	local rc_len = #self._rc_data
-	if rc_len >= 2 then
+	
+	while true do
+		local rc_len = #self._rc_data
+		if rc_len < 2 then
+			return
+		end
 		local h1,h2 = string.unpack('<I1I1',self._rc_data,1)
 		local FIN = h1 & 0x80
 		local opcode = h1 & 0x0f
