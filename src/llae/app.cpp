@@ -9,6 +9,26 @@
 
 namespace llae {
 
+
+    class app::lua_at_exit_handler : public at_exit_handler {
+        lua::ref m_ref;
+    public:
+        explicit lua_at_exit_handler(lua::state& l,int arg) {
+            l.pushvalue(arg);
+            m_ref.set(l);
+        }
+        virtual void at_exit( app& app , int arg) override {
+            auto& l{app.lua()};
+            m_ref.push(l);
+            m_ref.reset(l);
+            l.pushinteger(arg);
+            auto res = l.pcall(1,0,0);
+            if (res != lua::status::ok) {
+                app::show_lua_error(l,res);
+            }
+        }
+    };
+
     static int at_panic(lua_State* L) {
         std::cout << "PANIC: ";
         lua::state l(L);
@@ -41,6 +61,7 @@ namespace llae {
         if (need_signal) {
             m_stop_sig.reset( new uv::signal(loop()) );
             m_stop_sig->start_oneshot(SIGINT,[this]() {
+                this->process_at_exit(SIGINT);
                 this->loop().stop();
             });
             m_stop_sig->unref();
@@ -63,6 +84,18 @@ namespace llae {
         assert(l);
         assert(!closed(l));
         return *static_cast<app*>(uv_loop_get_data(l));
+    }
+
+    void app::at_exit(lua::state& l,int arg) {
+        common::intrusive_ptr<lua_at_exit_handler> h{new lua_at_exit_handler(l,arg) };
+        m_at_exit.emplace_back(std::move(h));
+    }
+
+    void app::process_at_exit(int res) {
+        for (auto& h:m_at_exit) {
+            h->at_exit(*this,res);
+        }
+        m_at_exit.clear();
     }
 
     static void stop_walk_cb(uv_handle_t* handle,void* arg) {
@@ -96,11 +129,12 @@ namespace llae {
     }
 
     void app::stop(int res) {
+        process_at_exit(res);
         m_res = res;
         loop().stop();
     }
 
-    void app::show_error(lua::state& l,lua::status e, bool pop) {
+    void app::show_lua_error(lua::state& l,lua::status e) {
         switch(e) {
             case lua::status::yield:
                 std::cout << "YIELD:\t";
@@ -130,6 +164,9 @@ namespace llae {
         } else {
             std::cout << "unknown" << std::endl;
         }
+    }
+    void app::show_error(lua::state& l,lua::status e, bool pop) {
+        show_lua_error(l,e);
         lua::state& ms(get(l).lua());
         luaL_traceback(ms.native(),l.native(),NULL,1);
         std::cout << lua::value(ms,-1).tostring() << std::endl;
@@ -141,6 +178,13 @@ namespace llae {
         app::get(L).stop(luaL_optinteger(L,1,0));
         return 0;
     }
+
+    static int lua_at_exit(lua_State* L) {
+        lua::state l(L);
+        l.checktype(1,lua::value_type::function);
+        app::get(l).at_exit(l,1);
+        return 0;
+    }
     
 }
 
@@ -149,6 +193,7 @@ int luaopen_llae(lua_State* L) {
     lua::state s(L);
     luaL_Reg reg[] = {
         { "stop", llae::lua_stop },
+        { "at_exit", llae::lua_at_exit },
         { "release_object", llae::lua_release_object },
         { NULL, NULL }
     };

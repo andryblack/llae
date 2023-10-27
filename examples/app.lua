@@ -4,6 +4,7 @@ local web = require 'web.application'
 local fs = require 'llae.fs'
 local path = require 'llae.path'
 local log = require 'llae.log'
+local llae = require 'llae'
 local app = web.new()
 
 app:use(web.static('./examples',{}))
@@ -95,6 +96,10 @@ app:post('/upload',function(req,res,next)
 		end
 	end
 	res:finish(200)
+end)
+
+llae.at_exit(function()
+	log.info('service finished')
 end)
 
 app:listen{port=1337}

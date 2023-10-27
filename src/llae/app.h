@@ -15,9 +15,16 @@ namespace llae {
 		uv::loop 	m_loop;
 		common::intrusive_ptr<uv::signal> m_stop_sig;
 		int m_res = 0;
+		class at_exit_handler : public common::ref_counter_base {
+		public:
+			virtual void at_exit( app& app , int code ) = 0;
+		};
+		class lua_at_exit_handler;
+		std::vector<common::intrusive_ptr<at_exit_handler>> m_at_exit;
 	protected:
 		void end_run(int res);
 		void close();
+		void process_at_exit(int res);
 	public:
 		explicit app(uv_loop_t* l,bool need_signal=true);
 		~app();
@@ -25,8 +32,11 @@ namespace llae {
 		lua::state& lua() { return m_lua; }
 		uv::loop& loop() { return m_loop; }
 
+		void at_exit(lua::state& l,int arg);
+
 		int run();
 		void stop(int code);
+		static void show_lua_error(lua::state& l,lua::status e);
 		static void show_error(lua::state& l,lua::status e,bool pop=false);
 		
         static bool closed(uv_loop_t* l);
