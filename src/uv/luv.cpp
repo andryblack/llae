@@ -327,6 +327,8 @@ int luaopen_uv(lua_State* L) {
     lua::bind::object<uv::pipe_server>::register_metatable(l,&uv::pipe_server::lbind);
     lua::bind::object<uv::timer>::register_metatable(l);
     lua::bind::object<uv::timer_lcb>::register_metatable(l,&uv::timer_lcb::lbind);
+    lua::bind::object<uv::signal_base>::register_metatable(l);
+    lua::bind::object<uv::lua_signal>::register_metatable(l,&uv::lua_signal::lbind);
 
 	l.createtable();
 	lua::bind::object<uv::buffer>::get_metatable(l);
@@ -347,8 +349,10 @@ int luaopen_uv(lua_State* L) {
     l.setfield(-2,"pipe");
     lua::bind::object<uv::pipe_server>::get_metatable(l);
 	l.setfield(-2,"pipe_server");
-     lua::bind::object<uv::timer_lcb>::get_metatable(l);
+    lua::bind::object<uv::timer_lcb>::get_metatable(l);
     l.setfield(-2,"timer");
+    lua::bind::object<uv::lua_signal>::get_metatable(l);
+    l.setfield(-2,"signal");
     
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
 	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);

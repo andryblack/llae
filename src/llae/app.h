@@ -33,6 +33,7 @@ namespace llae {
 		uv::loop& loop() { return m_loop; }
 
 		void at_exit(lua::state& l,int arg);
+		void cancel_signal();
 
 		int run();
 		void stop(int code);

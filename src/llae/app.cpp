@@ -60,11 +60,18 @@ namespace llae {
         lua::register_meta_object_metatable(lua());
         if (need_signal) {
             m_stop_sig.reset( new uv::signal(loop()) );
-            m_stop_sig->start_oneshot(SIGINT,[this]() {
-                this->process_at_exit(SIGINT);
+            m_stop_sig->start_oneshot(SIGINT,[this](int signum) {
+                this->process_at_exit(signum);
                 this->loop().stop();
             });
             m_stop_sig->unref();
+        }
+    }
+
+    void app::cancel_signal() {
+        if (m_stop_sig) {
+            m_stop_sig->close();
+            m_stop_sig.reset();
         }
     }
 
@@ -185,6 +192,11 @@ namespace llae {
         app::get(l).at_exit(l,1);
         return 0;
     }
+
+    static int lua_cancel_signal(lua_State* L) {
+        app::get(L).cancel_signal();
+        return 0;
+    }
     
 }
 
@@ -194,6 +206,7 @@ int luaopen_llae(lua_State* L) {
     luaL_Reg reg[] = {
         { "stop", llae::lua_stop },
         { "at_exit", llae::lua_at_exit },
+        { "cancel_sigint", llae::lua_cancel_signal },
         { "release_object", llae::lua_release_object },
         { NULL, NULL }
     };
