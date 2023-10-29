@@ -51,6 +51,7 @@ function request:_init( args )
 	self._method = args.method or 'GET'
 	self._version = args.version or '1.1'
 	self._body = args.body or ''
+	self._timeout = args.timeout
 end
 
 function request:_create_connection()
@@ -169,8 +170,19 @@ function request:exec(  )
 		return res,err
 	end
 	local p = self.parser.new(self.response)
+	local tmr
+	local terr
+	if self._timeout then
+		tmr = uv.timer.new()
+		tmr:start(function()
+			terr = 'timeout'
+			self._connection:close()
+		end,math.floor(self._timeout*1000))
 	while true do
 		local resp,err = p:load(self._connection) 
+		if tmr then
+			tmr:stop()
+		end
 		if resp then
 			if resp:get_code() == 302 or resp:get_code() == 301 then
 				resp:close()
@@ -179,9 +191,12 @@ function request:exec(  )
 				self._url = url.parse(redirect_url)
 				return self:exec()
 			end
+		elseif terr then
+			return nil,terr
 		end
 		return resp,err
 	end
 end
+
 
 return request
