@@ -173,11 +173,13 @@ function request:exec(  )
 	local tmr
 	local terr
 	if self._timeout then
+		--log.debug('start wait request response for',self._timeout)
 		tmr = uv.timer.new()
 		tmr:start(function()
 			terr = 'timeout'
 			self._connection:close()
 		end,math.floor(self._timeout*1000))
+	end
 	while true do
 		local resp,err = p:load(self._connection) 
 		if tmr then

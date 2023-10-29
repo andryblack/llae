@@ -347,8 +347,8 @@ namespace uv {
                 auto toth = l.tothread(-1);
                 l.pop(1);// thread
                 if (!try_read(toth)) {
-                    l.pushnil();
-                    l.pushnil();
+                    toth.pushnil();
+                    toth.pushnil();
                 }
                 lua::ref ref(std::move(m_read_cont));
                 auto s = toth.resume(l,2);
