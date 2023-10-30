@@ -16,6 +16,7 @@ static int json_array_marker = 0;
 struct parse_context {
     lua_State* L;
     int stack_depth;
+    bool mark_arrays = false;
     struct state_t {
         enum type {
             array,
@@ -132,6 +133,11 @@ static int yajl_parse_start_array(void * ctx) {
     lua_checkstack(c->L,5);
     c->on_pre_value();
     lua_newtable(c->L);
+    if (c->mark_arrays) {
+        lua_getfield(c->L,LUA_REGISTRYINDEX,"json_array");
+        lua_setmetatable(c->L,-1);
+    }
+
     ++c->stack_depth;
     parse_context::state_t s;
     s.type = parse_context::state_t::array;
@@ -166,11 +172,13 @@ static int json_parse(lua_State* L) {
     size_t len = 0;
     const char* text = lua_tolstring(L, 1, &len);
     bool safe = (lua_isnoneornil(L,2) ? false : lua_toboolean(L,2));
+
     yajl_callbacks cb;
     fill_parse_callbacks(cb);
     parse_context ctx;
     ctx.L = L;
     ctx.stack_depth = 0;
+    ctx.mark_arrays = (lua_isnoneornil(L,3) ? false : lua_toboolean(L,3));
     
     yajl_handle h = yajl_alloc(&cb, 0, &ctx);
     yajl_config(h,yajl_allow_comments,1);
