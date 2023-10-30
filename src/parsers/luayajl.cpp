@@ -135,7 +135,7 @@ static int yajl_parse_start_array(void * ctx) {
     lua_newtable(c->L);
     if (c->mark_arrays) {
         lua_getfield(c->L,LUA_REGISTRYINDEX,"json_array");
-        lua_setmetatable(c->L,-1);
+        lua_setmetatable(c->L,-2);
     }
 
     ++c->stack_depth;
@@ -179,6 +179,7 @@ static int json_parse(lua_State* L) {
     ctx.L = L;
     ctx.stack_depth = 0;
     ctx.mark_arrays = (lua_isnoneornil(L,3) ? false : lua_toboolean(L,3));
+    //std::cout << "mark_arrays: " << ctx.mark_arrays << std::endl;
     
     yajl_handle h = yajl_alloc(&cb, 0, &ctx);
     yajl_config(h,yajl_allow_comments,1);
@@ -206,34 +207,6 @@ static int json_parse(lua_State* L) {
     return ctx.stack_depth;
 }
 
-static int json_parse_safe(lua_State* L) {
-    luaL_checktype(L,1,LUA_TSTRING);
-    size_t len = 0;
-    const char* text = lua_tolstring(L, 1, &len);
-    yajl_callbacks cb;
-    fill_parse_callbacks(cb);
-    parse_context ctx;
-    ctx.L = L;
-    ctx.stack_depth = 0;
-    
-    yajl_handle h = yajl_alloc(&cb, 0, &ctx);
-    yajl_config(h,yajl_allow_comments,1);
-    yajl_status s = yajl_parse(h,reinterpret_cast<const unsigned char * >(text),len);
-    if (s == yajl_status_ok) {
-        s = yajl_complete_parse(h);
-    }
-    if (s!=yajl_status_ok) {
-        unsigned char* err_text = yajl_get_error(h, 1,reinterpret_cast<const unsigned char * >(text),len);
-        lua_pop(L, ctx.stack_depth);
-        lua_pushnil(L);
-        lua_pushstring(L, reinterpret_cast<const char*>(err_text));
-        yajl_free_error(h,err_text);
-        yajl_free(h);
-        return 2;
-    }
-    yajl_free(h);
-    return ctx.stack_depth;
-}
     
 struct encode_context {
     std::string data;
