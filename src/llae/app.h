@@ -7,6 +7,7 @@
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
 #include "lua/ref.h"
+#include <vector>
 
 namespace llae {
 
