@@ -40,7 +40,7 @@ function protocol:_handle_msg(opcode)
 	elseif opcode == protocol.opcode.binary then
 		self._handler:on_binary(payload)
 	elseif opcode == protocol.opcode.close then
-		local reason = string.unpack('>I2',payload)
+		local reason = (#payload>=2) and string.unpack('>I2',payload) or 0
 		self:_close()
 		self._handler:on_close(opcode)
 	end
@@ -80,13 +80,13 @@ function protocol:_process_rc(data)
 		if rc_len < (length + 2 + extra) then
 			return
 		end
+		local start = 1+2+extra
+		local payload_end = start+length
 		if length ~= 0 then
-			local start = 1+2+extra
-			local payload_end = start+length
 			local payload = string.sub(self._rc_data,start,payload_end-1)
-			self._rc_data = string.sub(self._rc_data,payload_end)
 			table.insert(self._rc_fragments,payload)
 		end
+		self._rc_data = string.sub(self._rc_data,payload_end)
 		if opcode ~= protocol.opcode.cont then
 			self._rc_opcode = opcode
 		end
