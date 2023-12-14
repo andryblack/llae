@@ -121,7 +121,7 @@ namespace ssl {
 		}
 		if (m_state != S_NONE) {
 			l.pushnil();
-			l.pushstring("stream::read invalid state");
+			l.pushstring("connection::handshake invalid state");
 			return {2};
 		}
 		{
@@ -487,8 +487,10 @@ namespace ssl {
                 return {2};
             }
             if (m_state == S_CONNECTED) {
+                m_write_cont.reset(l);
                 // all writed
                 l.pushboolean(true);
+                end_op("WRITE");
                 return {1};
             }
         }
