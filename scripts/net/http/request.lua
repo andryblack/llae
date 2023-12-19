@@ -24,21 +24,16 @@ function request:_init( args )
 	assert(args.url,'need url')
 	request.baseclass._init(self,args.headers or {})
 	if args.proxy then
-		local type,data= string.match(args.proxy,'([^:]+)://(.+)')
-		if not type or type ~= 'socks5' then
-			error('unsupported proxy ' .. tostring(type))
+		local proxy = url.parse(args.proxy)
+		if proxy.scheme ~= 'socks5' then
+			error('unsupported proxy ' .. tostring(proxy.scheme))
 		end
-		local addr,port,data = string.match(data,'([%d%.]+):(%d+):?(.*)')
-		local user,pass
-		if data then
-			user,pass = string.match(data,'([^:]+):(.+)')
-		end
-		log.debug('use socks5 proxy:',addr,port)
+		log.debug('use socks5 proxy:',proxy.host,proxy.port)
 		self._proxy = {
-			addr = addr,
-			port = tonumber(port),
-			user = user,
-			pass = pass,
+			addr = proxy.host,
+			port = tonumber(proxy.port),
+			user = proxy.user,
+			pass = proxy.password,
 			create = function(self)
 				local net = require 'net'
 				return assert(net.socks5.tcp_connection.new(self.addr,self.port,self.user,self.pass))
