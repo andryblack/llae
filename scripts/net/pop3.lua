@@ -3,17 +3,18 @@ local log = require 'llae.log'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
 local async = require 'llae.async'
+local url = require 'net.url'
 local uv = require 'uv'
 
 
-local ftp = class(nil,'net.pop3')
+local pop3 = class(require 'net.connection','net.pop3')
 
-function ftp:_init(  )
+function pop3:_init(  )
 	self._received_cmds = {}
 	self._received_data = ''
 end
 
-function ftp:_cmd_read( )
+function pop3:_cmd_read( )
 	while not self._received_cmds[1] and self._cmd_con do
 		--log.debug('read>')
 		local ch,e = self._cmd_con:read()
@@ -52,13 +53,13 @@ function ftp:_cmd_read( )
 	return table.remove(self._received_cmds,1)
 end
 
-function ftp:_send_cmd( cmd )
+function pop3:_send_cmd( cmd )
 	log.debug('>>>>>',cmd)
 	assert(self._cmd_con:write(cmd..'\r\n'))
 end
 
 
-function ftp:_wait_ok()
+function pop3:_wait_ok()
 	while true do
 		local cmd = self:_cmd_read()
 		if not cmd then
@@ -68,7 +69,8 @@ function ftp:_wait_ok()
 			return cmd:sub(5)
 		end
 		if cmd:sub(1,4) == '-ERR' then
-			return false, cmd:sub(6)
+			self._error = cmd:sub(6)
+			return false, self._error
 		end
 		log.debug('skip',cmd)
 		-- if cmd[1] == status then
@@ -81,11 +83,11 @@ function ftp:_wait_ok()
 	end
 end
 
-function ftp:_cmd_pop(  )
+function pop3:_cmd_pop(  )
 	return table.remove(self._received_cmds,1)
 end
 
-function ftp:_drop_all(status)
+function pop3:_drop_all(status)
 	while true do
 		local cmd = self:_cmd_pop()
 		if not cmd then
@@ -98,13 +100,14 @@ function ftp:_drop_all(status)
 	end
 end
 
-
-function ftp:connect( data )
+function pop3:connect( data )
 
 	self._port = data.port or 110
 	local addr = data.host
 
-	self._cmd_con = uv.tcp_connection.new()
+	self:_configure_connection(data)
+
+	self._cmd_con = self:_create_connection()
 
 
 	log.debug('resolve',addr)
@@ -156,17 +159,17 @@ function ftp:connect( data )
 
 	--self:_send_cmd('HELLO')
 	if not self:_wait_ok() then
-		return nil,'need OK'
+		return nil,'need OK, get ERR ' .. (self._error or 'unknown')
 	end
 
 	self:_send_cmd('USER ' .. data.user)
 	if not self:_wait_ok() then
-		return nil,'need OK'
+		return nil,'need OK, get ERR ' .. (self._error or 'unknown')
 	end
 
 	self:_send_cmd('PASS ' .. data.pass)
 	if not self:_wait_ok() then
-		return nil,'need OK'
+		return nil,'need OK, get ERR ' .. (self._error or 'unknown')
 	end
 
 	-- --self:_send_cmd('FEAT')
@@ -190,7 +193,7 @@ function ftp:connect( data )
 	return true
 end
 
-function ftp:get_count()
+function pop3:get_count()
 	self:_send_cmd('STAT')
 	local res,err = self:_wait_ok()
 	if not res then
@@ -201,7 +204,7 @@ function ftp:get_count()
 	return tonumber(count)
 end
 
-function ftp:getfile( name , to , cb)
+function pop3:getfile( name , to , cb)
 	self:_send_cmd('CWD ' .. path.dirname(name))
 	if not self:_expect_status(250) then
 		error('need 250')
@@ -267,7 +270,7 @@ function ftp:getfile( name , to , cb)
 	end
 end
 
-function ftp:get_and_delete(mailnum)
+function pop3:get_and_delete(mailnum)
 	self:_send_cmd('LIST ' .. mailnum)
 	local res,err = self:_wait_ok()
 	if not res then
@@ -322,10 +325,10 @@ function ftp:get_and_delete(mailnum)
 	return data
 end
 
-function ftp:close(  )
+function pop3:close(  )
 	self:_send_cmd('QUIT')
 	self:_wait_ok()
 	self._cmd_con:shutdown()
 end
 
-return ftp
+return pop3

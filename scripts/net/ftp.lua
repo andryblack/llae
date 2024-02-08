@@ -6,11 +6,12 @@ local async = require 'llae.async'
 local uv = require 'uv'
 
 
-local ftp = class(nil,'net.fpt')
+local ftp = class(require 'net.connection','net.fpt')
 
-function ftp:_init(  )
+function ftp:_init( data )
 	self._received_cmds = {}
 	self._received_data = ''
+	self:_configure_connection(data or {})
 end
 
 function ftp:_cmd_read( )
@@ -107,7 +108,7 @@ end
 
 function ftp:connect( addr, port )
 	self._port = port or 21
-	self._cmd_con = uv.tcp_connection.new()
+	self._cmd_con = self:_create_connection()
 
 	log.debug('resolve',addr)
 	local err

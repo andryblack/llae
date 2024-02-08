@@ -6,7 +6,7 @@ local class = require 'llae.class'
 local log = require 'llae.log'
 local fs = require 'llae.fs'
 local dns = require 'net.dns'
-
+local connection = require 'net.connection'
 
 
 local request = class(require 'net.http.headers','http.request')
@@ -14,6 +14,8 @@ local request = class(require 'net.http.headers','http.request')
 request.parser = require 'net.http.request_parser'
 request.response = require 'net.http.request_response'
 
+request._create_connection = connection._create_connection
+request._configure_connection = connection._configure_connection
 
 function request.get_ssl_ctx() 
 	local http = require 'net.http'
@@ -23,23 +25,7 @@ end
 function request:_init( args )
 	assert(args.url,'need url')
 	request.baseclass._init(self,args.headers or {})
-	if args.proxy then
-		local proxy = url.parse(args.proxy)
-		if proxy.scheme ~= 'socks5' then
-			error('unsupported proxy ' .. tostring(proxy.scheme))
-		end
-		log.debug('use socks5 proxy:',proxy.host,proxy.port)
-		self._proxy = {
-			addr = proxy.host,
-			port = tonumber(proxy.port),
-			user = proxy.user,
-			pass = proxy.password,
-			create = function(self)
-				local net = require 'net'
-				return assert(net.socks5.tcp_connection.new(self.addr,self.port,self.user,self.pass))
-			end
-		}
-	end
+	self:_configure_connection(args)
 	log.debug('new request to',args.url)
 	local comp = url.parse(args.url)
 	self._url = comp
@@ -49,12 +35,6 @@ function request:_init( args )
 	self._timeout = args.timeout
 end
 
-function request:_create_connection()
-	if self._proxy then
-		return self._proxy:create()
-	end
-	return uv.tcp_connection.new()
-end
 
 function request:get_path(  )
 	local p = self._url.path or ''
