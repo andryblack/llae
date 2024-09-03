@@ -285,14 +285,14 @@ namespace uv {
         auto res = mbedtls_base64_decode(nullptr,0,&osize,src,src_size);
         if (MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL!=res) {
             l.pushnil();
-            crypto::push_error(l,"failed decode %s",res);
+            crypto::push_error(l,"failed decode %d: %s",res);
             return {2};
         }
         buffer_ptr buf(buffer::alloc(osize));
         res = mbedtls_base64_decode(static_cast<unsigned char*>(buf->get_base()),osize,&osize,src,src_size);
         if (res!=0) {
             l.pushnil();
-            crypto::push_error(l,"failed decode %s",res);
+            crypto::push_error(l,"failed decode %d: %s",res);
             return {2};
         }
         buf->set_len(osize);
