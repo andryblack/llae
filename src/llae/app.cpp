@@ -181,6 +181,23 @@ namespace llae {
         get(l).stop(1);
     }
 
+    void app::lua_resume(lua::state& l) {
+        l.checktype(1,lua::value_type::thread);
+        auto n = l.gettop();
+        auto t = l.tothread(1);
+        for (int i=2;i<=n;++i) {
+            l.pushvalue(i);
+            t.xmove(l,1);
+        }
+        auto s = t.resume(l,n-1);
+        if (s!=lua::status::yield && s!=lua::status::ok) {
+            show_lua_error(t,s);
+            luaL_traceback(l.native(),t.native(),NULL,1);
+            std::cout << lua::value(l,-1).tostring() << std::endl;
+            get(l).stop(1);
+        }
+    }
+
     static int lua_stop(lua_State* L) {
         app::get(L).stop(luaL_optinteger(L,1,0));
         return 0;
@@ -197,7 +214,12 @@ namespace llae {
         app::get(L).cancel_signal();
         return 0;
     }
-    
+ 
+    static int lua_resume(lua_State* L) {
+        lua::state l(L);
+        app::lua_resume(l);
+        return 0;
+    }   
 }
 
 
@@ -208,6 +230,7 @@ int luaopen_llae(lua_State* L) {
         { "at_exit", llae::lua_at_exit },
         { "cancel_sigint", llae::lua_cancel_signal },
         { "release_object", llae::lua_release_object },
+        { "resume", llae::lua_resume },
         { NULL, NULL }
     };
     lua_newtable(L);

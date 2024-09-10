@@ -2,6 +2,7 @@ local llae = require 'llae'
 local class = require 'llae.class'
 local url = require 'net.url'
 local uv = require 'llae.uv'
+local log = require 'llae.log'
 local async = require 'llae.async'
 
 local redis = class(nil,'db.redis')
@@ -33,8 +34,10 @@ function redis:connect( addr , port )
 end
 
 function redis:close(  )
+	self._lock:lock()
 	self._conn:shutdown()
 	self._conn = nil
+	self._lock:unlock()
 end
 
 local function read_line( self )
@@ -218,24 +221,24 @@ function redis:try_start_subscribe()
 				if th then
 					self._unsubscribe[data[2]] = nil
 					self._subhandlers[data[2]] = nil
-					assert(coroutine.resume(th,true))
+					llae.resume(th,true)
 				else
-					print('not found',data[2])
+					log.error('redis','not found',data[2])
 				end
 			elseif data[1] == 'subscribe' then
 				local th = self._subscribe[data[2]]
 				if th then
 					self._subscribe[data[2]] = nil
 					--print('resume subscriber:',th)
-					assert(coroutine.resume(th,true))
+					llae.resume(th,true)
 				else
-					print('not found',data[2])
+					log.error('redis','not found',data[2])
 				end
 			end
 		end
 		this._sub_thread = nil
 	end)
-	assert(coroutine.resume(self._sub_thread,self))
+	llae.resume(self._sub_thread,self)
 end
 
 function redis:subscribe( ... )

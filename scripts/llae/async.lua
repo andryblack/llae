@@ -1,9 +1,19 @@
 local class = require 'llae.class'
+local llae = require 'llae'
+local log = require 'llae.log'
 local uv = require 'uv'
 
 local _M = {}
 
 _M.pause = uv.pause
+
+function _M.resume( th )
+	local res, err = coroutine.resume( th )
+	if not res then
+		log.error('failed resume:',err,debug.traceback(th),'frome',debug.traceback())
+		error(err or 'unknown')
+	end
+end
 
 function _M.run( fn , handle_error )
 	local th = coroutine.create( handle_error and function() 
@@ -12,10 +22,7 @@ function _M.run( fn , handle_error )
 			error(err or 'unknown')
 		end
 	end or fn )
-	local res, err = coroutine.resume( th )
-	if not res then
-		error(err or 'unknown')
-	end
+	_M.resume(th)
 end
 
 local lock = class()
@@ -27,7 +34,7 @@ end
 function lock:report_unlock()
 	local u = table.remove(self._wait,1)
 	if u then
-		coroutine.resume(u)
+		_M.resume(u)
 	end
 end
 
@@ -68,7 +75,7 @@ function event:set()
 	while self._set do
 		local u = table.remove(self._wait,1)
 		if u then
-			coroutine.resume(u)
+			_M.resume(u)
 		else
 			return
 		end
