@@ -165,6 +165,7 @@ local commands = {
 	'expire','persist',
 	'publish',
 	'rename',
+	'bitfield','bitcount','bitop','bitpos','getbit','setbit'
 }
 
 for _,cmd in ipairs(commands) do
