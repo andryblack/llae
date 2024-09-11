@@ -120,6 +120,23 @@ function redis:cmd(  ... )
 	local res,err = self._conn:write(req)
 	if not res then
 		self._lock:unlock()
+		error(err or 'unknown')
+	end
+	res,err = read_reply(self)
+	self._lock:unlock()
+	if err then
+		error(err)
+	end
+	return res
+end
+
+function redis:try_cmd(  ... )
+	self._lock:lock()
+	local req = redis.resp.gen_req(...)
+	--print('send: ',req)
+	local res,err = self._conn:write(req)
+	if not res then
+		self._lock:unlock()
 		return nil,err
 	end
 	res,err = read_reply(self)
@@ -249,7 +266,7 @@ function redis:subscribe( ... )
 		channels[v] = handler
 	end
 	if not handler or not next(channels) then
-		return nil, 'invalid arguments'
+		error('invalid arguments')
 	end
 	self._lock:lock()
 	table.insert(args,1,'SUBSCRIBE')
@@ -258,7 +275,7 @@ function redis:subscribe( ... )
 	local res,err = self._conn:write(req)
 	if not res then
 		self._lock:unlock()
-		return nil,err
+		error(err or 'unknown')
 	end
 
 	local cor = assert(coroutine.running())
