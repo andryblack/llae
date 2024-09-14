@@ -18,6 +18,9 @@ newaction {
 	description = 'unpack dependencies for build',
 	execute = function()
 		llae.unpack()
+		os.writefile_ifnotequal([[
+	LLAE_VERSION = "bootstrap"
+]],'build/_build_config.lua')
 		os.exit(0)
 	end,
 

@@ -35,7 +35,7 @@ function cmd:exec( args )
 		local install_dir = args['project-dir'] and path.join(fs.pwd(),args['project-dir']) or path.join(fs.pwd(),proj_name)
 
 		install_dir = utils.replace_env(install_dir)
-		log.init('start init project at',install_dir)
+		log.info('start init project at',install_dir)
 
 		async.run(function()
 			fs.mkdir(install_dir)

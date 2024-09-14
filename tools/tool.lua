@@ -2,10 +2,10 @@ local class = require 'llae.class'
 local fs = require 'llae.fs'
 local path = require 'llae.path'
 local utils = require 'llae.utils'
-
 local tool = class()
 
-tool._llae_root = path.join(path.dirname(fs.exepath()),'..')
+
+tool._llae_root = LLAE_ROOT or path.join(path.dirname(fs.exepath()),'..')
 
 function tool.set_root( root )
 	tool._llae_root = root

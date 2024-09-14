@@ -7,6 +7,7 @@ local log = require 'llae.log'
 local utils = require 'llae.utils'
 local tool = require 'tool'
 
+
 local Project = class(nil,'Project')
 
 
@@ -18,7 +19,6 @@ function Project.get_path(base,part)
 	return path.join(base,part)
 end
 
-Project.__llae_root = path.join(fs.exepath(),'..')
 Project.env = {}
 
 function Project.env:project( name )
@@ -295,6 +295,37 @@ end
 function Project:write_generated( )
 	self:load_modules()
 	self:write_premake()
+	
+	for _,conf in ipairs(self._env.generate_src or {}) do
+		local template_f
+		if conf.template then
+			local template_source_filename = path.join(self._root,conf.template)
+			template_f = template.load(template_source_filename)
+		else
+			template_f = template.compile(conf.template_content)
+		end
+		local filename = path.join(self._root,conf.filename)
+		log.info('generate',conf.filename)
+		fs.mkdir_r(path.dirname(filename))
+		fs.unlink(filename)
+		local f = assert(fs.open(filename,fs.O_WRONLY|fs.O_CREAT))
+		local ctx = setmetatable({
+			escape = conf.escape or tostring,
+			project=self,
+			template = template,
+			path = path,
+			conf = conf,
+			fs = fs,
+			root = self._root,
+			log = log
+		},{__index=_G})
+		if conf.config then
+			load(conf.config,'generate:config','t',ctx)()
+		end
+		f:write( template_f(ctx) )
+		f:close()
+	end
+
 	for _,m in ipairs(self._modules_list) do
 		for _,conf in ipairs(m.generate_src or {}) do
 			m.root = self._root 
@@ -327,35 +358,7 @@ function Project:write_generated( )
 			f:close()
 		end
 	end
-	for _,conf in ipairs(self._env.generate_src or {}) do
-		local template_f
-		if conf.template then
-			local template_source_filename = path.join(self._root,conf.template)
-			template_f = template.load(template_source_filename)
-		else
-			template_f = template.compile(conf.template_content)
-		end
-		local filename = path.join(self._root,conf.filename)
-		log.info('generate',conf.filename)
-		fs.mkdir_r(path.dirname(filename))
-		fs.unlink(filename)
-		local f = assert(fs.open(filename,fs.O_WRONLY|fs.O_CREAT))
-		local ctx = setmetatable({
-			escape = conf.escape or tostring,
-			project=self,
-			template = template,
-			path = path,
-			conf = conf,
-			fs = fs,
-			root = self._root,
-			log = log
-		},{__index=_G})
-		if conf.config then
-			load(conf.config,'generate:config','t',ctx)()
-		end
-		f:write( template_f(ctx) )
-		f:close()
-	end
+	
 
 end
 

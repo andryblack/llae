@@ -196,9 +196,16 @@ generate_src = {{
 	end
 	project_scripts = project:get_config_value('llae','embed_script')
 	for _,f in ipairs(project_scripts or {}) do
-		local name = string.gsub(f:sub(1,-5),'/','.')
+		local name
+		local fn = f
+		if type(f) == 'table' then
+			name = f[1]
+			fn = f[2]
+		else
+			name = string.gsub(f:sub(1,-5),'/','.')
+		end
 		installed_scripts[name] = true
-		local script_path = path.join(project:get_root(),f)
+		local script_path = path.join(project:get_root(),fn)
 		log.debug('embed',script_path,name)
 		table.insert(scripts,{
 			name = name,

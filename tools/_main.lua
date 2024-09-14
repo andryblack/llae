@@ -1,4 +1,8 @@
 
+pcall(function()
+	require '_build_config'
+end)
+
 local utils = require 'llae.utils'
 
 
