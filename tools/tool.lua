@@ -4,8 +4,14 @@ local path = require 'llae.path'
 local utils = require 'llae.utils'
 local tool = class()
 
+local vars = {
+	bindir = path.dirname(fs.exepath())
+}
+local function replace_vars(str)
+	return string.gsub(str,"{(.-)}",vars)
+end
 
-tool._llae_root = LLAE_ROOT or path.join(path.dirname(fs.exepath()),'..')
+tool._llae_root = LLAE_ROOT and replace_vars(LLAE_ROOT) or path.join(vars.bindir,'..')
 
 function tool.set_root( root )
 	tool._llae_root = root
