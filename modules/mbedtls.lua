@@ -65,6 +65,7 @@ function install()
 
 	for _,v in ipairs(project:get_config_value(name,'uncomment') or {}) do
 		uncomment[v]=true
+		comment[v] = nil
 	end 
 
 	preprocess{
