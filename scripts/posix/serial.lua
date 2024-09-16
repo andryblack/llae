@@ -149,4 +149,15 @@ function serial:stop_read()
 end
 
 
+function serial:close()
+	if self._poll then
+		self._poll:stop()
+	end
+	if self._fd then
+		self._fd:close()
+		self._fd = nil
+	end
+end
+
+
 return serial
