@@ -61,14 +61,22 @@ int luaopen_posix(lua_State* L) {
 	lua::bind::function(l,"dup2",&lua_posix_dup2);
 
 	BIND_M(O_WRONLY);
+	BIND_M(O_CREAT);
 	BIND_M(O_RDONLY);
 	BIND_M(O_RDWR);
 	BIND_M(O_EXCL);
+	BIND_M(O_APPEND);
+#ifdef O_TRUNC
+	BIND_M(O_TRUNC);
+#endif
 #ifdef O_NOCTTY
 	BIND_M(O_NOCTTY);
 #endif
 #ifdef O_ASYNC
 	BIND_M(O_ASYNC);
+#endif
+#ifdef O_SYNC
+	BIND_M(O_SYNC);
 #endif
 #ifdef O_DIRECT
 	BIND_M(O_DIRECT);
@@ -76,6 +84,19 @@ int luaopen_posix(lua_State* L) {
 #ifdef O_NONBLOCK
 	BIND_M(O_NONBLOCK);
 #endif
+
+	BIND_M(S_IRWXU);
+	BIND_M(S_IRUSR);
+	BIND_M(S_IWUSR);
+	BIND_M(S_IXUSR);
+	BIND_M(S_IRWXG);
+	BIND_M(S_IRGRP);
+	BIND_M(S_IWGRP);
+	BIND_M(S_IXGRP);
+	BIND_M(S_IRWXO);
+	BIND_M(S_IROTH);
+	BIND_M(S_IWOTH);
+	BIND_M(S_IXOTH);
 
 #ifdef F_GETFD
 	BIND_M(F_GETFD);
