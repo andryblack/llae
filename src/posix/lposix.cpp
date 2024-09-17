@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
+#include <stdio.h>
 
 namespace posix {
 
@@ -108,6 +109,15 @@ int luaopen_posix(lua_State* L) {
 #endif
 #ifdef F_NOTIFY
 	BIND_M(F_NOTIFY);
+#endif
+#ifdef STDERR_FILENO
+	BIND_M(STDERR_FILENO);
+#endif
+#ifdef STDOUT_FILENO
+	BIND_M(STDOUT_FILENO);
+#endif
+#ifdef STDIN_FILENO
+	BIND_M(STDIN_FILENO);
 #endif
 
 	return 1;
