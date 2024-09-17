@@ -1,8 +1,10 @@
 #include "lposix.h"
 #include "fd.h"
 #include "lua/bind.h"
+#include "lua/stack.h"
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
 
 namespace posix {
 
@@ -29,6 +31,23 @@ static int lua_posix_open(lua_State* L) {
 	return 1;
 }
 
+static int lua_posix_dup2(lua_State* L) {
+	lua::state l(L);
+	auto fd = lua::stack<posix::fd_ptr>::get(l,1);
+	auto from = l.checkinteger(2);
+	if (!fd) {
+		l.argerror(1,"need fd");
+	}
+	int res = dup2(fd->get(),from);
+	if (res == -1) {
+		l.pushnil();
+		posix::push_error_errno(l);
+		return 2;
+	}
+	l.pushinteger(res);
+	return 1;
+}
+
 
 int luaopen_posix(lua_State* L) {
 	lua::state l(L);
@@ -38,6 +57,7 @@ int luaopen_posix(lua_State* L) {
 	l.createtable();
 
 	lua::bind::function(l,"open",&lua_posix_open);
+	lua::bind::function(l,"dup2",&lua_posix_dup2);
 
 	BIND_M(O_WRONLY);
 	BIND_M(O_RDONLY);
