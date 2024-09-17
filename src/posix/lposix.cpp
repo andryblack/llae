@@ -21,7 +21,13 @@ static int lua_posix_open(lua_State* L) {
 	lua::state l(L);
 	const char* pathname = l.checkstring(1);
 	int flags = l.checkinteger(2);
-	int fd = open(pathname,flags);
+	int fd;
+	if (l.isnumber(3)) {
+		mode_t mode = l.checkinteger(3);
+		fd = open(pathname,flags,mode);
+	} else {
+		fd = open(pathname,flags);
+	}
 	if (fd == -1) {
 		l.pushnil();
 		posix::push_error_errno(l);
