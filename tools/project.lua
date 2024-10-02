@@ -5,6 +5,7 @@ local template = require 'llae.template'
 local path = require 'llae.path'
 local log = require 'llae.log'
 local utils = require 'llae.utils'
+local llae = require 'llae'
 local tool = require 'tool'
 
 
@@ -91,6 +92,15 @@ function Project.env:command(data)
 		table.insert(self.commands,data)
 	end
 end
+
+function Project.env:print(...)
+	log.info('[project]',...)
+end
+
+local function get_target(cmdargs)
+	return  (cmdargs and cmdargs['target-platform']) or os.getenv('LLAE_TARGET_PLATFORM') or llae.get_host_platform()
+end
+
 function Project:_init( env , root, cmdargs )
 	log.debug('Project:_init',root,cmdargs)
 	self._env = env
@@ -107,6 +117,7 @@ function Project:_init( env , root, cmdargs )
 		self:add_modules_location(path.join(root,'modules'))
 	end
 	self._dl_dir = (cmdargs and cmdargs['dl-dir']) or os.getenv('LLAE_DL_DIR') or tool.get_llae_path('dl')
+	self._target = get_target( cmdargs )
 end
 
 function Project:get_dl_dir()
@@ -131,6 +142,14 @@ end
 
 function Project:get_commands( )
 	return self._env.commands
+end
+
+function Project:get_target_platform()
+	return self._target
+end
+
+function Project:get_host_platform()
+	return llae.get_host_platform()
 end
 
 function Project:add_modules_location( loc )
@@ -362,12 +381,14 @@ function Project:write_generated( )
 
 end
 
-local function create_env( cmdargs )
+local function create_env( cmdargs  )
 	local env = {
-		modules = {}
+		modules = {},
 	}
 	local global_env = {
-		cmdargs = cmdargs or {}
+		cmdargs = cmdargs or {},
+		target = get_target( cmdargs ),
+		host = llae.get_host_platform(),
 	}
 	local super_env = {}
 	for n,v in pairs(Project.env) do
