@@ -26,7 +26,7 @@ function Project.env:project( name )
 	if type(name) ~= 'string' then
 		error('project must be string')
 	end
-	self.project = name
+	self.project_name = name
 end
 
 function Project.env:module( name )
@@ -126,7 +126,7 @@ function Project:get_dl_dir()
 end
 
 function Project:name(  )
-	return self._env.project
+	return self._env.project_name
 end
 
 function Project:get_premake( )
@@ -440,8 +440,8 @@ function Project.load( root_dir , cmdargs )
 	end
 
 	-- validate
-	if not env.project then
-		return nil,'need project'
+	if not env.project_name then
+		return nil,'need project name'
 	end
 
 	log.debug('loaded project at',root_dir)
