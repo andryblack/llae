@@ -524,7 +524,15 @@ function m:preprocess_am( config )
 end
 
 
-local _M = {}
+local _M = {  }
+
+function _M.apply_functions( super_env, env )
+	for n,v in pairs(m) do
+		super_env[n] = function(...)
+			return v(env,...)
+		end
+	end
+end
 
 function _M.create_env( project )
 	local env = {
@@ -532,11 +540,7 @@ function _M.create_env( project )
 		log = log
 	}
 	local super_env = {}
-	for n,v in pairs(m) do
-		super_env[n] = function(...)
-			return v(env,...)
-		end
-	end
+	_M.apply_functions(super_env,env)
 	setmetatable( env, {__index=setmetatable(super_env,{__index=_G})} )
 	return env
 end

@@ -93,6 +93,7 @@ function Project.env:command(data)
 	end
 end
 
+
 function Project.env:print(...)
 	log.info('[project]',...)
 end
@@ -101,21 +102,21 @@ local function get_target(cmdargs)
 	return  (cmdargs and cmdargs['target-platform']) or os.getenv('LLAE_TARGET_PLATFORM') or llae.get_host_platform()
 end
 
-function Project:_init( env , root, cmdargs )
-	log.debug('Project:_init',root,cmdargs)
+function Project:_init( env  )
+	log.debug('Project:_init')
 	self._env = env
-	self._root = root
+	self._env.project = self
 	self._scripts = {}
 	self._modules_locations = {}
 	self._modules = {}
 	self._modules_list = {}
 	self._cmodules = {}
-	self._cmdargs = cmdargs or {}
 	self._module_config = env.module_config or {}
 	
-	if root then
-		self:add_modules_location(path.join(root,'modules'))
+	if self._env.location then
+		self:add_modules_location(path.join(self._env.location,'modules'))
 	end
+	local cmdargs = self._env.cmdargs
 	self._dl_dir = (cmdargs and cmdargs['dl-dir']) or os.getenv('LLAE_DL_DIR') or tool.get_llae_path('dl')
 	self._target = get_target( cmdargs )
 end
@@ -133,11 +134,11 @@ function Project:get_premake( )
 end
 
 function Project:get_root( )
-	return self._root
+	return self._env.location or fs.pwd()
 end
 
 function Project:get_cmdargs(  )
-	return self._cmdargs
+	return self._env.cmdargs or {}
 end
 
 function Project:get_commands( )
@@ -167,9 +168,9 @@ function Project:add_module( name )
 	end
 	local m = modules.get(self,name)
 	
-	m.root = self._root
-	if self._root then
-		m.location = path.join(self._root,'build','modules', m.name)
+	m.root = self._env.location
+	if m.root then
+		m.location = path.join(m.root,'build','modules', m.name)
 	end
 		
 	self._modules[name] = m
@@ -234,7 +235,7 @@ end
 function Project:install_modules( tosystem )
 	self:load_modules()
 	self._scripts = {}
-	local root = self._root or fs.pwd()
+	local root = self:get_root()
 	fs.mkdir(path.join(root,'build'))
 	fs.mkdir(path.join(root,'build','modules'))
 	fs.mkdir(path.join(root,'build','premake'))
@@ -242,12 +243,31 @@ function Project:install_modules( tosystem )
 	for _,m in ipairs(self._modules_list) do
 		modules.install(m,root,tosystem)
 	end
+	
+end
+
+function Project:install(tosystem)
+	self:install_modules(tosystem)
+	if self._env.__write_env and self._env.__write_env.install then
+		local funcs = {
+			print = function(...)
+				Project.env.print(self._env,...)
+			end
+		}
+		modules.apply_functions(funcs,self._env)
+		setmetatable(self._env.__load_env,{
+			__index = setmetatable(funcs,{__index=self._env}),
+			__newindex={}
+		})
+		--modules.apply_functions(self._env.__write_env,self._env)
+		self._env.__write_env.install()
+	end
 end
 
 function Project:install_module( name )
 	self:load_modules()
 	self._scripts = {}
-	local root = self._root or fs.pwd()
+	local root = self:get_root()
 	fs.mkdir(path.join(root,'build'))
 	fs.mkdir(path.join(root,'build','modules'))
 	fs.mkdir(path.join(root,'build','premake'))
@@ -295,7 +315,7 @@ end
 
 function Project:write_premake(  )
 	local template_source_filename = tool.get_llae_path('data','premake5-template.lua')
-	local filename = path.join(self._root,'build','premake5.lua')
+	local filename = path.join(self:get_root(),'build','premake5.lua')
 	log.info('generate premake5.lua')
 	fs.mkdir_r(path.dirname(filename))
 	fs.unlink(filename)
@@ -318,12 +338,12 @@ function Project:write_generated( )
 	for _,conf in ipairs(self._env.generate_src or {}) do
 		local template_f
 		if conf.template then
-			local template_source_filename = path.join(self._root,conf.template)
+			local template_source_filename = path.join(self:get_root(),conf.template)
 			template_f = template.load(template_source_filename)
 		else
 			template_f = template.compile(conf.template_content)
 		end
-		local filename = path.join(self._root,conf.filename)
+		local filename = path.join(self:get_root(),conf.filename)
 		log.info('generate',conf.filename)
 		fs.mkdir_r(path.dirname(filename))
 		fs.unlink(filename)
@@ -335,7 +355,7 @@ function Project:write_generated( )
 			path = path,
 			conf = conf,
 			fs = fs,
-			root = self._root,
+			root = self:get_root(),
 			log = log
 		},{__index=_G})
 		if conf.config then
@@ -347,7 +367,7 @@ function Project:write_generated( )
 
 	for _,m in ipairs(self._modules_list) do
 		for _,conf in ipairs(m.generate_src or {}) do
-			m.root = self._root 
+			m.root = self:get_root()
 			m.location = path.join(m.root,'build','modules', m.name)
 			local template_f
 			if conf.template then
@@ -385,18 +405,15 @@ local function create_env( cmdargs  )
 	local env = {
 		modules = {},
 	}
-	local global_env = {
-		cmdargs = cmdargs or {},
-		target = get_target( cmdargs ),
-		host = llae.get_host_platform(),
-	}
-	local super_env = {}
+	local global_env = {}
+	local write_env = {}
 	for n,v in pairs(Project.env) do
-		super_env[n] = function(...)
+		global_env[n] = function(...)
 			v(env,...)
 		end
 	end
-	return setmetatable( global_env, {__index=super_env} ), env
+	setmetatable(global_env,{__index=env})
+	return setmetatable( {},  {__index=global_env,__newindex=write_env} ), env, write_env
 end
 
 function Project.load( root_dir , cmdargs )
@@ -405,7 +422,14 @@ function Project.load( root_dir , cmdargs )
 	else
 		root_dir = fs.pwd()
 	end
-	local load_env,env = create_env( cmdargs )
+	local load_env,env,write_env = create_env( cmdargs )
+	env.location = root_dir
+	env.root = env.location
+	env.cmdargs = cmdargs
+	env.target = get_target( cmdargs )
+	env.host = llae.get_host_platform()
+	env.__write_env = write_env
+	env.__load_env = load_env
 	local res,err = loadfile(path.join(root_dir,'llae-project.lua'),'bt',load_env)
 	if not res then
 		return res,err
@@ -421,7 +445,7 @@ function Project.load( root_dir , cmdargs )
 	end
 
 	log.debug('loaded project at',root_dir)
-	return Project.new(env,root_dir,cmdargs)
+	return Project.new(env)
 end
 
 return Project

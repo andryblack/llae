@@ -40,7 +40,7 @@ function install:exec( args )
 			log.info('install module')
 			prj:install_module(modname)
 		else
-	 		prj:install_modules()
+	 		prj:install()
 			prj:write_premake()
 		end
 	end)
