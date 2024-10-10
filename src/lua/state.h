@@ -50,6 +50,7 @@ namespace lua {
 		void setfield(int index, const char *k) { lua_setfield(m_L,index,k); }
 		void seti(int index, lua_Integer n) { lua_seti(m_L,index,n); }
 		void geti(int index, lua_Integer n) { lua_geti(m_L,index,n); }
+		void settable(int index) { lua_settable(m_L,index); }
 		void setglobal(const char* name) { lua_setglobal(m_L,name); }
 		value_type getglobal(const char* name) { return static_cast<value_type>(lua_getglobal(m_L,name)); }
 		value_type getfield(int tidx,const char* name) { return static_cast<value_type>(lua_getfield(m_L,tidx,name)); }
