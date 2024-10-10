@@ -27,9 +27,6 @@ namespace uv {
     class async_continue : public async {
     private:
         lua::ref m_cont;
-        void reset(lua::state& l) {
-            m_cont.reset(l);
-        }
         virtual void on_closed() override;
     protected:
         virtual void on_async() override;
@@ -42,7 +39,16 @@ namespace uv {
 
     public:
         explicit async_continue(loop& loop) : async(loop) {}
-        void start(lua::ref&& ref) { m_cont = std::move(ref); }
+        bool start(lua::ref&& ref) { 
+            if (m_cont.valid()) {
+                return false;
+            }
+            m_cont = std::move(ref); 
+            return true;
+        }
+        void reset(lua::state& l) {
+            m_cont.reset(l);
+        }
         int send();
     };
     using async_continue_ptr = common::intrusive_ptr<async_continue>;
