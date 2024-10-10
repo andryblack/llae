@@ -30,7 +30,7 @@ namespace uv {
             remove_ref();
             return;
         }
-        if (m_cont.valid()) {
+        if (!m_cont.valid()) {
             return;
         }
         l.checkstack(2);
