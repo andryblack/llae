@@ -30,8 +30,12 @@ namespace uv {
             remove_ref();
             return;
         }
+        if (m_cont.valid()) {
+            return;
+        }
         l.checkstack(2);
         m_cont.push(l);
+        reset(l);
         auto toth = l.tothread(-1);
         toth.checkstack(3);
         int nargs = on_cont(toth);
@@ -40,8 +44,6 @@ namespace uv {
             llae::app::show_error(toth,s);
         }
         l.pop(1);// thread
-        reset(l);
-        remove_ref();
     }
 
     int async_continue::send() {
@@ -49,7 +51,6 @@ namespace uv {
         if (r<0) {
             return r;
         }
-        add_ref();
         return r;
     }
 }

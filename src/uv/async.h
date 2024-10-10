@@ -41,7 +41,8 @@ namespace uv {
         }
 
     public:
-        explicit async_continue(loop& loop,lua::ref&& cont) : async(loop), m_cont(std::move(cont)) {}
+        explicit async_continue(loop& loop) : async(loop) {}
+        void start(lua::ref&& ref) { m_cont = std::move(ref); }
         int send();
     };
     using async_continue_ptr = common::intrusive_ptr<async_continue>;
