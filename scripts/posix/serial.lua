@@ -45,9 +45,17 @@ local baudrates = {
 
 function serial:configure(conf)
 	local options = self._options or assert(termios.tcgetattr(self._fd))
-	local baud = baudrates[conf.baudrate] or error('unexpected baudrate')
-	assert(termios.cfsetispeed(options,baud))
-	assert(termios.cfsetospeed(options,baud))
+	local baud = baudrates[conf.baudrate] 
+	if not baud then
+		if termios.set_baudrate then
+			assert(termios.set_baudrate(self._fd,conf.baudrate))
+		else
+			error('unsupported baudrate')
+		end
+	else
+		assert(termios.cfsetispeed(options,baud))
+		assert(termios.cfsetospeed(options,baud))
+	end
 	
 	options.c_cflag = options.c_cflag | (termios.CLOCAL | termios.CREAD)
 	options.c_cflag = options.c_cflag & ~termios.PARENB

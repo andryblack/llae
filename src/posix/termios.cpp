@@ -8,6 +8,11 @@
 #ifndef _WIN32
 #include <termios.h>
 
+#ifdef __APPLE__
+# include <sys/ioctl.h>
+# include <IOKit/serial/ioss.h>
+#endif
+
 struct termios_mt  {
 	static constexpr const char* name = "struct termios";
 	using object = struct termios;
@@ -82,112 +87,23 @@ static int lua_posix_cfsetospeed(lua_State* L) {
 	return 1;
 }
 
-
-// static int lua_posix_setbaudrate(lua_State* L) {
-// 	lua::state l(L);
-// 	auto fd = lua::stack<posix::fd_ptr>::get(l,1);
-// 	if (!fd) {
-// 		l.argerror(1,"posix::fd");
-// 	}
-// 	auto baudrate = l.checkinteger(2);
-// 	auto ios = termios_stack::get(l,3);
-// 	struct termios * termios = ios;
-// 	struct termios s_termios;
-// 	if (!termios) {
-// 		termios = &s_termios;
-// 		int r = tcgetattr(fd->get(),&tios);
-// 		if (r < 0) {
-// 			l.pushnil();
-// 			posix::push_error_errno(l);
-// 			return 2;
-// 		}
-// 	}
-
-// #ifndef __APPLE__
-
-//     speed_t brate = baudrate; // let you override switch below if needed
-//     switch(baudrate) {
-//         case    9600: brate=B9600;    break;
-//         case   19200: brate=B19200;   break;
-//         case   38400: brate=B38400;   break;
-//         case 57600:  brate=B57600;  break;
-//         case 115200: brate=B115200; break;
-// #ifdef B230400
-//         case 230400: brate=B230400; break;
-// #endif
-// #ifdef B460800
-//         case 460800: brate=B460800; break;
-// #endif
-// #ifdef B500000
-//         case  500000: brate=B500000;  break;
-// #endif
-// #ifdef B576000
-//         case  576000: brate=B576000;  break;
-// #endif
-// #ifdef B921600
-//         case 921600: brate=B921600; break;
-// #endif
-// #ifdef B1000000
-//         case 1000000: brate=B1000000; break;
-// #endif
-// #ifdef B1152000
-//         case 1152000: brate=B1152000; break;
-// #endif
-// #ifdef B1500000
-//         case 1500000: brate=B1500000; break;
-// #endif
-// #ifdef B2000000
-//         case 2000000: brate=B2000000; break;
-// #endif
-// #ifdef B2500000
-//         case 2500000: brate=B2500000; break;
-// #endif
-// #ifdef B3000000
-//         case 3000000: brate=B3000000; break;
-// #endif
-// #ifdef B3500000
-//         case 3500000: brate=B3500000; break;
-// #endif
-// #ifdef B400000
-//         case 4000000: brate=B4000000; break;
-// #endif
-//         default:
-//             log_error("can't set baudrate %dn", baudrate );
-//             return -1;
-//     }
-//     cfsetospeed(termios, brate);
-//     cfsetispeed(termios, brate);
-// #endif
-
-//     // also set options for __APPLE__ to enforce write drain
-//     // Mac OS Mojave: tcsdrain did not work as expected
-
-//     if (ios) {
-// 	    if( tcsetattr(fd->get(), TCSADRAIN, termios) < 0) {
-// 	    	l.pushnil();
-// 	    	l.pushstring("Couldn't set term attributes");
-// 	        return 2;
-// 	    }
-// 	}
-
-// #ifdef __APPLE__
-//     // From https://developer.apple.com/library/content/samplecode/SerialPortSample/Listings/SerialPortSample_SerialPortSample_c.html
-
-//     // The IOSSIOSPEED ioctl can be used to set arbitrary baud rates
-//     // other than those specified by POSIX. The driver for the underlying serial hardware
-//     // ultimately determines which baud rates can be used. This ioctl sets both the input
-//     // and output speed.
-
-//     speed_t speed = baudrate;
-//     if (ioctl(fd->get(), IOSSIOSPEED, &speed) == -1) {
-//     	l.pushnil();
-//         l.pushfstring("error calling ioctl(..., IOSSIOSPEED, %u) - %s(%d).\n", baudrate, strerror(errno), errno);
-//         return 2;
-//     }
-// #endif
-//     l.pushboolean(true);
-//     return 1;
-// }
+#ifdef __APPLE__
+static int lua_posix_set_baudrate(lua_State* L) {
+	lua::state l(L);
+	auto fd = lua::stack<posix::fd_ptr>::get(l,1);
+	if (!fd) {
+		l.argerror(1,"posix::fd");
+	}
+	speed_t speed = l.checkinteger(2);
+	if (ioctl(fd->get(), IOSSIOSPEED, &speed) < 0) {
+		l.pushnil();
+		l.pushstring("failed set custom baudrate");
+		return 2;
+	}
+	l.pushboolean(true);
+	return 1;
+}
+#endif
 
 int luaopen_posix_termios(lua_State* L) {
 	lua::state l(L);
@@ -201,7 +117,9 @@ int luaopen_posix_termios(lua_State* L) {
 	lua::bind::function(l,"cfsetispeed",&lua_posix_cfsetispeed);
 	lua::bind::function(l,"cfsetospeed",&lua_posix_cfsetospeed);
 
-	//lua::bind::function(l,"setbaudrate",&lua_posix_setbaudrate);
+#ifdef __APPLE__
+	lua::bind::function(l,"set_baudrate",&lua_posix_set_baudrate);
+#endif
 	
 	BIND_M(TCSANOW)
 	BIND_M(TCSADRAIN)
