@@ -155,7 +155,7 @@ function struct:dump( o , out)
 					if i~=1 then
 						prnt(p..'\t,')
 					end
-					self[v[2]]:dump(p..'\t\t')
+					self[v[2]][i]:dump(p..'\t\t')
 				end
 				prnt(p..'\t'..']')
 			else
