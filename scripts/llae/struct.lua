@@ -148,8 +148,20 @@ function struct:dump( o , out)
 	local p = o or '\t'
 	for _,v in ipairs(self._def) do
 		if type(v[1]) == 'table' then
-			prnt(p..'>'..v[2])
-			self[v[2]]:dump(p..'\t')
+			
+			if v[3] then
+				prnt(p..'>'..v[2]..'\t[')
+				for i=1,v[3] do
+					if i~=1 then
+						prnt(p..'\t,')
+					end
+					self[v[2]]:dump(p..'\t\t')
+				end
+				prnt(p..'\t'..']')
+			else
+				prnt(p..'>'..v[2])
+				self[v[2]]:dump(p..'\t')
+			end
 		else
 			local d = v.is_fill and '...' or format(self[v[2]],v)
 			prnt(p..v[2],d)
