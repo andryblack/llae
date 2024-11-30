@@ -162,7 +162,17 @@ function struct:read( d,offset )
 	local e = self._def.endian or 'le'
 	for _,v in ipairs(self._def) do
 		if type(v[1]) == 'table' then
-			self[v[2]],o = _M.read(d,v[1],o)
+			if v[3] then
+				local a = {}
+				for i=1,v[3] do
+					local iv
+					iv,o = _M.read(d,v[1],o)
+					table.insert(a,iv)
+				end
+				self[v[2]] = a
+			else
+				self[v[2]],o = _M.read(d,v[1],o)
+			end
 		else
 			local f = assert(_M['read'..v[1]] or _M['read'..v[1]..e])
 			if v[3] then
@@ -180,7 +190,13 @@ function struct:build( )
 	local e = self._def.endian or 'le'
 	for _,v in ipairs(self._def) do
 		if type(v[1]) == 'table' then
-			table.insert(r,self[v[2]]:build())
+			if v[3] then
+				for i=1,v[3] do
+					table.insert(r,self[v[2]][i]:build())
+				end
+			else
+				table.insert(r,self[v[2]]:build())
+			end
 		else
 			local f = assert(_M['write'..v[1]] or _M['write'..v[1]..e],'not found write ' .. v[1])
 			local d = assert(self[v[2]])
