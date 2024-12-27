@@ -98,6 +98,6 @@ project_main = [[
 	filter "system:linux"
 		links{ 'pthread','dl' }
 	filter "system:windows"
-		links{ 'psapi','user32','advapi32','iphlpapi','userenv','ws2_32' }
+		links{ 'psapi','user32','advapi32','iphlpapi','userenv','ws2_32','dbghelp' }
 	filter {}
 ]]
