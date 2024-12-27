@@ -31,7 +31,7 @@ build_lib = {
 	files = {},
 	common_files = {'fs-poll.c','heap-inl.h','idna.c','inet.c','queue.h','random.c',
 					'strscpy.c','strscpy.h','threadpool.c','timer.c','uv-common.c',
-					'uv-common.h','uv-data-getter-setters.c','version.c'},
+					'uv-common.h','uv-data-getter-setters.c','version.c', 'strtok.c'},
 	unix_files = {'async.c','loop.c','fs.c','core.c','pipe.c','poll.c','signal.c',
 					'stream.c','thread.c','process.c','proctitle.c','tcp.c','udp.c',
 					'tty.c', 'getaddrinfo.c', 'loop-watcher.c', 'random-devurandom.c' },
