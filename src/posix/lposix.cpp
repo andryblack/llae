@@ -91,18 +91,42 @@ int luaopen_posix(lua_State* L) {
 	BIND_M(O_NONBLOCK);
 #endif
 
+#ifdef S_IRWXU
 	BIND_M(S_IRWXU);
+#endif
+#ifdef S_IRUSR
 	BIND_M(S_IRUSR);
+#endif
+#ifdef S_IWUSR
 	BIND_M(S_IWUSR);
+#endif
+#ifdef S_IXUSR
 	BIND_M(S_IXUSR);
+#endif
+#ifdef S_IRWXG
 	BIND_M(S_IRWXG);
+#endif
+#ifdef S_IRGRP
 	BIND_M(S_IRGRP);
+#endif
+#ifdef S_IWGRP
 	BIND_M(S_IWGRP);
+#endif
+#ifdef S_IXGRP
 	BIND_M(S_IXGRP);
+#endif
+#ifdef S_IRWXO
 	BIND_M(S_IRWXO);
+#endif
+#ifdef S_IROTH
 	BIND_M(S_IROTH);
+#endif
+#ifdef S_IWOTH
 	BIND_M(S_IWOTH);
+#endif
+#ifdef S_IXOTH
 	BIND_M(S_IXOTH);
+#endif
 
 #ifdef F_GETFD
 	BIND_M(F_GETFD);
