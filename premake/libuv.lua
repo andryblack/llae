@@ -77,15 +77,11 @@ function _M.lib( root )
 				'_GNU_SOURCE',
 			}
 			files {
-				path.join(_M.root,'src','unix','linux-core.c'),
-				path.join(_M.root,'src','unix','linux-inotify.c'),
-				path.join(_M.root,'src','unix','linux-syscalls.c'),
-				path.join(_M.root,'src','unix','linux-syscalls.h'),
+				path.join(_M.root,'src','unix','linux.c'),
 				path.join(_M.root,'src','unix','procfs-exepath.c'),
+				path.join(_M.root,'src','unix','proctitle.c'),
 				path.join(_M.root,'src','unix','random-getrandom.c'),
-				path.join(_M.root,'src','unix','random-sysctl-linux.c'),
-				path.join(_M.root,'src','unix','sysinfo-loadavg.c'),
-				path.join(_M.root,'src','unix','epoll.c')
+				path.join(_M.root,'src','unix','random-sysctl-linux.c')
 			}
 		filter "system:windows"
 			defines {
