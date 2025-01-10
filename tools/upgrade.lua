@@ -28,6 +28,7 @@ function upgrade:exec( args )
 		local project = require 'project'
 		local p = project.new({location=install_dir})
 		p:add_module('llae')
+		p:init_modules()
 		p:install_modules(true)
 		p = project.new({location=install_dir})
 		p:add_module('llae')
