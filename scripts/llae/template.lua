@@ -21,7 +21,7 @@ local function escape(str)
 end
 
 function template:_init( options )
-	self._name = 'template'
+	self._name = (options and options.name) or 'template'
 	self._env = {
 		escape = escape
 	}

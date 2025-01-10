@@ -74,10 +74,11 @@ solution '<%= project:name() %>'
 			filter{'action:gmake or gmake2'}
 				location 'project'
 			filter{}
-			<%= template.compile(mod.build_lib.project,{env=...}){
+			<%= template.compile(mod.build_lib.project,{name=mod.name .. ':build_lib', env=...}){
 				module = mod,
 				lib = mod.build_lib,
 				format_mod_file = function(m,...)
+					local m = m:get_env()
 					return make_path(m,m.dir,...)
 				end,
 				format_file = function (...)

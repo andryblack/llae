@@ -162,27 +162,25 @@ function Project:get_modules_locations()
 	return self._modules_locations
 end
 
-function Project:add_module( name )
+function Project:add_module( name , install)
 	if self._modules[name] then
 		return
 	end
-	local m = modules.get(self,name)
-	
-	m.root = self._env.location
-	if m.root then
-		m.location = path.join(m.root,'build','modules', m.name)
-	end
+	local m = modules.get(self,name, install)
+	m:set_root(self:get_root())
+	m:set_project(self)
 		
 	self._modules[name] = m
-	m._project = self
-	if m.dependencies then
-		for _,v in ipairs(m.dependencies) do
-			self:add_module(v)
+	
+	if m:get_dependencies() then
+		for _,v in ipairs(m:get_dependencies()) do
+			self:add_module(v, install)
 		end
 	end
 	table.insert(self._modules_list,m)
-	if m.cmodules then
-		for _,cmod in ipairs(m.cmodules) do
+	local cmodules = m:get_cmodules()
+	if cmodules then
+		for _,cmod in ipairs(cmodules) do
 			if type(cmod) == 'string' then
 				table.insert(self._cmodules,{name=cmod,func='luaopen_' .. string.gsub(cmod,'%.','_')})
 			else
@@ -190,50 +188,25 @@ function Project:add_module( name )
 			end
 		end
 	end
-	self:resolve_module_configs(m)
+	m:load_configs(self._module_config)
 end
 
-function Project:resolve_module_configs(m)
-	local configs = {}
-	m.configs = configs
-	for _,v in ipairs(m.project_config or {}) do
-		local name = assert(v[1],'need config name')
-		if configs[name] then
-			error('dublicate module config ' .. name)
-		end
-		configs[name] = v
-		if v.storage and v.storage == 'list' then
-			v.value = {}
-			for __,cv in ipairs(self._module_config) do
-				if cv.module == m.name and cv.name == name then
-					table.insert(v.value,cv.value)
-				end
-			end
-		else
-			for __,cv in ipairs(self._module_config) do
-				if cv.module == m.name and cv.name == name then
-					if v.type and type(cv.value) ~= v.type then
-						error('invalid config value type')
-					end
-					v.value = cv.value
-				end
-			end
-		end
-	end
-end
 
-function Project:load_modules(  )
+function Project:load_modules( install )
 	if next(self._modules) then
 		return
 	end
 	self._modules = {}
 	self._modules_list = {}
 	for _,n in ipairs(self._env.modules) do
-		self:add_module(n)
+		self:add_module(n,install)
+	end
+	for _,m in ipairs(self._modules_list) do
+		m:resolve_configs(self._module_config)
 	end
 end
 function Project:install_modules( tosystem )
-	self:load_modules()
+	self:load_modules(true)
 	self._scripts = {}
 	local root = self:get_root()
 	fs.mkdir(path.join(root,'build'))
@@ -241,9 +214,18 @@ function Project:install_modules( tosystem )
 	fs.mkdir(path.join(root,'build','premake'))
 	fs.mkdir(self:get_dl_dir())
 	for _,m in ipairs(self._modules_list) do
-		modules.install(m,root,tosystem)
+		m:install(tosystem)
 	end
 	
+end
+
+local function apply_functions( super_env, env )
+	local m = require 'modules.functions'
+	for n,v in pairs(m) do
+		super_env[n] = function(...)
+			return v(env,...)
+		end
+	end
 end
 
 function Project:install(tosystem)
@@ -254,7 +236,7 @@ function Project:install(tosystem)
 				Project.env.print(self._env,...)
 			end
 		}
-		modules.apply_functions(funcs,self._env)
+		apply_functions(funcs,self._env)
 		setmetatable(self._env.__load_env,{
 			__index = setmetatable(funcs,{__index=self._env}),
 			__newindex={}
@@ -265,14 +247,14 @@ function Project:install(tosystem)
 end
 
 function Project:install_module( name )
-	self:load_modules()
+	self:load_modules(true)
 	self._scripts = {}
 	local root = self:get_root()
 	fs.mkdir(path.join(root,'build'))
 	fs.mkdir(path.join(root,'build','modules'))
 	fs.mkdir(path.join(root,'build','premake'))
 	local m = self._modules[name]
-	modules.install(m,root)
+	m:install(root)
 end
 
 function Project:check_script( file , m )
@@ -284,12 +266,26 @@ function Project:check_script( file , m )
 	self._scripts[file] = m
 end
 
+local function mod_next(t,i)
+	i = i + 1
+	if t[i] then
+		return i, t[i]:get_env()
+	end
+end
+
 function Project:foreach_module( )
-	return ipairs(self._modules_list)
+	return mod_next,self._modules_list,0
+end
+
+local function reversed_mod_next(t, i)
+    i = i - 1
+    if i ~= 0 then
+        return i, t[i]:get_env()
+    end
 end
 
 function Project:foreach_module_rev( )
-	return utils.reversedipairs(self._modules_list)
+	return reversed_mod_next,self._modules_list,#self._modules_list + 1
 end
 
 function Project:get_module( name )
@@ -306,10 +302,7 @@ function Project:get_config_value( module_name, config_name )
 		error('module not connected: ' .. tostring(module_name))
 		return nil
 	end
-	local config = module.configs[config_name]
-	if not config then
-		error('module ' .. module.name .. ' dnt declare config: ' .. tostring(config_name))
-	end
+	local config = module:get_config(config_name)
 	return config.value
 end
 
@@ -366,17 +359,15 @@ function Project:write_generated( )
 	end
 
 	for _,m in ipairs(self._modules_list) do
-		for _,conf in ipairs(m.generate_src or {}) do
-			m.root = self:get_root()
-			m.location = path.join(m.root,'build','modules', m.name)
+		for _,conf in ipairs(m:get_generate_src()) do
 			local template_f
 			if conf.template then
-				local template_source_filename = Project.get_path(m.location,conf.template)
+				local template_source_filename = Project.get_path(m:get_location(),conf.template)
 				template_f = template.load(template_source_filename)
 			else
 				template_f = template.compile(conf.template_content)
 			end
-			local filename = path.join(m.root,conf.filename)
+			local filename = path.join(self:get_root(),conf.filename)
 			log.info('generate',conf.filename)
 			fs.mkdir_r(path.dirname(filename))
 			fs.unlink(filename)
@@ -389,7 +380,7 @@ function Project:write_generated( )
 				conf = conf,
 				fs = fs,
 				log = log
-			},{__index=m})
+			},{__index=m:get_env()})
 			if conf.config then
 				load(conf.config,'generate:config','t',ctx)()
 			end
