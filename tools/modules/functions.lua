@@ -6,6 +6,7 @@ local crypto = require 'llae.crypto'
 local untar = require 'archive.tar'
 local unzip = require 'archive.zip'
 local http = require 'net.http'
+local os = require 'llae.os'
 
 local uv = require 'uv'
 
