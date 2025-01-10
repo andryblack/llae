@@ -98,7 +98,7 @@ function pgsql:auth()
 	elseif auth_type == 5 then
 		return self:md5_auth(msg)
 	else
-		return nil,'usupported auth method'
+		return nil,'usupported auth method ' .. tostring(auth_type)
 	end
 end
 
