@@ -191,6 +191,12 @@ function Project:add_module( name , install)
 	m:load_configs(self._module_config)
 end
 
+function Project:init_modules()
+	for _,m in ipairs(self._modules_list) do
+		m:resolve_configs(self._module_config)
+	end
+end
+
 
 function Project:load_modules( install )
 	if next(self._modules) then
@@ -201,9 +207,7 @@ function Project:load_modules( install )
 	for _,n in ipairs(self._env.modules) do
 		self:add_module(n,install)
 	end
-	for _,m in ipairs(self._modules_list) do
-		m:resolve_configs(self._module_config)
-	end
+	self:init_modules()
 end
 function Project:install_modules( tosystem )
 	self:load_modules(true)

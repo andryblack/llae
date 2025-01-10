@@ -90,7 +90,7 @@ end
 
 function base:load_configs( module_configs )
 	if self._env and self._env.module_configs then
-		for _,c in ipairs(module_configs) do
+		for _,c in ipairs(self._env.module_configs ) do
 			table.insert(module_configs,c)
 		end
 	end
