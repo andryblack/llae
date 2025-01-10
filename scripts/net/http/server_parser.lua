@@ -1,5 +1,6 @@
 
 local class = require 'llae.class'
+local log = require 'llae.log'
 
 local parser = class(require 'net.http.parser','http.server.parser')
 
@@ -15,12 +16,14 @@ function parser:load( client )
 			if self._data == '' then
 				return true
 			end
-			error('unexpected end')
+			log.error('http: unexpected method end')
+			return false
 		end
 	end
 	while not self:parse_header(client) do 
 		if not self:read(client) then
-			error('unexpected end')
+			log.error('http: unexpected header end')
+			return false
 		end
 	end
 	local _length = tonumber(self:get_header('Content-Length') or 0)
