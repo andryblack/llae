@@ -13,11 +13,11 @@ local cin = assert(uv.tty.new(0))
 local args = utils.parse_args(_G.args)
 
 async.run(function()
-	local pg = pgsql.new()
+	local pg = pgsql.new(args)
 	assert(pg:connect())
 	while true do
 		log.info('ready')
-		local line = assert(cin:read())
+		local line = tostring(assert(cin:read()))
 		line = line:gsub('\n','')
 		log.info('>line')
 		local res,err = pg:query(line)

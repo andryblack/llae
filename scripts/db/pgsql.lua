@@ -6,6 +6,7 @@ local async = require 'llae.async'
 local log = require 'llae.log'
 local json = require 'llae.json'
 local crypto = require 'llae.crypto'
+local sasl_auth = require 'db.pgsql.sasl_auth'
 
 local pgsql = class(nil,'db.pgsql')
 
@@ -22,7 +23,12 @@ pgsql.default_config = {
 }
 
 function pgsql:_init(conf)
-	self._config = conf or self.default_config
+	self._config = setmetatable({},{__index=self.default_config})
+	if conf then
+		for k,v in pairs(conf) do
+			self._config[k] = v
+		end
+	end
 	self._lock = async.lock.new()
 	self._conn = uv.tcp_connection.new()
 end
@@ -97,6 +103,8 @@ function pgsql:auth()
 		return self:cleartext_auth(msg)
 	elseif auth_type == 5 then
 		return self:md5_auth(msg)
+	elseif auth_type == 10 then
+		return self:sasl_auth(msg)
 	else
 		return nil,'usupported auth method ' .. tostring(auth_type)
 	end
@@ -132,6 +140,33 @@ function pgsql:md5_auth(msg)
 		self.NULL
 	})
 	return self:check_auth()
+end
+
+function pgsql:sasl_auth(msg)
+	if not self._config.password then
+		return nil,'need password for auth'
+	end
+
+	local auth,err = sasl_auth.parse_mechanism(msg,self._config)
+	if not auth then
+		return nil,err
+	end
+	return auth:auth(self)
+end
+
+
+function pgsql:sasl_auth_cont(msg)
+	if not self._sasl_auth_state then
+		return nil,'not SASL auth started'
+	end
+	self._sasl_auth_state = 'cont'
+end
+
+function pgsql:sasl_auth_final(msg)
+	if not self._sasl_auth_state then
+		return nil,'not SASL auth started'
+	end
+	self._sasl_auth_state = 'final'
 end
 
 function pgsql:check_auth()
