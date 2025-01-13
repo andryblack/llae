@@ -5,7 +5,7 @@
 #include "decl.h"
 #include "meta/object.h"
 #include "lua/ref.h"
-#include "lua/state.h"
+#include "lua/stack.h"
 #include "llae/memory.h"
 #include <vector>
 #include <cstdlib>
@@ -18,19 +18,36 @@ namespace uv {
     class buffer;
     typedef common::intrusive_ptr<buffer> buffer_ptr;
 
+    class buffer_view {
+    protected:
+        const void* m_data;
+        const size_t m_size;
+    public:
+        buffer_view() : m_data(nullptr),m_size(0) {}
+        buffer_view(const void* data,size_t len) : m_data(data),m_size(len) {}
+        
+        const void* get_base() const { return m_data; }
+        size_t get_len() const { return m_size; }
+
+        static buffer_view get(lua::state& l,int idx,bool check=false);
+    };
+
     class buffer_base : public meta::object {
         META_OBJECT
         LLAE_NAMED_ALLOC(buffer_base)
     protected:
-        uv_buf_t    m_buf;
+        uv_buf_t m_buf;
         buffer_base() {}
         explicit buffer_base(const uv_buf_t& b) : m_buf(b) {}
     public:
         const uv_buf_t* get() const { return &m_buf;}
+
+        const void* get_base() const { return m_buf.base; }
         size_t get_len() const { return m_buf.len; }
+
         lua::multiret sub(lua::state& l) const;
         buffer_ptr reverse() const;
-        const void* get_base() const { return m_buf.base; }
+        
         lua::multiret lfind(lua::state& l) const;
         lua::multiret lbyte(lua::state& l) const;
         lua::multiret ltostring(lua::state& l) const;
@@ -120,6 +137,21 @@ namespace uv {
         }
     };
     
+}
+
+namespace lua {
+    template<>
+    struct stack<uv::buffer_view> {
+        static uv::buffer_view get(lua::state& l,int idx) {
+            return uv::buffer_view::get(l,idx,false);
+        }
+    };
+    template<>
+    struct stack<check<uv::buffer_view> > {
+        static uv::buffer_view get(lua::state& l,int idx) {
+            return uv::buffer_view::get(l,idx,true);
+        }
+    };
 }
 
 #endif /*__LLAE_UV_STREAM_H_INCLUDED__*/

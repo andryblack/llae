@@ -170,10 +170,7 @@ namespace crypto {
     }
 
     lua::multiret ecp::ecdsa_verify(lua::state& l) {
-        auto b = uv::buffer_base::get(l,2,true);
-        if (!b) {
-            l.argerror(2, "need hased data");
-        }
+        auto b = uv::buffer_view::get(l,2,true);
         ecp_point_ptr Q = lua::stack<ecp_point_ptr>::get(l,3);
         if (!Q) {
             l.argerror(3, "need pubkey");
@@ -187,8 +184,8 @@ namespace crypto {
             l.argerror(4, "need s");
         }
         auto res = mbedtls_ecdsa_verify(&m_group,
-                                        static_cast<const unsigned char*>(b->get_base()),
-                                        b->get_len(),Q->get(),r->get(),s->get());
+                                        static_cast<const unsigned char*>(b.get_base()),
+                                        b.get_len(),Q->get(),r->get(),s->get());
         if (res == 0) {
             l.pushboolean(true);
             return {1};
@@ -228,10 +225,7 @@ namespace crypto {
     }
 
     lua::multiret ecp::ecdsa_sign(lua::state& l) {
-        auto b = uv::buffer_base::get(l,2,true);
-        if (!b) {
-            l.argerror(2, "need hased data");
-        }
+        auto b = uv::buffer_view::get(l,2,true);
         bignum_ptr d = lua::stack<bignum_ptr>::get(l,3);
         if (!d) {
             l.argerror(3, "need privkey");
@@ -253,16 +247,16 @@ namespace crypto {
             }
             
             res = mbedtls_ecdsa_sign_det_ext(&m_group,r->get(),s->get(),d->get(),
-                                      static_cast<const unsigned char*>(b->get_base()),
-                                      b->get_len(),
+                                      static_cast<const unsigned char*>(b.get_base()),
+                                      b.get_len(),
                                       mbedtls_md_get_type(info),
                                       &ecp::rng_func,this);
         } else
 #endif
         {
             res = mbedtls_ecdsa_sign(&m_group,r->get(),s->get(),d->get(),
-                                      static_cast<const unsigned char*>(b->get_base()),
-                                      b->get_len(),&ecp::rng_func,this);
+                                      static_cast<const unsigned char*>(b.get_base()),
+                                      b.get_len(),&ecp::rng_func,this);
         }
         if (res == 0) {
             lua::push(l, std::move(r));

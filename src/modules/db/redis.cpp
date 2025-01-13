@@ -65,14 +65,10 @@ static int lua_redis_resp_gen_req(lua_State* L) {
             write_rn();
             write_data(str,sz);
         } else if (t == lua::value_type::userdata) {
-            auto buf = uv::buffer_base::get(l,i,true);
-            if (!buf) {
-                l.argerror(i,"invalid type");
-            } else {
-                write_number(buf->get_len());
-                write_rn();
-                write_data(buf->get_base(),buf->get_len());
-            }
+            auto buf = uv::buffer_view::get(l,i,true);
+            write_number(buf.get_len());
+            write_rn();
+            write_data(buf.get_base(),buf.get_len());
         } else if (t == lua::value_type::number ||
             t == lua::value_type::boolean) {
             l.pushvalue(i);

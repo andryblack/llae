@@ -16,6 +16,16 @@ namespace uv {
     static const char hex_char[] = "0123456789abcdef";
     using uchar = unsigned char;
 
+    buffer_view buffer_view::get(lua::state& l,int idx,bool check) {
+        auto r = lua::stack<buffer_base_ptr>::get(l,idx);
+        if (r) return buffer_view(r->get_base(),r->get_len());
+        if (check && !l.isstring(idx)) return {};
+        size_t size;
+        auto ptr = l.tolstring(idx,size);
+        return buffer_view(ptr,size);
+    }
+
+
     lua::multiret buffer_base::sub(lua::state& l) const {
         if (get_len()==0) {
             l.pushstring("");
