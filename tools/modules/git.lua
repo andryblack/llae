@@ -7,9 +7,9 @@ local git = class(require 'modules.base')
 
 function git.load(project,url,install)
 
-	local host,rpath,options = string.match(url,'^([^/]+)/([^;]+);(.*)$')
+	local host,rpath,options = string.match(url,'^(.+)/([^;]+);(.*)$')
 	if not host then
-		host,rpath = string.match(url,'^([^/]+)/(.+)$')
+		host,rpath = string.match(url,'^(.+)/(.+)$')
 	end
 	if not host then
 		return false, 'failed parse url'
@@ -41,7 +41,12 @@ function git.load(project,url,install)
 	}
 	fs.mkdir_r(fm.location)
 	if install then
-		m.download_git(fm,proto .. '://' .. host .. '/' .. rpath,config)
+		if proto ~= 'git' then
+			proto = proto .. '://'
+		else
+			proto = ''
+		end
+		m.download_git(fm,proto .. host .. '/' .. rpath,config)
 	end
 	local fn = path.join(fm.location,config.dir,'llae-module.lua')
 	local dir = path.join(fm.location,config.dir,'modules')
@@ -53,6 +58,7 @@ function git.load(project,url,install)
 		local mod = git.new( name )
 		mod:set_root(root)
 		mod:loadfile(fn,project)
+		mod:set_env('dir',config.dir)
 		return mod
 	else
 		return false, 'not found module file ' .. tostring(fn)

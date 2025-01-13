@@ -75,6 +75,10 @@ function base:set_project(project)
 	end
 end
 
+function base:set_env(name,val)
+	self._env[name] = val
+end
+
 function base:install(tosystem)
 	log.info('install module',self:get_name(),self._env.version)
 	os.setenv('LLAE_PROJECT_ROOT',self._root)
