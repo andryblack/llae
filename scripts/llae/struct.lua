@@ -1,6 +1,16 @@
 local class = require 'llae.class'
 local _M = {}
 
+function _M.readu64le( d,offset )
+	local d = string.unpack('<I8',d,offset+1)
+	return d, offset+8
+end
+
+function _M.readu64be( d,offset )
+	local d = string.unpack('>I8',d,offset+1)
+	return d, offset+8
+end
+
 function _M.readu32le( d,offset )
 	local d = string.unpack('<I4',d,offset+1)
 	return d, offset+4
@@ -25,6 +35,14 @@ function _M.readu8( d,o )
 	return string.byte(d,o+1),o+1
 end
 
+function _M.writeu64le( d )
+	return string.pack('<I8',d)
+end
+
+function _M.writeu64be( d )
+	return string.pack('>I8',d)
+end
+
 function _M.writeu32le( d )
 	return string.pack('<I4',d)
 end
@@ -46,7 +64,7 @@ function _M.writeu8( d )
 end
 
 
-local sizes = {u32=4,u16=2,u8=1}
+local sizes = {u64=8,u32=4,u16=2,u8=1}
 
 local function reada(f,d,o,c)
 	local r = {}
@@ -78,6 +96,9 @@ end
 
 local formats = {
 }
+function formats.u64( v )
+	return string.format('0x%016x',v)
+end
 function formats.u32( v )
 	return string.format('0x%08x',v)
 end
