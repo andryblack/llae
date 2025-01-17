@@ -122,7 +122,9 @@ function m:download(url,file,hash)
 			url = url,
 			headers = {
 				['Accept'] = '*/*',
-				['Accept-Encoding'] = 'identity'
+				['Accept-Encoding'] = 'identity',
+				['User-Agent'] = 'Wget/1.24.5',
+				['Connection'] = 'close'
 			}
 		}
 
