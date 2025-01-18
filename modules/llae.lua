@@ -115,7 +115,7 @@ cmodules = {
 	'net',
 }
 
-includedir = dir .. '/src' 
+includedir = '${dir}/src' 
 
 dependencies = {
 	'premake',

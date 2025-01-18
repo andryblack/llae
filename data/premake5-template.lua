@@ -119,9 +119,9 @@ solution '<%= project:name() %>'
 
 		includedirs {
 			<% for _,mod in project:foreach_module() do if mod.includedir then %>
-				'<%= project.get_path(path.join('modules',mod.name),mod.includedir) %>',<%  
+				'<%= project.get_path(path.join('modules',mod.name),utils.replace_tokens(mod.includedir,mod)) %>',<%  
 				elseif mod.includedirs then
-					for __,idir in ipairs(mod.includedirs) do %>'<%= project.get_path(path.join('modules',mod.name),idir) %>',<% end
+					for __,idir in ipairs(mod.includedirs) do %>'<%= project.get_path(path.join('modules',mod.name),utils.replace_tokens(idir,mod)) %>',<% end
 				end
 			end %>
 		}

@@ -323,7 +323,8 @@ function Project:write_premake(  )
 		template = template,
 		path = path,
 		fs = fs,
-		log = log
+		log = log,
+		utils = utils
 	}))
 	f:close()
 end
