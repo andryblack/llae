@@ -84,6 +84,24 @@ namespace common {
             m_ptr = nullptr;
             return r;
         }
+        bool operator == (const intrusive_ptr<T>& o) const {
+            return m_ptr == o.m_ptr;
+        }
+        bool operator != (const intrusive_ptr<T>& o) const {
+            return m_ptr != o.m_ptr;
+        }
+        bool operator < (const intrusive_ptr<T>& o) const {
+            return m_ptr < o.m_ptr;
+        }
+        bool operator <= (const intrusive_ptr<T>& o) const {
+            return m_ptr <= o.m_ptr;
+        }
+        bool operator > (const intrusive_ptr<T>& o) const {
+            return m_ptr > o.m_ptr;
+        }
+        bool operator >= (const intrusive_ptr<T>& o) const {
+            return m_ptr >= o.m_ptr;
+        }
     };
 }
 
