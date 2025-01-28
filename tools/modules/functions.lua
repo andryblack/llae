@@ -407,6 +407,26 @@ function m:install_scripts( dir )
 	end
 end
 
+function m:install_scripts_dir( dir )
+	local src = path.join(self.location,dir)
+	local basename = path.basename(dir)
+	local files,err = fs.scanfiles_r(src)
+	if not files then
+		error(err)
+	end
+	for _,f in ipairs(files) do
+		local fn = path.join(basename,f)
+		self._project:check_script(fn,self)
+		local src = path.join(self.location,dir,f)
+		local dst = self.tosystem and path.join(self.root,'scripts',fn) or 
+			path.join(self.root,'build','scripts',fn)
+		fs.mkdir_r(path.dirname(dst))
+		log.debug('install',src,'->',dst)
+		fs.unlink(dst)
+		assert(fs.copyfile(src,dst))
+	end
+end
+
 function m:foreach_file_r(dir)
 	local src = path.join(self.location,dir)
 	local files,err = fs.scanfiles_r(src)
