@@ -293,7 +293,15 @@ function Project:foreach_module_rev( )
 end
 
 function Project:get_module( name )
-	return self._modules[name]
+	local res = self._modules[name]
+	if res then
+		return res
+	end
+	for _,v in pairs(self._modules) do
+		if v:get_name() == name then
+			return v
+		end
+	end
 end
 
 function Project:get_cmodules(  )
