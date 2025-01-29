@@ -13,6 +13,7 @@ local uv = require 'uv'
 
 local modules_base = require 'modules.base'
 local modules_git = require 'modules.git'
+local modules_file = require 'modules.file'
 
 
 local _M = {  }
@@ -51,6 +52,15 @@ function _M.get( project, modname, install )
 			log.error('failed load git module: ',modname)
 			log.error(err)
 			error('failed load git module ' .. modname)
+		end
+	elseif proto and proto == 'file' then
+		local mod,err = modules_file.load(project,tail,install)
+		if mod then
+			return mod
+		else
+			log.error('failed load file module: ',modname)
+			log.error(err)
+			error('failed load file module ' .. modname)
 		end
 	end
 
