@@ -53,4 +53,4 @@ function file.load(project,url,install)
 	end
 end
 
-return git
+return file
