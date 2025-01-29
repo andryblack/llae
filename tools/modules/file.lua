@@ -43,7 +43,7 @@ function file.load(project,url,install)
 	end
 	if fs.isfile(fn) then
 
-		local mod = git.new( name )
+		local mod = file.new( name )
 		mod:set_root(root)
 		mod:loadfile(fn,project)
 		mod:set_env('dir','')
