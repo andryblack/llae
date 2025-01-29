@@ -412,7 +412,7 @@ function m:install_scripts_dir( dir )
 	local basename = path.basename(dir)
 	local files,err = fs.scanfiles_r(src)
 	if not files then
-		error(err)
+		error(err .. '\n' .. src)
 	end
 	for _,f in ipairs(files) do
 		local fn = path.join(basename,f)

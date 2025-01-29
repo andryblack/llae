@@ -4,6 +4,10 @@ local fs = require 'llae.fs'
 
 local file = class(require 'modules.base')
 
+function file:_init(name, location)
+	file.baseclass._init(self,name)
+	self._location = location
+end
 
 function file.load(project,url,install)
 
@@ -43,7 +47,7 @@ function file.load(project,url,install)
 	end
 	if fs.isfile(fn) then
 
-		local mod = file.new( name )
+		local mod = file.new( name , fm.location )
 		mod:set_root(root)
 		mod:loadfile(fn,project)
 		mod:set_env('dir','')
@@ -51,6 +55,10 @@ function file.load(project,url,install)
 	else
 		return false, 'not found module file ' .. tostring(fn)
 	end
+end
+
+function file:on_root_set()
+	--self._location = self._env.location
 end
 
 return file

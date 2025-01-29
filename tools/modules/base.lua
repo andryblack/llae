@@ -59,13 +59,21 @@ function base:check_module( name )
 	self._name = self._env.name
 end
 
-function base:set_root(root)
-	self._root = path.getabsolute(root or self._root or utils.replace_env(fs.pwd()))
-	self._location = path.join(self._root,'build','modules', self:get_name())
+function base:update_env_location()
 	if self._env then
 		self._env.location = self._location
 		self._env.root = self._root
 	end
+end
+
+function base:on_root_set()
+	self._location = path.join(self._root,'build','modules', self:get_name())
+end
+
+function base:set_root(root)
+	self._root = path.getabsolute(root or self._root or utils.replace_env(fs.pwd()))
+	self:on_root_set()
+	self:update_env_location()	
 end
 
 function base:set_project(project)
