@@ -46,8 +46,7 @@ solution '<%= project:name() %>'
 <% end %>
 <% local function make_path(mod,first,...)
 		local t = path.isabsolute(first) and {first} or {
-			"modules",
-			mod.name,
+			mod.location,
 			first
 		}
 		for _,v in ipairs(table.pack(...)) do
