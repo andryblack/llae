@@ -47,7 +47,7 @@ function file.load(project,url,install)
 	end
 	if fs.isfile(fn) then
 
-		local mod = file.new( name , fm.location )
+		local mod = file.new( name ,  path.getabsolute(fm.location) )
 		mod:set_root(root)
 		mod:loadfile(fn,project)
 		mod:set_env('dir','')
@@ -58,6 +58,7 @@ function file.load(project,url,install)
 end
 
 function file:on_root_set()
+	--self._env.location = self._location
 	--self._location = self._env.location
 end
 
