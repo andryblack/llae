@@ -31,8 +31,39 @@ function _M.readu16be( d,offset )
 	return d, offset+2
 end
 
-function _M.readu8( d,o )
-	return string.byte(d,o+1),o+1
+function _M.readi64le( d,offset )
+	local d = string.unpack('<i8',d,offset+1)
+	return d, offset+8
+end
+
+function _M.readi64be( d,offset )
+	local d = string.unpack('>i8',d,offset+1)
+	return d, offset+8
+end
+
+function _M.readi32le( d,offset )
+	local d = string.unpack('<i4',d,offset+1)
+	return d, offset+4
+end
+
+function _M.readi32be( d,offset )
+	local d = string.unpack('>i4',d,offset+1)
+	return d, offset+4
+end
+
+function _M.readi16le( d,offset )
+	local d = string.unpack('<i2',d,offset+1)
+	return d, offset+2
+end
+
+function _M.readi16be( d,offset )
+	local d = string.unpack('>i2',d,offset+1)
+	return d, offset+2
+end
+
+function _M.readi8( d,o )
+	local d = string.unpack('i1',d,offset+1)
+	return d, offset+1
 end
 
 function _M.writeu64le( d )
@@ -59,12 +90,39 @@ function _M.writeu16be( d )
 	return string.pack('>I2',d)
 end
 
+function _M.writei64le( d )
+	return string.pack('<i8',d)
+end
+
+function _M.writei64be( d )
+	return string.pack('>i8',d)
+end
+
+function _M.writei32le( d )
+	return string.pack('<i4',d)
+end
+
+function _M.writei32be( d )
+	return string.pack('>i4',d)
+end
+
+function _M.writei16le( d )
+	return string.pack('<i2',d)
+end
+
+function _M.writei16be( d )
+	return string.pack('>i2',d)
+end
+
 function _M.writeu8( d )
 	return string.char(d)
 end
+function _M.writei8( d )
+	return string.pack('i1',d)
+end
 
 
-local sizes = {u64=8,u32=4,u16=2,u8=1}
+local sizes = {u64=8,i64=8,u32=4,i32=4,u16=2,i16=2,u8=1,i8=1}
 
 local function reada(f,d,o,c)
 	local r = {}
@@ -107,6 +165,18 @@ function formats.u16( v )
 end
 function formats.u8( v )
 	return string.format('0x%02x',v)
+end
+function formats.i64( v )
+	return string.format('0x%016x',v)
+end
+function formats.i32( v )
+	return string.format('0x%08x',v&0xffffffff)
+end
+function formats.i16( v )
+	return string.format('0x%04x',v&0xffff)
+end
+function formats.i8( v )
+	return string.format('0x%02x',v&0xff)
 end
 
 
