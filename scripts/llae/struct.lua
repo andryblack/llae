@@ -31,6 +31,11 @@ function _M.readu16be( d,offset )
 	return d, offset+2
 end
 
+function _M.readu8( d,o )
+	local d = string.byte(d, o+1)
+	return d, o+1
+end
+
 function _M.readi64le( d,offset )
 	local d = string.unpack('<i8',d,offset+1)
 	return d, offset+8
@@ -62,8 +67,8 @@ function _M.readi16be( d,offset )
 end
 
 function _M.readi8( d,o )
-	local d = string.unpack('i1',d,offset+1)
-	return d, offset+1
+	local d = string.unpack('i1',d,o+1)
+	return d, o+1
 end
 
 function _M.writeu64le( d )
@@ -277,7 +282,7 @@ function struct:read( d,offset )
 				self[v[2]],o = _M.read(d,v[1],o)
 			end
 		else
-			local f = assert(_M['read'..v[1]] or _M['read'..v[1]..e])
+			local f = assert(_M['read'..v[1]] or _M['read'..v[1]..e],'unknown data type: ' .. tostring(v[1]))
 			if v[3] then
 				self[v[2]],o = reada(f,d,o,v[3])
 			else
