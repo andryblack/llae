@@ -1,133 +1,291 @@
 local class = require 'llae.class'
 local _M = {}
 
-function _M.readu64le( d,offset )
-	local d = string.unpack('<I8',d,offset+1)
-	return d, offset+8
+local field_def = class()
+
+function field_def:_init(name,fdef)
+	self.name = name
+	if fdef then
+		self._default = fdef.default
+	end
 end
 
-function _M.readu64be( d,offset )
-	local d = string.unpack('>I8',d,offset+1)
-	return d, offset+8
+function field_def:load(dst,src)
+	local res = src[self.name] or self._default
+	if not res then
+		error('need field ' .. self.name)
+	end
+	dst[self.name] = res
 end
 
-function _M.readu32le( d,offset )
-	local d = string.unpack('<I4',d,offset+1)
-	return d, offset+4
+function field_def:write(dst,src)
+	self:write_data(dst,src[self.name] or error('need field ' .. self.name ))
 end
-
-function _M.readu32be( d,offset )
-	local d = string.unpack('>I4',d,offset+1)
-	return d, offset+4
-end
-
-function _M.readu16le( d,offset )
-	local d = string.unpack('<I2',d,offset+1)
-	return d, offset+2
-end
-
-function _M.readu16be( d,offset )
-	local d = string.unpack('>I2',d,offset+1)
-	return d, offset+2
-end
-
-function _M.readu8( d,o )
-	local d = string.byte(d, o+1)
-	return d, o+1
-end
-
-function _M.readi64le( d,offset )
-	local d = string.unpack('<i8',d,offset+1)
-	return d, offset+8
-end
-
-function _M.readi64be( d,offset )
-	local d = string.unpack('>i8',d,offset+1)
-	return d, offset+8
-end
-
-function _M.readi32le( d,offset )
-	local d = string.unpack('<i4',d,offset+1)
-	return d, offset+4
-end
-
-function _M.readi32be( d,offset )
-	local d = string.unpack('>i4',d,offset+1)
-	return d, offset+4
-end
-
-function _M.readi16le( d,offset )
-	local d = string.unpack('<i2',d,offset+1)
-	return d, offset+2
-end
-
-function _M.readi16be( d,offset )
-	local d = string.unpack('>i2',d,offset+1)
-	return d, offset+2
-end
-
-function _M.readi8( d,o )
-	local d = string.unpack('i1',d,o+1)
-	return d, o+1
-end
-
-function _M.writeu64le( d )
-	return string.pack('<I8',d)
-end
-
-function _M.writeu64be( d )
-	return string.pack('>I8',d)
-end
-
-function _M.writeu32le( d )
-	return string.pack('<I4',d)
-end
-
-function _M.writeu32be( d )
-	return string.pack('>I4',d)
-end
-
-function _M.writeu16le( d )
-	return string.pack('<I2',d)
-end
-
-function _M.writeu16be( d )
-	return string.pack('>I2',d)
-end
-
-function _M.writei64le( d )
-	return string.pack('<i8',d)
-end
-
-function _M.writei64be( d )
-	return string.pack('>i8',d)
-end
-
-function _M.writei32le( d )
-	return string.pack('<i4',d)
-end
-
-function _M.writei32be( d )
-	return string.pack('>i4',d)
-end
-
-function _M.writei16le( d )
-	return string.pack('<i2',d)
-end
-
-function _M.writei16be( d )
-	return string.pack('>i2',d)
-end
-
-function _M.writeu8( d )
-	return string.char(d)
-end
-function _M.writei8( d )
-	return string.pack('i1',d)
+function field_def:read(dst,d,o)
+	assert(o)
+	local data
+	data,o = self:read_data(d,o)
+	dst[self.name] = data
+	return o
 end
 
 
-local sizes = {u64=8,i64=8,u32=4,i32=4,u16=2,i16=2,u8=1,i8=1}
+local array_field_def = class(field_def)
+
+
+function array_field_def:_init(data,length)
+	array_field_def.baseclass._init(self,data.name)
+	self._data = data
+	self._length = length
+	self.size = length * data.size
+end
+
+
+function array_field_def:read_data(d,o)
+	local a = {}
+	local data
+	for i=1,self._length do
+		data,o = self._data:read_data(d,o)
+		table.insert(a,data)
+	end
+	return a,o
+end
+
+function array_field_def:dump(data,out,o)
+	local adata = data[self.name] or error('need array field ' .. self.name)
+	if self._data.is_a[simple_field_def] and self._length <= 16 then
+		local r = {}
+		for i=1,self._length do
+			table.insert(r,self._data:format(adata[i]))
+		end
+		out(o .. self.name,'[' .. table.concat(r,',') .. ']')
+	else
+		out(o .. self.name ,'[')
+		local p = o .. '\t'
+		for i=1,self._length do
+			self._data:dump_data(adata[i],out,p)
+			out(p..',')
+		end
+		out(o .. ']')
+	end
+end
+
+function array_field_def:write_data(dst,val)
+	assert(#val == self._length,'invalid array length')
+	for i=1,self._length do
+		self._data:write_data(dst,val[i])
+	end
+end
+
+function array_field_def:write(dst,src)
+	local arr =src[self.name] or error('need array field ' .. self.name )
+	if type(arr) ~= 'table' then
+		error('need table value for array field ' .. self.name)
+	end
+	if #arr ~= self._length then
+		error('invalid array length ' .. tostring(#arr) .. '/' .. tostring(self._length) .. ' for field ' .. self.name)
+	end
+	self:write_data(dst,arr)
+end
+
+local byte_array_field_def = class(array_field_def)
+
+
+function byte_array_field_def:read_data(d,o)
+	local data = d:sub(o+1,o+1+self._length-1)
+	return data,o+self._length
+end
+
+function byte_array_field_def:write_data(r,v)
+	assert(#v == self._length)
+	table.insert(r,v)
+end
+
+function byte_array_field_def:write(dst,src)
+	local arr =src[self.name] or error('need byte array field ' .. self.name )
+	if type(arr) ~= 'string' then
+		error('need string value for byte array field ' .. self.name)
+	end
+	self:write_data(dst,arr)
+end
+
+function byte_array_field_def:format(val)
+	local r = {}
+	local s = {}
+	local len = math.min(#val,32)
+	for i=1,len do
+		local v = string.unpack('I1',val,i)
+		table.insert(r,string.format('%02x',v))
+		if v > 10 and v < 128 then
+			table.insert(s,string.char(v))
+		else
+			table.insert(s,'.')
+		end
+	end
+	if len ~= self._length then
+		table.insert(r,'...')
+	end
+	return '[' .. table.concat(r,',') .. '](' .. table.concat(s,'') .. ')'
+end
+
+function byte_array_field_def:dump(data,out,t)
+	out(t..self.name,self:format(data[self.name]))
+end
+
+local zeroterm_byte_array_field_def = class(byte_array_field_def)
+
+function zeroterm_byte_array_field_def:read_data(d,o)
+	local data,o = zeroterm_byte_array_field_def.baseclass.read_data(self,d,o)
+	local p = data:find('\0',1,true)
+	if p then
+		data = data:sub(1,p-1)
+	end
+	return data,o
+end
+
+function zeroterm_byte_array_field_def:write_data(r,val)
+	if #val < self._length then
+		val = val .. string.rep('\0',self._length-#val)
+	end
+	return zeroterm_byte_array_field_def.baseclass.write_data(self,r,val)
+end
+
+
+local data_types = {
+	u64 = {
+		pack = 'I8',
+		size = 8,
+		format = '0x%016x'
+	},
+	u32 = {
+		pack = 'I4',
+		size = 4,
+		format = '0x%08x'
+	},
+	u24 = { -- non standart
+		pack = 'I3',
+		size = 3,
+		format = '0x%06x'
+	},
+	u16 = {
+		pack = 'I2',
+		size = 2,
+		format = '0x%04x'
+	},
+	u8 = {
+		pack = 'I1',
+		size = 1,
+		format = '0x%02x',
+		arrays = {
+			zeroterm = zeroterm_byte_array_field_def,
+			bytes = byte_array_field_def,
+		}
+	},
+	i64 = {
+		pack = 'i8',
+		size = 8,
+		format = '0x%016x'
+	},
+	i32 = {
+		pack = 'i4',
+		size = 4,
+		format = '0x%08x',
+		mask = 0xffffffff
+	},
+	i16 = {
+		pack = 'i2',
+		size = 2,
+		format = '0x%04x',
+		mask = 0xffff
+	},
+	i8 = {
+		pack = 'i1',
+		size = 1,
+		format = '0x%02x',
+		mask = 0xff
+	},
+	f4 = {
+		pack = 'f',
+		size = 4,
+		format = '%0.2f',
+	},
+	f8 = {
+		pack = 'd',
+		size = 8,
+		format = '%0.2f',
+	},
+}
+
+
+
+
+local field_stub = class()
+function field_stub:_init(size)
+	self.size = size
+end
+function field_stub:load(dst,src)
+end
+function field_stub:read(dst,d,o)
+	return o + self.size
+end
+function field_stub:write(dst)
+	table.insert(dst,string.rep('\0',self.size))
+end
+function field_stub:write_data(dst,val)
+	table.insert(dst,string.rep('\0',self.size))
+end
+function field_stub:dump()
+end
+
+local simple_field_def = class(field_def)
+
+function simple_field_def:dump_data(data,out,o)
+	out(o..self:format(data))
+end
+
+function simple_field_def:dump(data,out,o)
+	out(o..self.name,self:format(data[self.name]))
+end
+
+
+
+local function make_simple_def(def,pack)
+	local cls = class(simple_field_def)
+	cls.size = def.size
+	function cls:read_data(data,offset)
+		local res = data.unpack(pack,data,offset+1)
+		return res, offset + self.size
+	end
+	function cls:write_data(dst,val)
+		table.insert(dst,string.pack(pack,val))
+	end
+	local format = def.format
+	if def.mask then
+		local mask = def.mask
+		function cls:format(val)
+			return string.format(format,val & mask)
+		end
+	else
+		function cls:format(val)
+			return string.format(format,val)
+		end
+	end
+
+	cls.arrays_cls = def.arrays or {}
+	return cls
+end
+
+for _,v in pairs(data_types) do
+	if v.size > 1 then
+		v.cls_le = make_simple_def(v,'<' .. v.pack)
+		v.cls_be = make_simple_def(v,'>' .. v.pack)
+	else
+		local cls = make_simple_def(v,v.pack)
+		v.cls_le = cls
+		v.cls_be = cls
+	end
+	v.stub = field_stub.new(v.size)
+end
 
 local function reada(f,d,o,c)
 	local r = {}
@@ -152,39 +310,10 @@ function builda.u8( f, d, c)
 	if type(d) == 'table' then
 		return builda_def(f,d,c)
 	end
-	local r = string.char(string.byte(d,1,c))
+	local r = string.char(d:byte(1,c))
 	assert(#r == c)
 	return r
 end
-
-local formats = {
-}
-function formats.u64( v )
-	return string.format('0x%016x',v)
-end
-function formats.u32( v )
-	return string.format('0x%08x',v)
-end
-function formats.u16( v )
-	return string.format('0x%04x',v)
-end
-function formats.u8( v )
-	return string.format('0x%02x',v)
-end
-function formats.i64( v )
-	return string.format('0x%016x',v)
-end
-function formats.i32( v )
-	return string.format('0x%08x',v&0xffffffff)
-end
-function formats.i16( v )
-	return string.format('0x%04x',v&0xffff)
-end
-function formats.i8( v )
-	return string.format('0x%02x',v&0xff)
-end
-
-
 
 local formata = {}
 function formata.u8( d , c)
@@ -224,105 +353,307 @@ local function format( d, c)
 	return formats[t](d)
 end
 
+
+local struct_def = class(nil,'struct_def')
+local field_struct_def = class(struct_def)
+local field_struct_def_wrap = class(field_def)
+
+function struct_def:_init(fields,endian)
+	self._fields = {}
+	self._endian = fields.endian or endian or 'le'
+	local cls_name = 'cls_' .. self._endian
+	self.size = 0
+	for _,f in ipairs(fields) do
+		local ftype = f[1]
+		local fname = f[2]
+		local fd 
+		local ftypetype = type(ftype)
+		if ftypetype == 'table' then
+			if not ftype.is_a then
+				fd = field_struct_def.new(ftype,fname,f,endian)
+			elseif ftype.is_a[struct_def] then
+				fd = field_struct_def_wrap.new(ftype,fname)
+			elseif not ftype.is_a[struct_def] then
+				error('unexpected field type :' .. tostring(ftype))
+			end
+		elseif ftypetype == 'string' then
+			local type_def = data_types[ftype] or error('unsupported field type: ' .. tostring(ftype))
+			if not fname then
+				fd = type_def.stub
+			else
+				--assert(type_def[cls_name],'need simple field: ' .. cls_name .. ' for ' .. tostring(ftype))
+				fd = type_def[cls_name].new(fname,f)
+			end
+		else
+			error('unexpected field type:' .. tostring(ftypetype) .. '/' .. tostring(ftype))
+		end
+		if f[3] then
+			local array
+			if fd.arrays_cls then
+				for k,v in pairs(fd.arrays_cls) do
+					if f[k] then
+						array = v.new(fd,f[3])
+						break
+					end
+				end
+			end
+			fd = array or array_field_def.new(fd,f[3])
+		end
+		self.size = self.size + fd.size
+		table.insert(self._fields,fd)
+	end
+end
+
+function struct_def:load(dst,src)
+	for _,f in ipairs(self._fields) do
+		f:load(dst,src)
+	end
+end
+
+function struct_def:dump_fields(data,out,o)
+	assert(out)
+	for _,f in ipairs(self._fields) do
+		f:dump(data,out,o)
+	end
+end
+
+function struct_def:tostring_fields(data,o)
+	local r = {}
+	for _,f in ipairs(self._fields) do
+		local s = f:tostring(data)
+		if s then
+			table.insert(r,s)
+		end
+	end
+	return table.concat(r,',' .. (o or ''))
+end
+
+function struct_def:tostring_fields(data,o)
+	local res = {}
+	for _,v in ipairs(self._fields) do
+		table.insert(res, v:tostring(data,o))
+	end
+	return table.concat(res,',')
+end
+
+function struct_def:read_fields(dst,d,o)
+	assert(o)
+	for _,f in ipairs(self._fields) do
+		o = f:read(dst,d,o)
+	end
+	return o
+end
+
+function struct_def:write_fields(dst,d,o)
+	for _,f in ipairs(self._fields) do
+		f:write(dst,d,o)
+	end
+end
+
+
+function struct_def:compile()
+end
+
+function field_struct_def:_init(fields,name,fdef,endian)
+	field_struct_def.baseclass._init(self,fields,endian)
+	self.name = name
+end
+
+function field_struct_def:load(dst,src)
+	local ddst = {}
+	local dsrc = src[self.name] or error('need struct field: ' .. self.name)
+	for _,f in ipairs(self._fields) do
+		f:load(ddst,dsrc)
+	end
+	dst[self.name] = ddst
+end
+
+function field_struct_def:dump(data,out,o)
+	out(o .. self.name,'>')
+	o = o .. '\t'
+	field_struct_def.baseclass.dump_fields(self,data[self.name],out,o)
+end
+
+function field_struct_def:dump_data(data,out,o)
+	o = o .. '\t'
+	field_struct_def.baseclass.dump_fields(self,data,out,o)
+end
+
+function field_struct_def:read(dst,d,o)
+	local ddst = {}
+	o = field_struct_def.baseclass.read_fields(self,ddst,d,o)
+	dst[self.name] = ddst
+	return o
+end
+
+function field_struct_def:write(dst,d,o)
+	return field_struct_def.baseclass.write_fields(self,dst,d[self.name],o)
+end
+
+function field_struct_def:write_data(dst,d,o)
+	field_struct_def.baseclass.write_fields(self,dst,d,o)
+end
+
+function field_struct_def:read_data(d,o)
+	assert(o)
+	local r = {}
+	o = field_struct_def.baseclass.read_fields(self,r,d,o)
+	return r,o
+end
+
+function field_struct_def_wrap:_init(def,name)
+	field_struct_def_wrap.baseclass._init(self,name)
+	self._wrap = def
+	self.size = self._wrap.size
+end
+
+function field_struct_def_wrap:load(dst,src)
+	local ddst = {}
+	local dsrc = src[self.name] or error('need struct field: ' .. self.name)
+	self._wrap:load(ddst,dsrc)
+	dst[self.name] = ddst
+end
+
+function field_struct_def_wrap:dump(data,out,o)
+	out(o .. self.name,'>')
+	o = o .. '\t'
+	self._wrap:dump_fields(data[self.name],out,o)
+end
+function field_struct_def_wrap:dump_data(data,out,o)
+	o = o .. '\t'
+	self._wrap:dump_fields(data,out,o)
+end
+
+
+function field_struct_def_wrap:write_data(dst,val)
+	self._wrap:write_fields(dst,val)
+end
+
+function field_struct_def_wrap:read_data(d,o)
+	local r = {}
+	assert(o)
+	o = self._wrap:read_fields(r,d,o)
+	return r,o
+end
+
+
+-- local e = self._def.endian or 'le'
+-- 	for _,v in ipairs(self._def) do
+-- 		if type(v[1]) == 'table' then
+-- 			if v[3] then
+-- 				local a = {}
+-- 				for i=1,v[3] do
+-- 					local iv
+-- 					iv,o = _M.read(d,v[1],o)
+-- 					table.insert(a,iv)
+-- 				end
+-- 				self[v[2]] = a
+-- 			else
+-- 				self[v[2]],o = _M.read(d,v[1],o)
+-- 			end
+-- 		else
+-- 			local f = assert(_M['read'..v[1]] or _M['read'..v[1]..e],'unknown data type: ' .. tostring(v[1]))
+-- 			if v[3] then
+-- 				self[v[2]],o = reada(f,d,o,v[3])
+-- 			else
+-- 				self[v[2]],o = f(d,o)
+-- 			end
+-- 		end
+-- 	end
+
 local struct = class(nil,'struct')
 
 function struct:_init(s,d)
-	self._def = s
+	if s.is_a then
+		assert(s.is_a[struct_def],'invalid struct def: ' .. tostring(s))
+		self._def = s
+	else
+		self._def = struct_def.new(s)
+	end
 	if d then
-		--print(s)
-		for _,v in ipairs(s) do
-			local fn = v[2]
-			local iv = d[fn] or v.default
-			--print('init struct field ' .. fn .. ' with ' .. iv)
-			self[fn] = assert(iv,'need field ' .. fn)
-		end
+		self:load(d)
 	end
 end
 
-function struct:dump( o , out)
-	local prnt = out or print
-	local p = o or '\t'
-	for _,v in ipairs(self._def) do
-		if type(v[1]) == 'table' then
-			
-			if v[3] then
-				prnt(p..'>'..v[2]..'\t[')
-				for i=1,v[3] do
-					if i~=1 then
-						prnt(p..'\t,')
-					end
-					self[v[2]][i]:dump(p..'\t\t')
-				end
-				prnt(p..'\t'..']')
-			else
-				prnt(p..'>'..v[2])
-				self[v[2]]:dump(p..'\t')
-			end
-		else
-			local d = v.is_fill and '...' or format(self[v[2]],v)
-			prnt(p..v[2],d)
-		end
-	end
+function struct:load(d)
+	self._def:load(self,d)
 end
+
+
+function struct:dump( out, o )
+	local prnt = out or print
+	local p = o or ''
+	self._def:dump_fields(self,prnt,p)
+end
+
+-- for _,v in ipairs(self._def) do
+-- 		if type(v[1]) == 'table' then
+			
+-- 			if v[3] then
+-- 				prnt(p..'>'..v[2]..'\t[')
+-- 				for i=1,v[3] do
+-- 					if i~=1 then
+-- 						prnt(p..'\t,')
+-- 					end
+-- 					self[v[2]][i]:dump(p..'\t\t')
+-- 				end
+-- 				prnt(p..'\t'..']')
+-- 			else
+-- 				prnt(p..'>'..v[2])
+-- 				self[v[2]]:dump(p..'\t')
+-- 			end
+-- 		else
+-- 			local d = v.is_fill and '...' or format(self[v[2]],v)
+-- 			prnt(p..v[2],d)
+-- 		end
+-- 	end
 
 function struct:read( d,offset )
 	local o = offset or 0
-	local e = self._def.endian or 'le'
-	for _,v in ipairs(self._def) do
-		if type(v[1]) == 'table' then
-			if v[3] then
-				local a = {}
-				for i=1,v[3] do
-					local iv
-					iv,o = _M.read(d,v[1],o)
-					table.insert(a,iv)
-				end
-				self[v[2]] = a
-			else
-				self[v[2]],o = _M.read(d,v[1],o)
-			end
-		else
-			local f = assert(_M['read'..v[1]] or _M['read'..v[1]..e],'unknown data type: ' .. tostring(v[1]))
-			if v[3] then
-				self[v[2]],o = reada(f,d,o,v[3])
-			else
-				self[v[2]],o = f(d,o)
-			end
-		end
-	end
+	o = self._def:read_fields( self, d , o )
 	return o
 end
 
 function struct:build( )
 	local r = {}
-	local e = self._def.endian or 'le'
-	for _,v in ipairs(self._def) do
-		if type(v[1]) == 'table' then
-			if v[3] then
-				for i=1,v[3] do
-					table.insert(r,self[v[2]][i]:build())
-				end
-			else
-				table.insert(r,self[v[2]]:build())
-			end
-		else
-			local f = assert(_M['write'..v[1]] or _M['write'..v[1]..e],'not found write ' .. v[1])
-			local d = assert(self[v[2]])
-			if v[3] then
-				table.insert(r,(builda[v[1]] or  builda_def)(f,d,v[3]))
-			else
-				table.insert(r,f(d))
-			end
-		end
-	end
+	self._def:write_fields(r,self)
+	-- local e = self._def.endian or 'le'
+	-- for _,v in ipairs(self._def) do
+	-- 	if type(v[1]) == 'table' then
+	-- 		if v[3] then
+	-- 			for i=1,v[3] do
+	-- 				table.insert(r,self[v[2]][i]:build())
+	-- 			end
+	-- 		else
+	-- 			table.insert(r,self[v[2]]:build())
+	-- 		end
+	-- 	else
+	-- 		local f = assert(_M['write'..v[1]] or _M['write'..v[1]..e],'not found write ' .. v[1])
+	-- 		local d = assert(self[v[2]])
+	-- 		if v[3] then
+	-- 			table.insert(r,(builda[v[1]] or  builda_def)(f,d,v[3]))
+	-- 		else
+	-- 			table.insert(r,f(d))
+	-- 		end
+	-- 	end
+	-- end
 	return table.concat(r,'')
 end
 
 function _M.sizeof( s )
 	local r = 0
-	for _,v in ipairs( s) do
-		local s = (type(v[1]) == 'table') and _M.sizeof(v[1]) or  sizes[v[1]]
-		r = r + s * (v[3] or 1)
+	if s.size then
+		return s.size
+	end
+	for _,v in ipairs( s ) do
+		local fs 
+		if type(v[1]) == 'table' then
+			fs = _M.sizeof(v[1])
+		else
+			local d = data_types[v[1]] or error('undefined type:' .. tostring(v[1]))
+			fs = d.size
+		end
+		r = r + fs * (v[3] or 1)
 	end
 	return r
 end
@@ -350,5 +681,15 @@ function _M.read( d, struct_def, offset )
 	return r,o
 end
 
+
+function _M.define( s )
+	return struct_def.new(s)
+end
+
+function _M.compile( s )
+	local res = struct_def.new(s)
+	res:compile()
+	return res
+end
 
 return _M
