@@ -55,7 +55,7 @@ function untar:get_path( fn )
 end
 
 function untar:prepare_file(  )
-	if self._header.name[1] == 0 and
+	if #self._header.name == 0 and
 		self._header.typeflag == 0 then
 		self._state = 'align'
 		self._next = 'end'
@@ -63,6 +63,7 @@ function untar:prepare_file(  )
 		return
 	end
 	local name = self._header.name
+
 	local prefix = self._header.prefix
 	if prefix and #prefix > 0 then
 		name = prefix .. '/' .. name
