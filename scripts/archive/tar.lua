@@ -22,7 +22,7 @@ local posix_header_t = {
 	{'zs','gname',32},--		/* 297 */
 	{'u8','devmajor',8},--		/* 329 */
 	{'u8','devminor',8},--		/* 337 */
-	{'u8','prefix',155}--		/* 345 */
+	{'zs','prefix',155}--		/* 345 */
 }
 local posix_header_size = struct.sizeof(posix_header_t)
 assert( posix_header_size == 500 )
