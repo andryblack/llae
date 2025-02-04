@@ -7,19 +7,19 @@ local path = require 'llae.path'
 local untar = class(nil,'untar')
 
 local posix_header_t = {
-	{'u8','name',100,zeroterm=true},
-	{'u8','mode',8,zeroterm=true},
-	{'u8','uid',8,zeroterm=true},--			/* 108 */
-	{'u8','gid',8,zeroterm=true},--			/* 116 */
-	{'u8','size',12,zeroterm=true},--		/* 124 */
-	{'u8','mtime',12,zeroterm=true},--		/* 136 */
+	{'zs','name',100},
+	{'zs','mode',8},
+	{'zs','uid',8},--			/* 108 */
+	{'zs','gid',8},--			/* 116 */
+	{'zs','size',12},--		/* 124 */
+	{'zs','mtime',12},--		/* 136 */
 	{'u8','chksum',8},--		/* 148 */
 	{'u8','typeflag'},--		/* 156 */
-	{'u8','linkname',100,zeroterm=true},--		/* 157 */
+	{'zs','linkname',100},--		/* 157 */
 	{'u8','magic',6},--		/* 257 */
 	{'u8','version',2},--		/* 263 */
-	{'u8','uname',32,zeroterm=true},--		/* 265 */
-	{'u8','gname',32,zeroterm=true},--		/* 297 */
+	{'zs','uname',32},--		/* 265 */
+	{'zs','gname',32},--		/* 297 */
 	{'u8','devmajor',8},--		/* 329 */
 	{'u8','devminor',8},--		/* 337 */
 	{'u8','prefix',155}--		/* 345 */
@@ -49,17 +49,6 @@ function untar:process_header( data )
 	return false
 end
 
-local function parse_name(data)
-	local r = {}
-	for _,v in ipairs(data) do
-		if v == 0 then
-			break
-		else
-			table.insert(r,string.char(v))
-		end
-	end
-	return table.concat(r,'')
-end
 
 function untar:get_path( fn )
 	return fn
@@ -73,16 +62,16 @@ function untar:prepare_file(  )
 		self._file = nil
 		return
 	end
-	local name = parse_name(self._header.name)
-	local prefix = parse_name(self._header.prefix)
+	local name = self._header.name
+	local prefix = self._header.prefix
 	if prefix and #prefix > 0 then
 		name = prefix .. '/' .. name
 	end
 	local prev_file = self._file
 	self._file = {
 		name = name,
-		size = tonumber(parse_name(self._header.size),8),
-		mtime = tonumber(parse_name(self._header.mtime)),
+		size = tonumber(self._header.size,8),
+		mtime = tonumber(self._header.mtime),
 		readed = 0
 	}
 	if prev_file and prev_file.long_name then
