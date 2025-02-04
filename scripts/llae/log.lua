@@ -65,7 +65,7 @@ function progress:_init( width )
 end
 
 function progress:show(  )
-	print(_white..'[  0%]'.._blue..'['..string.rep(' ',_width)..']'.._reset)
+	print(_white..'[  0%]'.._blue..'['..string.rep(' ',self._width)..']'.._reset)
 end
 
 function progress:update( count, total )
