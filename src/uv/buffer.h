@@ -147,6 +147,8 @@ namespace lua {
         }
     };
     template<>
+    struct stack<const uv::buffer_view&> : stack<uv::buffer_view> {};
+    template<>
     struct stack<check<uv::buffer_view> > {
         static uv::buffer_view get(lua::state& l,int idx) {
             return uv::buffer_view::get(l,idx,true);

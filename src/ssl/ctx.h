@@ -4,10 +4,9 @@
 #include "meta/object.h"
 #include "lua/state.h"
 #include "common/intrusive_ptr.h"
-
+#include "crypto/random.h"
 #include <mbedtls/ssl.h>
 #include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
 
 namespace ssl {
 
@@ -15,10 +14,10 @@ namespace ssl {
 		META_OBJECT
 	private:
 		mbedtls_entropy_context m_entropy;
-		mbedtls_ctr_drbg_context m_ctr_drbg;
+        crypto::random_ptr m_random;
 		mbedtls_x509_crt m_cacert;
 	public:
-		explicit ctx(  );
+		explicit ctx( crypto::random_ptr&& random );
 		~ctx();
 		static void lbind(lua::state& l);
 		lua::multiret init(lua::state& l);

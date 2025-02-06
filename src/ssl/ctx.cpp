@@ -21,21 +21,22 @@ namespace ssl {
 	using crypto::push_error;
 	
 
-	ctx::ctx() {
+	ctx::ctx( crypto::random_ptr&& r) : m_random(std::move(r)) {
+        if (!m_random) {
+            m_random.reset(new crypto::random());
+        }
 		mbedtls_entropy_init( &m_entropy );
-		mbedtls_ctr_drbg_init( &m_ctr_drbg );
 		mbedtls_x509_crt_init( &m_cacert );
         //mbedtls_debug_set_threshold(3);
 	}
 
 	ctx::~ctx() {
 		mbedtls_x509_crt_free( &m_cacert );
-		mbedtls_ctr_drbg_free( &m_ctr_drbg );
 		mbedtls_entropy_free( &m_entropy );
 	}
 
 	int ctx::configure(mbedtls_ssl_config* conf) {
-		mbedtls_ssl_conf_rng( conf, mbedtls_ctr_drbg_random, &m_ctr_drbg );
+        mbedtls_ssl_conf_rng( conf, &crypto::random::read_func, m_random.get() );
 		mbedtls_ssl_conf_ca_chain( conf, &m_cacert, NULL );
 		mbedtls_ssl_conf_authmode( conf, MBEDTLS_SSL_VERIFY_REQUIRED );
 		
@@ -48,7 +49,7 @@ namespace ssl {
    	}
 
 	lua::multiret ctx::init(lua::state& l) {
-		int ret = mbedtls_ctr_drbg_seed( &m_ctr_drbg, mbedtls_entropy_func, &m_entropy,
+        int ret = mbedtls_ctr_drbg_seed( m_random->get(), mbedtls_entropy_func, &m_entropy,
                                (const unsigned char *) pers,
                                strlen( pers ) );
 		if (ret != 0) {
@@ -90,7 +91,7 @@ namespace ssl {
 
 	void ctx::lbind(lua::state& l) {
 		lua::bind::value(l,"default_cafile",default_cafile);
-        lua::bind::constructor<ctx>(l);
+        lua::bind::constructor<ctx,crypto::random_ptr&&>(l);
 		lua::bind::function(l,"init",&ctx::init);
 		lua::bind::function(l,"set_debug_threshold",&ctx::set_debug_threshold);
 		lua::bind::function(l,"load_cert",&ctx::load_cert);
