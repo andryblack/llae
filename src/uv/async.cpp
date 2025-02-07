@@ -1,6 +1,12 @@
 #include "async.h"
 #include "loop.h"
 #include "llae/app.h"
+#include "luv.h"
+#include "lua/bind.h"
+
+META_OBJECT_INFO(uv::async,uv::handle)
+META_OBJECT_INFO(uv::async_continue,uv::async)
+META_OBJECT_INFO(uv::async_wait,uv::async_continue)
 
 namespace uv {
 
@@ -53,4 +59,42 @@ namespace uv {
         }
         return r;
     }
+
+    lua::multiret async_wait::lnew(lua::state& l) {
+        lua::push(l,common::intrusive_ptr<async_wait>(new async_wait(llae::app::get(l).loop())));
+        return {1};
+    }
+    lua::multiret async_wait::emmit(lua::state& l) {
+        auto res = send();
+        return return_status_error(l,res);
+    }
+    int async_wait::on_cont(lua::state& l) {
+        return 0;
+    }
+    lua::multiret async_wait::wait(lua::state& l) {
+        if (!l.isyieldable()) {
+            l.pushnil();
+            l.pushstring("async_wait::wait is async");
+            return {2};
+        }
+        {
+            lua::ref cont;
+            l.pushthread();
+            cont.set(l);
+            if (!start(std::move(cont))) {
+                l.pushnil();
+                l.pushstring("start failed");
+                cont.reset(l);
+            }
+        }
+        l.yield(0);
+        return {0};
+    }
+
+    void async_wait::lbind(lua::state& l) {
+        lua::bind::function(l,"new",&async_wait::lnew);
+        lua::bind::function(l,"emmit",&async_wait::emmit);
+        lua::bind::function(l,"wait",&async_wait::wait);
+    }
+
 }

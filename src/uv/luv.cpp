@@ -15,6 +15,7 @@
 #include "timer.h"
 #include "pipe.h"
 #include "pipe_server.h"
+#include "async.h"
 #include "llae/app.h"
 #include <iostream>
 #include <memory>
@@ -329,7 +330,10 @@ int luaopen_uv(lua_State* L) {
     lua::bind::object<uv::timer_lcb>::register_metatable(l,&uv::timer_lcb::lbind);
     lua::bind::object<uv::signal_base>::register_metatable(l);
     lua::bind::object<uv::lua_signal>::register_metatable(l,&uv::lua_signal::lbind);
-
+    lua::bind::object<uv::async>::register_metatable(l);
+    lua::bind::object<uv::async_continue>::register_metatable(l);
+    lua::bind::object<uv::async_wait>::register_metatable(l,&uv::async_wait::lbind);
+	
 	l.createtable();
 	lua::bind::object<uv::buffer>::get_metatable(l);
 	l.setfield(-2,"buffer");
@@ -353,6 +357,8 @@ int luaopen_uv(lua_State* L) {
     l.setfield(-2,"timer");
     lua::bind::object<uv::lua_signal>::get_metatable(l);
     l.setfield(-2,"signal");
+    lua::bind::object<uv::async_wait>::get_metatable(l);
+    l.setfield(-2,"async");
     
 	lua::bind::function(l,"exepath",&lua_uv_exepath);
 	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);
