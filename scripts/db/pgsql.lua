@@ -295,7 +295,7 @@ end
 pgsql.type_deserializers = {}
 
 
---local decode_array = require("db.pgsql.arrays").decode_array
+local decode_array = require("db.pgsql.arrays").decode_array
 --local decode_hstore = require("db.pgsql.hstore").decode_hstore
 
 function pgsql.type_deserializers:json(val, name)
@@ -303,17 +303,17 @@ function pgsql.type_deserializers:json(val, name)
 end
 
 function pgsql.type_deserializers:bytea(val, name)
-	return self:decode_bytea(val)
+	return self.decode_bytea(val)
 end
--- function pgsql.type_deserializers:array_boolean(val, name)
--- 	return decode_array(val,function(v) return v=='t' end,self)
--- end
--- function pgsql.type_deserializers:array_number(val, name)
--- 	return decode_array(val,tonumber,self)
--- end
--- function pgsql.type_deserializers:array_string(val, name)
--- 	return decode_array(val,tostring,self)
--- end
+function pgsql.type_deserializers:array_boolean(val, name)
+	return decode_array(val,function(v) return v=='t' end,self)
+end
+function pgsql.type_deserializers:array_number(val, name)
+	return decode_array(val,tonumber,self)
+end
+function pgsql.type_deserializers:array_string(val, name)
+	return decode_array(val,tostring,self)
+end
 -- function pgsql.type_deserializers:array_json(val, name)
 -- 	return decode_array(val,decode_json,self)
 -- end
@@ -470,7 +470,7 @@ function pgsql:query(q)
 	return self:simple_query(q)
 end
 
-function pgsql:decode_bytea(str)
+function pgsql.decode_bytea(str)
 	if str:sub(1, 2) == '\\x' then
 		return str:sub(3):gsub('..', function(hex)
 		  return string.char(tonumber(hex, 16))
@@ -481,7 +481,7 @@ function pgsql:decode_bytea(str)
 		end)
 	end
 end
-function pgsql:encode_bytea(str)
+function pgsql.encode_bytea(str)
     return string.format("E'\\\\x%s'", str:gsub('.', function(byte)
         return string.format('%02x', string.byte(byte))
     end))
