@@ -130,7 +130,7 @@ function pop3:connect( data )
 	local res,err = self._cmd_con:connect(ip,self._port)
 	if not res then
 		log.error('failed connect to',ip,self._port)
-		self._connection:close()
+		self._cmd_con:close()
 		return nil,err
 	end
 	log.debug('connected')
