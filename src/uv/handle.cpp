@@ -60,6 +60,10 @@ namespace uv {
 		}
 	}
 
+    bool handle::is_closing() {
+        return uv_is_closing(get_handle());
+    }
+
 	void handle::unref() {
 		uv_unref(get_handle());
 	}

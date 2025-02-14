@@ -98,7 +98,6 @@ namespace uv {
     protected:
         readable_stream();
         ~readable_stream();
-        bool is_closed() const { return m_closed; }
         void set_closed() { m_closed = true; }
         bool is_read_active() { return m_read_consumer; }
         void consume_read(ssize_t nread,  buffer_ptr& buffer);
@@ -107,6 +106,7 @@ namespace uv {
         virtual void unhold_ref() = 0;
         uv::buffer_ptr get_read_buffer(size_t size);
     public:
+        bool is_closed() const { return m_closed; }
         virtual int start_read( const stream_read_consumer_ptr& consumer );
         virtual void stop_read();
         lua::multiret read(lua::state& l);

@@ -99,6 +99,10 @@ namespace net { namespace socks5 {
 	tcp_connection::~tcp_connection() {
  	}
 
+    void tcp_connection::destroy() {
+        uv::tcp_connection::destroy();
+    }
+
     void tcp_connection::on_closed() {
         if (llae::app::closed(get_stream()->loop)) {
             m_connect_cont.release();
@@ -357,6 +361,11 @@ namespace net { namespace socks5 {
 	}
 
 	lua::multiret tcp_connection::connect(lua::state& l) {
+        if (!is_closed() || is_closing()) {
+            l.pushnil();
+            l.pushstring("tcp_connection::connect is closed");
+            return {2};
+        }
 		if (!l.isyieldable()) {
 			l.pushnil();
 			l.pushstring("tcp_connection::connect is async");

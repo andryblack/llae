@@ -26,6 +26,9 @@ namespace uv {
 	}
 
 	int write_req::start_write(const uv_buf_t* buffers,size_t count) {
+        if (m_stream->is_closed() || m_stream->is_closing()) {
+            return -2;
+        }
 		add_ref();
 		int r = uv_write(&m_write,m_stream->get_stream(),
                          buffers,count,&write_req::write_cb);
@@ -413,7 +416,7 @@ namespace uv {
     }
 
 	lua::multiret readable_stream::read(lua::state& l) {
-		if (!l.isyieldable()) {
+    	if (!l.isyieldable()) {
 			l.pushnil();
 			l.pushstring("stream::read is async");
 			return {2};
@@ -469,6 +472,8 @@ namespace uv {
     }
 
     int stream::start_read( const stream_read_consumer_ptr& consumer ) {
+        if (is_closing() || is_closed())
+            return -2;
         auto res = readable_stream::start_read( consumer );
         if (res < 0) {
             return res;
@@ -483,6 +488,11 @@ namespace uv {
     }
 
 	lua::multiret stream::write(lua::state& l) {
+        if (is_closing() || is_closed()) {
+            l.pushnil();
+            l.pushstring("stream::write is closed");
+            return {2};
+        }
 		if (!l.isyieldable()) {
 			l.pushnil();
 			l.pushstring("stream::write is async");
@@ -521,6 +531,8 @@ namespace uv {
 
 
 	bool stream::write(buffer_base_ptr&& buf) {
+        if (is_closing() || is_closed())
+            return false;
 		common::intrusive_ptr<write_buffer_req> req{new write_buffer_req(stream_ptr(this),std::move(buf))};
 		int r = req->write();
 		if (r < 0) {
@@ -531,6 +543,11 @@ namespace uv {
 	}
 
 	lua::multiret stream::send(lua::state& l) {
+        if (is_closing() || is_closed()) {
+            l.pushnil();
+            l.pushstring("stream::send closing");
+            return {2};
+        }
 		if (!l.isyieldable()) {
 			l.pushnil();
 			l.pushstring("stream::send is async");
@@ -565,7 +582,7 @@ namespace uv {
 			l.pushstring("stream::shutdown is async");
 			return {2};
 		}
-		if (is_closed()) {
+        if (is_closed() || is_closing()) {
 			l.pushnil();
 			l.pushstring("stream::shutdown stream closed");
 			return {2};
@@ -593,6 +610,8 @@ namespace uv {
 	}
 
 	void stream::close() {
+        if (is_closing())
+            return;
         stop_read();
 		handle::close();
 	}

@@ -69,6 +69,9 @@ namespace uv {
 	}
 
 	lua::multiret server::accept(lua::state& l,const stream_ptr& stream) {
+        assert(stream);
+        assert(!stream->is_closing());
+        assert(!stream->is_closed());
 		int res = uv_accept(get_stream(),stream->get_stream());
 		if (res < 0) {
 			l.pushnil();

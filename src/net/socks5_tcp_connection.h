@@ -26,12 +26,13 @@ namespace net {
                 st_open_connection,
                 st_connected,
 			} m_state = st_none;
-            virtual void on_closed() override;
+            virtual void on_closed() override final;
             class write_connect_req;
             class connect_read_consumer;
             void on_connect_writed(int status);
             bool on_connect_read(ssize_t nread, uv::buffer_ptr& buffer);
             void on_connect_stop_read();
+            virtual void destroy() override final;
 		public:
 			explicit tcp_connection(uv::loop& loop,
 				const struct sockaddr_storage& addr,
