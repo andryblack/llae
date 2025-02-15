@@ -361,7 +361,7 @@ namespace net { namespace socks5 {
 	}
 
 	lua::multiret tcp_connection::connect(lua::state& l) {
-        if (!is_closed() || is_closing()) {
+        if (is_closed() || is_closing()) {
             l.pushnil();
             l.pushstring("tcp_connection::connect is closed");
             return {2};
