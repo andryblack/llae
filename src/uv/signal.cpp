@@ -99,6 +99,9 @@ namespace uv {
 
 	lua::multiret lua_signal::stop(lua::state& l) {
 		auto res = signal_base::stop();
+		if (res == 0) {
+			close();
+		}
 		return return_status_error(l,res);
 	}
 
