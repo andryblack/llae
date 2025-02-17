@@ -38,6 +38,7 @@ end
 
 local function exec_cmd(cmd,args,logfile,cwd)
 	log.debug(cmd,table.concat(args,' '))
+	logfile:write('# at ' .. (cwd or fs.cwd()) .. '\n')
 	logfile:write('$ '..cmd..' ' .. table.concat(args,' ') .. '\n')
 	local rpipe = uv.pipe.new(1)
 	local epipe = uv.pipe.new(1)
@@ -194,7 +195,7 @@ function m:unpack_zip( file , todir )
 	unzip.unpack_zip(src,dst)
 end
 
-function m:unpack_xz( file , todir )
+function m:unpack_txz( file , todir , strip)
 	local src = path.join(self._project:get_dl_dir(),file)
 	local dst = todir and path.join(self.location,todir) or self.location
 	log.info('unpack',file)
@@ -202,8 +203,9 @@ function m:unpack_xz( file , todir )
 	fs.unlink(logfilename)
 	local logfile = assert(fs.open_write(logfilename))
 	fs.mkdir_r(dst)
-	exec_cmd('unxz',{'-d',src,},logfile,dst)
+	exec_cmd('unxz',{'-k',src,},logfile,dst)
 	logfile:close()
+	untar.unpack_tar(path.join(path.dirname(src),path.basename(src))..'.tar',dst,strip)
 end
 
 

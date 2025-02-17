@@ -220,11 +220,35 @@ local function do_unpack(f,u, dir , strip)
 	end
 end
 
+local raw_read = class()
+
+function raw_read:_init()
+	self._data = {}
+end
+function raw_read:finish()
+	self._finished = true
+end
+function raw_read:write(ch)
+	table.insert(self._data,ch)
+end
+function raw_read:read()
+	local ch = table.remove(self._data,1)
+	return ch,nil
+end
+
+function untar.unpack_tar( fn, dir , strip )
+	local f = assert(fs.open(fn,fs.O_RDONLY))
+	local u = raw_read.new()
+	return do_unpack(f,u,dir,strip)
+end
+
 function untar.unpack_tgz( fn, dir , strip )
 	local f = assert(fs.open(fn,fs.O_RDONLY))
 	local u = (require 'archive').new_gunzip_read()
 	return do_unpack(f,u,dir,strip)
 end
+
+
 
 function untar.unpack_tbz2( fn, dir , strip )
 	local f = assert(fs.open(fn,fs.O_RDONLY))
