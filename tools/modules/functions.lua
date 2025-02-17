@@ -203,9 +203,12 @@ function m:unpack_txz( file , todir , strip)
 	fs.unlink(logfilename)
 	local logfile = assert(fs.open_write(logfilename))
 	fs.mkdir_r(dst)
-	exec_cmd('unxz',{'-k',src,},logfile,dst)
+	exec_cmd('unxz',{'-k','-f',src,},logfile,dst)
 	logfile:close()
-	untar.unpack_tar(path.join(path.dirname(src),path.basename(src))..'.tar',dst,strip)
+	local ext = path.extension(src)
+	local tarfileename = (ext == 'zx') and src:sub(1,-#ext-2) or (src:sub(1,-#ext-2) .. '.tar')
+	untar.unpack_tar(tarfileename,dst,strip)
+	fs.unlink(tarfileename)
 end
 
 
