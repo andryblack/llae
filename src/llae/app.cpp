@@ -61,6 +61,7 @@ namespace llae {
 
     void app::cancel_signal() {
         if (m_stop_sig) {
+            m_stop_sig->stop();
             m_stop_sig->close();
             m_stop_sig.reset();
         }

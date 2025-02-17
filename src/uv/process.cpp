@@ -34,11 +34,17 @@ namespace uv {
 	}
 
 	void process::on_exit(int64_t exit_status, int term_signal) {
-		auto& l = llae::app::get(get_handle()->loop).lua();
         m_completed = true;
         m_exit_status = exit_status;
         m_term_signal = term_signal;
         
+        if (llae::app::closed(get_handle()->loop)) {
+            m_cont.release();
+            return;
+        }
+		 
+        auto& l = llae::app::get(get_handle()->loop).lua();
+       
 		if (m_cont.valid()) {
             m_cont.push(l);
             auto toth = l.tothread(-1);

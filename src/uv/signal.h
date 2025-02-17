@@ -37,6 +37,7 @@ namespace uv {
 		explicit signal(loop& l) : signal_base(l) {}
 		int start(int signum,std::function<void(int)>&& f);
 		int start_oneshot(int signum,std::function<void(int)>&& f);
+        using signal_base::stop;
 	};
 
 	class lua_signal : public signal_base {

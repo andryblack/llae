@@ -69,7 +69,8 @@ namespace uv {
         return return_status_error(l,res);
     }
     int async_wait::on_cont(lua::state& l) {
-        return 0;
+        l.pushboolean(true);
+        return 1;
     }
     lua::multiret async_wait::wait(lua::state& l) {
         if (!l.isyieldable()) {
@@ -85,6 +86,7 @@ namespace uv {
                 l.pushnil();
                 l.pushstring("start failed");
                 cont.reset(l);
+                return {2};
             }
         }
         l.yield(0);
@@ -95,6 +97,7 @@ namespace uv {
         lua::bind::function(l,"new",&async_wait::lnew);
         lua::bind::function(l,"emmit",&async_wait::emmit);
         lua::bind::function(l,"wait",&async_wait::wait);
+        lua::bind::function(l,"close",&async_wait::close);
     }
 
 }

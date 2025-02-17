@@ -108,6 +108,7 @@ namespace uv {
 	void lua_signal::lbind(lua::state& l) {
 		lua::bind::function(l,"oneshot",&lua_signal::oneshot);
 		lua::bind::function(l,"stop",&lua_signal::stop);
+        lua::bind::function(l,"unref",&lua_signal::unref);
 	}
 
 }
