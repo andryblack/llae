@@ -23,6 +23,7 @@ namespace uv {
 		virtual void on_signal( int signum ) = 0;
 		explicit signal_base(loop& l);
 		int start(int signum);
+		int stop();
 		int start_oneshot(int signum);
 	};
 
@@ -47,6 +48,7 @@ namespace uv {
 		void on_signal(int s) override;
 		lua::multiret start_oneshot(lua::state& l, int signum, int i);
 		static lua::multiret oneshot(lua::state& l);
+		lua::multiret stop(lua::state& l);
 	public:
 		static void lbind(lua::state& l);
 	};

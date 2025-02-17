@@ -27,6 +27,10 @@ namespace uv {
 		}
 	}
 
+	int signal_base::stop() {
+		return uv_signal_stop(&m_sig);
+	}
+
 	signal_base::~signal_base() {
 	}
 
@@ -93,8 +97,14 @@ namespace uv {
         unref();
 	}
 
+	lua::multiret lua_signal::stop(lua::state& l) {
+		auto res = signal_base::stop();
+		return return_status_error(l,res);
+	}
+
 	void lua_signal::lbind(lua::state& l) {
 		lua::bind::function(l,"oneshot",&lua_signal::oneshot);
+		lua::bind::function(l,"stop",&lua_signal::stop);
 	}
 
 }
