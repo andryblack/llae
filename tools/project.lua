@@ -98,6 +98,18 @@ local function get_target(cmdargs)
 	return  (cmdargs and cmdargs['target-platform']) or os.getenv('LLAE_TARGET_PLATFORM') or llae.get_host_platform()
 end
 
+local function add_cmodules(dst,src)
+	if src then
+		for _,cmod in ipairs(src) do
+			if type(cmod) == 'string' then
+				table.insert(dst,{name=cmod,func='luaopen_' .. string.gsub(cmod,'[%.%-]','_')})
+			else
+				table.insert(dst,{name=cmod[1],func=cmod[2]})
+			end
+		end
+	end
+end
+
 function Project:_init( env  )
 	log.debug('Project:_init')
 	self._env = env
@@ -107,16 +119,14 @@ function Project:_init( env  )
 	self._modules = {}
 	self._modules_list = {}
 	self._cmodules = {}
+	self._project_cmodules = {}
 	self._module_config = env.module_config or {}
 	
 	if self._env.location then
 		self:add_modules_location(path.join(self._env.location,'modules'))
 	end
-	if self._env.cmodules then
-		for _,v in ipairs(self._env.cmodules) do
-			self:add_cmodule(v)
-		end
-	end
+	
+	add_cmodules(self._env.cmodules)
 	local cmdargs = self._env.cmdargs
 	self._dl_dir = (cmdargs and cmdargs['dl-dir']) or os.getenv('LLAE_DL_DIR') or tool.get_llae_path('dl')
 	self._target = get_target( cmdargs )
@@ -163,14 +173,6 @@ function Project:get_modules_locations()
 	return self._modules_locations
 end
 
-function Project:add_cmodule(cmod)
-	if type(cmod) == 'string' then
-		table.insert(self._cmodules,{name=cmod,func='luaopen_' .. string.gsub(cmod,'[%.%-]','_')})
-	else
-		table.insert(self._cmodules,{name=cmod[1],func=cmod[2]})
-	end
-end
-
 function Project:add_module( name , install)
 	if self._modules[name] then
 		return
@@ -187,12 +189,7 @@ function Project:add_module( name , install)
 		end
 	end
 	table.insert(self._modules_list,m)
-	local cmodules = m:get_cmodules()
-	if cmodules then
-		for _,cmod in ipairs(cmodules) do
-			self:add_cmodule(cmod)
-		end
-	end
+	add_cmodules(self._cmodules,m:get_cmodules())
 	m:load_configs(self._module_config)
 end
 
@@ -310,7 +307,7 @@ function Project:get_module( name )
 end
 
 function Project:get_cmodules(  )
-	return self._cmodules
+	return utils.list_concat(self._cmodules,self._project_cmodules)
 end
 
 function Project:get_config_value( module_name, config_name )
