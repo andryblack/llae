@@ -310,7 +310,7 @@ function Project:get_module( name )
 end
 
 function Project:get_cmodules(  )
-	return utils.list_concat(self._cmodules,self._env.cmodules or {})
+	return self._cmodules
 end
 
 function Project:get_config_value( module_name, config_name )
