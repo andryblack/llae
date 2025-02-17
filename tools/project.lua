@@ -47,11 +47,7 @@ function Project.env:cmodule( data )
 	if not self.cmodules then
 		self.cmodules = {}
 	end 
-	if type(data) == 'string' then
-		table.insert(self.cmodules,{name=data,func='luaopen_' .. string.gsub(data,'%.','_')})
-	else
-		table.insert(self.cmodules,{name=data[1],func=data[2]})
-	end
+	table.insert(self.cmodules,data)
 end
 
 function Project.env:config( module, name, value )
@@ -116,6 +112,11 @@ function Project:_init( env  )
 	if self._env.location then
 		self:add_modules_location(path.join(self._env.location,'modules'))
 	end
+	if self._env.cmodules then
+		for _,v in ipairs(self._env.cmodules) do
+			self:add_cmodule(v)
+		end
+	end
 	local cmdargs = self._env.cmdargs
 	self._dl_dir = (cmdargs and cmdargs['dl-dir']) or os.getenv('LLAE_DL_DIR') or tool.get_llae_path('dl')
 	self._target = get_target( cmdargs )
@@ -162,6 +163,14 @@ function Project:get_modules_locations()
 	return self._modules_locations
 end
 
+function Project:add_cmodule(cmod)
+	if type(cmod) == 'string' then
+		table.insert(self._cmodules,{name=cmod,func='luaopen_' .. string.gsub(cmod,'[%.%-]','_')})
+	else
+		table.insert(self._cmodules,{name=cmod[1],func=cmod[2]})
+	end
+end
+
 function Project:add_module( name , install)
 	if self._modules[name] then
 		return
@@ -181,11 +190,7 @@ function Project:add_module( name , install)
 	local cmodules = m:get_cmodules()
 	if cmodules then
 		for _,cmod in ipairs(cmodules) do
-			if type(cmod) == 'string' then
-				table.insert(self._cmodules,{name=cmod,func='luaopen_' .. string.gsub(cmod,'%.','_')})
-			else
-				table.insert(self._cmodules,{name=cmod[1],func=cmod[2]})
-			end
+			self:add_cmodule(cmod)
 		end
 	end
 	m:load_configs(self._module_config)
