@@ -36,14 +36,15 @@ local function redirect_pipe(pipe,file)
 	end)
 end
 
-local function exec_git(args,logfile)
-	log.debug('git',table.concat(args,' '))
-	logfile:write('$ git ' .. table.concat(args,' ') .. '\n')
+local function exec_cmd(cmd,args,logfile,cwd)
+	log.debug(cmd,table.concat(args,' '))
+	logfile:write('$ '..cmd..' ' .. table.concat(args,' ') .. '\n')
 	local rpipe = uv.pipe.new(1)
 	local epipe = uv.pipe.new(1)
 	local p = assert(uv.process.spawn{
-		file = 'git',
+		file = cmd,
 		args = args,
+		cwd = cwd,
 		streams = {
 			{uv.process.IGNORE},
 			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
@@ -57,8 +58,12 @@ local function exec_git(args,logfile)
 	rpipe:close()
 	epipe:close()
 	if code ~= 0 or sig ~= 0 then
-		error(string.format('git code:%d sig:%d',code,sig))
+		error(string.format(cmd .. ' code:%d sig:%d',code,sig))
 	end
+end
+
+local function exec_git(args,logfile)
+	return exec_cmd('git','args',logfile)
 end
 
 function m:download_git(url,config)
@@ -187,6 +192,18 @@ function m:unpack_zip( file , todir )
 	local dst = todir and path.join(self.location,todir) or self.location
 	log.info('unpack',file)
 	unzip.unpack_zip(src,dst)
+end
+
+function m:unpack_xz( file , todir )
+	local src = path.join(self._project:get_dl_dir(),file)
+	local dst = todir and path.join(self.location,todir) or self.location
+	log.info('unpack',file)
+	local logfilename = path.join(self.location,'unpack.txt')
+	fs.unlink(logfilename)
+	local logfile = assert(fs.open_write(logfilename))
+	fs.mkdir_r(dst)
+	exec_cmd('unxz',{'-d',src,},logfile,dst)
+	logfile:close()
 end
 
 
