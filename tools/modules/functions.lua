@@ -206,9 +206,12 @@ function m:unpack_txz( file , todir , strip)
 	exec_cmd('unxz',{'-k','-f',src,},logfile,dst)
 	logfile:close()
 	local ext = path.extension(src)
-	local tarfileename = (ext == 'zx') and src:sub(1,-(#ext+2)) or (src:sub(1,-(#ext+2)) .. '.tar')
-	untar.unpack_tar(tarfileename,dst,strip)
-	fs.unlink(tarfileename)
+	src = src:sub(1,-(#ext+2))
+	if path.extension(src) ~= 'tar' then
+		src = src .. '.tar'
+	end
+	untar.unpack_tar(src,dst,strip)
+	fs.unlink(src)
 end
 
 
