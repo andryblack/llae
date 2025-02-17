@@ -16,6 +16,7 @@
 #include "pipe.h"
 #include "pipe_server.h"
 #include "async.h"
+#include "idle.h"
 #include "llae/app.h"
 #include <iostream>
 #include <memory>
@@ -333,6 +334,7 @@ int luaopen_uv(lua_State* L) {
     lua::bind::object<uv::async>::register_metatable(l);
     lua::bind::object<uv::async_continue>::register_metatable(l);
     lua::bind::object<uv::async_wait>::register_metatable(l,&uv::async_wait::lbind);
+    lua::bind::object<uv::idle>::register_metatable(l);
 	
 	l.createtable();
 	lua::bind::object<uv::buffer>::get_metatable(l);
