@@ -65,7 +65,7 @@ namespace uv {
 			unref();
 			return return_status_error(l,res);
 		}
-		l.pushboolean(true);
+		lua::push(l,common::intrusive_ptr<lua_signal>(this));
 		return {1};
 	}
 
