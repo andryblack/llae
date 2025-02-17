@@ -172,6 +172,7 @@ function untar:process_end(  )
 end
 
 function untar:write( data )
+	--log.debug('write',self._state,#data)
 	while self['process_'..self._state](self,data) do
 		data = ''
 	end
@@ -229,10 +230,13 @@ function raw_read:finish()
 	self._finished = true
 end
 function raw_read:write(ch)
-	table.insert(self._data,ch)
+	if #ch > 0 then
+		table.insert(self._data,ch)
+	end
 end
 function raw_read:read()
 	local ch = table.remove(self._data,1)
+	--log.debug('read',ch and #ch)
 	return ch,nil
 end
 

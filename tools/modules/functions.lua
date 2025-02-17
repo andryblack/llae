@@ -210,6 +210,7 @@ function m:unpack_txz( file , todir , strip)
 	if path.extension(src) ~= 'tar' then
 		src = src .. '.tar'
 	end
+	log.debug('unpack tar',src,'->',dst)
 	untar.unpack_tar(src,dst,strip)
 	fs.unlink(src)
 end
