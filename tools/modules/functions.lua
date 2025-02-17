@@ -63,7 +63,7 @@ local function exec_cmd(cmd,args,logfile,cwd)
 end
 
 local function exec_git(args,logfile)
-	return exec_cmd('git','args',logfile)
+	return exec_cmd('git',args,logfile)
 end
 
 function m:download_git(url,config)
