@@ -126,7 +126,7 @@ function Project:_init( env  )
 		self:add_modules_location(path.join(self._env.location,'modules'))
 	end
 	
-	add_cmodules(self._env.cmodules)
+	add_cmodules(self._project_cmodules,self._env.cmodules)
 	local cmdargs = self._env.cmdargs
 	self._dl_dir = (cmdargs and cmdargs['dl-dir']) or os.getenv('LLAE_DL_DIR') or tool.get_llae_path('dl')
 	self._target = get_target( cmdargs )
