@@ -28,6 +28,9 @@ namespace uv {
 	}
 
 	int signal_base::stop() {
+		if (is_closing()) {
+			return -1;
+		}
 		return uv_signal_stop(&m_sig);
 	}
 
