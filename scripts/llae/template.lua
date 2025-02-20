@@ -104,6 +104,16 @@ function template:parse( data )
 	return self:compile(chunks)
 end
 
+local function build_lines(str)
+	local d = {}
+	local linenum = 1
+	for line in str:gmatch("[^\r\n]+") do
+		local ln = tostring(linenum)
+		table.insert(d,string.rep(' ',4-#ln) .. ln..': '..line)
+	end
+	return table.concat(d,'\n')
+end
+
 function template:compile( chunks )
 	--self._chunks = chunks
 	local env = {
@@ -122,7 +132,7 @@ function template:compile( chunks )
 		if res then
 			self._compiled = res
 		else
-			err = err .. '\n' .. table.concat(chunks)
+			err = err .. '\n' .. build_lines(table.concat(chunks)) .. '\n'
 			error('Failed compile template: ' .. '\n' .. err)
 		end
 	else
