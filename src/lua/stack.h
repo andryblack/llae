@@ -8,7 +8,8 @@
 #include "common/intrusive_ptr.h"
 #include <cstdint>
 #include <type_traits>
-
+#include <string>
+#include <string_view>
 
 namespace lua {
 
@@ -108,6 +109,21 @@ namespace lua {
 		static bool get(state& s,int idx) { return s.toboolean(idx); }
 		static void push(state& s,bool v) { s.pushboolean(v); }
 	};
+	template <>
+	struct stack<std::string> {
+		static std::string get(state& s,int idx) { return s.tostring(idx); }
+		static void push(state& s,const std::string& v) { s.pushstring(v.c_str()); }
+	};
+	template <>
+	struct stack<const std::string&> : stack<std::string> {};
+	template <>
+	struct stack<std::string_view> {
+		static std::string_view get(state& s,int idx) { size_t len = 0; auto p = s.tolstring(idx,len); return {p,len}; }
+		static void push(state& s,const std::string_view& v) { s.pushlstring(v.data(),v.size()); }
+	};
+	template <>
+	struct stack<const std::string_view&> : stack<std::string_view> {};
+
 	template <class T>
 	struct stack<common::intrusive_ptr<T> > {
 		static common::intrusive_ptr<T> get(state& s,int idx) { 
