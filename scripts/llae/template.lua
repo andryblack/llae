@@ -25,6 +25,7 @@ function template:_init( options )
 	self._env = {
 		escape = escape
 	}
+	self._debug = options and options.debug
 	if options and options.env then
 		for k,v in pairs(options.env) do
 			self._env[k]=v
@@ -112,11 +113,21 @@ function template:compile( chunks )
 		end
 	}
 	local idx = 0
-	self._compiled = assert(load(function()
-			idx = idx + 1
-			--print('load',idx,chunks[idx])
-			return chunks[idx]
-		end,self._name,'t',setmetatable({},env)))
+	local res,err = load(function()
+				idx = idx + 1
+				--print('load',idx,chunks[idx])
+				return chunks[idx]
+			end,self._name,'t',setmetatable({},env))
+	if self._debug then
+		if res then
+			self._compiled = res
+		else
+			err = err .. '\n' .. table.concat(chunks)
+			error('Failed compile template: ' .. '\n' .. err)
+		end
+	else
+		self._compiled = assert(res,err)
+	end
 	return self._compiled
 end
 

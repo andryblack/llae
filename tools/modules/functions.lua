@@ -51,7 +51,7 @@ local function exec_cmd(cmd,args,logfile,cwd)
 			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
 			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,epipe}
 		}
-	})
+	},'failed spawn ' .. tostring(cmd))
 	redirect_pipe(rpipe,logfile)
 	redirect_pipe(epipe,logfile)
 	
