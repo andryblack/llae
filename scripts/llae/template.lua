@@ -109,6 +109,7 @@ local function build_lines(str)
 	local linenum = 1
 	for line in str:gmatch("[^\r\n]+") do
 		local ln = tostring(linenum)
+		linenum = linenum + 1
 		table.insert(d,string.rep(' ',4-#ln) .. ln..': '..line)
 	end
 	return table.concat(d,'\n')
