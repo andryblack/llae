@@ -240,7 +240,14 @@ function Project:install(tosystem)
 		local funcs = {
 			print = function(...)
 				Project.env.print(self._env,...)
-			end
+			end,
+			project=self,
+			template = template,
+			path = path,
+			fs = fs,
+			log = log,
+			table = table,
+			string = string,
 		}
 		apply_functions(funcs,self._env)
 		setmetatable(self._env.__load_env,{
