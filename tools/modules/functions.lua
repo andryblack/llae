@@ -174,8 +174,8 @@ function m:download(url,file,hash)
 	end
 end
 
-function m:_local(fn)
-	if fs.isabsolute(fn) then
+local function _local(self,fn)
+	if path.isabsolute(fn) then
 		return fn
 	end
 	return path.join(self.location,fn)
@@ -183,28 +183,28 @@ end
 
 function m:unpack_tgz( file , todir , strip)
 	local src = path.join(self._project:get_dl_dir(),file)
-	local dst = todir and self:_local(todir) or self.location
+	local dst = todir and _local(self,todir) or self.location
 	log.info('unpack',file)
 	untar.unpack_tgz(src,dst,strip)
 end
 
 function m:unpack_tbz2( file , todir , strip)
 	local src = path.join(self._project:get_dl_dir(),file)
-	local dst = todir and self:_local(todir) or self.location
+	local dst = todir and _local(self,todir) or self.location
 	log.info('unpack',file)
 	untar.unpack_tbz2(src,dst,strip)
 end
 
 function m:unpack_zip( file , todir )
 	local src = path.join(self._project:get_dl_dir(),file)
-	local dst = todir and self:_local(todir) or self.location
+	local dst = todir and _local(self,todir) or self.location
 	log.info('unpack',file)
 	unzip.unpack_zip(src,dst)
 end
 
 function m:unpack_txz( file , todir , strip)
 	local src = path.join(self._project:get_dl_dir(),file)
-	local dst = todir and self._local(todir) or self.location
+	local dst = todir and _local(self,todir) or self.location
 	log.info('unpack',file)
 	local logfilename = path.join(self.location,'unpack.txt')
 	fs.unlink(logfilename)
@@ -381,7 +381,7 @@ end
 
 function m:install_files( files )
 	for to,from in pairs(files) do
-		local src = self:_local(from)
+		local src = _local(self,from)
 		local dst = path.join(self.root,to)
 		fs.mkdir(path.dirname(dst))
 		log.debug('install',src,'->',dst)
@@ -402,7 +402,7 @@ end
 
 function m:move_files( files )
 	for to,from in pairs(files) do
-		local src = self:_local(from)
+		local src = _local(self,from)
 		local dst = path.join(self.root,to)
 		fs.mkdir(path.dirname(dst))
 		log.debug('install',src,'->',dst)
@@ -412,7 +412,7 @@ function m:move_files( files )
 end
 
 function m:install_script( src_in , dst )
-	local src = self:_local(src_in)
+	local src = _local(self,src_in)
 	self._project:check_script(dst,self)
 	local fdst = self.tosystem and path.join(self.root,'scripts',dst) or 
 			path.join(self.root,'build','scripts',dst)
@@ -423,7 +423,7 @@ function m:install_script( src_in , dst )
 end
 
 function m:install_scripts( dir )
-	local ssrc = self:_local(dir)
+	local ssrc = _local(self,dir)
 	local files,err = fs.scanfiles_r(ssrc)
 	if not files then
 		error(err .. '\n' .. ssrc )
@@ -441,7 +441,7 @@ function m:install_scripts( dir )
 end
 
 function m:install_scripts_dir( dir )
-	local ssrc = self:_local(dir)
+	local ssrc = _local(self,dir)
 	local basename = path.basename(dir)
 	local files,err = fs.scanfiles_r(ssrc)
 	if not files then
@@ -461,7 +461,7 @@ function m:install_scripts_dir( dir )
 end
 
 function m:foreach_file_r(dir)
-	local src = self:_local(dir)
+	local src = _local(self,dir)
 	local files,err = fs.scanfiles_r(src)
 	if not files then
 		error('failed scan dir ' .. src ..' '.. err)
@@ -476,7 +476,7 @@ function m:foreach_file_r(dir)
 end
 
 function m:foreach_file( dir , recursive )
-	local src =  self:_local(dir)
+	local src =  _local(self,dir)
 	local files,err = fs.scandir(src)
 	if not files then
 		error('failed scan dir ' .. src ..' '.. err)
@@ -498,8 +498,8 @@ end
 
 
 function m:preprocess( config )
-	local src_file = self:_local(config.src)
-	local dst_file = config.insource and self:_local(config.dst) or path.join(self.root,config.dst)
+	local src_file = _local(self,config.src)
+	local dst_file = config.insource and _local(self,config.dst) or path.join(self.root,config.dst)
 
 	local data = {}
 	local uncomment = config.uncomment or {}
@@ -549,8 +549,8 @@ function m:preprocess( config )
 end
 
 function m:preprocess_am( config )
-	local src_file = self:_local(config.src)
-	local dst_file = config.insource and self:_local(config.dst) or path.join(self.root,config.dst)
+	local src_file = _local(self,config.src)
+	local dst_file = config.insource and _local(self,config.dst) or path.join(self.root,config.dst)
 
 	local data = {}
 	local defines = config.defines or {}
