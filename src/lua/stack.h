@@ -172,10 +172,8 @@ namespace lua {
     };
 	template <class T>
 	struct stack<T*> {
-		static T* get(state& s,int idx) { 
-			auto hdr = object_holder_t::get(s,idx);
-			if (!hdr) return nullptr;
-			return hdr->get_raw<T>();
+		static T* get(state& s,int idx) {
+            return meta_holder_base_t::get_ptr<T>(s,idx);
 		}
 	};
 
@@ -188,6 +186,13 @@ namespace lua {
             stack<int>::push(s,int(v));
         }
     };
+
+//    template <class T>
+//    struct stack<T&&,typename std::enable_if< std::is_copy_constructible<T>::value>::type> {
+//        static void push(state& s,T&& v) {
+//            push_raw(s,std::forward<T>(v));
+//        }
+//    };
 
 	template <class T>
 	struct stack<const common::intrusive_ptr<T>& > : stack<common::intrusive_ptr<T> >{};

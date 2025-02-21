@@ -1,12 +1,10 @@
 #include "object.h"
 
-
+META_INFO(meta::object, void)
 
 namespace meta {
-	static const info_t object_info = { 
-        "meta::object", nullptr
-    };
-    const info_t* object::get_class_info() { return &object_info; }
-
+    const info_t* object::get_class_info() {
+        return info<object>::get();
+    }
     size_t object::m_count = 0;
 }

@@ -104,7 +104,7 @@ namespace lua {
 				state l(L);
 				auto obj = stack<T*>::get(l,1);
 				if (!obj) {
-					l.argerror(1,T::get_class_info()->name);
+					l.argerror(1,meta::info<T>::get()->name);
 				}
 				apply(l,obj,*f,std::index_sequence_for<Args...>());
 				return 0;
@@ -133,7 +133,7 @@ namespace lua {
 				state l(L);
 				auto obj = stack<T*>::get(l,1);
 				if (!obj) {
-					l.argerror(1,T::get_class_info()->name);
+					l.argerror(1,meta::info<T>::get()->name);
 				}
 				apply(l,obj,*f,std::index_sequence_for<Args...>());
 				return 0;
@@ -163,7 +163,7 @@ namespace lua {
 				state l(L);
 				auto obj = stack<T*>::get(l,1);
 				if (!obj) {
-					l.argerror(1,T::get_class_info()->name);
+					l.argerror(1,meta::info<T>::get()->name);
 				}
 				auto r = apply(l,obj,*f,std::index_sequence_for<Args...>());
 				return r.val;
@@ -305,19 +305,19 @@ namespace lua {
 		template <class T>
 		struct object {
 			static void register_metatable(state& s) {
-				create_metatable(s,T::get_class_info());
+				create_metatable(s,meta::info<T>::get());
 				s.pop(1);
 			} 
 			static void register_metatable(state& s,void (*bindfunc)(state&)) {
-				create_metatable(s,T::get_class_info());
+				create_metatable(s,meta::info<T>::get());
 				bindfunc(s);
 				s.pop(1);
 			} 
 			static void get_metatable(state& s) {
-				lua::get_metatable(s,T::get_class_info());
+				lua::get_metatable(s,meta::info<T>::get());
 			}
 		};
-		
+    
 
 	}
 

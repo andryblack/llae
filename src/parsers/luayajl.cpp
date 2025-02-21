@@ -2,20 +2,20 @@
 extern "C" {
 #include <yajl/yajl_parse.h>
 #include <yajl/yajl_gen.h>
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
 }
 
 #include <vector>
 #include <cassert>
 #include <string>
+#include "uv/buffer.h"
+#include "lua/state.h"
+#include "lua/bind.h"
 
 static int json_array_marker = 0;
     
 struct parse_context {
-    lua_State* L;
-    int stack_depth;
+    lua::state& l;
+    int stack_depth = 0;
     bool mark_arrays = false;
     struct state_t {
         enum type {
@@ -29,7 +29,7 @@ struct parse_context {
         if (!state.empty()) {
             if (state.back().type == state_t::array) {
                 ++state.back().count;
-                lua_pushinteger(L, state.back().count);
+                l.pushinteger(state.back().count);
                 ++stack_depth;
             }
         }
@@ -41,14 +41,14 @@ struct parse_context {
         }
         if (!state.empty()) {
             if (state.back().type == state_t::map) {
-                assert(lua_istable(L, -3));
-                assert(lua_isstring(L, -2));
-                lua_settable(L, -3);
+                assert(l.istable(-3));
+                assert(l.isstring(-2));
+                l.settable(-3);
                 stack_depth-=2;
             } else if (state.back().type == state_t::array) {
-                assert(lua_istable(L, -3));
-                assert(lua_isnumber(L, -2));
-                lua_settable(L, -3);
+                assert(l.istable(-3));
+                assert(l.isnumber(-2));
+                l.settable(-3);
                 stack_depth-=2;
             }
         }
@@ -59,7 +59,7 @@ struct parse_context {
 static int yajl_parse_null(void * ctx) {
     parse_context* c = static_cast<parse_context*>(ctx);
     c->on_pre_value();
-    lua_pushnil(c->L);
+    c->l.pushnil();
     ++c->stack_depth;
     c->on_value();
     return 1;
@@ -67,7 +67,7 @@ static int yajl_parse_null(void * ctx) {
 static int yajl_parse_boolean(void * ctx, int boolVal) {
     parse_context* c = static_cast<parse_context*>(ctx);
     c->on_pre_value();
-    lua_pushboolean(c->L, boolVal);
+    c->l.pushboolean(boolVal);
     ++c->stack_depth;
     c->on_value();
     return 1;
@@ -75,7 +75,7 @@ static int yajl_parse_boolean(void * ctx, int boolVal) {
 static int yajl_parse_integer(void * ctx, long long integerVal) {
     parse_context* c = static_cast<parse_context*>(ctx);
     c->on_pre_value();
-    lua_pushinteger(c->L, integerVal);
+    c->l.pushinteger(integerVal);
     ++c->stack_depth;
     c->on_value();
     return 1;
@@ -83,7 +83,7 @@ static int yajl_parse_integer(void * ctx, long long integerVal) {
 static int yajl_parse_double(void * ctx, double doubleVal) {
     parse_context* c = static_cast<parse_context*>(ctx);
     c->on_pre_value();
-    lua_pushnumber(c->L, doubleVal);
+    c->l.pushnumber(doubleVal);
     ++c->stack_depth;
     c->on_value();
     return 1;
@@ -95,7 +95,7 @@ static int yajl_parse_string(void * ctx, const unsigned char * stringVal,
                              size_t stringLen) {
     parse_context* c = static_cast<parse_context*>(ctx);
     c->on_pre_value();
-    lua_pushlstring(c->L, reinterpret_cast<const char*>(stringVal),stringLen);
+    c->l.pushlstring(reinterpret_cast<const char*>(stringVal),stringLen);
     ++c->stack_depth;
     c->on_value();
     return 1;
@@ -104,8 +104,8 @@ static int yajl_parse_string(void * ctx, const unsigned char * stringVal,
 static int yajl_parse_start_map(void * ctx) {
     parse_context* c = static_cast<parse_context*>(ctx);
     c->on_pre_value();
-    lua_checkstack(c->L,5);
-    lua_newtable(c->L);
+    c->l.checkstack(5);
+    c->l.newtable();
     ++c->stack_depth;
     parse_context::state_t s;
     s.type = parse_context::state_t::map;
@@ -116,7 +116,7 @@ static int yajl_parse_start_map(void * ctx) {
 static int yajl_parse_map_key(void * ctx, const unsigned char * key,
                               size_t stringLen) {
     parse_context* c = static_cast<parse_context*>(ctx);
-    lua_pushlstring(c->L, reinterpret_cast<const char*>(key),stringLen);
+    c->l.pushlstring(reinterpret_cast<const char*>(key),stringLen);
     ++c->stack_depth;
     return 1;
 }
@@ -130,12 +130,12 @@ static int yajl_parse_end_map(void * ctx) {
 
 static int yajl_parse_start_array(void * ctx) {
     parse_context* c = static_cast<parse_context*>(ctx);
-    lua_checkstack(c->L,5);
+    c->l.checkstack(5);
     c->on_pre_value();
-    lua_newtable(c->L);
+    c->l.newtable();
     if (c->mark_arrays) {
-        lua_getfield(c->L,LUA_REGISTRYINDEX,"json_array");
-        lua_setmetatable(c->L,-2);
+        c->l.getfield(LUA_REGISTRYINDEX,"json_array");
+        c->l.setmetatable(-2);
     }
 
     ++c->stack_depth;
@@ -167,44 +167,67 @@ static void fill_parse_callbacks( yajl_callbacks& cb ) {
     cb.yajl_end_array = &yajl_parse_end_array;
 }
     
-static int json_parse(lua_State* L) {
-    luaL_checktype(L,1,LUA_TSTRING);
-    size_t len = 0;
-    const char* text = lua_tolstring(L, 1, &len);
-    bool safe = (lua_isnoneornil(L,2) ? false : lua_toboolean(L,2));
+static lua::multiret json_decode(lua::state& l) {
 
+    auto data = uv::buffer_view::get(l,1,true);
+    bool safe = false;
+
+    if (l.isboolean(2)) {
+        safe = l.toboolean(2);
+    } else if (l.istable(2)) {
+        l.getfield(2,"safe");
+        safe = l.toboolean(-1);
+        l.pop(1);
+    }
+   
     yajl_callbacks cb;
     fill_parse_callbacks(cb);
-    parse_context ctx;
-    ctx.L = L;
-    ctx.stack_depth = 0;
-    ctx.mark_arrays = (lua_isnoneornil(L,3) ? false : lua_toboolean(L,3));
-    //std::cout << "mark_arrays: " << ctx.mark_arrays << std::endl;
+    parse_context ctx = {l};
+    ctx.mark_arrays = false;
+    if (l.isboolean(3)) {
+        ctx.mark_arrays = l.toboolean(3);
+    } else if (l.istable(2)) {
+        l.getfield(2,"mark_arrays");
+        ctx.mark_arrays = l.toboolean(-1);
+        l.pop(1);
+    }
     
     yajl_handle h = yajl_alloc(&cb, 0, &ctx);
-    yajl_config(h,yajl_allow_comments,1);
-    yajl_status s = yajl_parse(h,reinterpret_cast<const unsigned char * >(text),len);
+    
+    if (l.istable(2)) {
+        l.getfield(2, "validate_utf");
+        bool validata = l.toboolean(-1);
+        l.pop(1);
+        yajl_config(h,yajl_dont_validate_strings,validata?0:1);
+        l.getfield(2, "allow_comments");
+        bool allow = l.toboolean(-1);
+        yajl_config(h,yajl_allow_comments,allow?1:0);
+        l.pop(1);
+    } else {
+        yajl_config(h,yajl_allow_comments,1);
+    }
+    yajl_status s = yajl_parse(h,reinterpret_cast<const unsigned char * >(data.get_base()),data.get_len());
     if (s == yajl_status_ok) {
         s = yajl_complete_parse(h);
     }
     if (s!=yajl_status_ok) {
-        unsigned char* err_text = yajl_get_error(h, 1,reinterpret_cast<const unsigned char * >(text),len);
-        lua_pop(L, ctx.stack_depth);
+        unsigned char* err_text = yajl_get_error(h, 1,reinterpret_cast<const unsigned char * >(data.get_base()),data.get_len());
+        l.pop(ctx.stack_depth);
         if (safe) {
-            lua_pushnil(L);
+            l.pushnil();
         }
-        lua_pushstring(L, reinterpret_cast<const char*>(err_text));
+        l.pushstring(reinterpret_cast<const char*>(err_text));
         yajl_free_error(h,err_text);
         yajl_free(h);
         if (safe) {
-            return 2;
+            return {2};
         } else {
-            lua_error(L);
-            return 1;
+            l.error();
+            return {1};
         }
     }
     yajl_free(h);
-    return ctx.stack_depth;
+    return {ctx.stack_depth};
 }
 
     
@@ -354,124 +377,146 @@ static int json_encode(lua_State* L) {
     lua_pushstring(L, ctx.data.c_str());
     return 1;
 }
+
+class json_gen {
+private:
+    yajl_gen m_g = nullptr;
     
 
-
-static int json_gen_free(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    yajl_gen_free(g);
-    return 0;
-}
-
-
-static int json_gen_new(lua_State* L) {
-    yajl_gen g = yajl_gen_alloc(0);
-    lua_pushlightuserdata(L,g);
-    if (lua_isboolean(L, 1) && lua_toboolean(L, 1)) {
-        yajl_gen_config(g,yajl_gen_beautify, 1);
+    void map_open(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        yajl_gen_status status = yajl_gen_map_open(m_g);
+        if (status!=yajl_gen_status_ok) {
+           l.error("json gen map open failed: %d",status);
+        }
     }
-    luaL_getmetatable(L,"json_gen");
-    lua_setmetatable(L,-2);
-    return 1;
-}
 
-static int json_gen_map_open(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    yajl_gen_status status = yajl_gen_map_open(g);
-    if (status!=yajl_gen_status_ok) {
-       luaL_error(L,"json gen map open failed: %d",status);
+    void map_close(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        yajl_gen_status status = yajl_gen_map_close(m_g);
+        if (status!=yajl_gen_status_ok) {
+           l.error("json gen map close failed: %d",status);
+        }
     }
-    return 0;
-}
 
-static int json_gen_map_close(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    yajl_gen_status status = yajl_gen_map_close(g);
-    if (status!=yajl_gen_status_ok) {
-       luaL_error(L,"json gen map close failed: %d",status);
+    void array_open(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        yajl_gen_status status = yajl_gen_array_open(m_g);
+        if (status!=yajl_gen_status_ok) {
+           l.error("json gen array open failed: %d",status);
+        }
     }
-    return 0;
-}
 
-static int json_gen_array_open(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    yajl_gen_status status = yajl_gen_array_open(g);
-    if (status!=yajl_gen_status_ok) {
-       luaL_error(L,"json gen array open failed: %d",status);
+    void array_close(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        yajl_gen_status status = yajl_gen_array_close(m_g);
+        if (status!=yajl_gen_status_ok) {
+            l.error("json gen array close failed: %d",status);
+        }
     }
-    return 0;
-}
 
-static int json_gen_array_close(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    yajl_gen_status status = yajl_gen_array_close(g);
-    if (status!=yajl_gen_status_ok) {
-        luaL_error(L,"json gen array close failed: %d",status);
+    void lstring(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        size_t size = 0;
+        const char* name = l.checklstring(2,size);
+        yajl_gen_status status = yajl_gen_string(m_g, reinterpret_cast<const unsigned char*>(name), size);
+        if (status!=yajl_gen_status_ok) {
+            l.error("json gen string failed: %d",status);
+        }
     }
-    return 0;
-}
 
-static int json_gen_string(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    size_t size = 0;
-    const char* name = luaL_checklstring(L,2,&size);
-    yajl_gen_status status = yajl_gen_string(g, reinterpret_cast<const unsigned char*>(name), size);
-    if (status!=yajl_gen_status_ok) {
-        luaL_error(L,"json gen string failed: %d",status);
+    void lnull(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        yajl_gen_status status = yajl_gen_null(m_g);
+        if (status!=yajl_gen_status_ok) {
+            l.error("json gen null failed: %d",status);
+        }
     }
-    return 0;
-}
 
-static int json_gen_null(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    yajl_gen_status status = yajl_gen_null(g);
-    if (status!=yajl_gen_status_ok) {
-        luaL_error(L,"json gen null failed: %d",status);
+    void lbool(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        int n = l.toboolean(2);
+        yajl_gen_status status = yajl_gen_bool(m_g, n);
+        if (status!=yajl_gen_status_ok) {
+            l.error("json gen bool failed: %d",status);
+        }
     }
-    return 0;
-}
 
-static int json_gen_bool(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    int n = lua_toboolean(L,2);
-    yajl_gen_status status = yajl_gen_bool(g, n);
-    if (status!=yajl_gen_status_ok) {
-        luaL_error(L,"json gen bool failed: %d",status);
+    void linteger(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        lua_Integer n = l.checkinteger(2);
+        yajl_gen_status status = yajl_gen_integer(m_g, n);
+        if (status!=yajl_gen_status_ok) {
+            l.error("json gen integer failed: %d",status);
+        }
     }
-    return 0;
-}
 
-static int json_gen_integer(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    lua_Integer n = luaL_checkinteger(L,2);
-    yajl_gen_status status = yajl_gen_integer(g, n);
-    if (status!=yajl_gen_status_ok) {
-        luaL_error(L,"json gen integer failed: %d",status);
+    void ldouble(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        auto n = l.checknumber(2);
+        yajl_gen_status status = yajl_gen_double(m_g, n);
+        if (status!=yajl_gen_status_ok) {
+            l.error("json gen double failed: %d",status);
+        }
     }
-    return 0;
-}
 
-static int json_gen_double(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    lua_Number n = luaL_checknumber (L,2);
-    yajl_gen_status status = yajl_gen_double(g, n);
-    if (status!=yajl_gen_status_ok) {
-        luaL_error(L,"json gen double failed: %d",status);
+    lua::multiret get_buffer(lua::state& l) {
+        if (!m_g) l.error("use after free");
+        const unsigned char * buf = 0;
+        size_t len = 0;
+        yajl_gen_status status = yajl_gen_get_buf(m_g,&buf,&len);
+        if (status == yajl_gen_generation_complete || status == yajl_gen_status_ok) {
+            l.pushlstring(reinterpret_cast<const char*>(buf),len);
+            return {1};
+        }
+        {
+            l.error("json gen failed: %d", status);
+        }
+        return {0};
     }
-    return 0;
-}
-
-static int json_gen_get_buffer(lua_State* L) {
-    yajl_gen g = (yajl_gen)luaL_checkudata(L,1,"json_gen");
-    const unsigned char * buf = 0;
-    size_t len = 0;
-    yajl_gen_status status = yajl_gen_get_buf(g,&buf,&len);
-    if (status == yajl_gen_generation_complete || status == yajl_gen_status_ok) {
-        lua_pushlstring(L,reinterpret_cast<const char*>(buf),len);
-        return 1;
+    
+    void free() {
+        if (m_g) yajl_gen_free(m_g);
+        m_g = nullptr;
     }
-    return luaL_error(L,"json gen failed: %d",status);
-}
+    
+public:
+    explicit json_gen() {
+        m_g = yajl_gen_alloc(0);
+    }
+    explicit json_gen(json_gen&& o) : m_g(o.m_g) {
+        o.m_g = nullptr;
+    }
+    ~json_gen() {
+        free();
+    }
+    void config(lua::state& l) {
+        if (l.isboolean(1)) {
+            yajl_gen_config(m_g,yajl_gen_beautify, l.toboolean(1)?1:0);
+        }
+    }
+    static lua::multiret lnew(lua::state& l) {
+        json_gen gen;
+        gen.config(l);
+        lua::push_raw(l,std::move(gen));
+        return {1};
+    }
+    static void lbind(lua::state& l) {
+        lua::bind::function(l,"new",&json_gen::lnew);
+        lua::bind::function(l,"map_open",&json_gen::map_open);
+        lua::bind::function(l,"map_close",&json_gen::map_close);
+        lua::bind::function(l,"array_open",&json_gen::array_open);
+        lua::bind::function(l,"array_close",&json_gen::array_close);
+        lua::bind::function(l,"null",&json_gen::lnull);
+        lua::bind::function(l,"bool",&json_gen::lbool);
+        lua::bind::function(l,"string",&json_gen::lstring);
+        lua::bind::function(l,"double",&json_gen::ldouble);
+        lua::bind::function(l,"integer",&json_gen::linteger);
+        lua::bind::function(l,"free",&json_gen::free);
+        lua::bind::function(l,"get_buffer",&json_gen::get_buffer);
+    }
+};
+META_INFO(json_gen,void)
 
 static int json_array(lua_State* L) {
     luaL_checktype(L,1,LUA_TTABLE);
@@ -497,45 +542,21 @@ static int is_json_array(lua_State* L) {
 
 
 int luaopen_json(lua_State* L) {
-
-    luaL_Reg reg[] = {
-        { "encode", json_encode },
-        { "decode", json_parse },
-        { NULL, NULL }
-    };
+    lua::state l{L};
+    l.newtable();
+    lua::bind::object<json_gen>::register_metatable(l,&json_gen::lbind);
+    lua::bind::function(l,"encode",&json_encode);
+    lua::bind::function(l,"decode",&json_decode);
+    lua::bind::function(l,"array",&json_array);
+    lua::bind::function(l,"is_array",&is_json_array);
+    lua::bind::object<json_gen>::get_metatable(l);
+    l.setfield(-2, "gen");
     
-    lua_newtable(L);
-    luaL_setfuncs(L, reg, 0);
-
-    luaL_newmetatable(L,"json_gen");
-    luaL_Reg gen[] = {
-        { "new", json_gen_new },
-        { "free", json_gen_free },
-        { "map_open",   json_gen_map_open },
-        { "map_close",   json_gen_map_close },
-        { "array_open",   json_gen_array_open },
-        { "array_close",   json_gen_array_close },
-        { "null",       json_gen_null },
-        { "bool",       json_gen_bool },
-        { "string",     json_gen_string },
-        { "double",     json_gen_double },
-        { "integer",    json_gen_integer },
-        { "get_buffer", json_gen_get_buffer},
-        { NULL, NULL }
-    };
-    luaL_setfuncs(L, gen, 0);
-    lua_pushvalue(L,-1);
-    lua_setfield(L,-2,"__index");
-    lua_setfield(L,-2,"gen");
-
     luaL_newmetatable(L,"json_array");
     lua_pushlightuserdata(L,&json_array_marker);
     lua_setfield(L,-2,"__json_type");
     lua_pop(L,1);
-    lua_pushcfunction(L,&json_array);
-    lua_setfield(L,-2,"array");
-    lua_pushcfunction(L,&is_json_array);
-    lua_setfield(L,-2,"is_array");
+   
 
     return 1;
 }

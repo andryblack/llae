@@ -30,8 +30,8 @@ namespace meta {
 
 #define META_OBJECT \
     public: \
-        static const ::meta::info_t* get_class_info();\
-        virtual const ::meta::info_t* get_object_info() const override { return get_class_info(); } \
+        static const ::meta::info_t* get_class_info(); \
+        virtual const ::meta::info_t* get_object_info() const override { return get_class_info(); }
 
 #define META_OBJECT_INFO_X(Klass,Parent,Name) \
         const ::meta::info_t* Klass::get_class_info() { \
@@ -41,10 +41,15 @@ namespace meta {
 
 #define META_OBJECT_INFO(Type,Parent) META_OBJECT_INFO_X(Type,Parent,#Type)
 
+    template <typename T>
+    struct info<T,std::enable_if_t<std::is_convertible_v<T*, object*>>> {
+        static const info_t* get() { return T::get_class_info(); }
+    };
+
     template <class T>
     static T* cast( object* o ) {
         if (!o) return nullptr;
-        if (!is_convertible(o->get_object_info(),T::get_class_info())) return nullptr;
+        if (!is_convertible(o->get_object_info(),info<T>::get())) return nullptr;
         return static_cast<T*>(o);
     }
 

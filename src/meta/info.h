@@ -18,8 +18,25 @@ namespace meta {
         }
         return false;
     }
+    template <typename T,class enable = void>
+    struct info {
+        static const info_t* get();
+    };
+    template <>
+    struct info<void,void> {
+        static const info_t* get() { return nullptr; }
+    };
+    template <typename T>
+    struct info<const T> : info<T> {};
 
+#define META_INFO_BASE_X(Klass,Name,Base) \
+        template <> \
+        const ::meta::info_t* ::meta::info<Klass>::get() { \
+            static const ::meta::info_t info = { Name,  ::meta::info<Base>::get() }; \
+            return &info; \
+        };
 
+#define META_INFO(Type,Base) META_INFO_BASE_X(Type,#Type,Base)
 
 
 }
