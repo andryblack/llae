@@ -174,30 +174,37 @@ function m:download(url,file,hash)
 	end
 end
 
+function m:_local(fn)
+	if fs.isabsolute(fn) then
+		return fn
+	end
+	return path.join(self.location,fn)
+end
+
 function m:unpack_tgz( file , todir , strip)
 	local src = path.join(self._project:get_dl_dir(),file)
-	local dst = todir and path.join(self.location,todir) or self.location
+	local dst = todir and self:_local(todir) or self.location
 	log.info('unpack',file)
 	untar.unpack_tgz(src,dst,strip)
 end
 
 function m:unpack_tbz2( file , todir , strip)
 	local src = path.join(self._project:get_dl_dir(),file)
-	local dst = todir and path.join(self.location,todir) or self.location
+	local dst = todir and self:_local(todir) or self.location
 	log.info('unpack',file)
 	untar.unpack_tbz2(src,dst,strip)
 end
 
 function m:unpack_zip( file , todir )
 	local src = path.join(self._project:get_dl_dir(),file)
-	local dst = todir and path.join(self.location,todir) or self.location
+	local dst = todir and self:_local(todir) or self.location
 	log.info('unpack',file)
 	unzip.unpack_zip(src,dst)
 end
 
 function m:unpack_txz( file , todir , strip)
 	local src = path.join(self._project:get_dl_dir(),file)
-	local dst = todir and path.join(self.location,todir) or self.location
+	local dst = todir and self._local(todir) or self.location
 	log.info('unpack',file)
 	local logfilename = path.join(self.location,'unpack.txt')
 	fs.unlink(logfilename)
@@ -374,7 +381,7 @@ end
 
 function m:install_files( files )
 	for to,from in pairs(files) do
-		local src = path.join(self.location,from)
+		local src = self:_local(from)
 		local dst = path.join(self.root,to)
 		fs.mkdir(path.dirname(dst))
 		log.debug('install',src,'->',dst)
@@ -395,7 +402,7 @@ end
 
 function m:move_files( files )
 	for to,from in pairs(files) do
-		local src = path.join(self.location,from)
+		local src = self:_local(from)
 		local dst = path.join(self.root,to)
 		fs.mkdir(path.dirname(dst))
 		log.debug('install',src,'->',dst)
@@ -405,7 +412,7 @@ function m:move_files( files )
 end
 
 function m:install_script( src_in , dst )
-	local src = path.join(self.location,src_in)
+	local src = self:_local(src_in)
 	self._project:check_script(dst,self)
 	local fdst = self.tosystem and path.join(self.root,'scripts',dst) or 
 			path.join(self.root,'build','scripts',dst)
@@ -416,14 +423,14 @@ function m:install_script( src_in , dst )
 end
 
 function m:install_scripts( dir )
-	local src = path.join(self.location,dir)
-	local files,err = fs.scanfiles_r(src)
+	local ssrc = self:_local(dir)
+	local files,err = fs.scanfiles_r(ssrc)
 	if not files then
-		error(err)
+		error(err .. '\n' .. ssrc )
 	end
 	for _,f in ipairs(files) do
 		self._project:check_script(f,self)
-		local src = path.join(self.location,dir,f)
+		local src = path.join(ssrc,f)
 		local dst = self.tosystem and path.join(self.root,'scripts',f) or 
 			path.join(self.root,'build','scripts',f)
 		fs.mkdir_r(path.dirname(dst))
@@ -434,16 +441,16 @@ function m:install_scripts( dir )
 end
 
 function m:install_scripts_dir( dir )
-	local src = path.join(self.location,dir)
+	local ssrc = self:_local(dir)
 	local basename = path.basename(dir)
-	local files,err = fs.scanfiles_r(src)
+	local files,err = fs.scanfiles_r(ssrc)
 	if not files then
-		error(err .. '\n' .. src)
+		error(err .. '\n' .. ssrc)
 	end
 	for _,f in ipairs(files) do
 		local fn = path.join(basename,f)
 		self._project:check_script(fn,self)
-		local src = path.join(self.location,dir,f)
+		local src = path.join(ssrc,f)
 		local dst = self.tosystem and path.join(self.root,'scripts',fn) or 
 			path.join(self.root,'build','scripts',fn)
 		fs.mkdir_r(path.dirname(dst))
@@ -454,7 +461,7 @@ function m:install_scripts_dir( dir )
 end
 
 function m:foreach_file_r(dir)
-	local src = path.join(self.location,dir)
+	local src = self:_local(dir)
 	local files,err = fs.scanfiles_r(src)
 	if not files then
 		error('failed scan dir ' .. src ..' '.. err)
@@ -469,7 +476,7 @@ function m:foreach_file_r(dir)
 end
 
 function m:foreach_file( dir , recursive )
-	local src = path.join(self.location,dir)
+	local src =  self:_local(dir)
 	local files,err = fs.scandir(src)
 	if not files then
 		error('failed scan dir ' .. src ..' '.. err)
@@ -491,8 +498,8 @@ end
 
 
 function m:preprocess( config )
-	local src_file = path.join(self.location,config.src)
-	local dst_file = config.insource and path.join(self.location,config.dst) or path.join(self.root,config.dst)
+	local src_file = self:_local(config.src)
+	local dst_file = config.insource and self:_local(config.dst) or path.join(self.root,config.dst)
 
 	local data = {}
 	local uncomment = config.uncomment or {}
@@ -542,8 +549,8 @@ function m:preprocess( config )
 end
 
 function m:preprocess_am( config )
-	local src_file = path.join(self.location,config.src)
-	local dst_file = config.insource and path.join(self.location,config.dst) or path.join(self.root,config.dst)
+	local src_file = self:_local(config.src)
+	local dst_file = config.insource and self:_local(config.dst) or path.join(self.root,config.dst)
 
 	local data = {}
 	local defines = config.defines or {}
