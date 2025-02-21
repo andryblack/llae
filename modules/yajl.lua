@@ -16,6 +16,24 @@ function install()
 		['build/include/yajl/yajl_parse.h'] = 		dir..'/src/api/yajl_parse.h',
 		['build/include/yajl/yajl_tree.h'] = 		dir..'/src/api/yajl_tree.h',
 	}
+	-- https://github.com/lloyd/yajl/pull/232/commits/ae1fa8f58491901f071339ced9896ca3ecad0703
+	preprocess{
+		src = dir .. '/src/yajl_encode.c',
+		dst = dir .. '/src/yajl_encode.c',
+		insource = true,
+		insert_before = {
+[ [=[                            unsigned int surrogate = 0;]=] ] = [=[
+                        if (str[end + 1] == '\\' && str[end + 2] == 'u') {
+]=],
+[ [=[                            hexToDigit(&surrogate, str + end + 2);]=] ] = [=[
+                            end++;
+]=]
+		},
+		commentline = {
+[ [=[                        if (str[end] == '\\' && str[end + 1] == 'u') {]=] ] = true,
+[ [=[                        end++;]=] ] = true
+		}
+	}
 end
 
 
