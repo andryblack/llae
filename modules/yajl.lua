@@ -2,10 +2,11 @@
 name = 'yajl'
 revision = '66cb08c'
 version = '2.1.0'
-url = 'https://github.com/lloyd/yajl/archive/refs/tags/'..version..'.tar.gz'
+--url = 'https://github.com/lloyd/yajl/archive/refs/tags/'..version..'.tar.gz'
+url = 'https://github.com/lloyd/yajl/archive/refs/heads/'..version..'.tar.gz'
 dir =  name .. '-' .. version 
 archive = dir ..  '.tar.gz'
-hash = '6887e0ed7479d2549761a4d284d3ecb0'
+hash = 'f018c6871abed96e7a1d4d8491c2be18'
 
 function install()
 	download(url,archive,hash)
