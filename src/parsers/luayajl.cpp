@@ -381,98 +381,42 @@ static int json_encode(lua_State* L) {
 
 namespace llae {
 
-    void json_gen::map_open(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        yajl_gen_status status = yajl_gen_map_open(m_g);
-        if (status!=yajl_gen_status_ok) {
-           l.error("json gen map open failed: %d",status);
-        }
+    bool json_build::map_open() {
+        return m_g && (yajl_gen_map_open(m_g) == yajl_gen_status_ok);
+    }
+    bool json_build::map_close() {
+        return m_g && (yajl_gen_map_close(m_g) == yajl_gen_status_ok);
     }
 
-    void json_gen::map_close(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        yajl_gen_status status = yajl_gen_map_close(m_g);
-        if (status!=yajl_gen_status_ok) {
-           l.error("json gen map close failed: %d",status);
-        }
+    bool json_build::array_open() {
+        return m_g && (yajl_gen_array_open(m_g) == yajl_gen_status_ok);
     }
 
-    void json_gen::array_open(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        yajl_gen_status status = yajl_gen_array_open(m_g);
-        if (status!=yajl_gen_status_ok) {
-           l.error("json gen array open failed: %d",status);
-        }
+    bool json_build::array_close() {
+        return m_g && (yajl_gen_array_close(m_g) == yajl_gen_status_ok);
     }
 
-    void json_gen::array_close(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        yajl_gen_status status = yajl_gen_array_close(m_g);
-        if (status!=yajl_gen_status_ok) {
-            l.error("json gen array close failed: %d",status);
-        }
+    bool json_build::add_string(const std::string_view& val) {
+        return m_g && (yajl_gen_string(m_g,reinterpret_cast<const unsigned char*>(val.data()),val.size()) == yajl_gen_status_ok);
     }
 
-    void json_gen::lstring(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        size_t size = 0;
-        const char* name = l.checklstring(2,size);
-        yajl_gen_status status = yajl_gen_string(m_g, reinterpret_cast<const unsigned char*>(name), size);
-        if (status!=yajl_gen_status_ok) {
-            l.error("json gen string failed: %d",status);
-        }
+    bool json_build::add_null() {
+        return m_g && (yajl_gen_null(m_g) == yajl_gen_status_ok);
     }
 
-    void json_gen::lnull(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        yajl_gen_status status = yajl_gen_null(m_g);
-        if (status!=yajl_gen_status_ok) {
-            l.error("json gen null failed: %d",status);
-        }
+    bool json_build::add_bool(bool val) {
+        return m_g && (yajl_gen_bool(m_g,val ? 1 : 0) == yajl_gen_status_ok);
     }
 
-    void json_gen::lbool(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        int n = l.toboolean(2);
-        yajl_gen_status status = yajl_gen_bool(m_g, n);
-        if (status!=yajl_gen_status_ok) {
-            l.error("json gen bool failed: %d",status);
-        }
+    bool json_build::add_integer(uint64_t val) {
+        return m_g && (yajl_gen_integer(m_g,val) == yajl_gen_status_ok);
     }
 
-    void json_gen::linteger(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        lua_Integer n = l.checkinteger(2);
-        yajl_gen_status status = yajl_gen_integer(m_g, n);
-        if (status!=yajl_gen_status_ok) {
-            l.error("json gen integer failed: %d",status);
-        }
+    bool json_build::add_double(double val) {
+        return m_g && (yajl_gen_double(m_g,val) == yajl_gen_status_ok);
     }
 
-    void json_gen::ldouble(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        auto n = l.checknumber(2);
-        yajl_gen_status status = yajl_gen_double(m_g, n);
-        if (status!=yajl_gen_status_ok) {
-            l.error("json gen double failed: %d",status);
-        }
-    }
-
-    lua::multiret json_gen::get_buffer(lua::state& l) {
-        if (!m_g) l.error("use after free");
-        const unsigned char * buf = 0;
-        size_t len = 0;
-        yajl_gen_status status = yajl_gen_get_buf(m_g,&buf,&len);
-        if (status == yajl_gen_generation_complete || status == yajl_gen_status_ok) {
-            l.pushlstring(reinterpret_cast<const char*>(buf),len);
-            return {1};
-        }
-        {
-            l.error("json gen failed: %d", status);
-        }
-        return {0};
-    }
-    uv::buffer_view json_gen::get_data() const {
+    uv::buffer_view json_build::get_data() const {
         if (!m_g) return uv::buffer_view(nullptr,0);
         const unsigned char * buf = 0;
         size_t len = 0;
@@ -482,47 +426,147 @@ namespace llae {
         }
         return uv::buffer_view(nullptr,0);
     }
-    void json_gen::free() {
+    void json_build::free() {
         if (m_g) yajl_gen_free(m_g);
         m_g = nullptr;
     }
     
-    json_gen::json_gen() {
+    json_build::json_build() {
         m_g = yajl_gen_alloc(0);
     }
-    json_gen::json_gen(json_gen&& o) : m_g(o.m_g) {
+    json_build::json_build(json_build&& o) : m_g(o.m_g) {
         o.m_g = nullptr;
     }
-    json_gen::~json_gen() {
+    json_build::~json_build() {
         free();
     }
-    void json_gen::config(lua::state& l) {
-        if (l.isboolean(1)) {
-            yajl_gen_config(m_g,yajl_gen_beautify, l.toboolean(1)?1:0);
+
+    class json_gen : public json_build {
+    private:
+         void lmap_open(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            yajl_gen_status status = yajl_gen_map_open(m_g);
+            if (status!=yajl_gen_status_ok) {
+               l.error("json gen map open failed: %d",status);
+            }
         }
-    }
-    lua::multiret json_gen::lnew(lua::state& l) {
-        json_gen gen;
-        gen.config(l);
-        lua::push_raw(l,std::move(gen));
-        return {1};
-    }
-    void json_gen::lbind(lua::state& l) {
-        lua::bind::function(l,"new",&json_gen::lnew);
-        lua::bind::function(l,"map_open",&json_gen::map_open);
-        lua::bind::function(l,"map_close",&json_gen::map_close);
-        lua::bind::function(l,"array_open",&json_gen::array_open);
-        lua::bind::function(l,"array_close",&json_gen::array_close);
-        lua::bind::function(l,"null",&json_gen::lnull);
-        lua::bind::function(l,"bool",&json_gen::lbool);
-        lua::bind::function(l,"string",&json_gen::lstring);
-        lua::bind::function(l,"double",&json_gen::ldouble);
-        lua::bind::function(l,"integer",&json_gen::linteger);
-        lua::bind::function(l,"free",&json_gen::free);
-        lua::bind::function(l,"get_buffer",&json_gen::get_buffer);
-    }
+        void lmap_close(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            yajl_gen_status status = yajl_gen_map_close(m_g);
+            if (status!=yajl_gen_status_ok) {
+               l.error("json gen map close failed: %d",status);
+            }
+        }
+
+        void larray_open(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            yajl_gen_status status = yajl_gen_array_open(m_g);
+            if (status!=yajl_gen_status_ok) {
+               l.error("json gen array open failed: %d",status);
+            }
+        }
+
+        void larray_close(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            yajl_gen_status status = yajl_gen_array_close(m_g);
+            if (status!=yajl_gen_status_ok) {
+                l.error("json gen array close failed: %d",status);
+            }
+        }
+
+        void lstring(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            size_t size = 0;
+            const char* name = l.checklstring(2,size);
+            yajl_gen_status status = yajl_gen_string(m_g, reinterpret_cast<const unsigned char*>(name), size);
+            if (status!=yajl_gen_status_ok) {
+                l.error("json gen string failed: %d",status);
+            }
+        }
+
+        void lnull(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            yajl_gen_status status = yajl_gen_null(m_g);
+            if (status!=yajl_gen_status_ok) {
+                l.error("json gen null failed: %d",status);
+            }
+        }
+
+        void lbool(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            int n = l.toboolean(2);
+            yajl_gen_status status = yajl_gen_bool(m_g, n);
+            if (status!=yajl_gen_status_ok) {
+                l.error("json gen bool failed: %d",status);
+            }
+        }
+
+        void linteger(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            lua_Integer n = l.checkinteger(2);
+            yajl_gen_status status = yajl_gen_integer(m_g, n);
+            if (status!=yajl_gen_status_ok) {
+                l.error("json gen integer failed: %d",status);
+            }
+        }
+
+        void ldouble(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            auto n = l.checknumber(2);
+            yajl_gen_status status = yajl_gen_double(m_g, n);
+            if (status!=yajl_gen_status_ok) {
+                l.error("json gen double failed: %d",status);
+            }
+        }
+
+        lua::multiret get_buffer(lua::state& l) {
+            if (!m_g) l.error("use after free");
+            const unsigned char * buf = 0;
+            size_t len = 0;
+            yajl_gen_status status = yajl_gen_get_buf(m_g,&buf,&len);
+            if (status == yajl_gen_generation_complete || status == yajl_gen_status_ok) {
+                l.pushlstring(reinterpret_cast<const char*>(buf),len);
+                return {1};
+            }
+            {
+                l.error("json gen failed: %d", status);
+            }
+            return {0};
+        }
+    public:
+        void config(lua::state& l) {
+            if (l.isboolean(1)) {
+                yajl_gen_config(m_g,yajl_gen_beautify, l.toboolean(1)?1:0);
+            }
+        }
+        static lua::multiret lnew(lua::state& l) {
+            json_gen gen;
+            gen.config(l);
+            lua::push_raw(l,std::move(gen));
+            return {1};
+        }
+        static void lbind(lua::state& l) {
+            lua::bind::function(l,"new",&json_gen::lnew);
+            lua::bind::function(l,"map_open",&json_gen::lmap_open);
+            lua::bind::function(l,"map_close",&json_gen::lmap_close);
+            lua::bind::function(l,"array_open",&json_gen::larray_open);
+            lua::bind::function(l,"array_close",&json_gen::larray_close);
+            lua::bind::function(l,"null",&json_gen::lnull);
+            lua::bind::function(l,"bool",&json_gen::lbool);
+            lua::bind::function(l,"string",&json_gen::lstring);
+            lua::bind::function(l,"double",&json_gen::ldouble);
+            lua::bind::function(l,"integer",&json_gen::linteger);
+            lua::bind::function(l,"free",&json_gen::free);
+            lua::bind::function(l,"get_buffer",&json_gen::get_buffer);
+        }
+        json_gen() {}
+        ~json_gen() {}
+        explicit json_gen(json_gen&& v) : json_build(std::move(v)) {}
+    };
+
 };
-META_INFO(llae::json_gen,void)
+META_INFO(llae::json_build,void)
+META_INFO(llae::json_gen,llae::json_build)
 
 static int json_array(lua_State* L) {
     luaL_checktype(L,1,LUA_TTABLE);
@@ -550,6 +594,7 @@ static int is_json_array(lua_State* L) {
 int luaopen_json(lua_State* L) {
     lua::state l{L};
     l.newtable();
+    lua::bind::object<llae::json_build>::register_metatable(l);
     lua::bind::object<llae::json_gen>::register_metatable(l,&llae::json_gen::lbind);
     lua::bind::function(l,"encode",&json_encode);
     lua::bind::function(l,"decode",&json_decode);

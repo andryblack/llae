@@ -6,41 +6,36 @@ typedef struct yajl_gen_t * yajl_gen;
 
 namespace llae {
 
-	class json_gen {
-	private:
+	class json_build {
+	protected:
 	    yajl_gen m_g = nullptr;
 	    
 	public:
-	    void map_open(lua::state& l);
+	    bool map_open();
 
-	    void map_close(lua::state& l);
+	    bool map_close();
 
-	    void array_open(lua::state& l);
+	    bool array_open();
 
-	    void array_close(lua::state& l);
+	    bool array_close();
 
-	    void lstring(lua::state& l);
+	    bool add_string(const std::string_view& val);
 
-	    void lnull(lua::state& l);
+	    bool add_null();
 
-	    void lbool(lua::state& l);
+	    bool add_bool(bool val);
 
-	    void linteger(lua::state& l);
+	    bool add_integer(uint64_t val);
 
-	    void ldouble(lua::state& l);
-
-	    lua::multiret get_buffer(lua::state& l);
+	    bool add_double(double val);
 	    
 	    void free();
 
 	    uv::buffer_view get_data() const;
 	    
 	public:
-	    explicit json_gen();
-	    explicit json_gen(json_gen&& o);
-	    ~json_gen();
-	    void config(lua::state& l) ;
-	    static lua::multiret lnew(lua::state& l);
-	    static void lbind(lua::state& l);
+	    explicit json_build();
+	    explicit json_build(json_build&& o);
+	    ~json_build();
 	};
 }
