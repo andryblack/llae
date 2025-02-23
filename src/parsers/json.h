@@ -1,5 +1,6 @@
 #pragma once
 #include "lua/state.h"
+#include "uv/buffer.h"
 
 typedef struct yajl_gen_t * yajl_gen;
 
@@ -9,7 +10,7 @@ namespace llae {
 	private:
 	    yajl_gen m_g = nullptr;
 	    
-
+	public:
 	    void map_open(lua::state& l);
 
 	    void map_close(lua::state& l);
@@ -31,6 +32,8 @@ namespace llae {
 	    lua::multiret get_buffer(lua::state& l);
 	    
 	    void free();
+
+	    uv::buffer_view get_data() const;
 	    
 	public:
 	    explicit json_gen();

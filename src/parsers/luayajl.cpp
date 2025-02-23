@@ -472,7 +472,16 @@ namespace llae {
         }
         return {0};
     }
-    
+    uv::buffer_view json_gen::get_data() const {
+        if (!m_g) return uv::buffer_view(nullptr,0);
+        const unsigned char * buf = 0;
+        size_t len = 0;
+        yajl_gen_status status = yajl_gen_get_buf(m_g,&buf,&len);
+        if (status == yajl_gen_generation_complete || status == yajl_gen_status_ok) {
+            return uv::buffer_view(buf,len);
+        }
+        return uv::buffer_view(nullptr,0);
+    }
     void json_gen::free() {
         if (m_g) yajl_gen_free(m_g);
         m_g = nullptr;
