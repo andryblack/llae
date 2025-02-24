@@ -96,7 +96,7 @@ function Project.env:exe_command(data)
 	if not data.name then
 		error('exe_command need name')
 	end
-	data.exe_command = true
+	data.project_exe = true
 	if not self.commands then
 		self.commands = { data }
 	else
