@@ -117,8 +117,8 @@ local function add_cmodules(dst,src)
 	if src then
 		for _,cmod in ipairs(src) do
 			if type(cmod) == 'string' then
-				local type,name = string.match(cmod,'C:(.*)')
-				if type then
+				local name = string.match(cmod,'C:(.*)')
+				if name then
 					table.insert(dst,{name=name,func='luaopen_' .. string.gsub(name,'[%.%-]','_'),decl='extern "C" '})
 				else
 					table.insert(dst,{name=cmod,func='luaopen_' .. string.gsub(cmod,'[%.%-]','_'),decl=""})
