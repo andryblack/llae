@@ -361,7 +361,7 @@ end
 function Project:write_premake(  )
 	local template_source_filename = tool.get_llae_path('data','premake5-template.lua')
 	local filename = path.join(self:get_root(),'build','premake5.lua')
-	log.info('generate premake5.lua')
+	log.info('generate premake5.lua',path.getrelative(template_source_filename,self:get_root()))
 	fs.mkdir_r(path.dirname(filename))
 	fs.unlink(filename)
 	local f = assert(fs.open(filename,fs.O_WRONLY|fs.O_CREAT))
@@ -383,14 +383,16 @@ function Project:write_generated( )
 	
 	for _,conf in ipairs(self._env.generate_src or {}) do
 		local template_f
+		local template_source_filename
 		if conf.template then
-			local template_source_filename = path.join(self:get_root(),conf.template)
+			template_source_filename = path.join(self:get_root(),conf.template)
 			template_f = template.load(template_source_filename)
+			template_source_filename = path.getrelative(template_source_filename,self:get_root())
 		else
 			template_f = template.compile(conf.template_content)
 		end
 		local filename = path.join(self:get_root(),conf.filename)
-		log.info('generate',conf.filename)
+		log.info('generate',conf.filename,template_source_filename)
 		fs.mkdir_r(path.dirname(filename))
 		fs.unlink(filename)
 		local f = assert(fs.open(filename,fs.O_WRONLY|fs.O_CREAT))
@@ -414,14 +416,16 @@ function Project:write_generated( )
 	for _,m in ipairs(self._modules_list) do
 		for _,conf in ipairs(m:get_generate_src()) do
 			local template_f
+			local template_source_filename
 			if conf.template then
-				local template_source_filename = Project.get_path(m:get_location(),conf.template)
+				template_source_filename = Project.get_path(m:get_location(),conf.template)
 				template_f = template.load(template_source_filename)
+				template_source_filename = path.getrelative(template_source_filename,self:get_root())
 			else
 				template_f = template.compile(conf.template_content)
 			end
 			local filename = path.join(self:get_root(),conf.filename)
-			log.info('generate',conf.filename)
+			log.info('generate',conf.filename,template_source_filename)
 			fs.mkdir_r(path.dirname(filename))
 			fs.unlink(filename)
 			local f = assert(fs.open(filename,fs.O_WRONLY|fs.O_CREAT))
