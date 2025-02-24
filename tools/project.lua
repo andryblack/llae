@@ -89,6 +89,21 @@ function Project.env:command(data)
 	end
 end
 
+function Project.env:exe_command(data)
+	if type(data) ~= 'table' then
+		error('exe_command must be table')
+	end
+	if not data.name then
+		error('exe_command need name')
+	end
+	data.exe_command = true
+	if not self.commands then
+		self.commands = { data }
+	else
+		table.insert(self.commands,data)
+	end
+end
+
 
 function Project.env:print(...)
 	log.info('[project]',...)
@@ -154,6 +169,17 @@ end
 
 function Project:get_commands( )
 	return self._env.commands
+end
+
+function Project:get_exe_ext()
+	if self:get_host_platform() == 'windows' then
+		return '.exe'
+	end
+	return ''
+end
+
+function Project:get_exe_path()
+	return path.join('bin',self._env.project_name .. self:get_exe_ext())
 end
 
 function Project:get_target_platform()

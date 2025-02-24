@@ -18,10 +18,17 @@ function run:exec( args )
 	async.run(function()
 		local Project = require 'project'
 		local prj,err = Project.load( )
+		local add_args 
+		local project_exe
 		if prj then
 			for _,v in ipairs(prj:get_commands() or {}) do
 				if v.name == script then
 					script = v.script
+					add_args = v.args
+					if v.project_exe then
+						project_exe = prj:get_exe_path()
+					end
+					break
 				end
 			end
 		end
@@ -29,17 +36,27 @@ function run:exec( args )
 		local run_args = {}
 		for k,v in pairs(args) do
 			if type(k) == 'string' then
-				run_args[k]=v
+				table.insert(run_args,k .. '=' .. v)
 			end
 		end
-		run_args[0] = this
 		local i = 3
 		while args[i] do
-			run_args[i-2] = args[i]
+			table.insert(run_args,args[i])
 			i = i + 1
 		end
-		_G.args = run_args
-		dofile(script)
+		if add_args then
+			for _,v in ipairs(add_args) do
+				table.insert(run_args,v)
+			end
+		end
+		if not project_exe then
+			local utils = require 'llae.utils'
+			run_args[0] = this
+			_G.args = utils.parse_args(run_args)
+			dofile(script)
+		else
+			os.execute(project_exe .. ' ' .. table.concat(run_args,' '))
+		end
 	end,true)
 
 	
