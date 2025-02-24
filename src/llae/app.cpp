@@ -189,7 +189,37 @@ namespace llae {
             get(l).stop(1);
         }
     }
+    
+    static void printfuncname(lua_State* L,lua_Debug* ar) {
+        if (*ar->namewhat != '\0')  /* is there a name from code? */
+            std::cout << ar->namewhat << " '" << ar->name << "'";
+        else if (*ar->what == 'm')  /* main? */
+            std::cout << "main chunk";
+        else if (*ar->what != 'C')  /* for Lua functions, use <file:line> */
+            std::cout << "function <" << ar->short_src << ":" << ar->linedefined << ">";
+        else  /* nothing left... */
+            std::cout << "?";
+    }
 
+    void app::print_backtrace(lua_State* L) {
+        luaL_checkstack(L, 10, NULL);
+        std::cout << "\nstack traceback:";
+        lua_State* L1 = L;
+        lua_Debug ar;
+        int level = 1;
+        //int n1 = 10;
+        while (lua_getstack(L1, level++, &ar)) {
+            lua_getinfo(L1, "Slnt", &ar);
+            std::cout << "\n\t" << ar.short_src << ":";
+            if (ar.currentline > 0)
+                std::cout << ar.currentline << ":";
+            std::cout << " in ";
+            printfuncname(L, &ar);
+            if (ar.istailcall)
+                std::cout << "\n\t(...tail call...)";
+        }
+        std::cout << std::endl;
+    }
    
 }
 

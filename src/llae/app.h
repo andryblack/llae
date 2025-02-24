@@ -63,6 +63,8 @@ namespace llae {
 			}
 			l.pop(1);// thread
 		}
+        
+        static void print_backtrace(lua_State* L);
 	};
 
 }
