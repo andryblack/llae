@@ -36,7 +36,11 @@ function run:exec( args )
 		local run_args = {}
 		for k,v in pairs(args) do
 			if type(k) == 'string' then
-				table.insert(run_args,k .. '=' .. v)
+				if (type(v) == 'boolean' and v) then
+					table.insert(run_args,k)
+				else
+					table.insert(run_args,k .. '=' .. v)
+				end
 			end
 		end
 		local i = 3
@@ -55,7 +59,10 @@ function run:exec( args )
 			_G.args = utils.parse_args(run_args)
 			dofile(script)
 		else
-			os.execute(project_exe .. ' ' .. table.concat(run_args,' '))
+			local log = require 'llae.log'
+			local cmd = project_exe .. ' ' .. table.concat(run_args,' ')
+			log.debug('run:',cmd)
+			os.execute(cmd)
 		end
 	end,true)
 
