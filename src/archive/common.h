@@ -399,22 +399,22 @@ namespace archive {
 		lua::multiret write(lua::state& l) {
 			if (is_error()) {
 	            l.pushnil();
-	            l.pushstring("zlibsteam::write is error");
+	            l.pushstring("compressionstream::write is error");
 	            return {2};
 	        }
 	        if (m_finished) {
 	            l.pushnil();
-	            l.pushstring("zlibsteam::write is finished");
+	            l.pushstring("compressionstream::write is finished");
 	            return {2};
 	        }
 	        if (!l.isyieldable()) {
 	            l.pushnil();
-	            l.pushstring("zlibsteam::write is async");
+	            l.pushstring("compressionstream::write is async");
 	            return {2};
 	        }
 	        if (m_write_cont.valid()) {
 	            l.pushnil();
-	            l.pushstring("zlibsteam::write async not completed");
+	            l.pushstring("compressionstream::write async not completed");
 	            return {2};
 	        }
 	        {
@@ -440,24 +440,24 @@ namespace archive {
 		lua::multiret finish(lua::state& l) {
 			if (is_error()) {
 	            l.pushnil();
-	            l.pushstring("zlibcompress::finish is error");
+	            l.pushstring("compressionstream::finish is error");
 	            return {2};
 	        }
 	        
 	        if (!l.isyieldable()) {
 	            l.pushnil();
-	            l.pushstring("zlibcompress::finish is async");
+	            l.pushstring("compressionstream::finish is async");
 	            return {2};
 	        }
 	        if (m_write_cont.valid()) {
 	            l.pushnil();
-	            l.pushstring("zlibcompress::finish async not completed");
+	            l.pushstring("compressionstream::finish async not completed");
 	            return {2};
 	        }
 	        if (m_finished) {
 	        	if (l.gettop()>1) {
 		            l.pushnil();
-		            l.pushstring("zlibcompress::finish is finished");
+		            l.pushstring("compressionstream::finish is finished");
 		            return {2};
 		        } else {
 		        	l.pushboolean(true);
@@ -486,22 +486,22 @@ namespace archive {
 		lua::multiret send(lua::state& l) {
 			if (is_error()) {
 	            l.pushnil();
-	            l.pushstring("zlibcompress::send is error");
+	            l.pushstring("compressionstream::send is error");
 	            return {2};
 	        }
 	        if (m_finished) {
 	            l.pushnil();
-	            l.pushstring("zlibcompress::send is finished");
+	            l.pushstring("compressionstream::send is finished");
 	            return {2};
 	        }
 	        if (!l.isyieldable()) {
 	            l.pushnil();
-	            l.pushstring("zlibcompress::send is async");
+	            l.pushstring("compressionstream::send is async");
 	            return {2};
 	        }
 	        if (m_write_cont.valid()) {
 	            l.pushnil();
-	            l.pushstring("zlibcompress::send async not completed");
+	            l.pushstring("compressionstream::send async not completed");
 	            return {2};
 	        }
 			{
@@ -584,12 +584,12 @@ namespace archive {
         lua::multiret read(lua::state& l) {
             if (this->is_error()) {
                 l.pushnil();
-                l.pushstring("zlibsteam::read is error");
+                l.pushstring("compressionstream::read is error");
                 return {2};
             }
             if (m_read_cont.valid()) {
                 l.pushnil();
-                l.pushstring("zlibsteam::read async not completed");
+                l.pushstring("compressionstream::read async not completed");
                 return {2};
             }
             uv::buffer_ptr buf;
@@ -614,7 +614,7 @@ namespace archive {
             }
             if (!l.isyieldable()) {
                 l.pushnil();
-                l.pushstring("zlibsteam::read is async");
+                l.pushstring("compressionstream::read is async");
                 return {2};
             }
             
@@ -630,12 +630,12 @@ namespace archive {
         lua::multiret read_buffer(lua::state& l) {
             if (this->is_error()) {
                 l.pushnil();
-                l.pushstring("compress_steam::read is error");
+                l.pushstring("compressionstream::read is error");
                 return {2};
             }
             if (m_read_cont.valid()) {
                 l.pushnil();
-                l.pushstring("compress_steam::read async not completed");
+                l.pushstring("compressionstream::read async not completed");
                 return {2};
             }
             uv::buffer_ptr buf;
@@ -656,7 +656,7 @@ namespace archive {
             }
             if (!l.isyieldable()) {
                 l.pushnil();
-                l.pushstring("compress_steam::read is async");
+                l.pushstring("compressionstream::read is async");
                 return {2};
             }
             

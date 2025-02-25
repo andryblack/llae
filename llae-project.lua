@@ -2,6 +2,7 @@ project 'llae'
 
 module 'llae'
 module 'bzip2'
+module 'xz'
 
 if cmdargs.debug then
 	config('lua','apicheck',true)

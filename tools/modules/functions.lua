@@ -206,20 +206,7 @@ function m:unpack_txz( file , todir , strip)
 	local src = path.join(self._project:get_dl_dir(),file)
 	local dst = todir and _local(self,todir) or self.location
 	log.info('unpack',file)
-	local logfilename = path.join(self.location,'unpack.txt')
-	fs.unlink(logfilename)
-	local logfile = assert(fs.open_write(logfilename))
-	fs.mkdir_r(dst)
-	exec_cmd('unxz',{'-k','-f',src,},logfile,dst)
-	logfile:close()
-	local ext = path.extension(src)
-	src = src:sub(1,-(#ext+2))
-	if path.extension(src) ~= 'tar' then
-		src = src .. '.tar'
-	end
-	log.debug('unpack tar',src,'->',dst)
-	untar.unpack_tar(src,dst,strip)
-	fs.unlink(src)
+	untar.unpack_txz(src,dst,strip)
 end
 
 
