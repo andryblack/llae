@@ -28,7 +28,7 @@ namespace lua {
 			return static_cast<value_type>(lua_type(m_L,idx)); 
 		}
 		const char* get_typename(int idx) const {
-			return lua_typename(m_L,idx);
+			return lua_typename(m_L,lua_type(m_L,idx));
 		}
 		int gettop() { return lua_gettop(m_L); }
 		void* newuserdata(size_t size) { return lua_newuserdata(m_L,size); }
