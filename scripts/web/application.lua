@@ -87,6 +87,10 @@ function web:listen( options )
 	assert(self._server:listen(port,host,options and options.backlog))
 end
 
+function web:stop()
+	self._server:stop()
+end
+
 function web.static( root, options )
 	local static = require 'web.static'
 	return static.new(root,options)

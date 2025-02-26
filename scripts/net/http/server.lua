@@ -30,7 +30,7 @@ function server:listen( port, addr , backlog )
 end
 
 function server:stop(  )
-	self._server:close()
+	self._server:stop()
 end
 
 --local connection_num = 0
