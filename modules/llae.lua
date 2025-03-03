@@ -113,6 +113,7 @@ cmodules = {
 	'posix',
 	'posix.termios',
 	'net',
+	'utf16',
 }
 
 includedir = '${dir}/src' 
