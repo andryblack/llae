@@ -88,6 +88,7 @@ end
 
 local function download_file_impl(url,dst,h)
 	local uri = (require 'net.url').parse(url)
+	fs.unlink(dst)
 	if uri.scheme == 'ftp' then
 		local ftp = (require 'net.ftp').new()
 		assert(ftp:connect(uri.host,uri.port))
