@@ -86,27 +86,7 @@ function m:download_git(url,config)
 	logfile:close()
 end
 
-function m:download(url,file,hash)
-	log.info('download',self.name,url)
-	local dst = path.join(self._project:get_dl_dir(),file)
-	if hash and fs.isfile(dst) then
-		local h = crypto.md5()
-		for b in fs.read_file(dst) do
-			assert(h:update(b))
-		end
-		local fhash = tostring(assert(h:finish()):hex_encode())
-		if fhash == hash then
-			log.info('skip, already downloaded')
-			return
-		else
-			log.info('hash different, redownload',fhash,hash)
-		end
-	else
-		log.debug('dnt found downloaded',dst,hash)
-	end
-	fs.unlink(dst)
-
-	local h = hash and crypto.md5()
+local function download_file_impl(url,dst,h)
 	local uri = (require 'net.url').parse(url)
 	if uri.scheme == 'ftp' then
 		local ftp = (require 'net.ftp').new()
@@ -165,6 +145,31 @@ function m:download(url,file,hash)
 		end
 		f:close()
 	end
+end
+
+
+function m:download(url,file,hash)
+	log.info('download',self.name,url)
+	local dst = path.join(self._project:get_dl_dir(),file)
+	if hash and fs.isfile(dst) then
+		local h = crypto.md5()
+		for b in fs.read_file(dst) do
+			assert(h:update(b))
+		end
+		local fhash = tostring(assert(h:finish()):hex_encode())
+		if fhash == hash then
+			log.info('skip, already downloaded')
+			return
+		else
+			log.info('hash different, redownload',fhash,hash)
+		end
+	else
+		log.debug('dnt found downloaded',dst,hash)
+	end
+	fs.unlink(dst)
+
+	local h = hash and crypto.md5()
+	download_file_impl(url,dst,h)
 	if h then
 		fhash = tostring(assert(h:finish()):hex_encode())
 		if fhash ~= hash then
@@ -179,6 +184,13 @@ local function _local(self,fn)
 		return fn
 	end
 	return path.join(self.location,fn)
+end
+
+function m:download_file(url,file)
+	local dst = _local(self,file)
+	fs.mkdir_r(path.dirname(dst))
+	log.debug('download file',url,file)
+	download_file_impl(url,dst)
 end
 
 function m:unpack_tgz( file , todir , strip)
