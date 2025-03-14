@@ -44,6 +44,10 @@ namespace uv {
         }
 		 
         auto& l = llae::app::get(get_handle()->loop).lua();
+        if (!l.native()) {
+            m_cont.release();
+            return;
+        }
        
 		if (m_cont.valid()) {
             m_cont.push(l);
