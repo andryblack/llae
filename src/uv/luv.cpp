@@ -211,7 +211,7 @@ static int lua_uv_hrtime(lua_State* L) {
 
 static int lua_uv_sleep(lua_State* L) {
 	lua::state l(L);
-	uv_sleep(l.checkinteger(1));
+	uv_sleep(static_cast<unsigned int>(l.checkinteger(1)));
 	return 0;
 }
 

@@ -28,7 +28,7 @@ namespace archive {
             self.m_try_raw = false;
             inflateReset(z);
             r = inflateInit2(z, -MAX_WBITS);
-            z->avail_in = avail_in;
+            z->avail_in = static_cast<uInt>(avail_in);
             z->next_in = origin;
             if ( r!=Z_OK) return r;
             r = ::inflate(z, flush);

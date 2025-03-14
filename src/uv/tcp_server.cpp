@@ -21,7 +21,7 @@ namespace uv {
 
 	lua::multiret tcp_server::bind(lua::state& l) {
 		const char* host = l.checkstring(2);
-		int port = l.checkinteger(3);
+		int port = int(l.checkinteger(3));
 		struct sockaddr_storage addr;
 		if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
 	      	uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {

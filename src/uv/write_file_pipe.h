@@ -26,10 +26,10 @@ namespace uv {
 		static void fs_cb(uv_fs_t* req);
 		static void write_cb(uv_write_t* req, int status);
 		void on_end(int status);
-		int start_write(int size);
+        int start_write(size_t size);
 		int start_read();
 
-		void on_read(int status);
+        void on_read(ssize_t status);
 		void on_write(int status);
 		
 	protected:

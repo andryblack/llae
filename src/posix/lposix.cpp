@@ -20,7 +20,7 @@ namespace posix {
 static int lua_posix_open(lua_State* L) {
 	lua::state l(L);
 	const char* pathname = l.checkstring(1);
-	int flags = l.checkinteger(2);
+	int flags = static_cast<int>(l.checkinteger(2));
 	int fd;
 	if (l.isnumber(3)) {
 		mode_t mode = l.checkinteger(3);
@@ -41,7 +41,7 @@ static int lua_posix_open(lua_State* L) {
 static int lua_posix_dup2(lua_State* L) {
 	lua::state l(L);
 	auto fd = lua::stack<posix::fd_ptr>::get(l,1);
-	auto from = l.checkinteger(2);
+	auto from = static_cast<int>(l.checkinteger(2));
 	if (!fd) {
 		l.argerror(1,"need fd");
 	}

@@ -51,7 +51,7 @@ namespace uv {
 	lua::multiret tty::lnew(lua::state& l) {
 		posix::fd_ptr fdp = lua::stack<posix::fd_ptr>::get(l,1);
 		if (!fdp) {
-			uv_file fd = l.checkinteger(1);
+			uv_file fd = uv_file(l.checkinteger(1));
 			common::intrusive_ptr<tty> res{new tty(llae::app::get(l).loop(),fd)};
 			lua::push(l,std::move(res));
 		} else {

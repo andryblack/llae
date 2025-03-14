@@ -73,7 +73,7 @@ namespace uv {
 			auto res = uv_fs_get_result(get());
 			if (res < 0) {
 				l.pushnil();
-				uv::push_error(l,res);
+				uv::push_error(l,int(res));
 				return 2;
 			} 
 			l.pushboolean(true);
@@ -97,7 +97,7 @@ namespace uv {
 			auto res = uv_fs_get_result(get());
 			if (res < 0) {
 				l.pushnil();
-				uv::push_error(l,res);
+				uv::push_error(l,int(res));
 				return 2;
 			} 
 			auto& statbuf(*uv_fs_get_statbuf(get()));
@@ -126,7 +126,7 @@ namespace uv {
 			auto res = uv_fs_get_result(req);
 			if (res < 0) {
 				l.pushnil();
-				uv::push_error(l,res);
+				uv::push_error(l,int(res));
 				return 2;
 			} 
 			l.createtable();
@@ -166,10 +166,10 @@ namespace uv {
 			auto res = uv_fs_get_result(get());
 			if (res < 0) {
 				l.pushnil();
-				uv::push_error(l,res);
+				uv::push_error(l,int(res));
 				return 2;
 			} 
-			common::intrusive_ptr<file> f(new file(res,get()->loop));
+			common::intrusive_ptr<file> f(new file(uv_file(res),get()->loop));
 			lua::push_meta_object(l,std::move(f));
 			return 1;
 		}
@@ -185,7 +185,7 @@ namespace uv {
 		}
 		{
 			auto path = l.checkstring(1);
-			int mode = l.optinteger(2,0755);
+			int mode = int(l.optinteger(2,0755));
 			llae::app& app(llae::app::get(l));
 			lua::ref cont;
 			l.pushthread();
@@ -280,7 +280,7 @@ namespace uv {
 			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
 			req->add_ref();
 			int r = uv_fs_copyfile(app.loop().native(),
-				req->get(),path,new_path,flags,&fs_req::fs_cb);
+				req->get(),path,new_path,int(flags),&fs_req::fs_cb);
 			if (r < 0) {
 				req->remove_ref();
 				l.pushnil();
@@ -358,7 +358,7 @@ namespace uv {
 		}
 		{
 			auto path = l.checkstring(1);
-			int flags = l.optinteger(2,0);
+			int flags = int(l.optinteger(2,0));
 			llae::app& app(llae::app::get(l));
 			lua::ref cont;
 			l.pushthread();
@@ -387,8 +387,8 @@ namespace uv {
 		}
 		{
 			auto path = l.checkstring(1);
-			int flags = l.optinteger(2,UV_FS_O_RDONLY);
-			int mode = l.optinteger(3,0644);
+			int flags = int(l.optinteger(2,UV_FS_O_RDONLY));
+			int mode = int(l.optinteger(3,0644));
 			llae::app& app(llae::app::get(l));
 			lua::ref cont;
 			l.pushthread();
@@ -478,7 +478,7 @@ namespace uv {
 			auto res = uv_fs_get_result(get());
 			if (res < 0) {
 				l.pushnil();
-				uv::push_error(l,res);
+				uv::push_error(l,int(res));
 				return 2;
 			} 
 			
@@ -513,7 +513,7 @@ namespace uv {
 			req->add_ref();
 			int r = uv_fs_write(app.loop().native(),
 				req->get(),m_file,req->buffers().data(),
-				req->buffers().size(),m_offset,&fs_req::fs_cb);
+				static_cast<unsigned int>(req->buffers().size()),m_offset,&fs_req::fs_cb);
 			if (r < 0) {
                 req->reset(l);
 				req->remove_ref();
@@ -543,7 +543,7 @@ namespace uv {
             if (res < 0) {
                 m_file.reset();
                 l.pushnil();
-                uv::push_error(l,res);
+                uv::push_error(l,int(res));
                 return 2;
             }
             m_file.reset();
@@ -552,7 +552,7 @@ namespace uv {
         }
         void alloc(lua::state& l) {
             m_data.resize(l.optinteger(2,1024*16));
-            m_buffer = uv_buf_init(m_data.data(), m_data.size());
+            m_buffer = uv_buf_init(m_data.data(), static_cast<unsigned int>(m_data.size()));
         }
     };
 

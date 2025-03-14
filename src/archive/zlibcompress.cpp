@@ -58,7 +58,7 @@ namespace archive {
 #endif
 
 	bool zlibcompress::init_deflate(lua::state& l,int argbase) {
-		int level = l.optinteger(argbase+0,Z_DEFAULT_COMPRESSION);
+		int level = static_cast<int>(l.optinteger(argbase+0,Z_DEFAULT_COMPRESSION));
 		int r = init(llae::app::get(l).loop(),level,Z_DEFLATED, MAX_WBITS, DEF_MEM_LEVEL,
                          Z_DEFAULT_STRATEGY);
 		if (r != Z_OK) {
@@ -73,7 +73,7 @@ namespace archive {
 		auto t = l.getfield(arg,name);
 		T res = default_value;
 		if (t == lua::value_type::number) {
-			res = l.tointeger(-1);
+			res = static_cast<T>(l.tointeger(-1));
 		}
 		l.pop(1);
 		return res;

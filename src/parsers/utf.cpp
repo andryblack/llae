@@ -291,8 +291,8 @@ namespace utf {
 	static lua::multiret utf16_char(lua::state& l) {
 		auto len = l.gettop();
 		std::unique_ptr<uint16_t[]> src(new uint16_t[len]);
-		for (lua_Integer i=1; i<=len; ++i) {
-			src.get()[i-1] =  l.tointeger(i);
+		for (int i=1; i<=len; ++i) {
+			src.get()[i-1] = static_cast<uint16_t>(l.tointeger(i));
 		}
 		auto res_size = utf16_decoder::process(src.get(),len,0,utf8_counter{});
 		std::unique_ptr<char[]> res(new char[res_size]);
@@ -307,7 +307,7 @@ namespace utf {
 		auto src = reinterpret_cast<const uint16_t*>(data.get_base());
 		auto len = data.get_len()/2;
 		auto res_size = utf16_decoder::process(src,len,0,utf32_counter{});
-		l.createtable(res_size,0);
+		l.createtable(static_cast<int>(res_size),0);
 		utf16_decoder::process(src,len,{l,1},utf32_pusher{});
 		return {1};
 	}

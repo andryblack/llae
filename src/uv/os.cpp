@@ -164,10 +164,10 @@ namespace uv {
 		uv_pid_t p = 0;
 		if (l.gettop() > 1) {
 			p = static_cast<uv_pid_t>(l.checkinteger(1));
-			prio = l.checkinteger(2);
+			prio = int(l.checkinteger(2));
 		} else {
 			p = uv_os_getpid();
-			prio = l.checkinteger(1);
+			prio = int(l.checkinteger(1));
 		}
 
 		auto r = uv_os_setpriority(p,prio);

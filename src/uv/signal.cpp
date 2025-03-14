@@ -80,7 +80,7 @@ namespace uv {
  		auto signum = l.tointeger(1);
  		l.checktype(2,lua::value_type::function);
  		common::intrusive_ptr<lua_signal> sig{new lua_signal(llae::app::get(l).loop())};
- 		return sig->start_oneshot(l,signum,2);
+ 		return sig->start_oneshot(l,int(signum),2);
 	}
 
 	void lua_signal::on_signal(int signum) {

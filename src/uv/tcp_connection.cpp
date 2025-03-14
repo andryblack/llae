@@ -94,7 +94,7 @@ namespace uv {
 		
 		{
 			const char* host = l.checkstring(2);
-			int port = l.checkinteger(3);
+			int port = int(l.checkinteger(3));
 			struct sockaddr_storage addr;
 			if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
 		      	uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
@@ -147,7 +147,7 @@ namespace uv {
 		int enable = l.toboolean(2);
 		int delay = 0;
 		if (enable) {
-			delay = l.checkinteger(3);
+			delay = int(l.checkinteger(3));
 		}
 		auto r = uv_tcp_keepalive(&m_tcp,enable,delay);
 		return return_status_error(l,r);

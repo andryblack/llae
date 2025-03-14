@@ -78,7 +78,7 @@ namespace uv {
         options.flags = 0;
         l.getfield(1,"flags");
         if (l.isnumber(-1)) {
-            options.flags = l.tointeger(-1);
+            options.flags = static_cast<unsigned int>(l.tointeger(-1));
         }
         l.pop(1);
         
@@ -143,7 +143,7 @@ namespace uv {
                     
                     if (m_streams.back().flags & UV_INHERIT_FD) {
                         l.geti(-2, 2);
-                        m_streams.back().data.fd = l.tointeger(-1);
+                        m_streams.back().data.fd = static_cast<int>(l.tointeger(-1));
                         l.pop(1);
                     } else if (m_streams.back().flags & (UV_INHERIT_STREAM | UV_CREATE_PIPE)) {
                         l.geti(-2, 2);
@@ -186,7 +186,7 @@ namespace uv {
             options.env = nullptr;
         }
         options.cwd = m_cwd.c_str();
-        options.stdio_count = m_streams.size();
+        options.stdio_count = static_cast<int>(m_streams.size());
         options.stdio = m_streams.data();
         options.uid = 0;
         options.gid = 0;

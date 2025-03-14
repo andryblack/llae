@@ -83,13 +83,13 @@ namespace uv {
     lua::multiret buffer_base::lfind(lua::state& l) const {
         size_t len = 0;
         const char* str = l.checklstring(2,len);
-        int offset = l.optinteger(3,1) - 1;
+        int offset = static_cast<int>(l.optinteger(3,1) - 1);
         if (offset<1) {
             // @todo
             offset = 1;
         } 
         if (offset > get_len()) {
-            offset = get_len();
+            offset = static_cast<int>(get_len());
         }
         if (len == 0) { 
             l.pushinteger(offset);
@@ -114,8 +114,8 @@ namespace uv {
     }
 
     lua::multiret buffer_base::lbyte(lua::state& l) const {
-        int start = l.optinteger(2,1);
-        int end = l.optinteger(3,start);
+        auto start = l.optinteger(2,1);
+        auto end = l.optinteger(3,start);
         if (start<0) {
             return {0};
         }
@@ -129,10 +129,10 @@ namespace uv {
             return {0}; 
         }
         auto data = static_cast<const unsigned char*>(get_base());
-        for (int i=start;i<=end;++i) {
+        for (lua_Integer i=start;i<=end;++i) {
             l.pushinteger(data[i-1]);
         }
-        return {end-start+1};
+        return {int(end-start+1)};
     }
 
     buffer_ptr buffer_base::reverse() const {
@@ -461,7 +461,7 @@ namespace uv {
             if (val && size !=0) {
                 m_refs.emplace_back();
                 m_refs.back().set(l);
-                m_bufs.push_back(uv_buf_init(const_cast<char*>(val),size));
+                m_bufs.push_back(uv_buf_init(const_cast<char*>(val),static_cast<unsigned int>(size)));
             } else {
                 return false;
             }
@@ -475,7 +475,7 @@ namespace uv {
             m_bufs.reserve(m_bufs.size()+tl);
             m_refs.reserve(m_refs.size()+tl);
             for (size_t j=0;j<tl;++j) {
-                l.rawgeti(-1,j+1);
+                l.rawgeti(-1,int(j+1));
                 if (!put_one(l)) {
                     l.pop(2);
                     return false;

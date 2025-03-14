@@ -76,7 +76,7 @@ namespace uv {
 
 
     lua::multiret pipe::lnew(lua::state& l) {
-        int ipc = l.optinteger(1,0);
+        int ipc = int(l.optinteger(1,0));
         common::intrusive_ptr<pipe> res{new pipe(llae::app::get(l).loop(),ipc)};
         lua::push(l,std::move(res));
         return {1};

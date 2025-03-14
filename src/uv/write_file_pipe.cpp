@@ -37,7 +37,7 @@ namespace uv {
 		}
 		remove_ref();
 	}
-	int write_file_pipe::start_write(int size) {
+    int write_file_pipe::start_write(size_t size) {
 		m_buf.len = size;
 		m_write_active = true;
 		int r = uv_write(&m_write_req,m_stream->get_stream(),&m_buf,1,&write_file_pipe::write_cb);
@@ -66,10 +66,10 @@ namespace uv {
 		}
 		return r;
 	}
-	void write_file_pipe::on_read(int status) {
+	void write_file_pipe::on_read(ssize_t status) {
 		m_read_active = false;
 		if (status < 0) {
-			return on_end(status);
+			return on_end(int(status));
 		}
 		if (status > 0) {
 			m_offset += status;

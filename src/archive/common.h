@@ -250,10 +250,10 @@ namespace archive {
 				return r;
 			}
 
-			void on_read(uv::loop& l,int status) {
+			void on_read(uv::loop& l,ssize_t status) {
 				m_read_active = false;
 				if (status < 0) {
-					return on_end(l,status);
+					return on_end(l,static_cast<int>(status));
 				}
 				if (status > 0) {
 					m_offset += status;

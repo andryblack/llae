@@ -26,7 +26,7 @@ namespace llae {
     }
 
 	static int lua_stop(lua_State* L) {
-        app::get(L).stop(luaL_optinteger(L,1,0));
+        app::get(L).stop(static_cast<int>(luaL_optinteger(L,1,0)));
         return 0;
     }
 

@@ -32,7 +32,7 @@ static int lua_posix_tcsetattr(lua_State* L) {
 	if (!fd) {
 		l.argerror(1,"posix::fd");
 	}
-	int optional_actions = l.checkinteger(2);
+	int optional_actions = static_cast<int>(l.checkinteger(2));
 	struct termios* tios = termios_stack::get(l,3);
 	int r = tcsetattr(fd->get(),optional_actions,tios);
 	if (r < 0) {

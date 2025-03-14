@@ -60,12 +60,12 @@ namespace lua {
 	};
 	template <>
 	struct stack<int> {
-		static int get(state& s,int idx) { return s.tointeger(idx); }
+		static int get(state& s,int idx) { return static_cast<int>(s.tointeger(idx)); }
 		static void push(state& s,int v) { s.pushinteger(v); }
 	};
 	template <>
 	struct stack<unsigned int> {
-		static unsigned int get(state& s,int idx) { return s.tointeger(idx); }
+		static unsigned int get(state& s,int idx) { return static_cast<unsigned int>(s.tointeger(idx)); }
 		static void push(state& s,unsigned int v) { s.pushinteger(v); }
 	};
 	template <>

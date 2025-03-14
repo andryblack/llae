@@ -35,7 +35,7 @@ namespace crypto {
 	lua::multiret ecp_point::read_string(lua::state& l) {
 		const char* x = l.checkstring(2);
 		const char* y = l.checkstring(3);
-		int radix = l.optinteger(4,10);
+		int radix = static_cast<int>(l.optinteger(4,10));
 		auto r = mbedtls_ecp_point_read_string(&m_point,radix,x,y);
 		if (r == 0) {
 			l.pushboolean(1);
@@ -108,7 +108,7 @@ namespace crypto {
         if (!point) {
             l.argerror(2, "need point");
         }
-        int fmt = l.optinteger(3, MBEDTLS_ECP_PF_COMPRESSED);
+        int fmt = static_cast<int>(l.optinteger(3, MBEDTLS_ECP_PF_COMPRESSED));
         unsigned char buf[2];
         size_t need_len = 0;
         auto res = mbedtls_ecp_point_write_binary(&m_group,point->get(),fmt,&need_len,buf,0);

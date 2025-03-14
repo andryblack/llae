@@ -33,7 +33,8 @@ namespace crypto {
 	public:
 		explicit crc32_async(uint32_t start,uv::buffer_base_ptr&& data,lua::ref&& cont) : m_value(start),m_data(std::move(data)),m_cont(std::move(cont)) {}
 		virtual void on_work() {
-			m_value = crc32(m_value,static_cast<const Bytef *>(m_data->get_base()),m_data->get_len());
+			m_value = static_cast<uint32_t>(crc32(m_value,static_cast<const Bytef *>(m_data->get_base()),
+                            static_cast<uInt>(m_data->get_len())));
 		}
 		virtual void on_after_work(int status) {
             if (llae::app::closed(get_loop())) {
@@ -56,7 +57,7 @@ namespace crypto {
 			return {2};
 		}
 		{
-			uint32_t start = l.checkinteger(1);
+			uint32_t start = static_cast<uint32_t>(l.checkinteger(1));
 			auto data = uv::buffer_base::get(l,2);
 
 			l.pushthread();

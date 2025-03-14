@@ -120,7 +120,7 @@ namespace net { namespace socks5 {
 	lua::multiret tcp_connection::lnew(lua::state& l) {
 		
 		const char* host = l.checkstring(1);
-		int port = l.checkinteger(2);
+		int port = static_cast<int>(l.checkinteger(2));
 		struct sockaddr_storage addr;
 		if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
 	      	uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
@@ -183,7 +183,7 @@ namespace net { namespace socks5 {
                     l.pushstring("SOCKS5: auth failed");
                     if (nread < 0) {
                         l.pushstring(" ");
-                        uv::push_error(l, nread);
+                        uv::push_error(l, static_cast<int>(nread));
                         l.concat(3);
                     }
                 });
@@ -232,7 +232,7 @@ namespace net { namespace socks5 {
                     l.pushstring("SOCKS5: auth failed");
                     if (nread < 0) {
                         l.pushstring(" ");
-                        uv::push_error(l, nread);
+                        uv::push_error(l, static_cast<int>(nread));
                         l.concat(3);
                     }
                 });
@@ -280,7 +280,7 @@ namespace net { namespace socks5 {
                     l.pushstring("SOCKS5: auth failed");
                     if (nread < 0) {
                         l.pushstring(" ");
-                        uv::push_error(l, nread);
+                        uv::push_error(l, static_cast<int>(nread));
                         l.concat(3);
                     }
                 });
@@ -386,7 +386,7 @@ namespace net { namespace socks5 {
 		
 		{
 			const char* host = l.checkstring(2);
-			int port = l.checkinteger(3);
+			int port = static_cast<int>(l.checkinteger(3));
 			
 			if (uv_ip4_addr(host, port, (struct sockaddr_in*)&m_connect_addr) &&
 		      	uv_ip6_addr(host, port, (struct sockaddr_in6*)&m_connect_addr)) {

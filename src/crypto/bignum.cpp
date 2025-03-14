@@ -137,7 +137,7 @@ namespace crypto {
     }
 
     lua::multiret bignum::tostring(lua::state& l) {
-        auto radix = l.optinteger(2, 16);
+        auto radix = static_cast<int>(l.optinteger(2, 16));
         char dummy;
         size_t len = 0;
         int r = mbedtls_mpi_write_string(&m_mpi,radix,&dummy,0,&len);
@@ -224,7 +224,7 @@ namespace crypto {
             if (l.isnumber(1)) {
                 ptr->set(l.tointeger(1));
             } else if (l.isstring(1)) {
-                auto radix = l.optinteger(2, 16);
+                auto radix = static_cast<int>(l.optinteger(2, 16));
                 check_error(l, mbedtls_mpi_read_string(&ptr->m_mpi, radix, l.tostring(1)));
             } else {
                 auto optr = lua::stack<const bignum*>::get(l, 1);

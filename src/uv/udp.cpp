@@ -25,7 +25,7 @@ namespace uv {
     int udp_send_req::start_send(const uv_buf_t* buffers,size_t count, const struct sockaddr* addr) {
         add_ref();
         int r = uv_udp_send(&m_udp_send,m_udp->get_udp(),
-                         buffers,count,addr,&udp_send_req::send_cb);
+                         buffers,static_cast<unsigned int>(count),addr,&udp_send_req::send_cb);
         if (r < 0) {
             remove_ref();
         }
@@ -108,7 +108,7 @@ namespace uv {
                     }
                 } else if (nread < 0) {
                     toth.pushnil();
-                    uv::push_error(toth,nread);
+                    uv::push_error(toth,int(nread));
                     args = 2;
                 } 
                 lua::ref ref(std::move(m_recv_cont));
@@ -147,8 +147,8 @@ namespace uv {
 
     lua::multiret udp::bind(lua::state& l) {
         const char* host = l.checkstring(2);
-        int port = l.checkinteger(3);
-        int flags = l.optinteger(4,0);
+        int port = int(l.checkinteger(3));
+        int flags = int(l.optinteger(4,0));
         struct sockaddr_storage addr;
         if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
               uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
@@ -231,7 +231,7 @@ namespace uv {
         bool with_addr = false;
         if (l.gettop()>2) {
             const char* host = l.checkstring(3);
-            int port = l.checkinteger(4);
+            int port = int(l.checkinteger(4));
             if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
                   uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
                 l.error("udp::send invalid IP address or port [%s:%d]", host, port);
@@ -278,7 +278,7 @@ namespace uv {
     lua::multiret udp::connect(lua::state& l) {
         struct sockaddr_storage addr;
         const char* host = l.checkstring(2);
-        int port = l.checkinteger(3);
+        int port = int(l.checkinteger(3));
         if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
               uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
             l.error("invalid IP address or port [%s:%d]", host, port);
@@ -403,7 +403,7 @@ namespace uv {
         bool with_addr = false;
         if (l.gettop()>2) {
             const char* host = l.checkstring(3);
-            int port = l.checkinteger(4);
+            int port = int(l.checkinteger(4));
             if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
                   uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
                 l.error("udp::try_send invalid IP address or port [%s:%d]", host, port);

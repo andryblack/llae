@@ -123,7 +123,8 @@ namespace crypto {
 			return {0};
 		}
 		auto ret = mbedtls_cipher_setkey(&m_ctx,
-			static_cast<const unsigned char*>(key->get_base()),key->get_len()*8,op);
+			static_cast<const unsigned char*>(key->get_base()),
+                                         static_cast<int>(key->get_len()*8),op);
 		if (ret != 0) {
             l.pushnil();
 	        push_error(l,"set_key failed, code:%d, %s",ret);

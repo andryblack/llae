@@ -20,11 +20,11 @@ namespace archive { namespace impl {
         using stream = z_stream;
         static void fill_out(stream& z,void* base,size_t len) {
             z.next_out = static_cast<Bytef*>(base);
-            z.avail_out = len;
+            z.avail_out = static_cast<uInt>(len);
         }
         static void fill_in(stream& z,void* base,size_t len) {
             z.next_in = reinterpret_cast<Bytef*>(base);
-            z.avail_in = len;
+            z.avail_in = static_cast<uInt>(len);
         }
         static bool has_in(stream& z) {
             return z.avail_in;

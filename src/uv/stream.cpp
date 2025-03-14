@@ -31,7 +31,8 @@ namespace uv {
         }
 		add_ref();
 		int r = uv_write(&m_write,m_stream->get_stream(),
-                         buffers,count,&write_req::write_cb);
+                         buffers,static_cast<unsigned int>(count),
+                         &write_req::write_cb);
 		if (r < 0) {
 			remove_ref();
 		}
@@ -225,7 +226,7 @@ namespace uv {
                 toth.pushnil();
             } else if (nread < 0) {
                 toth.pushnil();
-                uv::push_error(toth,nread);
+                uv::push_error(toth,int(nread));
             } else { // == 0
                 return false;
             }
@@ -277,7 +278,7 @@ namespace uv {
                 }
                 if (m_read_status<0) {
                     l.pushnil();
-                    uv::push_error(l,m_read_status);
+                    uv::push_error(l,int(m_read_status));
                     return true;
                 }
             }

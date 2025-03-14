@@ -86,7 +86,7 @@ namespace posix {
 		l.pushstring("unsupported");
 		return {2};
 #else
-		int cmd =  l.checkinteger(2);
+		int cmd = static_cast<int>(l.checkinteger(2));
 		int res;
 		switch (cmd) {
 			case F_GETFD:
