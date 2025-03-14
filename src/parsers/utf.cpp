@@ -2,6 +2,7 @@
 #include "uv/buffer.h"
 #include "lua/bind.h"
 #include <cstdint>
+#include <memory>
 /*
  * This work is based on the pugixml parser, which is:
  * Copyright (C) 2006-2020, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
