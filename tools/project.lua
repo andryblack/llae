@@ -425,7 +425,7 @@ function Project:write_generated( )
 				template_f = template.compile(conf.template_content)
 			end
 			local filename = path.join(self:get_root(),conf.filename)
-			log.info('generate',conf.filename,template_source_filename)
+			log.info('generate',m:get_name(),conf.filename,template_source_filename)
 			fs.mkdir_r(path.dirname(filename))
 			fs.unlink(filename)
 			local f = assert(fs.open(filename,fs.O_WRONLY|fs.O_CREAT))
