@@ -91,6 +91,7 @@ int luaopen_crypto(lua_State* L) {
     lua::bind::object<crypto::ecp_point>::register_metatable(l,&crypto::ecp_point::lbind);
     lua::bind::object<crypto::pk>::register_metatable(l,&crypto::pk::lbind);
     lua::bind::object<crypto::rsa_base>::register_metatable(l,&crypto::rsa_base::lbind);
+    lua::bind::object<crypto::entropy>::register_metatable(l,&crypto::entropy::lbind);
     lua::bind::object<crypto::random>::register_metatable(l,&crypto::random::lbind);
 	l.createtable();
 	lua::bind::function(l,"crc32",&crypto::lcrc32);
@@ -108,7 +109,9 @@ int luaopen_crypto(lua_State* L) {
     l.setfield(-2,"ecp_point");
     lua::bind::object<crypto::pk>::get_metatable(l);
     l.setfield(-2,"pk");
-     lua::bind::object<crypto::random>::get_metatable(l);
+    lua::bind::object<crypto::entropy>::get_metatable(l);
+    l.setfield(-2,"entropy");
+    lua::bind::object<crypto::random>::get_metatable(l);
     l.setfield(-2,"random");
 
 #define BIND_M(M) l.pushinteger(MBEDTLS_ ## M);l.setfield(-2,#M);

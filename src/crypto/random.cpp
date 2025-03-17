@@ -4,11 +4,30 @@
 #include "uv/buffer.h"
 
 META_OBJECT_INFO(crypto::random,meta::object)
+META_OBJECT_INFO(crypto::entropy,meta::object)
 
 namespace crypto {
 
+	static const char *pers = "llae_mbedtls_";
+
+	entropy::entropy() {
+		mbedtls_entropy_init( &m_entropy );
+	}
+
+	entropy::~entropy() {
+		mbedtls_entropy_free( &m_entropy );
+	}
+
+	lua::multiret entropy::lnew(lua::state& l) {
+		lua::push(l,entropy_ptr(new entropy( )));
+		return {1};
+	}
+
+	void entropy::lbind(lua::state& l) {
+		lua::bind::function(l,"new",&entropy::lnew);
+	}
 	
-	random::random() {
+	random::random(const entropy_ptr& e) : m_entropy(e) {
 		mbedtls_ctr_drbg_init( &m_ctr_drbg );
 	}
 
@@ -18,11 +37,14 @@ namespace crypto {
 
 	
 	int random::randomize() {
-		unsigned char buf[128];
-		for (size_t i=0;i<sizeof(buf);++i) {
-			buf[i] = ::rand();
+		if (!m_entropy) {
+			m_entropy.reset(new entropy());
 		}
-		return mbedtls_ctr_drbg_update(&m_ctr_drbg,buf,sizeof(buf));
+
+		int ret = mbedtls_ctr_drbg_seed( &m_ctr_drbg, mbedtls_entropy_func, m_entropy->get(),
+                               (const unsigned char *) pers,
+                               strlen( pers ) );
+		return ret;
 	}
 
 	int random::read_func(void *p_rng,
@@ -38,7 +60,7 @@ namespace crypto {
 	}
 
 	lua::multiret random::lnew(lua::state& l) {
-		lua::push(l,random_ptr(new random()));
+		lua::push(l,random_ptr(new random( lua::stack<entropy_ptr>::get(l,1) )));
 		return {1};
 	}
 
