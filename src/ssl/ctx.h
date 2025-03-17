@@ -6,15 +6,14 @@
 #include "common/intrusive_ptr.h"
 #include "crypto/random.h"
 #include <mbedtls/ssl.h>
-#include <mbedtls/entropy.h>
+
 
 namespace ssl {
 
 	class ctx : public meta::object {
 		META_OBJECT
 	private:
-		mbedtls_entropy_context m_entropy;
-        crypto::random_ptr m_random;
+	    crypto::random_ptr m_random;
 		mbedtls_x509_crt m_cacert;
 	public:
 		explicit ctx( crypto::random_ptr&& random );
