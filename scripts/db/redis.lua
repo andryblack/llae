@@ -35,8 +35,10 @@ end
 
 function redis:close(  )
 	self._lock:lock()
-	self._conn:shutdown()
-	self._conn = nil
+	if self._conn then
+		self._conn:shutdown()
+		self._conn = nil
+	end
 	self._lock:unlock()
 end
 
@@ -114,6 +116,9 @@ end
 
 
 function redis:cmd(  ... )
+	if not self._conn then
+		error('closed')
+	end
 	self._lock:lock()
 	local req = redis.resp.gen_req(...)
 	--print('send: ',req)
@@ -131,6 +136,9 @@ function redis:cmd(  ... )
 end
 
 function redis:try_cmd(  ... )
+	if not self._conn then
+		return nil,'closed'
+	end
 	self._lock:lock()
 	local req = redis.resp.gen_req(...)
 	--print('send: ',req)
@@ -165,6 +173,9 @@ function redis.encode( ... )
 end
 
 function redis:pubsubcmd( ...)
+	if not self._conn then
+		return nil,'closed'
+	end
 	local req = redis.resp.gen_req(...)
 	--print('send: ',req)
 	local res,err = self._conn:write(req)
@@ -211,7 +222,7 @@ function redis:unsubscribe(...)
 	while next(self._unsubscribe) do
 		coroutine.yield(cor)
 	end
-	return true
+	return res,err
 end
 
 function redis:try_start_subscribe()
