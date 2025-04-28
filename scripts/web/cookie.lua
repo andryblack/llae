@@ -19,7 +19,7 @@ function cookie.parse(str)
 		if not npos then
 			break
 		end
-		pos = npos + 3
+		pos = npos + 2
 	end
 	return res
 end
