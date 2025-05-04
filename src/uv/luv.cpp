@@ -311,6 +311,25 @@ static int lua_uv_random(lua_State* L) {
 	return 0;
 }
 
+static void print_walk_cb(uv_handle_t* handle,void* arg) {
+    bool active = *static_cast<const bool*>(arg);
+    if ((active && uv_is_active(handle)) || !active) {
+        auto type_name = uv_handle_type_name(uv_handle_get_type(handle));
+        if (!type_name) type_name = "unknown";
+        std::cout << "handle: " << type_name << " : " <<
+        (uv_is_active(handle) ? "active" : "inactive") <<
+        (uv_is_closing(handle) ? ",closing" : "") << std::endl;
+    }
+}
+
+static int lua_uv_print_handles(lua_State* L) {
+    lua::state l(L);
+    bool active = l.toboolean(1);
+    llae::app& app(llae::app::get(l));
+    uv_walk(app.loop().native(),print_walk_cb,&active);
+    return 0;
+}
+
 int luaopen_uv(lua_State* L) {
 	lua::state l(L);
 
@@ -376,6 +395,7 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"hrtime",&lua_uv_hrtime);
 	lua::bind::function(l,"sleep",&lua_uv_sleep);
 	lua::bind::function(l,"random",&lua_uv_random);
+    lua::bind::function(l,"print_handles", &lua_uv_print_handles);
 
 	l.pushinteger(AF_INET);
     l.setfield(-2,"AF_INET");
