@@ -82,7 +82,7 @@ namespace uv {
         int do_set_multicast_loop(bool on);
         int do_set_multicast_ttl(int ttl);
         int do_set_multicast_interface(const char* interface_addr);
-        int do_try_send(const llae::buffer_ptr& buffer,const struct sockaddr *addr);
+        int do_try_send(const llae::buffer_base_ptr& buffer,const struct sockaddr *addr);
         
         lua::multiret bind(lua::state& l);
         lua::multiret send(lua::state& l);

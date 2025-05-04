@@ -146,11 +146,12 @@ namespace lua {
 	void register_meta_object_metatable(state& s);
 	void create_metatable(state& s,const meta::info_t* info);
 	void set_metatable(state& s,const meta::info_t* info);
-	void get_metatable(state& s,const meta::info_t* info);
+	bool get_metatable(state& s,const meta::info_t* info);
     void metatable_set_setter(state& s, const char* name, int mtidx);
     void metatable_set_getter(state& s, const char* name, int mtidx);
     void metatable_set_method(state& s,const char* name, int mtidx);
     void metatable_set_field(state& s,const char* name, int mtidx);
+    void metatable_set_meta(state& s,const char* name, int mtidx);
 
     void ref_value(state& s,int idx,int ref_idx);
 
@@ -174,6 +175,14 @@ namespace lua {
         void* data = s.newuserdata(sizeof(holder_t));
         const meta::info_t* info = meta::info<T>::get();
         new (data) holder_t{ std::move(v) };
+        set_metatable(s,info);
+    }
+    template <class T,class... Arg>
+    static void emplace_raw( state& s,Arg&&...arg ) {
+        using holder_t = raw_holder_t<T>;
+        void* data = s.newuserdata(sizeof(holder_t));
+        const meta::info_t* info = meta::info<T>::get();
+        new (data) holder_t( typename holder_t::inplace{}, std::forward<Arg>(arg)... );
         set_metatable(s,info);
     }
 

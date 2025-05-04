@@ -150,6 +150,7 @@ namespace lua {
 
 	static void metaobject_bind(state& s) {
 		bind::function(s,"free",&metaobject_reset_ref);
+		bind::function(s,"__tostring",&metaobject_tostring);
 	}
 
 	void register_meta_object_metatable(state& s) {
@@ -181,7 +182,7 @@ namespace lua {
 		const meta::info_t* parent = info->parent;
 		if (parent) {
             if (s.getmetatable(parent->name) != value_type::table ) {
-                s.error("unregistered parent metatable %s",parent->name);
+                s.error("%s unregistered parent metatable %s",info->name,parent->name);
             }
             s.pushnil();
 			while (s.next(-2)) { // mt,p-mt,k,v
@@ -200,10 +201,7 @@ namespace lua {
 		s.pushcclosure(&metaobject__newindex,0);
 		s.setfield(-2,"__newindex");
 		s.pushcclosure(&metaobject_destroy,0);
-		s.setfield(-2,"__gc");
-		s.pushcclosure(&metaobject_tostring,0);
-		s.setfield(-2,"__tostring");
-        
+		s.setfield(-2,"__gc");    
 	}
 
 	void set_metatable(state& s,const meta::info_t* info) {
@@ -212,8 +210,8 @@ namespace lua {
 		}
 		s.setmetatable(-2);
 	}
-	void get_metatable(state& s,const meta::info_t* info) {
-		s.getmetatable(info->name);
+	bool get_metatable(state& s,const meta::info_t* info) {
+        return s.getmetatable(info->name) != value_type::lnil;
 	}
 
 	void metatable_set_setter(state& s, const char* name, int mtidx) {

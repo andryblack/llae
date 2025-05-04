@@ -14,7 +14,7 @@ namespace llae {
     private:
         std::vector<buffer_view> m_bufs;
         std::vector<lua::ref> m_refs;
-        std::vector<llae::buffer_base_ptr> m_ext;
+        std::vector<buffer_base_ptr> m_ext;
         bool put_one(lua::state& s);
     public:
         bool put(lua::state& s);

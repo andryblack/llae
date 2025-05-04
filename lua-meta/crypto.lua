@@ -85,9 +85,10 @@ function cipher:set_iv(iv) end
 
 --- Sets the encryption/decryption key for the cipher.
 ---@param key string|llae.buffer_base The cipher key
+---@param op number? operation crypto.ENCRYPT or crypto.DECRYPT
 ---@return boolean? True on success
 ---@return string? Error message if setting key fails
-function cipher:set_key(key) end
+function cipher:set_key(key,op) end
 
 --- Sets the padding mode for the cipher.
 ---@param padding integer Padding mode (PADDING_PKCS7, PADDING_ONE_AND_ZEROS, PADDING_ZEROS_AND_LEN, PADDING_ZEROS, PADDING_NONE)
@@ -102,7 +103,7 @@ function cipher:reset() end
 
 --- Processes data through the cipher (encrypt/decrypt).
 ---@param data string|llae.buffer_base The data to process
----@return llae.buffer? The processed data on success
+---@return llae.buffer_base? The processed data on success
 ---@return string? Error message if processing fails
 function cipher:update(data) end
 
@@ -113,7 +114,7 @@ function cipher:update(data) end
 function cipher:update_ad(data) end
 
 --- Finalizes the cipher operation and returns any remaining data.
----@return llae.buffer? The final processed data on success
+---@return llae.buffer_base? The final processed data on success
 ---@return string? Error message if finalization fails
 function cipher:finish() end
 
@@ -132,7 +133,7 @@ function cipher:check_tag(tag) end
 --- Processes data through the cipher (encrypt/decrypt).
 ---@param iv string|llae.buffer_base? The initialization vector
 ---@param buffer string|llae.buffer_base The data to process
----@return llae.buffer? The processed data on success
+---@return llae.buffer_base? The processed data on success
 ---@return string? Error message if processing fails
 function cipher:crypt(iv, buffer) end
 
@@ -201,17 +202,16 @@ function bignum:add(other) end
 function bignum:sub(other) end
 
 --- Writes the big number to a string representation.
----@param format string? The output format (e.g., 'hex', 'binary')
----@return string? The string representation on success
+---@param len number? The output buffer size
+---@return string? The binary representation on success
 ---@return string? Error message if writing fails
-function bignum:write(format) end
+function bignum:write(len) end
 
---- Reads a big number from string data.
+--- Reads a big number from binary data data.
 ---@param data string|llae.buffer_base The input data
----@param format string? The input format (e.g., 'hex', 'binary')
 ---@return boolean? True on success
 ---@return string? Error message if reading fails
-function bignum:read(data, format) end
+function bignum:read(data) end
 
 --- Checks if this big number is less than another.
 ---@param other crypto.bignum The big number to compare with
@@ -292,10 +292,11 @@ function ecp:check_privkey(privkey) end
 --- Verifies an ECDSA signature.
 ---@param hash string|llae.buffer_base The hash of the data that was signed
 ---@param signature string|llae.buffer_base The signature to verify
----@param pubkey crypto.ecp_point The public key to verify against
+---@param r crypto.bignum The public key to verify against
+---@param s crypto.bignum The public key to verify against
 ---@return boolean? True if the signature is valid
 ---@return string? Error message if verification fails
-function ecp:ecdsa_verify(hash, signature, pubkey) end
+function ecp:ecdsa_verify(hash, signature, r, s) end
 
 --- Signs data using ECDSA.
 ---@param hash string|llae.buffer_base The hash of the data to sign

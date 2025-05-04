@@ -2,6 +2,7 @@
 
 #include "crypto/random.h"
 #include "llae-private/mbedtls/ecp.h"
+#include "llae/buffer.h"
 #include "lua/types.h"
 #include "meta/object.h"
 #include "common/intrusive_ptr.h"
@@ -68,7 +69,7 @@ namespace crypto {
         lua::multiret gen_keypair(lua::state& l);
         lua::multiret gen_privkey(lua::state& l);
         lua::multiret gen_pubkey(lua::state& l);
-        lua::multiret set_random_data(lua::state& l);
+        void set_random_data(const llae::buffer_view& data);
 		void set_random(const random_ptr& r) { m_random = r; }
 		lua::multiret ecdh_gen_public(lua::state& l);
 		lua::multiret ecdh_compute_shared(lua::state& l);

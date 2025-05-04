@@ -1,5 +1,4 @@
-#ifndef __LAE_COMMON_INTRUSIVE_PTR_H_INCLUDED__
-#define __LAE_COMMON_INTRUSIVE_PTR_H_INCLUDED__
+#pragma once
 
 #include <cassert>
 #include <utility>
@@ -105,10 +104,16 @@ namespace common {
         }
     };
 
+    struct intrusive_maker {
+        template <class T,typename... Args>
+        static inline intrusive_ptr<T> make(Args&&... args) {
+            return intrusive_ptr<T>(new T(std::forward<Args>(args)...));
+        }
+    };
+
     template <class T,typename... Args>
     static inline intrusive_ptr<T> make_intrusive(Args&&... args) {
-        return intrusive_ptr<T>(new T(std::forward<Args...>(args)...));
+        return intrusive_maker::template make<T>(std::forward<Args>(args)...);
     }
 }
 
-#endif /*__COMMON_INTRUSIVE_PTR_H_INCLUDED__*/

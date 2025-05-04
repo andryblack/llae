@@ -61,6 +61,9 @@ function buffer_base.base64_encode(data) end
 ---@param b string|llae.buffer_base
 ---@return llae.buffer
 function buffer_base.xor(a,b) end
+---@param other string|llae.buffer_base
+---@return llae.buffer
+function buffer_base:__concat(other) end
 
 ---@class llae.buffer : llae.buffer_base
 local buffer = {}
@@ -73,9 +76,9 @@ function buffer:__concat(other) end
 ---@param other llae.buffer|string
 ---@return boolean
 function buffer:__eq(other) end
----@param size integer?
+---@param data string?
 ---@return llae.buffer
-function buffer.new(size) end
+function buffer.new(data) end
 ---@param size integer
 ---@return llae.buffer
 function buffer.alloc(size) end
@@ -85,6 +88,23 @@ function buffer:get_allocated() end
 function buffer:self_reverse() end
 
 llae.buffer = buffer
+
+---@class llae.writable_buffer : llae.buffer_base
+local writable_buffer = {}
+
+---@param size integer
+---@return llae.writable_buffer
+function writable_buffer.alloc(size) end
+---@param data string
+---@return llae.writable_buffer
+function writable_buffer.new(data) end
+
+---@param offset integer
+---@param data string|llae.buffer_base
+---@return boolean
+function writable_buffer:write(offset, data) end
+
+llae.writable_buffer = writable_buffer
 
 ---@class llae.native.log_handler
 local log_handler = {}

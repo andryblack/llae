@@ -222,13 +222,12 @@ namespace crypto {
         return 0;
     }
 
-    lua::multiret ecp::set_random_data(lua::state& l) {
-        auto b = llae::buffer::get(l,2,true);
-        if (!b) {
-            l.argerror(2, "need hased data");
+    void ecp::set_random_data(const llae::buffer_view& data) {
+        if (data.empty()) {
+            m_random_data.reset();
+        } else {
+            m_random_data = llae::buffer::hold(data.get_base(),data.get_len());
         }
-        m_random_data = b;
-        return {0};
     }
 
     lua::multiret ecp::ecdsa_sign(lua::state& l) {

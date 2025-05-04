@@ -13,7 +13,7 @@ solution '<%= project:name() %>'
 	configurations { 'debug', 'release' }
 
 	language 'c++'
-	cppdialect "C++17"
+	cppdialect "C++20"
 
 	objdir 'objects' 
 	

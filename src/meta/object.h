@@ -53,6 +53,10 @@ namespace meta {
         return static_cast<T*>(o);
     }
 
+    template <typename T>
+    static inline const char* get_type_name() {
+        return info<T>::get()->name;
+    }
 }
 
 #endif /*__LLAE_META_OBJECT_H_INCLUDED__*/

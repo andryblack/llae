@@ -39,6 +39,14 @@ function TestWritableBuffer:test_new()
   lu.assertEquals(buf:get_len(), 4)
 end
 
+function TestWritableBuffer:test_write_basic1()
+  -- Test writing at beginning
+  local buf = llae.writable_buffer.alloc(10)
+  local result = buf:write(1, "hello")
+  lu.assertTrue(result)
+  lu.assertEquals(buf:sub(1, 5), "hello")
+end
+
 function TestWritableBuffer:test_write_basic()
   -- Test writing at beginning
   local buf = llae.writable_buffer.alloc(10)

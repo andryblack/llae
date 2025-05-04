@@ -391,7 +391,7 @@ namespace uv {
         }
         return res;
     }
-    int udp::do_try_send(const llae::buffer_ptr& buffer,const struct sockaddr *addr) {
+    int udp::do_try_send(const llae::buffer_base_ptr& buffer,const struct sockaddr *addr) {
         auto buf = get_buffer(buffer);
         return uv_udp_try_send(get_udp(),&buf,1,addr);
     }
@@ -408,10 +408,7 @@ namespace uv {
             }
             with_addr = true;
         }
-        auto buf = llae::buffer::get(l,2);
-        if (!buf) {
-            l.argerror(2,"need buffer");
-        }
+        auto buf = llae::buffer_base::get(l,2, true);
         auto r = do_try_send(buf,(struct sockaddr*)(with_addr ? &addr : nullptr));
         if (r < 0) {
             l.pushnil();

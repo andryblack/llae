@@ -39,6 +39,14 @@ else
 	log.redirect('build/test.log.txt',true)
 end
 
+local bypassargs = {}
+local i = 1
+while args[i] do
+	bypassargs[i] = args[i]
+	i = i + 1
+end
+
+
 local async = require 'llae.async'
 local fs = require 'llae.fs'
 local path = require 'llae.path'
@@ -50,5 +58,5 @@ async.run(function()
 			dofile(path.join('tests',v))
 		end
 	end
-	os.exit( lu.LuaUnit.run() )
+	os.exit( lu.LuaUnit.run(table.unpack(bypassargs)) )
 end)

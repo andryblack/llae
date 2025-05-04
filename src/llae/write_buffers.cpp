@@ -1,11 +1,12 @@
 #include "write_buffers.h"
+#include "llae/buffer.h"
 #include "lua/stack.h"
 
 namespace llae {
 
    
     bool write_buffers::put_one(lua::state& l) {
-        auto buf = lua::stack<llae::buffer_base_ptr>::get(l, -1);
+        auto buf = lua::get_intrusive<buffer_base>(l, -1);
         if (buf) {
             if (buf->get_len()) {
                 m_refs.emplace_back();

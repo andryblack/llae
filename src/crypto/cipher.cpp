@@ -195,13 +195,9 @@ namespace crypto {
 	}
 
 	lua::multiret cipher::set_iv(lua::state& l) {
-		auto iv = llae::buffer::get(l,2);
-		if (!iv) {
-			l.argerror(2,"need iv data");
-			return {0};
-		}
+		auto iv = llae::buffer_view::get(l,2,true);
 		auto ret = mbedtls_cipher_set_iv(&m_ctx,
-			static_cast<const unsigned char*>(iv->get_base()),iv->get_len());
+			static_cast<const unsigned char*>(iv.get_base()),iv.get_len());
 		if (ret != 0) {
             l.pushnil();
 	        push_error(l,"set_iv failed, code:%d, %s",ret);
@@ -211,15 +207,11 @@ namespace crypto {
         return {1};
 	}
 	lua::multiret cipher::set_key(lua::state& l) {
-		auto key = llae::buffer::get(l,2);
+		auto key = llae::buffer_view::get(l,2,true);
 		mbedtls_operation_t op = mbedtls_operation_t(l.optinteger(3,MBEDTLS_DECRYPT));
-		if (!key) {
-			l.argerror(2,"need key data");
-			return {0};
-		}
 		auto ret = mbedtls_cipher_setkey(&m_ctx,
-			static_cast<const unsigned char*>(key->get_base()),
-                                         static_cast<int>(key->get_len()*8),op);
+			static_cast<const unsigned char*>(key.get_base()),
+                                         static_cast<int>(key.get_len()*8),op);
 		if (ret != 0) {
             l.pushnil();
 	        push_error(l,"set_key failed, code:%d, %s",ret);

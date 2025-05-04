@@ -22,12 +22,19 @@ namespace llae {
     using uchar = unsigned char;
 
     buffer_view buffer_view::get(lua::state& l,int idx,bool check) {
-        auto r = lua::stack<buffer_base_ptr>::get(l,idx);
-        if (r) return buffer_view(r->get_base(),r->get_len());
-        if (check && !l.isstring(idx)) return {};
-        size_t size;
-        auto ptr = l.tolstring(idx,size);
-        return buffer_view(ptr,size);
+        if (l.isstring(idx)) {
+            size_t size;
+            auto ptr = l.tolstring(idx,size);
+            return buffer_view(ptr,size);
+        }
+        auto b = lua::get_intrusive<buffer_base>(l, idx);
+        if (b) {
+            return buffer_view(b->get_base(),b->get_len());
+        }
+        if (check) {
+            l.argerror(idx, "need buffer or string");
+        }
+        return {};
     }
 
 
@@ -156,18 +163,15 @@ namespace llae {
     lua::multiret buffer_base::lconcat(lua::state& l) {
         if (l.get_type(1)==lua::value_type::userdata &&
             l.get_type(2)==lua::value_type::userdata) {
-            auto b1 = lua::stack<buffer_base_ptr>::get(l, 1);
-            if (!b1) l.argerror(1, "need buffer");
-            auto b2 = lua::stack<buffer_base_ptr>::get(l, 2);
-            if (!b2) l.argerror(2, "need buffer");
+            auto b1 = buffer_base::get(l, 1, true);
+            auto b2 = buffer_base::get(l, 2, true);
             auto b = buffer::alloc(b1->get_len()+b2->get_len());
             memcpy(b->get_base(), b1->get_base(), b1->get_len());
             memcpy(static_cast<char*>(b->get_base())+b1->get_len(), b2->get_base(), b2->get_len());
             lua::push(l,std::move(b));
             return {1};
         } else if (l.get_type(1)==lua::value_type::userdata) {
-            auto self = lua::stack<buffer_base_ptr>::get(l, 1);
-            if (!self) l.argerror(1, "need buffer");
+            auto self = buffer_base::get(l, 1, true);
             size_t size2 = 0;
             const void* data2 = l.checklstring(2, size2);
             std::vector<char> data;
@@ -178,8 +182,7 @@ namespace llae {
             l.pushlstring(data.data(), data.size());
             return {1};
         } else if (l.get_type(2)==lua::value_type::userdata) {
-            auto self = lua::stack<buffer_base_ptr>::get(l, 2);
-            if (!self) l.argerror(2, "need buffer");
+            auto self = buffer_base::get(l, 2,true);
             size_t size1 = 0;
             const void* data1 = l.checklstring(1, size1);
             std::vector<char> data;
@@ -237,8 +240,7 @@ namespace llae {
         if (l.isstring(1)) {
             src = reinterpret_cast<const uchar*>(l.tolstring(1,src_size));
         } else {
-            auto self = lua::stack<buffer_base_ptr>::get(l, 1);
-            if (!self) l.argerror(1, "need buffer or string");
+            auto self = buffer_base::get(l, 1,true);
             src = static_cast<const uchar*>(self->get_base());
             src_size = self->get_len();
         }
@@ -264,8 +266,7 @@ namespace llae {
         if (l.isstring(1)) {
             src = reinterpret_cast<const unsigned char*>(l.tolstring(1,src_size));
         } else {
-            auto self = lua::stack<buffer_base_ptr>::get(l, 1);
-            if (!self) l.argerror(1, "need buffer or string");
+            auto self = buffer_base::get(l, 1, true);
             src = static_cast<const unsigned char*>(self->get_base());
             src_size = self->get_len();
         }
@@ -288,8 +289,7 @@ namespace llae {
         if (l.isstring(1)) {
             src = reinterpret_cast<const unsigned char*>(l.tolstring(1,src_size));
         } else {
-            auto self = lua::stack<buffer_base_ptr>::get(l, 1);
-            if (!self) l.argerror(1, "need buffer or string");
+            auto self = buffer_base::get(l, 1,true);
             src = static_cast<const unsigned char*>(self->get_base());
             src_size = self->get_len();
         }
@@ -313,8 +313,7 @@ namespace llae {
         if (l.isstring(1)) {
             src = reinterpret_cast<const unsigned char*>(l.tolstring(1,src_size));
         } else {
-            auto self = lua::stack<buffer_base_ptr>::get(l, 1);
-            if (!self) l.argerror(1, "need buffer or string");
+            auto self = buffer_base::get(l, 1, true);
             src = static_cast<const unsigned char*>(self->get_base());
             src_size = self->get_len();
         }
@@ -337,13 +336,18 @@ namespace llae {
     }
 
     buffer_base_ptr buffer_base::get(lua::state& l,int idx,bool check) {
-        auto r = lua::stack<buffer_base_ptr>::get(l,idx);
+        auto r = lua::get_intrusive<buffer_base>(l, idx);
         if (r) return r;
-        if (check && !l.isstring(idx)) return {};
-        /// @todo hold data on lua
-        size_t size = 0;
-        auto ptr = l.tolstring(idx,size);
-        return buffer::hold(ptr,size);
+        if (l.isstring(idx)) {
+            /// @todo hold data on lua
+            size_t size = 0;
+            auto ptr = l.tolstring(idx,size);
+            return buffer::hold(ptr,size);
+        }
+        if (check) {
+            l.argerror(idx, "need buffer or string");
+        }
+        return buffer_base_ptr{};
     }
 
     void buffer_base::lbind(lua::state& l) {
@@ -442,17 +446,6 @@ namespace llae {
         }
     }
 
-    
-
-    buffer_ptr buffer::get(lua::state& l,int idx,bool check) {
-        buffer_ptr r = lua::stack<buffer_ptr>::get(l,idx);
-        if (r) return r;
-        if (check && !l.isstring(idx)) return {};
-        /// @todo hold data on lua
-        size_t size = 0;
-        auto ptr = l.tolstring(idx,size);
-        return hold(ptr,size);
-    }
 
     void buffer::lbind(lua::state& l) {
         lua::bind::function(l,"__len",&buffer_base::get_len);

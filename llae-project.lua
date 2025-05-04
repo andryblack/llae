@@ -12,7 +12,7 @@ if cmdargs and (cmdargs.development or cmdargs.inplace) then
 	module 'premake-ecc'
 end
 
-if cmdargs and cmdargs.debug then
+if cmdargs and (cmdargs.debug or cmdargs.development) then
 	config('lua','apicheck',true)
 end
 
@@ -28,6 +28,8 @@ end
 
 if cmdargs and cmdargs.development then
 	cmodule 'bind_tests'
+	cmodule 'result_tests'
+	cmodule 'inplace_function_tests'
 	premake {
 		project = [[
 			files{

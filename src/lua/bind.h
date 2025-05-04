@@ -25,12 +25,12 @@ namespace lua {
 		struct default_policy {
 			static constexpr bool allow_set_field = true;
 			template <typename R>
-			static void push_result(state& s,R&& result) {
-				stack<R>::push(s,std::forward<R>(result));
+			static int push_result(state& s,R&& result) {
+				return stack<R>::push(s,std::forward<R>(result));
 			}
 			template <typename R>
-			static void push_field(state& s,const R& result) {
-				stack<R>::push(s,result);
+			static int push_field(state& s,const R& result) {
+				return stack<R>::push(s,result);
 			}
 			template <typename R>
 			static void set_field(state& s, R& result, int idx) {
@@ -46,19 +46,22 @@ namespace lua {
 		template <int idx = 1>
 		struct return_ref_policy {
 			template <typename R>
-			static void push_result(state& s,R&& result) {
-				default_policy::push_result(s,std::forward<R>(result));
-				ref_value(s,-1,idx);
+			static int push_result(state& s,R&& result) {
+				auto r = default_policy::push_result(s,std::forward<R>(result));
+				ref_value(s,-r,idx);
+				return r;
 			}
 			template <typename R>
-			static void push_result(state& s,R* result) {
+			static int push_result(state& s,R* result) {
 				push_ptr(s,result);
 				ref_value(s,-1,idx);
+				return 1;
 			}
 			template <typename R>
-			static void push_field(state& s, R& result) {
+			static int push_field(state& s, R& result) {
 				push_ptr(s,&result);
 				ref_value(s,-1,idx);
+				return 1;
 			}
 			template <typename R>
 			static void set_field(state& s, R& result, int) {
@@ -72,8 +75,9 @@ namespace lua {
 		template <int idx = 1>
 		struct return_arg_policy : default_policy {
 			template <typename R>
-			static void push_result(state& s,R&&) {
+			static int push_result(state& s,R&&) {
 				s.pushvalue(idx);
+				return 1;
 			}
 		};
 		using return_self_policy = return_arg_policy<1>;
@@ -81,13 +85,14 @@ namespace lua {
 		template <bool zero_terminate = true>
 		struct string_policy {
 			template <size_t size>
-			static void push_field(state& s,const char(&str)[size]) {
+			static int push_field(state& s,const char(&str)[size]) {
 				auto zero_pos = std::find(str,str+size,0);
 				if (zero_pos != str+size) {
 					s.pushlstring(str,zero_pos-str);
 				} else {
 					s.pushlstring(str,size);
 				}
+				return 1;
 			}
 			template <typename T,size_t size>
 			static void set_field(state& s,T(&str)[size],int value_idx) {
@@ -106,8 +111,9 @@ namespace lua {
 		template <>
 		struct string_policy<false> : string_policy<true> {
 			template <typename T,size_t size>
-			static void push_field(state& s,const T(&str)[size]) {
+			static int push_field(state& s,const T(&str)[size]) {
 				s.pushlstring(reinterpret_cast<const char*>(str),size);
+				return 1;
 			}
 		};
 
@@ -124,15 +130,13 @@ namespace lua {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
 				auto obj = get_self_object<T>(l,1);
-				policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
-				return 1;
+				return policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
 			}
 			static int cfunction(lua_State* L) {
 				auto f = static_cast<cfunc_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
 				auto obj = get_self_object<const T>(l,1);
-				policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
-				return 1;
+				return policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
 			}
 		};
 
@@ -287,8 +291,7 @@ namespace lua {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
 				auto obj = get_self_object<T>(l,1);
-				policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
-				return 1;
+				return policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
 			}
 		};
 
@@ -334,8 +337,7 @@ namespace lua {
             static int function(lua_State* L) {
                 auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
                 state l(L);
-                policy_t::push_result(l,apply(l,*f,std::index_sequence_for<Args...>()));
-                return 1;
+                return policy_t::push_result(l,apply(l,*f,std::index_sequence_for<Args...>()));
             }
         };
 
@@ -351,11 +353,10 @@ namespace lua {
 				}
 				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				if (obj.second) {
-					policy_t::template push_field<const R>(s,obj.first->*field);
+					return policy_t::template push_field<const R>(s,obj.first->*field);
 				} else {
-					policy_t::template push_field<R>(s,obj.first->*field);
+					return policy_t::template push_field<R>(s,obj.first->*field);
 				}
-				return 1;
 			}
 			static int set(lua_State* L) {
 				state s(L);
@@ -404,8 +405,7 @@ namespace lua {
 					s.error("invalid self object %s",meta::info<T>::get()->name);
 				}
 				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
-				policy_t::push_field(s,obj.first->*field);
-				return 1;
+				return policy_t::push_field(s,obj.first->*field);
 			}
 			static int set(lua_State* L) {
 				state s(L);
@@ -548,8 +548,8 @@ namespace lua {
 				bindfunc(s);
 				s.pop(1);
 			} 
-			static void get_metatable(state& s) {
-				lua::get_metatable(s,meta::info<T>::get());
+			static bool get_metatable(state& s) {
+				return lua::get_metatable(s,meta::info<T>::get());
 			}
 		};
     

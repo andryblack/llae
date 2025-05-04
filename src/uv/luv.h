@@ -1,8 +1,11 @@
 #ifndef __LLAE_UV_LUV_H_INCLUDED__
 #define __LLAE_UV_LUV_H_INCLUDED__
 
+#include "common/intrusive_ptr.h"
+#include "llae/error.h"
 #include "lua/state.h"
 #include "decl.h"
+#include "llae/result.h"
 #include <string>
 #include <vector>
 #include "llae/buffer.h"
@@ -43,6 +46,26 @@ namespace uv {
 	static llae::buffer_ptr get_buffer(const uv_buf_t* buf) {
 		return llae::buffer_ptr(llae::buffer::get(buf->base));
 	} 
+
+    class status_error : public llae::code_error {
+		META_OBJECT
+    public:
+    	static const std::string category;
+    	explicit status_error(int status) : llae::code_error(status) {}
+		virtual const std::string& get_category() const override { return category; }
+    	virtual std::string to_string() const override;
+		static llae::error_ptr create(int status) {
+			return common::make_intrusive<status_error>(status);
+		}
+    };
+
+    static inline llae::result<> make_result(int status) {
+    	if (status < 0) {
+    		return status_error::create(status);
+    	} else {
+    		return llae::result<>();
+    	}
+    }
 }
 
 #endif /*__LLAE_UV_LUV_H_INCLUDED__*/

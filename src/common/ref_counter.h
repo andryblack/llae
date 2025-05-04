@@ -1,5 +1,4 @@
-#ifndef __LAE_COMMON_REF_COUNTER_H_INCLUDED__
-#define __LAE_COMMON_REF_COUNTER_H_INCLUDED__
+#pragma once
 
 #include <atomic>
 #include <cassert>
@@ -34,4 +33,3 @@ namespace common {
 
 }
 
-#endif /*__COMMON_REF_COUNTER_H_INCLUDED__*/

@@ -1,9 +1,12 @@
 #include "app.h"
+#include "common/intrusive_ptr.h"
 #include "lua/state.h"
 #include "lua/types.h"
 #include "lua/value.h"
 #include "meta/object.h"
 #include "lua/metatable.h"
+#include "lua/bind.h"
+#include "error.h"
 #include "uv/handle.h"
 #include "logger.h"
 #include <cstdint>

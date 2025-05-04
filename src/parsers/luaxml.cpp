@@ -32,7 +32,7 @@ namespace xml {
     }
 
     static lua::multiret tolua(lua::state& l) {
-        auto buffer = llae::buffer::get(l,1);
+        auto buffer = lua::stack<llae::buffer_ptr>::get(l,1);
         if (!buffer) {
             l.argerror(1,"need data");
         }

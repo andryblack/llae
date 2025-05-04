@@ -3,6 +3,7 @@
 #include "common/intrusive_ptr.h"
 #include "lua/bind.h"
 #include "lua/types.h"
+#include "meta/object.h"
 #include "tcp_server.h"
 #include "stream.h"
 #include "tcp_connection.h"
@@ -22,10 +23,19 @@
 #include <iostream>
 #include <memory>
 
-namespace uv {
-	
+META_OBJECT_INFO(uv::status_error,llae::error)
 
+namespace uv {
+
+	const std::string status_error::category = "uv";
 	static char uv_error_buf[1024];
+
+	std::string status_error::to_string() const {
+		const char* err = uv_strerror_r(get_code(), uv_error_buf, sizeof(uv_error_buf));
+        if (!err) err = "unknown";
+		return std::format("[uv]:{}",err);
+	}
+	
     void error(lua::state& l,int e) {
         const char* err = uv_strerror_r(e, uv_error_buf, sizeof(uv_error_buf));
         if (!err) err = "unknown";
@@ -37,9 +47,7 @@ namespace uv {
         llae::report_diag_error(err,file,line);
     }
     void push_error(lua::state& l,int e) {
-        const char* err = uv_strerror_r(e, uv_error_buf, sizeof(uv_error_buf));
-        if (!err) err = "unknown";
-        l.pushstring(err);
+    	l.pushstring(status_error(e).to_string().c_str());
     }
     lua::multiret return_status_error(lua::state& s,int r) {
     	if (r<0) {

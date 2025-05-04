@@ -1,6 +1,7 @@
 #ifndef __LLAE_LLAE_H_INCLUDED__
 #define __LLAE_LLAE_H_INCLUDED__
 
+#include "llae/error.h"
 #include "lua/state.h"
 #include "uv/loop.h"
 #include "uv/signal.h"

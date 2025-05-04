@@ -3,6 +3,8 @@
 #include "lua/bind.h"
 #include "logger.h"
 #include "uv/fs.h"
+#include "error.h"
+#include "result.h"
 
 #if defined(__APPLE__)
 /* lets us know what version of Mac OS X we're compiling on */
@@ -16,6 +18,7 @@
 #endif
 #endif
 
+#include "lua/bind.h"
 
 namespace llae {
 

@@ -109,7 +109,6 @@ namespace llae {
         static lua::multiret lalloc(lua::state& l);
         static void lbind(lua::state& l);
       
-        static buffer_ptr get(lua::state& l,int idx,bool check = false);
         static buffer* get( char*);
     private:
         const size_t m_capacity;
@@ -158,6 +157,18 @@ namespace lua {
     struct stack<check<llae::buffer_view> > {
         static llae::buffer_view get(lua::state& l,int idx) {
             return llae::buffer_view::get(l,idx,true);
+        }
+    };
+    template<>
+    struct stack<llae::buffer_base_ptr> {
+        static llae::buffer_base_ptr get(lua::state& l,int idx) {
+            return llae::buffer_base::get(l,idx,false);
+        }
+        static int push(lua::state& l,llae::buffer_base_ptr&& v) {
+            return lua::push_intrusive(l,std::move(v));
+        }
+        static int push(lua::state& l,const llae::buffer_base_ptr& v) {
+            return lua::push_intrusive(l,v);
         }
     };
 }

@@ -135,7 +135,7 @@ namespace uv {
             m_cb.release();
             return;
         }
-        l.checkstack(2);
+        l.checkstack(3);
         m_cb.push(l);
         lua::push(l,timer_ptr(this));
         auto s = l.pcall(1,0,0);
