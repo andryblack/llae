@@ -65,6 +65,25 @@ namespace uv {
 		lua::multiret lstop(lua::state& l);
 	};
 
+	class timer_wait : public timer {
+		META_OBJECT
+	private:
+		lua::ref m_cont;
+		bool m_ready = false;
+		bool m_started = false;
+	protected:
+		virtual void on_cb() override;
+		virtual void on_closed() override;
+		explicit timer_wait(loop& l) : timer(l) {}
+		void resume(lua::state& l,const char* status);
+	public:
+		static lua::multiret lnew(lua::state& l);
+		static void lbind(lua::state& l);
+		lua::multiret lstart(lua::state& l);
+		lua::multiret lstop(lua::state& l);
+		lua::multiret lwait(lua::state& l);
+	};
+
 }
 
 #endif /*__LLAE_UV_TIMER_H_INCLUDED__*/

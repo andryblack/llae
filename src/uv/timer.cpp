@@ -6,6 +6,7 @@
 
 META_OBJECT_INFO(uv::timer,uv::handle)
 META_OBJECT_INFO(uv::timer_lcb,uv::timer)
+META_OBJECT_INFO(uv::timer_wait,uv::timer)
 
 namespace uv {
 
@@ -156,5 +157,122 @@ namespace uv {
 		lua::bind::function(l,"start",&timer_lcb::lstart);
 		lua::bind::function(l,"stop",&timer_lcb::lstop);
 		lua::bind::function(l,"new",&timer_lcb::lnew);
+	}
+
+	void timer_wait::resume(lua::state& l,const char* status) {
+        l.checkstack(2);
+        m_cont.push(l);
+        auto toth = l.tothread(-1);
+        m_cont.reset(l);
+        toth.checkstack(3);
+        int rets;
+        if (status) {
+        	l.pushnil();
+        	l.pushstring(status);
+        	rets = 2;
+        } else {
+        	l.pushboolean(true);
+        	rets = 1;
+        }
+        auto s = toth.resume(l,rets);
+        if (s != lua::status::ok && s != lua::status::yield) {
+            llae::app::show_error(toth,s);
+        }
+        l.pop(1);// thread
+	}
+	void timer_wait::on_cb() {
+		auto& l = llae::app::get(get_handle()->loop).lua();
+        if (!l.native()) {
+            m_cont.release();
+            return;
+        }
+        if (m_cont.valid()) {
+        	m_ready = false;
+        	resume(l,nullptr);
+	    } else {
+	    	m_ready = true;
+	    }
+	}
+
+	void timer_wait::on_closed() {
+        if (llae::app::closed(get_handle()->loop)) {
+            m_cont.release();
+        } else {
+            m_cont.reset(llae::app::get(get_handle()->loop).lua());
+        }
+	}
+
+	lua::multiret timer_wait::lnew(lua::state& l) {
+		common::intrusive_ptr<timer_wait> req{new timer_wait(llae::app::get(l).loop())};
+		lua::push(l,std::move(req));
+		return {1};
+	}
+
+	lua::multiret timer_wait::lstart(lua::state& l) {
+		m_ready = false;
+		if (m_started) {
+			l.pushnil();
+			l.pushstring("already started");
+			return {2};
+		}
+		auto timeout = l.checkinteger(2);
+		auto repeat = l.optinteger(3,0);
+		m_started = true;
+		auto r = start(timeout,repeat);
+		return return_status_error(l,r);
+	}
+
+	lua::multiret timer_wait::lstop(lua::state& l) {
+		if (!m_started) {
+			l.pushnil();
+			l.pushstring("not started");
+			return {2};
+		}
+		m_ready = false;
+		m_started = false;
+		auto r = stop();
+		if (m_cont.valid()) {
+			resume(l,"stop");
+		}
+		return return_status_error(l,r);
+	}
+
+	lua::multiret timer_wait::lwait(lua::state& l) {
+		if (!m_started) {
+			l.pushnil();
+			l.pushstring("not started");
+			return {2};
+		}
+		if (m_ready) {
+			m_ready = false;
+			l.pushboolean(true);
+			return {1};
+		}
+		if (m_cont.valid()) {
+			l.pushnil();
+			l.pushstring("already wait");
+			return {2};
+		}
+		if (!l.isyieldable()) {
+			l.pushnil();
+			l.pushstring("timer_wait::lwait is async");
+			return {2};
+		}
+		{
+			lua_Integer delay = l.checkinteger(1);
+			lua::ref cont;
+			l.pushthread();
+			cont.set(l);
+			m_cont = std::move(cont);
+		}
+		l.yield(0);
+		return {0};
+	}
+
+	void timer_wait::lbind(lua::state& l) {
+		lua::bind::function(l,"start",&timer_wait::lstart);
+		lua::bind::function(l,"stop",&timer_wait::lstop);
+		lua::bind::function(l,"wait",&timer_wait::lwait);
+		lua::bind::function(l,"new",&timer_wait::lnew);
 	}
 }
