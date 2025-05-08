@@ -377,7 +377,7 @@ int luaopen_uv(lua_State* L) {
 	l.setfield(-2,"pipe_server");
     lua::bind::object<uv::timer_lcb>::get_metatable(l);
     l.setfield(-2,"timer");
-     lua::bind::object<uv::timer_wait>::get_metatable(l);
+    lua::bind::object<uv::timer_wait>::get_metatable(l);
     l.setfield(-2,"timer_wait");
     lua::bind::object<uv::lua_signal>::get_metatable(l);
     l.setfield(-2,"signal");

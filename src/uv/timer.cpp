@@ -259,7 +259,6 @@ namespace uv {
 			return {2};
 		}
 		{
-			lua_Integer delay = l.checkinteger(1);
 			lua::ref cont;
 			l.pushthread();
 			cont.set(l);
