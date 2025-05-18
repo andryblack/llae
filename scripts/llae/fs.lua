@@ -76,13 +76,13 @@ end
 
 function fs.mkdir_r(dir)
 	local components = {}
-	while not fs.isdir(dir) do
+	while dir and dir~='/' and dir~='' and (not fs.isdir(dir)) do
 		local f = path.basename(dir)
-		if not f then
-			break
-		end
-		dir = path.dirname(dir)
 		table.insert(components,1,f)
+		dir = path.dirname(dir)
+	end
+	if dir == '' then
+		dir = fs.pwd()
 	end
 	for _,c in ipairs(components) do
 		dir = path.join(dir,c)
