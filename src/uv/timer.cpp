@@ -73,13 +73,14 @@ namespace uv {
         l.checkstack(2);
         m_cont.push(l);
         auto toth = l.tothread(-1);
-        m_cont.reset(l);
+        auto cont = std::move(m_cont);
+        l.pop(1);// thread
         toth.checkstack(1);
         auto s = toth.resume(l,0);
+        cont.reset(l);
         if (s != lua::status::ok && s != lua::status::yield) {
             llae::app::show_error(toth,s);
         }
-        l.pop(1);// thread
 	}
 
 	lua::multiret timer_pause::pause(lua::state& l) {
@@ -167,11 +168,11 @@ namespace uv {
         toth.checkstack(3);
         int rets;
         if (status) {
-        	l.pushnil();
-        	l.pushstring(status);
+        	toth.pushnil();
+        	toth.pushstring(status);
         	rets = 2;
         } else {
-        	l.pushboolean(true);
+        	toth.pushboolean(true);
         	rets = 1;
         }
         auto s = toth.resume(l,rets);
