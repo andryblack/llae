@@ -93,6 +93,11 @@ function untar:prepare_file(  )
 		self._next = 'long_name'
 		self._state = 'align'
 		self._file.long_name = ''
+	elseif self._header.typeflag == string.byte('x') or self._header.typeflag == string.byte('g') then
+		-- skip pax Extended Header
+		-- @todo read size
+		self._next = 'file'
+		self._state = 'align'
 	else
 		--log.debug('start file',self._file.name,self._file.size)
 		self._next = 'file'
