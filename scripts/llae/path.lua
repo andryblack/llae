@@ -1,8 +1,22 @@
-
 local path = {}
 
+function path.normalize(p)
+	return p:gsub("[/\\]+", "/")
+end
+
 function path.isabsolute(p)
-	return string.sub(p,1,1) == '/'
+	if string.sub(p,1,1) == '/' then
+		return true
+	end
+	-- Check for Windows drive letter path (e.g. C:/ or C:\)
+	if string.match(p, '^%a%:[\\/]') then
+		return true
+	end
+	-- Windows UNC path
+	if string.sub(p,1,1) == '\\' then
+		return true
+	end
+	return false
 end
 
 local function findlast(s, pattern, plain)

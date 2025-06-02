@@ -1,0 +1,32 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Web Framework Guide
+
+The web framework is a modular Express.js-like system built on top of the HTTP module.
+
+## Core Files
+- [scripts/web/application.lua](mdc:scripts/web/application.lua) - Main application class
+- [scripts/web/router.lua](mdc:scripts/web/router.lua) - URL routing implementation
+
+## Middleware Modules
+Located in `scripts/web/`:
+- [scripts/web/static.lua](mdc:scripts/web/static.lua) - Static file serving
+- [scripts/web/views.lua](mdc:scripts/web/views.lua) - Template rendering
+- [scripts/web/json.lua](mdc:scripts/web/json.lua) - JSON request/response handling
+- [scripts/web/cookie.lua](mdc:scripts/web/cookie.lua) - Cookie parsing/setting
+- [scripts/web/formparser.lua](mdc:scripts/web/formparser.lua) - Form data parsing
+- [scripts/web/multipart.lua](mdc:scripts/web/multipart.lua) - File upload handling
+
+## Examples
+See [examples/app.lua](mdc:examples/app.lua) for a complete application example showing:
+- Middleware usage
+- Route handling
+- Template rendering
+- File uploads
+- Static file serving
+
+## Documentation
+The full web framework documentation is available in [docs/web.md](mdc:docs/web.md)

@@ -1,0 +1,35 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Database Clients Guide
+
+LLAE provides asynchronous database clients for Redis and PostgreSQL.
+
+## Redis Client
+Main module: [scripts/db/redis.lua](mdc:scripts/db/redis.lua)
+- Supports all Redis commands
+- Pub/Sub functionality
+- Pipeline operations
+- Automatic type conversion
+
+Example usage: [examples/redis.lua](mdc:examples/redis.lua)
+Documentation: [docs/db/redis.md](mdc:docs/db/redis.md)
+
+## PostgreSQL Client
+Main module: [scripts/db/pgsql.lua](mdc:scripts/db/pgsql.lua)
+- Asynchronous queries
+- Multiple authentication methods
+- Binary data handling
+- Type conversion
+
+Example usage: [examples/pgsql.lua](mdc:examples/pgsql.lua)
+Documentation: [docs/db/pgsql.md](mdc:docs/db/pgsql.md)
+
+## Common Features
+Both clients:
+- Use coroutines for async operations
+- Handle automatic reconnection
+- Support connection pooling
+- Provide type-safe data handling

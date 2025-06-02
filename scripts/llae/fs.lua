@@ -11,12 +11,12 @@ fs.exepath = uv.exepath
 
 function fs.isfile( fn )
 	local st = fs.stat(fn)
-	return st and st.isfile
+	return st and st.isfile or false
 end
 
 function fs.isdir( fn )
 	local st = fs.stat(fn)
-	return st and st.isdir
+	return st and st.isdir or false
 end
 
 function fs.rmdir_r(dir)

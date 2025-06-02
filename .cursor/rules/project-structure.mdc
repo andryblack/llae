@@ -1,0 +1,44 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Structure Guide
+
+LLAE is organized into several key directories:
+
+## Core Directories
+- `scripts/` - Contains the core Lua modules
+  - `llae/` - Core functionality modules
+  - `net/` - Networking modules including HTTP and WebSocket
+  - `web/` - Web framework modules
+  - `db/` - Database clients (Redis, PostgreSQL)
+
+## Documentation
+- `docs/` - Module documentation in Markdown format
+  - `db/` - Database modules documentation
+  - `net/` - Network modules documentation
+  - `web.md` - Web framework documentation
+  - `cli.md` - CLI commands documentation
+
+## Examples
+The [examples/](mdc:examples) directory contains working examples for various features:
+- [examples/app.lua](mdc:examples/app.lua) - Complete web application example
+- [examples/http.lua](mdc:examples/http.lua) - HTTP server example
+- [examples/redis.lua](mdc:examples/redis.lua) - Redis client example
+- [examples/pgsql.lua](mdc:examples/pgsql.lua) - PostgreSQL client example
+- [examples/websocket.lua](mdc:examples/websocket.lua) - WebSocket example
+
+## Tools
+- `tools/` - CLI command implementations
+  - [tools/commands.lua](mdc:tools/commands.lua) - Command registry
+  - Individual command modules like `install.lua`, `run.lua`, etc.
+
+## Project Files
+- `llae-project.lua` - Project configuration file
+- `bin/llae` - Main executable
+
+## Unit tests
+The `tests/` directory constains unit tests.
+Unit tests framework is luaunit.
+Command for run tests is: `./bin/llae run tests/run_all.lua`

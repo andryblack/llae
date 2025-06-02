@@ -4,6 +4,10 @@ module 'llae'
 module 'bzip2'
 module 'xz'
 
+if cmdargs.development then
+	module 'luaunit'
+end
+
 if cmdargs.debug then
 	config('lua','apicheck',true)
 end
