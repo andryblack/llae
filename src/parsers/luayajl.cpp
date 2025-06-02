@@ -1,4 +1,3 @@
-
 extern "C" {
 #include <yajl/yajl_parse.h>
 #include <yajl/yajl_gen.h>
@@ -296,11 +295,11 @@ static void do_json_encode_table(lua_State* L,int indx,yajl_gen g) {
     }
     if ((only_integers && count!=0) || is_array) {
         yajl_gen_array_open(g);
-        lua_pushnil(L);
-        while (lua_next(L, -2) != 0) {
-            /* uses 'key' (at index -2) and 'value' (at index -1) */
+        // For arrays, iterate through numeric indices instead of using lua_next
+        size_t len = lua_rawlen(L, -1);
+        for (size_t i = 1; i <= len; i++) {
+            lua_rawgeti(L, -1, i);
             do_json_encode(L, -1, g);
-            /* removes 'value'; keeps 'key' for next iteration */
             lua_pop(L, 1);
         }
         yajl_gen_array_close(g);
