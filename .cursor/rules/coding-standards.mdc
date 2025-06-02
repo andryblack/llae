@@ -33,5 +33,5 @@ alwaysApply: true
 - Write unit tests for all modules
 - Tests should be in `tests/` directory
 - Use luaunit framework
-- Run tests with `./bin/llae run tests/run_all.lua`
+- Run tests with `./bin/llae run tests`
 

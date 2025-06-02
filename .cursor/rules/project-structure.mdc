@@ -41,4 +41,4 @@ The [examples/](mdc:examples) directory contains working examples for various fe
 ## Unit tests
 The `tests/` directory constains unit tests.
 Unit tests framework is luaunit.
-Command for run tests is: `./bin/llae run tests/run_all.lua`
+Important: command for run tests is: `./bin/llae run tests`

@@ -20,17 +20,27 @@ function run:exec( args )
 		local prj,err = Project.load( )
 		local add_args 
 		local project_exe
+		local is_command = false
 		if prj then
 			for _,v in ipairs(prj:get_commands() or {}) do
 				if v.name == script then
 					script = v.script
 					add_args = v.args
+					is_command = true
 					if v.project_exe then
 						project_exe = prj:get_exe_path()
+					elseif not script then
+						error('need script argument')
 					end
 					break
 				end
 			end
+		else
+			local log = require 'llae.log'
+			log.debug('failed to load project',err)
+		end
+		if (not is_command) and (script:sub(-4)~='.lua') then
+			error('script must be a lua file or a command')
 		end
 		
 		local run_args = {}
@@ -54,9 +64,6 @@ function run:exec( args )
 			end
 		end
 		if not project_exe then
-			if not script then
-				error('need script argument')
-			end
 			local log = require 'llae.log'
 			local utils = require 'llae.utils'
 			run_args[0] = this

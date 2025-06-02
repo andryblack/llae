@@ -4,15 +4,15 @@ module 'llae'
 module 'bzip2'
 module 'xz'
 
-if cmdargs.development then
+if cmdargs and (cmdargs.development or cmdargs.inplace) then
 	module 'luaunit'
 end
 
-if cmdargs.debug then
+if cmdargs and cmdargs.debug then
 	config('lua','apicheck',true)
 end
 
-if cmdargs.inplace then
+if cmdargs and cmdargs.inplace then
 	config('llae','embed_scripts','scripts')
 	config('llae','embed_scripts','tools')
 	module 'redis'
@@ -27,3 +27,8 @@ generate_src{
 	filename = 'build/_build_config.lua',
 }
 config('llae','embed_script',{'_build_config','build/_build_config.lua'})
+
+command {
+	name = 'tests',
+	script = 'tests/run_all.lua'
+}

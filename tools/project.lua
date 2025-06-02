@@ -480,10 +480,12 @@ function Project.load( root_dir , cmdargs )
 	env.__load_env = load_env
 	local res,err = loadfile(path.join(root_dir,'llae-project.lua'),'bt',load_env)
 	if not res then
+		--log.error('failed to load llae-project.lua',err)
 		return res,err
 	end
 	res,err = pcall(res)
 	if not res then
+		log.error('failed to parse llae-project.lua',err)
 		return res,err
 	end
 
