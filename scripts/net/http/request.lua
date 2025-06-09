@@ -53,7 +53,7 @@ end
 function request:_connect( port )
 	local ip = nil
 	for _,v in ipairs(self._ip_list) do
-		if v.addr and v.socktype=='tcp' then
+		if v.addr and v.socktype=='tcp' and not self._timeout_error then
 			local ip = v.addr
 			--log.debug('connect to',ip,port)
 			self._connection = self:_create_connection()
@@ -79,14 +79,35 @@ function request:resolve()
 	return true,nil
 end
 
+function request:_on_timeout()
+	self._timeout_error = true
+	if self._tcp then
+		self._tcp:close()
+	end
+	if self._connection then
+		self._connection:close()
+	end
+end
+
 function request:exec(  )
 	local res,err = self:resolve()
 	if not res then
 		return nil,err
 	end
+	local tmr
+	if self._timeout then
+		--log.debug('start wait request response for',self._timeout)
+		tmr = uv.timer.new()
+		tmr:start(function()
+			self:_on_timeout()
+		end,math.floor(self._timeout*1000))
+	end
 	local port = self._url.port or url.services[self._url.scheme]
 	res,err = self:_connect(port)
 	if not res then
+		if self._timeout_error then	
+			return nil,'timeout'
+		end
 		return nil,err
 	end
 	
@@ -145,16 +166,7 @@ function request:exec(  )
 		return res,err
 	end
 	local p = self.parser.new(self.response)
-	local tmr
-	local terr
-	if self._timeout then
-		--log.debug('start wait request response for',self._timeout)
-		tmr = uv.timer.new()
-		tmr:start(function()
-			terr = 'timeout'
-			self._connection:close()
-		end,math.floor(self._timeout*1000))
-	end
+	
 	while true do
 		local resp,err = p:load(self._connection) 
 		if tmr then
@@ -168,8 +180,8 @@ function request:exec(  )
 				self._url = url.parse(redirect_url)
 				return self:exec()
 			end
-		elseif terr then
-			return nil,terr
+		elseif self._timeout_error then
+			return nil,'timeout'
 		end
 		return resp,err
 	end
