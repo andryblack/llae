@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include "lua/state.h"
 #include "uv/buffer.h"
 
@@ -25,7 +26,8 @@ namespace llae {
 
 	    bool add_bool(bool val);
 
-	    bool add_integer(uint64_t val);
+	    bool add_integer(int64_t val);
+		bool add_unsigned(uint64_t val);
 
 	    bool add_double(double val);
 	    

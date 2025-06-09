@@ -1,3 +1,4 @@
+#include <cstdio>
 extern "C" {
 #include <yajl/yajl_parse.h>
 #include <yajl/yajl_gen.h>
@@ -407,8 +408,14 @@ namespace llae {
         return m_g && (yajl_gen_bool(m_g,val ? 1 : 0) == yajl_gen_status_ok);
     }
 
-    bool json_build::add_integer(uint64_t val) {
+    bool json_build::add_integer(int64_t val) {
         return m_g && (yajl_gen_integer(m_g,val) == yajl_gen_status_ok);
+    }
+
+    bool json_build::add_unsigned(uint64_t val) {
+        char buf[32];
+        ::snprintf(buf, sizeof(buf)-1, "%" PRIu64 , val);
+        return m_g && (yajl_gen_number(m_g,buf,::strlen(buf)) == yajl_gen_status_ok);
     }
 
     bool json_build::add_double(double val) {
