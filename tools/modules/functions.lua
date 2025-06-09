@@ -400,6 +400,18 @@ function m:write_file( filename , content)
 	fs.write_file(filename,content)
 end
 
+function m:read_file( filename )
+	local src = _local(self,filename)
+	local content = fs.load_file(src)
+	return content
+end
+
+function m:read_dl_file( filename )
+	local src = path.join(self._project:get_dl_dir(),filename)
+	local content = fs.load_file(src)
+	return content
+end
+
 function m:move_files( files )
 	for to,from in pairs(files) do
 		local src = _local(self,from)
