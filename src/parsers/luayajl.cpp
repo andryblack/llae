@@ -4,6 +4,7 @@ extern "C" {
 #include <yajl/yajl_gen.h>
 }
 
+#include <cinttypes>
 #include <vector>
 #include <cassert>
 #include <string>
