@@ -6,6 +6,7 @@ module 'xz'
 
 if cmdargs and (cmdargs.development or cmdargs.inplace) then
 	module 'luaunit'
+	module 'premake-ecc'
 end
 
 if cmdargs and cmdargs.debug then
