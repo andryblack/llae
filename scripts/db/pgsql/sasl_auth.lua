@@ -1,6 +1,7 @@
 local class = require 'llae.class'
 local uv = require 'llae.uv'
 local log = require 'llae.log'
+local llae = require 'llae'
 local crypto = require 'llae.crypto'
 
 local sasl_auth = class()
@@ -11,7 +12,7 @@ end
 
 function sasl_auth:create_client_first_message()
 	local rand_str = uv.random(32)
-	self._sasl_nonce = tostring(uv.buffer.hex_encode(rand_str))
+	self._sasl_nonce = tostring(llae.buffer.hex_encode(rand_str))
 	self._client_first_message_bare = 'n=' .. self._config.user .. ',r='..self._sasl_nonce
 	self._client_first_message = 'n,,' .. self._client_first_message_bare
 	return self._client_first_message
@@ -88,7 +89,7 @@ end
 
 function sasl_auth:process_server_first_message(server_first_message)
 	local p = sasl_parse(server_first_message)
-	local salt = tostring(uv.buffer.base64_decode(p.s))
+	local salt = tostring(llae.buffer.base64_decode(p.s))
 	local salted_password = sasl_hi(self._config.password,salt,tonumber(p.i))
 	local client_key = sasl_hmac(salted_password,'Client Key')
 	local stored_key = sasl_h(client_key)
@@ -96,7 +97,7 @@ function sasl_auth:process_server_first_message(server_first_message)
 	local auth_message = self._client_first_message_bare .. ',' .. server_first_message .. ',' .. client_final_message
 	local client_signature = sasl_hmac(stored_key,auth_message)
 	local client_proof = xor_data(client_key,client_signature)
-	client_final_message = client_final_message .. ',p=' .. tostring(uv.buffer.base64_encode(client_proof))
+	client_final_message = client_final_message .. ',p=' .. tostring(llae.buffer.base64_encode(client_proof))
 	return client_final_message
 end
 

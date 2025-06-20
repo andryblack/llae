@@ -4,8 +4,9 @@
 #include "handle.h"
 #include "lua/state.h"
 #include "lua/ref.h"
-#include "buffer.h"
+#include "llae/buffer.h"
 #include "req.h"
+#include "write_buffers.h"
 #include <vector>
 
 namespace uv {
@@ -46,7 +47,7 @@ namespace uv {
 
     class udp_recv_consumer : public meta::object {
     public:
-        virtual bool on_recv(udp* s,ssize_t nread, buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags) = 0;
+        virtual bool on_recv(udp* s,ssize_t nread, llae::buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags) = 0;
         virtual void on_udp_closed(udp* s) {}
         virtual void on_stop_recv(udp* s) {}
     };
@@ -60,14 +61,14 @@ namespace uv {
         bool m_connected = false;
         static void alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);
         static void recv_cb(uv_udp_t* stream, ssize_t nread, const uv_buf_t* buf,const struct sockaddr* addr, unsigned flags);
-        std::vector<uv::buffer_ptr> m_buffers;
+        std::vector<llae::buffer_ptr> m_buffers;
     public:
         virtual uv_handle_t* get_handle() override final { return reinterpret_cast<uv_handle_t*>(&m_udp); }
         uv_udp_t* get_udp() { return &m_udp; }
     protected:
         virtual ~udp() override;
         virtual void on_closed() override;
-        bool on_recv(ssize_t nread, buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags);
+        bool on_recv(ssize_t nread, llae::buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags);
     public:
         explicit udp(uv::loop& loop);
         
@@ -83,7 +84,7 @@ namespace uv {
         int do_set_multicast_loop(bool on);
         int do_set_multicast_ttl(int ttl);
         int do_set_multicast_interface(const char* interface_addr);
-        int do_try_send(const buffer_ptr& buffer,const struct sockaddr *addr);
+        int do_try_send(const llae::buffer_ptr& buffer,const struct sockaddr *addr);
         
         lua::multiret bind(lua::state& l);
         lua::multiret send(lua::state& l);
@@ -99,7 +100,7 @@ namespace uv {
         lua::multiret set_multicast_interface(lua::state& l,const char* interface_addr);
         lua::multiret getpeername(lua::state& l);
         lua::multiret getsockname(lua::state& l);
-        void add_buffer(uv::buffer_ptr&& buffer);
+        void add_buffer(llae::buffer_ptr&& buffer);
         void disconnect();
         lua::multiret recv(lua::state& l);
         int start_recv( const udp_recv_consumer_ptr& consumer );

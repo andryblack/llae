@@ -4,7 +4,7 @@ local fs = require 'llae.fs'
 local utils = require 'llae.utils'
 local async = require 'llae.async'
 local os = require 'llae.os'
-local uv = require 'llae.uv'
+local llae = require 'llae'
 
 local log = require 'llae.log'
 
@@ -38,7 +38,7 @@ function base:create_env(project)
 	local env = {
 		project = project,
 		log = log,
-		buffer = uv.buffer
+		buffer = llae.buffer
 	}
 	local super_env = {}
 	apply_functions(super_env,env)

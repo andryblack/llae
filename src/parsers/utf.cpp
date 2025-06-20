@@ -1,5 +1,5 @@
 #include "lua/state.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include "lua/bind.h"
 #include <cstdint>
 #include <memory>
@@ -236,7 +236,7 @@ namespace utf {
 	};
 
 	static lua::multiret utf16_decode(lua::state& l) {
-		auto data = uv::buffer_view::get(l,1,true);
+		auto data = llae::buffer_view::get(l,1,true);
 		auto src = reinterpret_cast<const uint16_t*>(data.get_base());
 		auto len = data.get_len()/2;
 		auto res_size = utf16_decoder::process(src,len,0,utf8_counter{});
@@ -248,11 +248,11 @@ namespace utf {
 	}
 
 	static lua::multiret utf16_encode(lua::state& l) {
-		auto data = uv::buffer_view::get(l,1,true);
+		auto data = llae::buffer_view::get(l,1,true);
 		auto src = reinterpret_cast<const uint8_t*>(data.get_base());
 		auto len = data.get_len();
 		auto res_size = utf8_decoder::process(src,len,0,utf16_counter{});
-		auto res = uv::buffer::alloc(res_size*sizeof(uint16_t));
+		auto res = llae::buffer::alloc(res_size*sizeof(uint16_t));
 		auto write = reinterpret_cast<uint16_t*>(res->get_base());
 		utf8_decoder::process(src,len,write,utf16_writer{});
 		lua::push(l,std::move(res));
@@ -303,7 +303,7 @@ namespace utf {
 	}
 
 	static lua::multiret utf16_codes(lua::state& l) {
-		auto data = uv::buffer_view::get(l,1,true);
+		auto data = llae::buffer_view::get(l,1,true);
 		auto src = reinterpret_cast<const uint16_t*>(data.get_base());
 		auto len = data.get_len()/2;
 		auto res_size = utf16_decoder::process(src,len,0,utf32_counter{});

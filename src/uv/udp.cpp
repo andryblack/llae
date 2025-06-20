@@ -81,7 +81,7 @@ namespace uv {
         lua_recv_consumer(lua::ref && cont) : m_recv_cont(std::move(cont)) {}
         virtual bool on_recv(udp* s,
                              ssize_t nread,
-                             buffer_ptr&& buffer,
+                             llae::buffer_ptr&& buffer,
                              const struct sockaddr* addr, unsigned flags) override final {
             auto& l = llae::app::get(s->get_udp()->loop).lua();
             if (m_recv_cont.valid()) {
@@ -331,19 +331,19 @@ namespace uv {
 
     void udp::alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
         udp* self = static_cast<udp*>(handle->data);
-        uv::buffer_ptr b;
+        llae::buffer_ptr b;
         if (!self->m_buffers.empty()) {
             b = std::move(self->m_buffers.back());
             self->m_buffers.pop_back();
         } else {
-            b = buffer::alloc(suggested_size);
+            b = llae::buffer::alloc(suggested_size);
         }
         buf->base = static_cast<char*>(b->get_base());
         buf->len = b->get_capacity();
         b->add_ref();
     }
 
-    void udp::add_buffer(uv::buffer_ptr&& buffer) {
+    void udp::add_buffer(llae::buffer_ptr&& buffer) {
         if (buffer) {
             m_buffers.emplace_back(std::move(buffer));
         } else {
@@ -353,8 +353,8 @@ namespace uv {
 
     void udp::recv_cb(uv_udp_t* u, ssize_t nread, const uv_buf_t* buf,const struct sockaddr* addr, unsigned flags) {
         udp* self = static_cast<udp*>(u->data);
-        auto b = buffer::get(buf->base);
-        if (self->on_recv(nread,buffer_ptr(b),addr,flags)) {
+        auto b = llae::buffer::get(buf->base);
+        if (self->on_recv(nread,llae::buffer_ptr(b),addr,flags)) {
             //std::cout << "stream read_cb remove_ref" << std::endl;
             self->remove_ref();
         }
@@ -363,7 +363,7 @@ namespace uv {
         }
     }
 
-    bool udp::on_recv(ssize_t nread, buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags) {
+    bool udp::on_recv(ssize_t nread, llae::buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags) {
         if (m_recv_consumer) {
             auto consumer = std::move(m_recv_consumer);
             bool res = consumer->on_recv(this,
@@ -394,8 +394,9 @@ namespace uv {
         }
         return res;
     }
-    int udp::do_try_send(const buffer_ptr& buffer,const struct sockaddr *addr) {
-        return uv_udp_try_send(get_udp(),buffer->get(),1,addr);
+    int udp::do_try_send(const llae::buffer_ptr& buffer,const struct sockaddr *addr) {
+        auto buf = get_buffer(buffer);
+        return uv_udp_try_send(get_udp(),&buf,1,addr);
     }
 
     lua::multiret udp::try_send(lua::state& l) {
@@ -410,7 +411,7 @@ namespace uv {
             }
             with_addr = true;
         }
-        auto buf = buffer::get(l,2);
+        auto buf = llae::buffer::get(l,2);
         if (!buf) {
             l.argerror(2,"need buffer");
         }

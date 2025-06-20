@@ -1,6 +1,6 @@
 #include <pugixml/pugixml.hpp>
 #include "lua/bind.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 
 namespace xml {
 
@@ -32,7 +32,7 @@ namespace xml {
     }
 
     static lua::multiret tolua(lua::state& l) {
-        auto buffer = uv::buffer::get(l,1);
+        auto buffer = llae::buffer::get(l,1);
         if (!buffer) {
             l.argerror(1,"need data");
         }

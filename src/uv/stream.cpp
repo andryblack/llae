@@ -85,7 +85,7 @@ namespace uv {
 		return start_write(m_buffers.get_buffers().data(),m_buffers.get_buffers().size());
 	}
 
-	write_buffer_req::write_buffer_req(stream_ptr&& s,buffer_base_ptr&& b) : write_req(std::move(s)),m_buffer(std::move(b)) {
+	write_buffer_req::write_buffer_req(stream_ptr&& s,llae::buffer_base_ptr&& b) : write_req(std::move(s)),m_buffer(std::move(b)) {
 	}
 	write_buffer_req::~write_buffer_req() {
 	}
@@ -98,7 +98,8 @@ namespace uv {
 	}
 
 	int write_buffer_req::write() {
-		return start_write(m_buffer->get(),1);
+        auto buf = get_buffer(m_buffer);
+		return start_write(&buf,1);
 	}
 
 
@@ -177,7 +178,7 @@ namespace uv {
         handle::on_closed();
 	}
 
-	uv::buffer_ptr readable_stream::get_read_buffer(size_t size) {
+	llae::buffer_ptr readable_stream::get_read_buffer(size_t size) {
 		while (!m_read_buffers.empty()) {
 			auto res = std::move(m_read_buffers.back());
 			m_read_buffers.pop_back();
@@ -186,7 +187,7 @@ namespace uv {
 				return res;
 			}
 		}
-		return buffer::alloc(size);
+		return llae::buffer::alloc(size);
 	}
 
 	void stream::alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
@@ -198,7 +199,7 @@ namespace uv {
 	}
 	void stream::read_cb(uv_stream_t* s, ssize_t nread, const uv_buf_t* buf) {
 		stream* self = static_cast<stream*>(s->data);
-        buffer_ptr b{buffer::get(buf->base)};
+        auto b = get_buffer(buf);
         if (b) {
             b->remove_ref();
         }
@@ -207,7 +208,7 @@ namespace uv {
             self->add_read_buffer(std::move(b));
         }
 	}
-	void readable_stream::add_read_buffer(uv::buffer_ptr&& b) {
+	void readable_stream::add_read_buffer(llae::buffer_ptr&& b) {
         if (!b) return;
 		m_read_buffers.emplace_back(std::move(b));
 	}
@@ -216,7 +217,7 @@ namespace uv {
 
 	class lua_read_consumer_base : public stream_read_consumer {
 	protected:
-		static bool push_read( lua::state& toth, ssize_t nread,  buffer_ptr& buffer ) {
+		static bool push_read( lua::state& toth, ssize_t nread,  llae::buffer_ptr& buffer ) {
 			if (nread > 0) {
                 buffer->set_len(nread);
                 lua::push(toth,std::move(buffer));
@@ -236,7 +237,7 @@ namespace uv {
     class readable_stream::lua_read_consumer : public lua_read_consumer_base {
     private:
         lua::ref m_read_cont;
-        std::vector<uv::buffer_ptr> m_readed;
+        std::vector<llae::buffer_ptr> m_readed;
         size_t m_readed_size = 0;
         ssize_t m_read_status = 0;
         bool m_read_status_consumed = false;
@@ -286,7 +287,7 @@ namespace uv {
         }
         virtual bool on_read(readable_stream* s,
                              ssize_t nread,
-                             buffer_ptr& buffer) override final {
+                             llae::buffer_ptr& buffer) override final {
             auto& l = s->get_lua();
             if (!l.native()) {
                 m_read_cont.release();
@@ -382,7 +383,7 @@ namespace uv {
         }
     }
 
-	void readable_stream::consume_read(ssize_t nread,  buffer_ptr& buffer) {
+	void readable_stream::consume_read(ssize_t nread,  llae::buffer_ptr& buffer) {
         if (m_read_consumer) {
             auto consumer = m_read_consumer;
             bool res = consumer->on_read(this, nread, buffer);
@@ -531,7 +532,7 @@ namespace uv {
 	}
 
 
-	bool stream::write(buffer_base_ptr&& buf) {
+	bool stream::write(llae::buffer_base_ptr&& buf) {
         if (is_closing() || is_closed())
             return false;
 		common::intrusive_ptr<write_buffer_req> req{new write_buffer_req(stream_ptr(this),std::move(buf))};

@@ -80,7 +80,7 @@ int main(int argc,char** argv) {
     }
 
 	LLAE_DIAG(std::cout << "meta objects:  " << meta::object::get_total_count() << std::endl;)
-	LLAE_DIAG(std::cout << "buffers alloc: " << llae::named_alloc<uv::buffer>::get_allocated() << std::endl;)
+	LLAE_DIAG(std::cout << "buffers alloc: " << llae::named_alloc<llae::buffer>::get_allocated() << std::endl;)
 
 	return retcode;
 }

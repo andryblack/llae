@@ -1,7 +1,7 @@
 #include "random.h"
 #include "lua/bind.h"
 #include "crypto.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 
 META_OBJECT_INFO(crypto::random,meta::object)
 META_OBJECT_INFO(crypto::entropy,meta::object)
@@ -54,7 +54,7 @@ namespace crypto {
 	}
 
 	lua::multiret random::update(lua::state& l) {
-		auto data = uv::buffer_view::get(l,2,true);
+		auto data = llae::buffer_view::get(l,2,true);
 		auto res = mbedtls_ctr_drbg_update(&m_ctr_drbg,static_cast<const unsigned char*>(data.get_base()),data.get_len());
 		return mbedtls_result(l,res);
 	}

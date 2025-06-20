@@ -385,7 +385,7 @@ namespace ssl {
 		return int(count);
 	}
 
-    bool connection::on_read(uv::readable_stream* s,ssize_t nread, uv::buffer_ptr& buffer) {
+    bool connection::on_read(uv::readable_stream* s,ssize_t nread, llae::buffer_ptr& buffer) {
         //std::cout << "on_read " << nread << std::endl;
         if (nread > 0) {
             m_readed_data.push_back({size_t(nread),0,std::move(buffer)});
@@ -516,7 +516,7 @@ namespace ssl {
     template <typename Handle>
     void connection::do_read(Handle handle) {
         while (is_read_active()) {
-            uv::buffer_ptr buffer = get_read_buffer(CONN_BUFFER_SIZE);
+            llae::buffer_ptr buffer = get_read_buffer(CONN_BUFFER_SIZE);
             unsigned char* data = reinterpret_cast<unsigned char*>(buffer->get_base());
             int r = mbedtls_ssl_read(&m_ssl, data, CONN_BUFFER_SIZE);
             if (r > 0) {
@@ -567,7 +567,7 @@ namespace ssl {
     }
             
     void connection::process_read() {
-        do_read([this](int status,uv::buffer_ptr& data){
+        do_read([this](int status,llae::buffer_ptr& data){
             consume_read(status,data);
             if (data) {
                 add_read_buffer(std::move(data));
@@ -650,7 +650,7 @@ namespace ssl {
 //            l.pushstring("connection::read is not active");
 //            return {2};
 //        }
-        do_read([this](int status,uv::buffer_ptr& data){
+        do_read([this](int status,llae::buffer_ptr& data){
             consume_read(status,data);
             if (data) {
                 add_read_buffer(std::move(data));

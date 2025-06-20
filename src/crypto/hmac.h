@@ -9,6 +9,8 @@
 
 namespace uv {
 	class loop;
+}
+namespace llae {
 	class buffer;
 	using buffer_ptr = common::intrusive_ptr<buffer>;
 }
@@ -27,7 +29,7 @@ namespace crypto {
 		class update_async;
 		void on_start_completed(lua::state& l,int uvstatus,int mbedlsstatus);
 		void on_update_completed(lua::state& l,int uvstatus,int mbedlsstatus);
-		void on_finish_completed(uv::loop& l,int uvstatus,int mbedlsstatus,uv::buffer_ptr&& digest);
+		void on_finish_completed(uv::loop& l,int uvstatus,int mbedlsstatus,llae::buffer_ptr&& digest);
 		lua::ref m_cont;
 		void release() { m_cont.release(); }
 	public:

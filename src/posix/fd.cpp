@@ -1,7 +1,7 @@
 #include "fd.h"
 #include "lposix.h"
 #include "lua/bind.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -40,9 +40,9 @@ namespace posix {
 	}
 
 	lua::multiret fd::lread(lua::state& l) {
-		uv::buffer_ptr buffer = lua::stack<uv::buffer_ptr>::get(l,2);
+		auto buffer = lua::stack<llae::buffer_ptr>::get(l,2);
 		if (!buffer) {
-			buffer = uv::buffer::alloc(l.checkinteger(2));
+			buffer = llae::buffer::alloc(l.checkinteger(2));
 		}
 		auto readed = read(buffer->get_base(),buffer->get_capacity());
 		if (readed < 0) {
@@ -60,7 +60,7 @@ namespace posix {
 	}
 
 	lua::multiret fd::lwrite(lua::state& l) {
-		auto buffer = lua::stack<uv::buffer_base_ptr>::get(l,2);
+		auto buffer = lua::stack<llae::buffer_base_ptr>::get(l,2);
 		const void* data = nullptr;
 		size_t len = 0;
 		if (!buffer) {

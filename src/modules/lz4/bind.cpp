@@ -4,8 +4,8 @@
 
 class decompress_raw_work : public uv::lua_cont_work {
 private:
-    uv::buffer_base_ptr m_src_data;
-    uv::buffer_ptr m_dst_data;
+    llae::buffer_base_ptr m_src_data;
+    llae::buffer_ptr m_dst_data;
     int m_result = 0;
 protected:
     virtual void on_work() override {
@@ -33,15 +33,15 @@ protected:
         return args;
     }
 public:
-    explicit decompress_raw_work(lua::ref&& cont,uv::buffer_base_ptr&& src,size_t dst_buffer_size) : uv::lua_cont_work(std::move(cont)),m_src_data(std::move(src)) {
-        m_dst_data = uv::buffer::alloc(dst_buffer_size);
+    explicit decompress_raw_work(lua::ref&& cont,llae::buffer_base_ptr&& src,size_t dst_buffer_size) : uv::lua_cont_work(std::move(cont)),m_src_data(std::move(src)) {
+        m_dst_data = llae::buffer::alloc(dst_buffer_size);
     }
 };
 
 class compress_raw_work : public uv::lua_cont_work {
 private:
-    uv::buffer_base_ptr m_src_data;
-    uv::buffer_ptr m_dst_data;
+    llae::buffer_base_ptr m_src_data;
+    llae::buffer_ptr m_dst_data;
     int m_result = 0;
 protected:
     virtual void on_work() override {
@@ -69,13 +69,13 @@ protected:
         return args;
     }
 public:
-    explicit compress_raw_work(lua::ref&& cont,uv::buffer_base_ptr&& src) :uv::lua_cont_work(std::move(cont)),m_src_data(std::move(src))  {
-        m_dst_data = uv::buffer::alloc(LZ4_compressBound(m_src_data->get_len()));
+    explicit compress_raw_work(lua::ref&& cont,llae::buffer_base_ptr&& src) :uv::lua_cont_work(std::move(cont)),m_src_data(std::move(src))  {
+        m_dst_data = llae::buffer::alloc(LZ4_compressBound(m_src_data->get_len()));
     }
 };
 
 static lua::multiret lua_lz4decompress_raw(lua::state& l) {
-    auto buf = uv::buffer_base::get(l,1,true);
+    auto buf = llae::buffer_base::get(l,1,true);
     auto dst_size = l.checkinteger(2);
     if (!buf) {
         l.argerror(1,"need data");
@@ -105,7 +105,7 @@ static lua::multiret lua_lz4decompress_raw(lua::state& l) {
 }
 
 static lua::multiret lua_lz4compress_raw(lua::state& l) {
-    auto buf = uv::buffer_base::get(l,1,true);
+    auto buf = llae::buffer_base::get(l,1,true);
     if (!buf) {
         l.argerror(1,"need data");
     }

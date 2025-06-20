@@ -2,6 +2,7 @@ local class = require 'llae.class'
 local url = require 'net.url'
 local uv = require 'llae.uv'
 local log = require 'llae.log'
+local llae = require 'llae'
 local headers = require 'net.http.headers'
 
 local multipart = class(require 'web.middle','multipart')
@@ -71,7 +72,7 @@ end
 
 function multipart.build(values)
 	local rand_data = string.pack('<I4I4I4I4',math.random(1,0x7fffffff),math.random(1,0x7fffffff),math.random(1,0x7fffffff),math.random(1,0x7fffffff))
-	local bounds = '--------------' .. uv.buffer.hex_encode(rand_data)
+	local bounds = '--------------' .. llae.buffer.hex_encode(rand_data)
 	local prefix = '--' .. bounds
 	local res = {}
 	for _,v in ipairs(values) do

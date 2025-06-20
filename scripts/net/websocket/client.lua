@@ -3,6 +3,7 @@ local class = require 'llae.class'
 local url = require 'net.url'
 local uv = require 'llae.uv'
 local log = require 'llae.log'
+local llae = require 'llae'
 local handler = require 'net.websocket.handler'
 
 local client = class(require 'net.websocket.protocol')
@@ -32,7 +33,7 @@ function client:start( cb )
 	end
 	client.counter = client.counter + 1
 	local ws_key = string.pack('I4I4I4I4',math.random(1,0xffffffff),math.random(1,0xffffffff),math.random(1,0xffffffff),client.counter)
-	ws_key = tostring(uv.buffer.base64_encode(ws_key))
+	ws_key = tostring(llae.buffer.base64_encode(ws_key))
 	local http_url = comp:build()
 	local http_args = setmetatable({
 		url = http_url,

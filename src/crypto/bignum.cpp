@@ -1,7 +1,7 @@
 #include "bignum.h"
 #include "lua/stack.h"
 #include "lua/bind.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include <memory>
 #include <mbedtls/error.h>
 
@@ -151,7 +151,7 @@ namespace crypto {
 
     lua::multiret bignum::write(lua::state& l) {
         size_t len = l.optinteger(2,mbedtls_mpi_size(&m_mpi));
-        auto buffer = uv::buffer::alloc(len);
+        auto buffer = llae::buffer::alloc(len);
         int r = mbedtls_mpi_write_binary(&m_mpi,static_cast<unsigned char*>(buffer->get_base()),len);
         check_error(l,r);
         lua::push(l,std::move(buffer));
@@ -165,7 +165,7 @@ namespace crypto {
             int r = mbedtls_mpi_read_binary(&m_mpi,reinterpret_cast<const unsigned char*>(base),len);
             check_error(l,r);
         } else {
-            auto b = lua::stack<uv::buffer_base_ptr>::get(l,2);
+            auto b = lua::stack<llae::buffer_base_ptr>::get(l,2);
             if (!b) {
                 l.argerror(2,"need data");
             }

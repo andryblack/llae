@@ -2,12 +2,13 @@
 #include <memory>
 #include "crypto.h"
 #include "uv/work.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include "llae/app.h"
 #include "common/intrusive_ptr.h"
 #include "lua/bind.h"
 #include "lua/stack.h"
 #include "uv/luv.h"
+#include "uv/write_buffers.h"
 
 META_OBJECT_INFO(crypto::hmac,meta::object)
 
@@ -63,9 +64,9 @@ namespace crypto {
 
 	class hmac::start_async : public hmac::async {
 	private:
-		uv::buffer_base_ptr m_key;
+		llae::buffer_base_ptr m_key;
 	public:
-		explicit start_async(hmac_ptr&& m,uv::buffer_base_ptr&& key) : hmac::async(std::move(m)),m_key(std::move(key)) {}
+		explicit start_async(hmac_ptr&& m,llae::buffer_base_ptr&& key) : hmac::async(std::move(m)),m_key(std::move(key)) {}
 		virtual void on_work() {
 			m_status = mbedtls_md_hmac_starts(&m_hmac->m_ctx,
 				reinterpret_cast<const unsigned char*>(m_key->get_base()),m_key->get_len());
@@ -83,12 +84,12 @@ namespace crypto {
 
 	class hmac::finish_async : public hmac::async {
 	private:
-		uv::buffer_ptr m_digest;
+		llae::buffer_ptr m_digest;
 	public:
 		explicit finish_async(hmac_ptr&& m) : hmac::async(std::move(m)) {}
 		virtual void on_work() {
 			size_t size = mbedtls_md_get_size(m_hmac->m_info);
-			m_digest = uv::buffer::alloc(size);
+			m_digest = llae::buffer::alloc(size);
 			m_status = mbedtls_md_hmac_finish(&m_hmac->m_ctx,static_cast<unsigned char*>(m_digest->get_base()));
 		}
 		virtual void on_after_work(int status) {
@@ -110,7 +111,7 @@ namespace crypto {
 			return {2};
 		}
 		{
-			auto key = uv::buffer_base::get(l,2);
+			auto key = llae::buffer_base::get(l,2);
 			if (!key) {
 				l.pushnil();
 				l.pushstring("hmac::start need key");
@@ -277,7 +278,7 @@ namespace crypto {
 		}
 		l.pop(1);// thread
 	}
-	void hmac::on_finish_completed(uv::loop& loop,int uvstatus,int mbedlsstatus,uv::buffer_ptr&& digest) {
+	void hmac::on_finish_completed(uv::loop& loop,int uvstatus,int mbedlsstatus,llae::buffer_ptr&& digest) {
 		if (!m_cont.valid())
 			return;
 		lua::state& l(llae::app::get(loop).lua());

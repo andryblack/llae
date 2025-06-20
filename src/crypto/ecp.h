@@ -8,6 +8,9 @@
 
 namespace uv {
 	class loop;
+}
+
+namespace llae {
 	class buffer;
 	using buffer_ptr = common::intrusive_ptr<buffer>;
 }
@@ -49,7 +52,7 @@ namespace crypto {
 		int load_group(mbedtls_ecp_group_id grp_id);
         static int rng_func(void *, unsigned char *, size_t);
         void rng_gen(unsigned char * buffer, size_t size);
-        uv::buffer_ptr m_random_data;
+        llae::buffer_ptr m_random_data;
 	public:
 		~ecp();
 

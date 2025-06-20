@@ -2,7 +2,7 @@
 #include "lua/stack.h"
 #include "lua/bind.h"
 #include "crypto/crypto.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include <mbedtls/debug.h>
 #include <mbedtls/error.h>
 #include <iostream>
@@ -63,7 +63,7 @@ namespace ssl {
 	}
 
 	lua::multiret ctx::load_cert(lua::state& l) {
-		auto data = uv::buffer::get(l,2,true);
+		auto data = llae::buffer::get(l,2,true);
 		if (!data) {
 			l.pushnil();
 			l.pushstring("need buffer with cert");

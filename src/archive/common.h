@@ -2,7 +2,7 @@
 #define __LLAE_ARCHIVE_COMMON_H_INCLUDED__
 
 #include "common/intrusive_ptr.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include "uv/mutex.h"
 #include "uv/work.h"
 #include "uv/fs.h"
@@ -38,12 +38,12 @@ namespace archive {
 		protected:
             compressionstream_ptr m_stream;
 			int m_z_status = Lib::OK;
-			uv::buffer_ptr m_out;
+			llae::buffer_ptr m_out;
 			void flush_out(typename Lib::stream& z) {
 				if (m_out) {
 					m_stream->add_data(std::move(m_out));
 				}
-				m_out = std::move(uv::buffer::alloc(COMPRESSED_BLOCK_SIZE));
+				m_out = llae::buffer::alloc(COMPRESSED_BLOCK_SIZE);
                 Lib::fill_out(z,m_out->get_base(),m_out->get_len());
 			}
 			virtual void on_after_work(int status) override {
@@ -150,8 +150,8 @@ namespace archive {
 			int64_t m_offset = 0;
 
 			uv_fs_t	m_fs_req;
-			uv::buffer_ptr m_read_buffer;
-			uv::buffer_ptr m_compress_buffer;
+			llae::buffer_ptr m_read_buffer;
+			llae::buffer_ptr m_compress_buffer;
 
 			bool m_compress_active = false;
 			bool m_read_active = false;
@@ -240,10 +240,11 @@ namespace archive {
 			int start_read(uv::loop& l) {
 				m_read_active = true;
 				if (!m_read_buffer) {
-					m_read_buffer = uv::buffer::alloc(BUFFER_SIZE);
+					m_read_buffer = llae::buffer::alloc(BUFFER_SIZE);
 				}
+				uv_buf_t buf = {static_cast<char*>(m_read_buffer->get_base()),static_cast<size_t>(m_read_buffer->get_len())};
 				int r = uv_fs_read(l.native(),&m_fs_req,m_file->get(),
-					m_read_buffer->get(),1,m_offset,&fs_cb);
+					&buf,1,m_offset,&fs_cb);
 				if (r < 0) {
 					m_read_active = false;
 				}
@@ -355,7 +356,7 @@ namespace archive {
             m_read_resume.reset();
 			continue_read(l);
 		}
-		void add_data(uv::buffer_ptr&& b) {
+		void add_data(llae::buffer_ptr&& b) {
 			uv::scoped_lock l(m_mutex);
 			if (!m_processed.empty()) {
 				size_t tail = m_processed.back()->get_capacity()-m_processed.back()->get_len();
@@ -378,7 +379,7 @@ namespace archive {
 		common::intrusive_ptr<async_resume_read> m_read_resume;
 		typename Lib::stream m_z;
 		
-		std::vector<uv::buffer_ptr> m_processed;
+		std::vector<llae::buffer_ptr> m_processed;
 		uv::mutex m_mutex;
 		bool m_is_error = false;
 		bool m_finished = false;
@@ -541,7 +542,7 @@ namespace archive {
             if (!m_read_cont.valid()) {
                 return;
             }
-            uv::buffer_ptr buf;
+            llae::buffer_ptr buf;
             {
                 uv::scoped_lock l(this->m_mutex);
                 if (!this->m_processed.empty()) {
@@ -592,7 +593,7 @@ namespace archive {
                 l.pushstring("compressionstream::read async not completed");
                 return {2};
             }
-            uv::buffer_ptr buf;
+            llae::buffer_ptr buf;
             {
                 uv::scoped_lock l(this->m_mutex);
                 if (!this->m_processed.empty()) {
@@ -638,7 +639,7 @@ namespace archive {
                 l.pushstring("compressionstream::read async not completed");
                 return {2};
             }
-            uv::buffer_ptr buf;
+            llae::buffer_ptr buf;
             {
                 uv::scoped_lock l(this->m_mutex);
                 if (!this->m_processed.empty()) {
@@ -680,7 +681,7 @@ namespace archive {
         class write_buffer_req : public uv::write_buffer_req {
             compressionstream_to_stream_ptr m_self;
         public:
-            write_buffer_req(compressionstream_to_stream_ptr&& self,uv::buffer_base_ptr&& b) :
+            write_buffer_req(compressionstream_to_stream_ptr&& self,llae::buffer_base_ptr&& b) :
                 uv::write_buffer_req(uv::stream_ptr(self->m_stream),std::move(b)),
                 m_self(std::move(self)) {
 
@@ -716,7 +717,7 @@ namespace archive {
             if (!m_stream) {
                 return;
             }
-            uv::buffer_ptr buf;
+            llae::buffer_ptr buf;
             while (true) {
                 {
                     uv::scoped_lock l(this->m_mutex);

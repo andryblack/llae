@@ -2,7 +2,7 @@
 #include "crypto.h"
 #include "bignum.h"
 #include "lua/bind.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include "lua/stack.h"
 
 #include <mbedtls/ecdsa.h>
@@ -85,7 +85,7 @@ namespace crypto {
         if (l.isstring(2)) {
             data = reinterpret_cast<const unsigned char*>(l.tolstring(2, size));
         } else {
-            uv::buffer_base_ptr b = lua::stack<uv::buffer_base_ptr>::get(l,2);
+            llae::buffer_base_ptr b = lua::stack<llae::buffer_base_ptr>::get(l,2);
             if (!b) {
                 l.argerror(2, "need data");
             } else {
@@ -113,7 +113,7 @@ namespace crypto {
         size_t need_len = 0;
         auto res = mbedtls_ecp_point_write_binary(&m_group,point->get(),fmt,&need_len,buf,0);
         if (res == MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL) {
-            uv::buffer_ptr b = uv::buffer::alloc(need_len);
+            auto b = llae::buffer::alloc(need_len);
             res = mbedtls_ecp_point_write_binary(&m_group,point->get(),fmt,&need_len,
                                                  static_cast<unsigned char *>(b->get_base()),need_len);
             if (res == 0) {
@@ -170,7 +170,7 @@ namespace crypto {
     }
 
     lua::multiret ecp::ecdsa_verify(lua::state& l) {
-        auto b = uv::buffer_view::get(l,2,true);
+        auto b = llae::buffer_view::get(l,2,true);
         ecp_point_ptr Q = lua::stack<ecp_point_ptr>::get(l,3);
         if (!Q) {
             l.argerror(3, "need pubkey");
@@ -216,7 +216,7 @@ namespace crypto {
     }
 
     lua::multiret ecp::set_random_data(lua::state& l) {
-        auto b = uv::buffer::get(l,2,true);
+        auto b = llae::buffer::get(l,2,true);
         if (!b) {
             l.argerror(2, "need hased data");
         }
@@ -225,7 +225,7 @@ namespace crypto {
     }
 
     lua::multiret ecp::ecdsa_sign(lua::state& l) {
-        auto b = uv::buffer_view::get(l,2,true);
+        auto b = llae::buffer_view::get(l,2,true);
         bignum_ptr d = lua::stack<bignum_ptr>::get(l,3);
         if (!d) {
             l.argerror(3, "need privkey");

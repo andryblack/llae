@@ -1,19 +1,22 @@
 #include "buffer.h"
+
 #include "lua/bind.h"
 #include "lua/stack.h"
 #include <new>
 #include <cstddef>
 #include <cstdlib>
-#include <memory>
+#include <vector>
+
 #include <mbedtls/base64.h>
 #include "crypto/crypto.h"
 
-META_OBJECT_INFO(uv::buffer_base,meta::object)
-META_OBJECT_INFO(uv::buffer,uv::buffer_base)
 
-namespace uv {
+META_OBJECT_INFO(llae::buffer_base,meta::object)
+META_OBJECT_INFO(llae::buffer,llae::buffer_base)
 
-    static const char hex_char[] = "0123456789abcdef";
+namespace llae {
+
+     static const char hex_char[] = "0123456789abcdef";
     using uchar = unsigned char;
 
     buffer_view buffer_view::get(lua::state& l,int idx,bool check) {
@@ -50,12 +53,12 @@ namespace uv {
             l.pushstring("");
             return {1};
         }
-        l.pushlstring(m_buf.base+begin-1,end-begin+1);
+        l.pushlstring(static_cast<const char*>(m_data)+begin-1,end-begin+1);
         return {1};
     }
 
     lua::multiret buffer_base::ltostring(lua::state& l) const {
-        l.pushlstring(m_buf.base,get_len());
+        l.pushlstring(static_cast<const char*>(m_data),get_len());
         return {1};
     }
 
@@ -338,8 +341,8 @@ namespace uv {
 
 
     buffer::buffer(const buffer_alloc_tag& tag) : m_capacity(tag.size) {
-        m_buf.base = tag.data;
-        m_buf.len = tag.size;
+        m_data = tag.data;
+        m_size = tag.size;
     }
 
     buffer_ptr buffer::realloc(size_t nsize) {
@@ -353,19 +356,9 @@ namespace uv {
 
     void buffer::destroy() {
         void* mem = this;
-        auto size = get_capacity() + (m_buf.base-static_cast<char*>(mem));
+        auto size = get_capacity() + (static_cast<const char*>(m_data)-static_cast<char*>(mem));
         this->~buffer();
         allocator_t::dealloc(mem,size);
-    }
-
-    buffer* buffer::get(uv_buf_t* b) {
-        if (!b) return nullptr;
-        // offsetof got warning
-        static const size_t offset = static_cast<char*>(static_cast<void*>(&(static_cast<buffer*>(nullptr))->m_buf))-
-            static_cast<char*>(static_cast<void*>(static_cast<buffer*>(nullptr)));
-        void* start = reinterpret_cast<char*>(b) - offset;
-        //void* start = reinterpret_cast<char*>(b)-offsetof(buffer,m_buf);
-        return static_cast<buffer*>(start);
     }
 
     buffer* buffer::get(char* base) {
@@ -395,15 +388,15 @@ namespace uv {
     
     void* buffer::find(const char* str) {
         auto start = static_cast<char*>(get_base());
-        auto len = strlen(str);
+        auto len = ::strlen(str);
         if (len == 0) return get_base();
         while (true) {
             size_t flen = ((static_cast<const char*>(get_base()) + get_len()) - start)-len + 1;
-            char* pos = static_cast<char*>(memchr(start,*str,flen));
+            char* pos = static_cast<char*>(::memchr(start,*str,flen));
             if (!pos) {
                 return nullptr;
             }
-            if (len==1 || (memcmp(pos,str,len)==0)) {
+            if (len==1 || (::memcmp(pos,str,len)==0)) {
                 return pos; 
             }
             start = pos + 1;
@@ -446,80 +439,6 @@ namespace uv {
         lua::bind::function(l,"alloc",&buffer::lalloc);
         lua::bind::function(l,"get_allocated",&buffer::allocator_t::get_allocated);
         lua::bind::function(l,"self_reverse", &buffer::self_reverse);
-    }
-
-    bool write_buffers::put_one(lua::state& l) {
-        auto buf = lua::stack<buffer_base_ptr>::get(l, -1);
-        if (buf) {
-            m_refs.emplace_back();
-            m_refs.back().set(l);
-            m_bufs.push_back(*buf->get());
-        } else {
-            size_t size;
-            
-            const char* val = l.tolstring(-1,size);
-            if (val && size !=0) {
-                m_refs.emplace_back();
-                m_refs.back().set(l);
-                m_bufs.push_back(uv_buf_init(const_cast<char*>(val),static_cast<unsigned int>(size)));
-            } else {
-                return false;
-            }
-        }
-        return true;
-    }
-    bool write_buffers::put(lua::state &l) {
-        auto t = l.get_type(-1);
-        if (t == lua::value_type::table) {
-            size_t tl = l.rawlen(-1);
-            m_bufs.reserve(m_bufs.size()+tl);
-            m_refs.reserve(m_refs.size()+tl);
-            for (size_t j=0;j<tl;++j) {
-                l.rawgeti(-1,int(j+1));
-                if (!put_one(l)) {
-                    l.pop(2);
-                    return false;
-                }
-            }
-            l.pop(1);
-        } else {
-            if (!put_one(l)) {
-                l.pop(1);
-                return false;
-            }
-        }
-        return true;
-    }
-
-    bool write_buffers::putm(lua::state& s,int base) {
-        auto top = s.gettop();
-        for (int i=base;i<=top;++i) {
-            s.pushvalue(i);
-            if (!put(s)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    void write_buffers::reset(lua::state &l) {
-        for (auto& r:m_refs) {
-            r.reset(l);
-        }
-        m_bufs.clear();
-        m_refs.clear();
-    }
-
-    void write_buffers::release() {
-        for (auto& r:m_refs) {
-            r.release();
-        }
-    }
-
-    void write_buffers::pop_front(lua::state& l) {
-        m_refs.front().reset(l);
-        m_refs.erase(m_refs.begin());
-        m_bufs.erase(m_bufs.begin());
     }
 
 }

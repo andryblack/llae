@@ -218,7 +218,7 @@ static int lua_uv_sleep(lua_State* L) {
 class rand_req : public uv::req {
 private:
 	uv_random_t	m_random;
-	uv::buffer_ptr m_buffer;
+	llae::buffer_ptr m_buffer;
 	lua::ref m_cont;
 protected:
 	static rand_req* get(uv_random_t* req) {
@@ -274,7 +274,7 @@ public:
 		uv_req_set_data(reinterpret_cast<uv_req_t*>(&m_random),nullptr);
 	}
 	int start(uv::loop& loop,size_t len) {
-		m_buffer = uv::buffer::alloc(len);
+		m_buffer = llae::buffer::alloc(len);
 		auto res = uv_random(loop.native(),&m_random,m_buffer->get_base(),len,0,&rand_req::on_random_cb);
 		if (res < 0) {
 
@@ -338,9 +338,7 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::object<uv::tcp_server>::register_metatable(l,&uv::tcp_server::lbind);
 	lua::bind::object<uv::stream>::register_metatable(l,&uv::stream::lbind);
 	lua::bind::object<uv::tcp_connection>::register_metatable(l,&uv::tcp_connection::lbind);
-	lua::bind::object<uv::buffer_base>::register_metatable(l,&uv::buffer_base::lbind);
-	lua::bind::object<uv::buffer>::register_metatable(l,&uv::buffer::lbind);
-    lua::bind::object<uv::udp>::register_metatable(l,&uv::udp::lbind);
+	lua::bind::object<uv::udp>::register_metatable(l,&uv::udp::lbind);
     lua::bind::object<uv::tty>::register_metatable(l,&uv::tty::lbind);
     lua::bind::object<uv::poll>::register_metatable(l,&uv::poll::lbind);
     lua::bind::object<uv::process>::register_metatable(l,&uv::process::lbind);
@@ -357,8 +355,6 @@ int luaopen_uv(lua_State* L) {
     lua::bind::object<uv::idle>::register_metatable(l);
 	
 	l.createtable();
-	lua::bind::object<uv::buffer>::get_metatable(l);
-	l.setfield(-2,"buffer");
 	lua::bind::object<uv::tcp_server>::get_metatable(l);
 	l.setfield(-2,"tcp_server");
 	lua::bind::object<uv::tcp_connection>::get_metatable(l);

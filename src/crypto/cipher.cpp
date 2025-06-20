@@ -1,10 +1,11 @@
 #include "cipher.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include "llae/app.h"
 #include "uv/work.h"
 #include "uv/luv.h"
 #include "lua/bind.h"
 #include "crypto.h"
+#include "uv/write_buffers.h"
 
 META_OBJECT_INFO(crypto::cipher,meta::object)
 
@@ -13,7 +14,7 @@ namespace crypto {
 	class cipher::async : public uv::work {
 	protected:
 		cipher_ptr m_cipher;
-		uv::buffer_ptr m_data;
+		llae::buffer_ptr m_data;
 		int m_status = 0;
 	public:
 		explicit async(cipher_ptr&& m) : m_cipher(std::move(m)) {}
@@ -26,11 +27,11 @@ namespace crypto {
 		explicit update_async(cipher_ptr&& m) : cipher::async(std::move(m)) {}
 		virtual void on_work() override {
 			size_t blocksize = mbedtls_cipher_get_block_size(&m_cipher->m_ctx);
-			uv::buffer_ptr enc_buffer;
+			llae::buffer_ptr enc_buffer;
 			for (auto& b:m_buffers.get_buffers()) {
 				size_t osize = b.len + blocksize;
 				if (!enc_buffer || enc_buffer->get_capacity() < osize) {
-					enc_buffer = uv::buffer::alloc(osize);
+					enc_buffer = llae::buffer::alloc(osize);
 				}
 				m_status = mbedtls_cipher_update(&m_cipher->m_ctx, 
 					reinterpret_cast<const unsigned char*>(b.base), b.len,
@@ -71,7 +72,7 @@ namespace crypto {
 		explicit finish_async(cipher_ptr&& m) : cipher::async(std::move(m)) {}
 		virtual void on_work() override {
 			size_t size = mbedtls_cipher_get_block_size(&m_cipher->m_ctx);
-			m_data = uv::buffer::alloc(size);
+			m_data = llae::buffer::alloc(size);
 			size_t osize = 0;
 			m_status = mbedtls_cipher_finish(&m_cipher->m_ctx,
 				static_cast<unsigned char*>(m_data->get_base()),&osize);
@@ -100,7 +101,7 @@ namespace crypto {
 	}
 
 	lua::multiret cipher::set_iv(lua::state& l) {
-		auto iv = uv::buffer::get(l,2);
+		auto iv = llae::buffer::get(l,2);
 		if (!iv) {
 			l.argerror(2,"need iv data");
 			return {0};
@@ -116,7 +117,7 @@ namespace crypto {
         return {1};
 	}
 	lua::multiret cipher::set_key(lua::state& l) {
-		auto key = uv::buffer::get(l,2);
+		auto key = llae::buffer::get(l,2);
 		mbedtls_operation_t op = mbedtls_operation_t(l.optinteger(3,MBEDTLS_DECRYPT));
 		if (!key) {
 			l.argerror(2,"need key data");
@@ -219,7 +220,7 @@ namespace crypto {
 		return {0};
 	}
 
-	void cipher::on_completed(lua::state& l,int uvstatus,int mbedlsstatus,uv::buffer_ptr&& data) {
+	void cipher::on_completed(lua::state& l,int uvstatus,int mbedlsstatus,llae::buffer_ptr&& data) {
 		if (!m_cont.valid())
 			return;
 		

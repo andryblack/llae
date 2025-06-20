@@ -77,7 +77,7 @@ namespace ssl {
         struct readed_data {
             size_t size;
             size_t readded;
-            uv::buffer_ptr data;
+            llae::buffer_ptr data;
         };
         std::deque<readed_data> m_readed_data;
         class write_buffers : public uv::write_buffers {
@@ -104,8 +104,7 @@ namespace ssl {
         class shutdown_stream_req;
         void on_shutdown(int status);
         
-        virtual bool on_read(uv::readable_stream* stream,ssize_t nread,
-                            uv::buffer_ptr& buffer) override final;
+        virtual bool on_read(uv::readable_stream* stream,ssize_t nread, llae::buffer_ptr& buffer) override final;
         const char* m_active_op = nullptr;
         void begin_op(const char* op);
         void end_op(const char* op);
@@ -123,7 +122,7 @@ namespace ssl {
         lua::multiret close(lua::state& l);
         lua::multiret shutdown(lua::state& l);
         
-        void add_read_buffer(uv::buffer_ptr&& b) { readable_stream::add_read_buffer(std::move(b)); }
+        void add_read_buffer(llae::buffer_ptr&& b) { readable_stream::add_read_buffer(std::move(b)); }
         int start_read( const uv::stream_read_consumer_ptr& consumer ) override;
         void stop_read() override;
 	};

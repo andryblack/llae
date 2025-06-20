@@ -1,6 +1,6 @@
 #include "lua/bind.h"
 #include "uv/tcp_connection.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include <cmath>
 #include <cstdlib>
 
@@ -18,7 +18,7 @@ static int lua_redis_resp_gen_req(lua_State* L) {
     if (top > 9999) {
         l.error("too many args");
     }
-    auto res = uv::buffer::alloc(1+number_len(top)+2+2+top*16); // euristic
+    auto res = llae::buffer::alloc(1+number_len(top)+2+2+top*16); // euristic
     res->set_len(0);
     auto require_size = [&res](size_t size) {
         while ((res->get_len()+size) > res->get_capacity()) {
@@ -65,7 +65,7 @@ static int lua_redis_resp_gen_req(lua_State* L) {
             write_rn();
             write_data(str,sz);
         } else if (t == lua::value_type::userdata) {
-            auto buf = uv::buffer_view::get(l,i,true);
+            auto buf = llae::buffer_view::get(l,i,true);
             write_number(buf.get_len());
             write_rn();
             write_data(buf.get_base(),buf.get_len());

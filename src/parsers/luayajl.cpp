@@ -8,7 +8,7 @@ extern "C" {
 #include <vector>
 #include <cassert>
 #include <string>
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include "lua/state.h"
 #include "lua/bind.h"
 #include "json.h"
@@ -171,7 +171,7 @@ static void fill_parse_callbacks( yajl_callbacks& cb ) {
     
 static lua::multiret json_decode(lua::state& l) {
 
-    auto data = uv::buffer_view::get(l,1,true);
+    auto data = llae::buffer_view::get(l,1,true);
     bool safe = false;
 
     if (l.isboolean(2)) {
@@ -423,15 +423,15 @@ namespace llae {
         return m_g && (yajl_gen_double(m_g,val) == yajl_gen_status_ok);
     }
 
-    uv::buffer_view json_build::get_data() const {
-        if (!m_g) return uv::buffer_view(nullptr,0);
+    llae::buffer_view json_build::get_data() const {
+        if (!m_g) return llae::buffer_view(nullptr,0);
         const unsigned char * buf = 0;
         size_t len = 0;
         yajl_gen_status status = yajl_gen_get_buf(m_g,&buf,&len);
         if (status == yajl_gen_generation_complete || status == yajl_gen_status_ok) {
-            return uv::buffer_view(buf,len);
+            return llae::buffer_view(buf,len);
         }
-        return uv::buffer_view(nullptr,0);
+        return llae::buffer_view(nullptr,0);
     }
     void json_build::free() {
         if (m_g) yajl_gen_free(m_g);

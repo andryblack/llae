@@ -16,8 +16,8 @@ namespace archive {
 
 	class decompress_work : public uv::lua_cont_work {
 	protected:
-	    uv::buffer_base_ptr m_src_data;
-	    uv::buffer_ptr m_dst_data;
+	    llae::buffer_base_ptr m_src_data;
+	    llae::buffer_ptr m_dst_data;
 	    int m_result = 0;
 	    lzma_stream m_z;
 	protected:
@@ -83,19 +83,19 @@ namespace archive {
 	        return args;
 	    }
 	public:
-	    explicit decompress_work(lua::ref&& cont,uv::buffer_base_ptr&& src,size_t dst_buffer_size) : uv::lua_cont_work(std::move(cont)),m_src_data(std::move(src)) {
-	        m_dst_data = uv::buffer::alloc(dst_buffer_size);
+	    explicit decompress_work(lua::ref&& cont,llae::buffer_base_ptr&& src,size_t dst_buffer_size) : uv::lua_cont_work(std::move(cont)),m_src_data(std::move(src)) {
+	        m_dst_data = llae::buffer::alloc(dst_buffer_size);
 	        m_z = LZMA_STREAM_INIT;
 	    }
 	};
 
     class decompress_params_work : public decompress_work {
-        uv::buffer_base_ptr m_params_data;
+        llae::buffer_base_ptr m_params_data;
         lzma_filter m_filters[LZMA_FILTERS_MAX + 1];
     public:
         explicit decompress_params_work(lua::ref&& cont,
-                                        uv::buffer_base_ptr&& params,
-                                        uv::buffer_base_ptr&& src,
+                                        llae::buffer_base_ptr&& params,
+                                        llae::buffer_base_ptr&& src,
                                         size_t dst_buffer_size) :
             decompress_work(std::move(cont),std::move(src),dst_buffer_size),
             m_params_data(std::move(params)) {}
@@ -152,7 +152,7 @@ namespace archive {
 
     
     lua::multiret lzmauncompress::decompress(lua::state& l) {
-    	auto buf = uv::buffer_base::get(l,1,true);
+    	auto buf = llae::buffer_base::get(l,1,true);
 	    auto dst_size = l.checkinteger(2);
 	    if (!buf) {
 	        l.argerror(1,"need data");
@@ -183,12 +183,12 @@ namespace archive {
 
     lua::multiret lzmauncompress::decompress_params(lua::state& l) {
         const char* config = l.checkstring(1);
-        auto buf = uv::buffer_base::get(l,2,true);
+        auto buf = llae::buffer_base::get(l,2,true);
         if (!buf) {
             l.argerror(1,"need data");
         }
         auto dst_size = l.checkinteger(3);
-        auto params_buf = uv::buffer_base::get(l,4,false);
+        auto params_buf = llae::buffer_base::get(l,4,false);
         if (!l.isyieldable()) {
             l.pushnil();
             l.pushstring("decompress is async");

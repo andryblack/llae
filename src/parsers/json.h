@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "lua/state.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 
 typedef struct yajl_gen_t * yajl_gen;
 
@@ -33,7 +33,7 @@ namespace llae {
 	    
 	    void free();
 
-	    uv::buffer_view get_data() const;
+	    llae::buffer_view get_data() const;
 	    
 	public:
 	    explicit json_build();

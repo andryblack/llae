@@ -4,7 +4,7 @@
 #include "meta/object.h"
 #include "lua/state.h"
 #include "lua/ref.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 
 namespace crypto {
 
@@ -16,7 +16,7 @@ namespace crypto {
 		class decrypt_async;
 		class encrypt_async;
 		lua::ref m_cont;
-		void on_completed(lua::state& l,int uvstatus,int mbedlsstatus,uv::buffer_base_ptr&& result);
+		void on_completed(lua::state& l,int uvstatus,int mbedlsstatus,llae::buffer_base_ptr&& result);
 		void release() { m_cont.release(); }
 	public:
 		pk();

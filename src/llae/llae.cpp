@@ -1,4 +1,6 @@
 #include "app.h"
+#include "buffer.h"
+#include "lua/bind.h"
 
 #if defined(__APPLE__)
 /* lets us know what version of Mac OS X we're compiling on */
@@ -11,6 +13,7 @@
 #include <TargetConditionals.h>
 #endif
 #endif
+
 
 namespace llae {
 
@@ -74,17 +77,24 @@ namespace llae {
 }
 
 int luaopen_llae(lua_State* L) {
-    lua::state s(L);
-    luaL_Reg reg[] = {
-        { "stop", llae::lua_stop },
-        { "at_exit", llae::lua_at_exit },
-        { "cancel_sigint", llae::lua_cancel_signal },
-        { "release_object", llae::lua_release_object },
-        { "resume", llae::lua_resume },
-        { "get_host_platform", llae::lua_get_host_platform },
-        { NULL, NULL }
-    };
-    lua_newtable(L);
-    luaL_setfuncs(L, reg, 0);
+
+   
+
+    lua::state l(L);
+
+    lua::bind::object<llae::buffer_base>::register_metatable(l,&llae::buffer_base::lbind);
+	lua::bind::object<llae::buffer>::register_metatable(l,&llae::buffer::lbind);
+    
+    l.createtable();
+    lua::bind::function(l, "stop", llae::lua_stop );
+    lua::bind::function(l, "at_exit", llae::lua_at_exit );
+    lua::bind::function(l, "cancel_sigint", llae::lua_cancel_signal );
+    lua::bind::function(l, "release_object", llae::lua_release_object );
+    lua::bind::function(l, "resume", llae::lua_resume );
+    lua::bind::function(l, "get_host_platform", llae::lua_get_host_platform );
+    
+    lua::bind::object<llae::buffer>::get_metatable(l);
+	l.setfield(-2,"buffer");
+	
     return 1;
 }

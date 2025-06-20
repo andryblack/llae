@@ -18,12 +18,12 @@ namespace crypto {
 	class pk::async : public uv::work {
 	protected:
 		pk_ptr m_pk;
-		uv::buffer_base_ptr m_src;
-		uv::buffer_ptr m_result;
+		llae::buffer_base_ptr m_src;
+		llae::buffer_ptr m_result;
 		random_ptr m_random;
 		int m_status = 0;
 	public:
-		explicit async(pk_ptr&& m,uv::buffer_base_ptr&& src,random_ptr&& r) : m_pk(std::move(m)), m_src(std::move(src)),m_random(std::move(r)) {}
+		explicit async(pk_ptr&& m,llae::buffer_base_ptr&& src,random_ptr&& r) : m_pk(std::move(m)), m_src(std::move(src)),m_random(std::move(r)) {}
 		virtual void on_after_work(int status) override {
             if (llae::app::closed(get_loop())) {
                 m_pk->release();
@@ -37,9 +37,9 @@ namespace crypto {
 
 	class pk::encrypt_async : public pk::async {
 	public:
-		explicit encrypt_async(pk_ptr&& m,uv::buffer_base_ptr&& src,random_ptr&& r) : pk::async(std::move(m),std::move(src),std::move(r)) {}
+		explicit encrypt_async(pk_ptr&& m,llae::buffer_base_ptr&& src,random_ptr&& r) : pk::async(std::move(m),std::move(src),std::move(r)) {}
 		virtual void on_work() override {
-			m_result = uv::buffer::alloc(MBEDTLS_MPI_MAX_SIZE);
+			m_result = llae::buffer::alloc(MBEDTLS_MPI_MAX_SIZE);
 			size_t osize = 0;
 			m_status = mbedtls_pk_encrypt(&m_pk->m_ctx,
 				static_cast<const unsigned char*>(m_src->get_base()),
@@ -68,7 +68,7 @@ namespace crypto {
 
 
 	lua::multiret pk::parse_public_key(lua::state& l) {
-		auto data = uv::buffer_view::get(l,2,true);
+		auto data = llae::buffer_view::get(l,2,true);
 		auto res = mbedtls_pk_parse_public_key(&m_ctx,
 			static_cast<const unsigned char*>(data.get_base()),data.get_len());
 		return mbedtls_result(l,res);
@@ -102,7 +102,7 @@ namespace crypto {
 			l.pushstring("pk::encrypt operation in progress");
 			return {2};
 		}
-		auto src = uv::buffer_base::get(l,2,true);
+		auto src = llae::buffer_base::get(l,2,true);
 		auto random = lua::stack<random_ptr>::get(l,3);
 		if (!random) {
 			random = random_ptr(new crypto::random());
@@ -126,7 +126,7 @@ namespace crypto {
 		return {0};
 	}
 
-	void pk::on_completed(lua::state& l,int uvstatus,int mbedlsstatus,uv::buffer_base_ptr&& data) {
+	void pk::on_completed(lua::state& l,int uvstatus,int mbedlsstatus,llae::buffer_base_ptr&& data) {
 		if (!m_cont.valid())
 			return;
 		

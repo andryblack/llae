@@ -2,12 +2,13 @@
 #include <memory>
 #include "crypto.h"
 #include "uv/work.h"
-#include "uv/buffer.h"
+#include "llae/buffer.h"
 #include "llae/app.h"
 #include "common/intrusive_ptr.h"
 #include "lua/bind.h"
 #include "lua/stack.h"
 #include "uv/luv.h"
+#include "uv/write_buffers.h"
 
 META_OBJECT_INFO(crypto::md,meta::object)
 
@@ -63,12 +64,12 @@ namespace crypto {
 
 	class md::finish_async : public md::async {
 	private:
-		uv::buffer_ptr m_digest;
+		llae::buffer_ptr m_digest;
 	public:
 		explicit finish_async(md_ptr&& m) : md::async(std::move(m)) {}
 		virtual void on_work() {
 			size_t size = mbedtls_md_get_size(m_md->m_info);
-			m_digest = uv::buffer::alloc(size);
+			m_digest = llae::buffer::alloc(size);
 			m_status = mbedtls_md_finish(&m_md->m_ctx,static_cast<unsigned char*>(m_digest->get_base()));
 		}
 		virtual void on_after_work(int status) {
@@ -178,7 +179,7 @@ namespace crypto {
 		}
 		l.pop(1);// thread
 	}
-	void md::on_finish_completed(uv::loop& loop,int uvstatus,int mbedlsstatus,uv::buffer_ptr&& digest) {
+	void md::on_finish_completed(uv::loop& loop,int uvstatus,int mbedlsstatus,llae::buffer_ptr&& digest) {
 		if (!m_cont.valid())
 			return;
 		lua::state& l(llae::app::get(loop).lua());
