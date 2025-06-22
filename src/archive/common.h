@@ -242,7 +242,7 @@ namespace archive {
 				if (!m_read_buffer) {
 					m_read_buffer = llae::buffer::alloc(BUFFER_SIZE);
 				}
-				uv_buf_t buf = {static_cast<char*>(m_read_buffer->get_base()),static_cast<size_t>(m_read_buffer->get_len())};
+				uv_buf_t buf = uv_buf_init(static_cast<char*>(m_read_buffer->get_base()),static_cast<size_t>(m_read_buffer->get_len()));
 				int r = uv_fs_read(l.native(),&m_fs_req,m_file->get(),
 					&buf,1,m_offset,&fs_cb);
 				if (r < 0) {
