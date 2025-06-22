@@ -10,7 +10,7 @@ namespace uv {
             m_refs.emplace_back();
             m_refs.back().set(l);
             auto base = const_cast<char*>(static_cast<const char*>(buf->get_base()));
-            m_bufs.emplace_back(uv_buf_t{base,buf->get_len()});
+            m_bufs.emplace_back(uv_buf_init(base,buf->get_len()));
         } else {
             size_t size;
             
