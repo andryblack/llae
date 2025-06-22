@@ -123,7 +123,7 @@ function _M.link(  )
 	filter "system:linux"
 		links{ 'pthread' }
 	filter "system:windows"
-		links{ 'ws2_32','userenv','iphlpapi','psapi' }
+		links{ 'ws2_32','userenv','iphlpapi','psapi','user32','advapi32','dbghelp','ole32' }
 	filter {}
 	links{ 'llae-'.._M.name }
 end
