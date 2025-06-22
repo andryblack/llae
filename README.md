@@ -43,6 +43,11 @@ make -C build -j
 ./bin/llae run tests --verbose
 ```
 
+### Build docker image with llae
+```bash
+docker build -f docker/llae.dockerfile -t llae:latest .
+```
+
 ## License
 
 This library is available to anybody free of charge, under the terms of MIT License (see LICENSE).
