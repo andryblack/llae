@@ -23,10 +23,10 @@ namespace uv {
 
 	static inline uv_buf_t get_buffer(const llae::buffer_base_ptr& buf) {
 		if (!buf) {
-			return uv_buf_t{nullptr,0};
+			return uv_buf_init(nullptr,0);
 		}
 		auto base = const_cast<char*>(static_cast<const char*>(buf->get_base()));
-		return uv_buf_t{base,buf->get_len()};
+		return uv_buf_init(base,buf->get_len());
 	}
 	static llae::buffer_ptr get_buffer(const uv_buf_t* buf) {
 		return llae::buffer_ptr(llae::buffer::get(buf->base));
