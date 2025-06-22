@@ -42,7 +42,7 @@ namespace meta {
 #define META_OBJECT_INFO(Type,Parent) META_OBJECT_INFO_X(Type,Parent,#Type)
 
     template <typename T>
-    struct info<T,std::enable_if_t<std::is_convertible_v<T*, object*>>> {
+    struct info<T,std::enable_if_t<std::is_convertible_v<T*, object*> && !std::is_same_v<T,object>>> {
         static const info_t* get() { return T::get_class_info(); }
     };
 
