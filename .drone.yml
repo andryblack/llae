@@ -6,6 +6,10 @@ name: default
 when: 
  event: [ tag ]
  branch: [ develop ]
+volumes:
+- name: dl_cache
+  host:
+    path: /var/lib/cache/llae-dl
 steps:
 - name: cleanup
   image: alpine
@@ -14,11 +18,21 @@ steps:
 - name: download
   image: build-llae
   pull: never
+  volumes:
+  - name: dl_cache
+    path: /tmp/llae-dl
+  environment:
+    LLAE_DL_DIR: /tmp/llae-dl
   commands:
     - premake5 download
 - name: prepare
   image: build-llae
   pull: never
+  volumes:
+  - name: dl_cache
+    path: /tmp/llae-dl
+  environment:
+    LLAE_DL_DIR: /tmp/llae-dl
   commands:
     - premake5 unpack
     - premake5 gmake2
@@ -34,7 +48,11 @@ steps:
 - name: clean-for-windows
   image: build-llae
   pull: never
+  volumes:
+  - name: dl_cache
+    path: /tmp/llae-dl
   environment:
+    LLAE_DL_DIR: /tmp/llae-dl
   commands:
     - rm -rf bin/* build/* lib/*
     - premake5 download
@@ -42,7 +60,11 @@ steps:
 - name: prepare-windows
   image: build-llae-windows
   pull: never
+  volumes:
+  - name: dl_cache
+    path: /tmp/llae-dl
   environment:
+    LLAE_DL_DIR: /tmp/llae-dl
   commands:
     - premake5 unpack
     - premake5 --os=windows gmake2
