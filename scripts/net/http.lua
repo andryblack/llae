@@ -16,9 +16,19 @@ function http.get_ssl_ctx()
 		local fs = require 'llae.fs'
 		http._ssl_ctx = ssl.ctx.new()
 		assert(http._ssl_ctx:init())
-		log.debug('load cert from',ssl.ctx.default_cafile)
-		local cert = assert(fs.load_file(ssl.ctx.default_cafile))
-		assert(http._ssl_ctx:load_cert(cert))
+		if ssl.ctx.default_cafile then
+			log.debug('load cert from',ssl.ctx.default_cafile)
+			local cert = assert(fs.load_file(ssl.ctx.default_cafile))
+			assert(http._ssl_ctx:load_cert(cert))
+		else
+			log.debug('load system certificates')
+			local res,err = http._ssl_ctx:load_system_certs()
+			if not res then
+				log.error('failed load system cert:',err)
+			else
+				log.debug('system certificates loaded')
+			end
+		end
 	end
 	return http._ssl_ctx
 end

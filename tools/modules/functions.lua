@@ -18,8 +18,14 @@ local function redirect_pipe(pipe,file)
 		while true do
 			local ch,err = pipe:read()
 			if not ch then
+				if d and #d > 0 then	
+					file:write(d)
+				end
 				if err then
-					error(err)
+					log.error('pipe read failed:',err)
+					file:write('read failed:',err)
+					--error(err)
+					break
 				else
 					break
 				end

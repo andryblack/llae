@@ -8,13 +8,20 @@
 #include <iostream>
 #include <cstring>
 
+#ifdef _WIN32
+#include <windows.h>
+#include <wincrypt.h>
+#endif
+
 META_OBJECT_INFO(ssl::ctx,meta::object)
 
 namespace ssl {
 
 	
-#ifdef __linux__
+#if defined(__linux__)
 	static const char* default_cafile = "/etc/ssl/certs/ca-certificates.crt";
+#elif defined(_WIN32)
+	static const char* default_cafile = nullptr;
 #else
 	static const char* default_cafile = "/etc/ssl/cert.pem";
 #endif
@@ -88,12 +95,104 @@ namespace ssl {
 		return {1};
 	}
 
+#ifdef _WIN32
+	struct cert_store {
+		HCERTSTORE store = NULL;
+		~cert_store() {
+			close();
+		}
+		void close() {
+			if (store) {
+				CertCloseStore(store,0);
+			}
+			store = NULL;
+		}
+	};
+	struct cert_context {
+		PCCERT_CONTEXT context = NULL;
+		bool need_free = false;
+		~cert_context() {
+			free();
+		}
+		void free() {
+			if (need_free) {
+				CertFreeCertificateContext(context);
+				need_free = false;
+			}
+		}
+		bool next(cert_store& store) {
+			//free();
+			context = CertEnumCertificatesInStore(store.store,context);
+			need_free = !!context;
+			return need_free;
+		}
+	};
+#endif
+	lua::multiret ctx::load_system_certs(lua::state& l) {
+#ifdef _WIN32
+		cert_store store;
+		store.store = CertOpenSystemStore(0, "ROOT");
+    	if (store.store == NULL) {
+        	l.pushboolean(false);
+        	l.pushstring("failed open root cert strore");
+        	return {2};	
+        }
+
+        bool found = false;
+        cert_context context;
+        while (context.next(store)) {
+        	// Convert the certificate to DER format (example)
+        	// unsigned char *der_data = NULL;
+        	// DWORD der_size = 0;
+        	// if (!CertGetCertificateContextProperty(context.context, CERT_ அப்படியே_PROPERTY, NULL, &der_size)) {
+            // 	// Handle error
+            // 	continue;
+        	// }
+        	// der_data = (unsigned char*)malloc(der_size);
+        	// if (!CertGetCertificateContextProperty(context.context, CERT_ அப்படியே_PROPERTY, der_data, &der_size)) {
+            // 	//Handle error
+            // 	free(der_data);
+            // 	continue;
+        	// }
+        	if (context.context->dwCertEncodingType == X509_ASN_ENCODING) {
+        		const auto* cert = reinterpret_cast<unsigned char*>(context.context->pbCertEncoded);
+        		const auto certlen = context.context->cbCertEncoded;
+        		//std::cout << "parse cert" << std::endl;
+        		auto ret = mbedtls_x509_crt_parse( &m_cacert, cert, certlen );
+        		if( ret != 0 ) {
+		 		    //std::cout << "failed parse cert" << std::endl;
+		 		    //l.pushnil();
+					//push_error(l,"mbedtls_x509_crt_parse failed, code:%d, %s",ret);
+					//return {2};
+				} else {
+					found = true;
+				}
+        	} else {
+        		//std::cout << "skip cert by type" << std::endl;
+        	}
+        }
+        context.free();
+        store.close();
+        if (found) {
+			l.pushboolean(true);
+			return {1};
+		} else {
+			l.pushboolean(false);
+			l.pushstring("not found certificates");
+			return {2};
+		}
+#else
+		return {0};
+#endif
+	}
+
 	void ctx::lbind(lua::state& l) {
 		lua::bind::value(l,"default_cafile",default_cafile);
         lua::bind::constructor<ctx,crypto::random_ptr&&>(l);
 		lua::bind::function(l,"init",&ctx::init);
 		lua::bind::function(l,"set_debug_threshold",&ctx::set_debug_threshold);
 		lua::bind::function(l,"load_cert",&ctx::load_cert);
+		lua::bind::function(l,"load_system_certs",&ctx::load_system_certs);
 	}
 
 }

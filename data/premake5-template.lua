@@ -45,8 +45,8 @@ solution '<%= project:name() %>'
 <% end %>
 <% end %>
 <% local function make_path(mod,first,...)
-		local t = path.isabsolute(first) and {first} or {
-			mod.location,
+		local t = path.isabsolute(first) and {path.normalize(first)} or {
+			path.normalize(mod.location),
 			first
 		}
 		for _,v in ipairs(table.pack(...)) do
@@ -144,7 +144,7 @@ solution '<%= project:name() %>'
 	-- project premake project
 	<%= template.compile(project:get_premake().project,{env=...}){
 		format_file = function (first,...)
-			local t = path.isabsolute(first) and {first} or {
+			local t = path.isabsolute(first) and {path.normalize(first)} or {
 				'..',
 				first
 			}

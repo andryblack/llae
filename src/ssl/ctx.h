@@ -21,6 +21,7 @@ namespace ssl {
 		static void lbind(lua::state& l);
 		lua::multiret init(lua::state& l);
 		lua::multiret load_cert(lua::state& l);
+		lua::multiret load_system_certs(lua::state& l);
 		int configure(mbedtls_ssl_config* conf);
 		static void set_debug_threshold(int v);
 	};

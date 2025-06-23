@@ -3,6 +3,27 @@ local _M = {}
 
 _M.root = _MAIN_SCRIPT_DIR
 
+local msys_checked
+function _M.is_msys()
+	if not msys_checked then
+		local msys = os.getenv('MSYSTEM')
+		if msys then
+			print('MSYSTEM:',msys)
+			_M._is_msys = (msys == 'UCRT64')
+		end
+		msys_checked = true
+	end
+	return _M._is_msys
+end
+
+function _M.normalize_path(path)
+	if _M.is_msys() then
+		return string.gsub(path,'^(.):(.*)',function(c,d)
+			return '/' .. string.lower(c) .. '/' .. d
+		end)
+	end
+	return path
+end
 
 local components = { 'common','lua','meta','uv','llae','ssl','archive','crypto','posix' }
 
@@ -18,7 +39,10 @@ function _M.extract_zip( zip_file, extlibs_folder )
 end
 
 function _M.extract_tar_gz( zip_file, extlibs_folder )
+	zip_file = _M.normalize_path(zip_file)
+	extlibs_folder = _M.normalize_path(extlibs_folder)
 	local cmd = 'tar -xzf ' .. zip_file .. ' -C ' .. extlibs_folder
+	print(cmd)
 	assert(os.execute(cmd))
 end
 
@@ -130,6 +154,9 @@ function _M.link(  )
 	for _,ext in ipairs(extlibs) do
 		ext.link()
 	end
+	filter "system:windows"
+		links{ 'crypt32' }
+	filter {}
 end
 
 function _M.builddir( )

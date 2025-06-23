@@ -171,6 +171,9 @@ project_main = [[
 	sysincludedirs {
 		<%= format_file(module.dir,'src') %>
 	}
+	filter "system:windows"
+		links{ 'crypt32' }
+	filter {}
 ]]
 
 generate_src = {{

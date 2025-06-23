@@ -53,7 +53,7 @@ end
 function request:_connect( port )
 	local ip = nil
 	for _,v in ipairs(self._ip_list) do
-		if v.addr and v.socktype=='tcp' and not self._timeout_error then
+		if v.addr and (v.socktype=='tcp' or v.socktype=='any') and not self._timeout_error then
 			local ip = v.addr
 			--log.debug('connect to',ip,port)
 			self._connection = self:_create_connection()

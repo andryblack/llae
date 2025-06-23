@@ -20,6 +20,9 @@ namespace uv {
 		};
 		l.setfield(-2,"family");
 		switch (res->ai_socktype) {
+			case 0:
+				l.pushstring("any");
+				break;	
 			case SOCK_STREAM:
 				l.pushstring("tcp");
 				break;

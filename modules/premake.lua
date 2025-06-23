@@ -63,16 +63,18 @@ function bootstrap()
 		dst = dir .. '/contrib/libzip/premake5.lua',
 	}
 
-
-	local PLATFORM = exec_res('uname',{'-s'})
-	if string.match(PLATFORM,'Darwin.*') then
-		exec{
-			bin = 'xcode-select',
-			args = {'--install'}
-		}
-		PLATFORM = 'osx'
-	elseif string.match(PLATFORM,"Linux.*") then
-		PLATFORM = 'linux'
+	local PLATFORM = project:get_host_platform()
+	if PLATFORM ~= 'windows' then
+		PLATFORM = exec_res('uname',{'-s'})
+		if string.match(PLATFORM,'Darwin.*') then
+			exec{
+				bin = 'xcode-select',
+				args = {'--install'}
+			}
+			PLATFORM = 'osx'
+		elseif string.match(PLATFORM,"Linux.*") then
+			PLATFORM = 'linux'
+		end
 	end
 	assert(exec{
 		bin = 'make',
