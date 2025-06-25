@@ -88,7 +88,8 @@ steps:
 - name: build-image
   image: docker
   commands: 
-    - docker build -f docker/llae.dockerfile -t llae:latest --build-arg CACHE_BREAKER=$(date +%s) .
+    - echo "commit: $DRONE_COMMIT_SHA"
+    - docker build -f docker/llae.dockerfile -t llae:latest --build-arg CACHE_BREAKER=$DRONE_COMMIT_SHA .
   volumes:
     - name: docker_sock
       path: /var/run/docker.sock
