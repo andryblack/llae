@@ -1,4 +1,3 @@
-
 # ---
 kind: pipeline
 type: docker
@@ -10,6 +9,9 @@ volumes:
 - name: dl_cache
   host:
     path: /var/lib/cache/llae-dl
+- name: docker_sock
+  host:
+    path: /var/run/docker.sock
 steps:
 - name: cleanup
   image: alpine
@@ -88,6 +90,7 @@ steps:
   commands: 
     - docker build -f docker/llae.dockerfile -t llae:latest .
   volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
+    - name: docker_sock
+      path: /var/run/docker.sock
 # depends_on:
 # - docker-windows
