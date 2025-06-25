@@ -88,7 +88,7 @@ steps:
 - name: build-image
   image: docker
   commands: 
-    - docker build -f docker/llae.dockerfile -t llae:latest .
+    - docker build -f docker/llae.dockerfile -t llae:latest --build-arg CACHE_BREAKER=$(date +%s) .
   volumes:
     - name: docker_sock
       path: /var/run/docker.sock
