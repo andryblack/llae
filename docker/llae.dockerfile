@@ -14,5 +14,7 @@ RUN cd llae && premake5 gmake2
 RUN make -C llae/build verbose=1 config=release 
 RUN cd llae && LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap bootstrap
 RUN ln -s $HOME/.llae/bin/llae /bin/llae
+RUN /bin/premake5
+RUN ln -s $HOME/.llae/bin/premake5 /bin/premake5
 RUN rm -rf llae
 RUN llae --help
