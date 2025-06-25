@@ -401,7 +401,7 @@ function m:write_file( filename , content)
 	if not path.isabsolute(filename) then
 		filename = path.join(self.root,filename)
 	end
-	fs.mkdir(path.dirname(filename))
+	fs.mkdir_r(path.dirname(filename))
 	fs.unlink(filename)
 	fs.write_file(filename,content)
 end
