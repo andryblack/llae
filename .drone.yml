@@ -83,5 +83,11 @@ steps:
    - make -C build verbose=1 clean
    - make -C build verbose=1 config=release 
 
+- name: build-image
+  image: docker
+  commands: 
+    - docker build -f docker/llae.dockerfile -t llae:latest .
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
 # depends_on:
 # - docker-windows
