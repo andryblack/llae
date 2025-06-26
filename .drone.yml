@@ -87,11 +87,9 @@ steps:
 
 - name: build-image
   image: docker
-  commands: 
-    - echo "commit: $DRONE_COMMIT_SHA"
-    - docker build -f docker/llae.dockerfile -t llae:latest --build-arg CACHE_BREAKER=$DRONE_COMMIT_SHA .
   volumes:
     - name: docker_sock
       path: /var/run/docker.sock
-# depends_on:
-# - docker-windows
+  commands:
+    - 'echo "commit: ${DRONE_COMMIT_SHA}"'
+    - docker build -f docker/llae.dockerfile -t llae:latest --build-arg CACHE_BREAKER=$DRONE_COMMIT_SHA .
