@@ -100,6 +100,7 @@ project_config = {
 	{'extern_main',type='boolean'},
 	{'cmodule',type='string',storage='list'},
 	{'lua_path',type='string',storage='list'},
+	{'lua_main',type='string',storage='list'},
 }
 
 cmodules = {

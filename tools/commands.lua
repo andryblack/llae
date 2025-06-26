@@ -13,10 +13,11 @@ local function register( modname )
 	commands.map[mod.name] = mod
 end
 
+register('help')
+register('version')
 register('install')
 register('bootstrap')
 register('init_project')
-register('help')
 register('run')
 register('http_server')
 register('upgrade')

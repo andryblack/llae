@@ -3,4 +3,4 @@
 if args['deploy-root'] then %>
 	LLAE_ROOT = "<%= args['deploy-root'] %>"
 <% end %>
-LLAE_VERSION="0.1"
+LLAE_VERSION="<%= project:get_var('version') %>"

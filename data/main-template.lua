@@ -25,4 +25,8 @@ if args.verbose then
 	(require 'llae.log').set_verbose(true)
 end
 
+<% for _,v in ipairs(project:get_config_value('llae','lua_main') or {}) do %>
+<%- v %>
+<% end %>
+
 require( 'main' )

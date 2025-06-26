@@ -1,4 +1,5 @@
 project 'llae'
+version = '1.0'
 
 module 'llae'
 module 'bzip2'

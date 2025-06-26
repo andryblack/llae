@@ -156,6 +156,12 @@ function Project:get_dl_dir()
 	return self._dl_dir
 end
 
+function Project:get_var(name)
+	if self._env.__write_env then
+		return self._env.__write_env[name]
+	end
+end
+
 function Project:name(  )
 	return self._env.project_name
 end
