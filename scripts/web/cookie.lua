@@ -1,6 +1,6 @@
 local class = require 'llae.class'
 local log = require 'llae.log'
-local format = require 'net.http.timestamp'
+local timestamp = require 'net.http.timestamp'
 
 local cookie = class(require 'web.middle','cookie')
 

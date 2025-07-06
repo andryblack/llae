@@ -160,8 +160,9 @@ function m:download(url,file,hash)
 	local dst = path.join(self._project:get_dl_dir(),file)
 	if hash and fs.isfile(dst) then
 		local h = crypto.md5()
-		for b in fs.read_file(dst) do
-			assert(h:update(b))
+		local data = fs.read_file(dst)
+		if #data > 0 then
+			assert(h:update(data))
 		end
 		local fhash = tostring(assert(h:finish()):hex_encode())
 		if fhash == hash then
