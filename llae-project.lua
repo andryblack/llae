@@ -4,6 +4,7 @@ version = '1.0'
 module 'llae'
 module 'bzip2'
 module 'xz'
+module 'zstd'
 
 if cmdargs and (cmdargs.development or cmdargs.inplace) then
 	module 'luaunit'

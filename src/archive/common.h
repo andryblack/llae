@@ -24,7 +24,7 @@ namespace archive {
 
 	namespace impl {
 	
-	static const size_t COMPRESSED_BLOCK_SIZE = 1024 * 16;
+	static const size_t COMPRESSED_BLOCK_SIZE = 1024 * 1024;
 
 
 
@@ -37,7 +37,7 @@ namespace archive {
 			LLAE_NAMED_ALLOC(alloc_tag)
 		protected:
             compressionstream_ptr m_stream;
-			int m_z_status = Lib::OK;
+			typename Lib::status_t m_z_status = Lib::OK;
 			llae::buffer_ptr m_out;
 			void flush_out(typename Lib::stream& z) {
 				if (m_out) {
@@ -68,10 +68,10 @@ namespace archive {
                     Lib::fill_in(z,b.base,b.len);
 					
 					while(Lib::has_in(z)) {
-						if (!Lib::has_out(z)) {
+						if (Lib::get_avail_out(z) == 0) {
 							this->flush_out(z);
 						}
-						int r = T::process(&z,Lib::NO_FLUSH,*this->m_stream);
+						auto r = T::process(&z,Lib::NO_FLUSH,*this->m_stream);
                         if (r == Lib::STREAM_END) {
                             this->m_z_status = r;
                             break;
@@ -86,10 +86,10 @@ namespace archive {
                     }
 				}
 	            if (this->m_out) {
-                    this->m_out->set_len(COMPRESSED_BLOCK_SIZE-z.avail_out);
+                    this->m_out->set_len(COMPRESSED_BLOCK_SIZE-Lib::get_avail_out(z));
                     this->m_stream->add_data(std::move(this->m_out));
 	            }
-	            z.avail_out = 0;
+	            Lib::fill_out(z,nullptr,0);
 			}
 			virtual void on_after_work(int status) override {
 				auto& s(llae::app::get(this->get_loop()).lua());
@@ -113,13 +113,13 @@ namespace archive {
 					return;
 				auto& z(this->m_stream->m_z);
 				while (true) {
-					if (!Lib::has_out(z)) {
+					if (Lib::get_avail_out(z) == 0) {
 						this->flush_out(z);
 					}
-					int r = T::process(&z,Lib::FINISH,*this->m_stream);
+					auto r = T::process(&z,Lib::FINISH,*this->m_stream);
 					if (r == Lib::STREAM_END) {
 	                    if (this->m_out) {
-                            this->m_out->set_len(COMPRESSED_BLOCK_SIZE-z.avail_out);
+                            this->m_out->set_len(COMPRESSED_BLOCK_SIZE-Lib::get_avail_out(z));
                             this->m_stream->add_data(std::move(this->m_out));
 	                    }
 						return;
@@ -188,10 +188,10 @@ namespace archive {
                     Lib::fill_in(z,m_compress_buffer->get_base(),m_compress_buffer->get_len());
 					
 					while(Lib::has_in(z)) {
-						if (!Lib::has_out(z)) {
+						if (Lib::get_avail_out(z) == 0) {
 							this->flush_out(z);
 						}
-						int r = T::process(&z,Lib::NO_FLUSH,*this->m_stream);
+						auto r = T::process(&z,Lib::NO_FLUSH,*this->m_stream);
 						if (r != Lib::OK && r != Lib::BUF_ERROR) {
                             this->m_z_status = r;
 							return;
@@ -199,13 +199,13 @@ namespace archive {
 					}
 				} else {
 					while (true) {
-						if (!Lib::has_out(z)) {
+						if (Lib::get_avail_out(z) == 0) {
 							this->flush_out(z);
 						}
-						int r = T::process(&z,Lib::FINISH,*this->m_stream);
+						auto r = T::process(&z,Lib::FINISH,*this->m_stream);
 						if (r == Lib::STREAM_END) {
 		                    if (this->m_out) {
-                                this->m_out->set_len(COMPRESSED_BLOCK_SIZE-z.avail_out);
+                                this->m_out->set_len(COMPRESSED_BLOCK_SIZE-Lib::get_avail_out(z));
                                 this->m_stream->add_data(std::move(this->m_out));
 		                    }
 							return;
@@ -305,7 +305,7 @@ namespace archive {
 
 
 		using compress_work_ptr = common::intrusive_ptr<compress_work>;
-		void on_work_complete(lua::state& l,int status,int z_err) {
+		void on_work_complete(lua::state& l,int status,typename Lib::status_t z_err) {
 			if (status < 0 || (z_err != Lib::OK && z_err != Lib::BUF_ERROR)) {
                 if (z_err == Lib::STREAM_END) {
                     m_finished = true;
@@ -386,12 +386,13 @@ namespace archive {
 		virtual void continue_read(lua::state& l) = 0;
 	public:
 		compressionstream() {
-			memset(&m_z, 0, sizeof(m_z));
+			Lib::alloc(m_z);
 		}
 		~compressionstream() {
 			if (m_read_resume) {
 				m_read_resume->reset();
 			}
+			Lib::dealloc(m_z);
 		}
         void init_common(uv::loop& l) {
             m_read_resume.reset( new async_resume_read(l,this) );

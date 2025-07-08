@@ -14,7 +14,7 @@ META_OBJECT_INFO(archive::lzmauncompress_to_stream,archive::lzmauncompress)
 
 namespace archive {
 
-	class decompress_work : public uv::lua_cont_work {
+	class lzma_decompress_work : public uv::lua_cont_work {
 	protected:
 	    llae::buffer_base_ptr m_src_data;
 	    llae::buffer_ptr m_dst_data;
@@ -83,21 +83,21 @@ namespace archive {
 	        return args;
 	    }
 	public:
-	    explicit decompress_work(lua::ref&& cont,llae::buffer_base_ptr&& src,size_t dst_buffer_size) : uv::lua_cont_work(std::move(cont)),m_src_data(std::move(src)) {
+	    explicit lzma_decompress_work(lua::ref&& cont,llae::buffer_base_ptr&& src,size_t dst_buffer_size) : uv::lua_cont_work(std::move(cont)),m_src_data(std::move(src)) {
 	        m_dst_data = llae::buffer::alloc(dst_buffer_size);
 	        m_z = LZMA_STREAM_INIT;
 	    }
 	};
 
-    class decompress_params_work : public decompress_work {
+    class lzma_decompress_params_work : public lzma_decompress_work {
         llae::buffer_base_ptr m_params_data;
         lzma_filter m_filters[LZMA_FILTERS_MAX + 1];
     public:
-        explicit decompress_params_work(lua::ref&& cont,
+        explicit lzma_decompress_params_work(lua::ref&& cont,
                                         llae::buffer_base_ptr&& params,
                                         llae::buffer_base_ptr&& src,
                                         size_t dst_buffer_size) :
-            decompress_work(std::move(cont),std::move(src),dst_buffer_size),
+            lzma_decompress_work(std::move(cont),std::move(src),dst_buffer_size),
             m_params_data(std::move(params)) {}
         const char* load_config(const char* str) {
             int pos;
@@ -167,7 +167,7 @@ namespace archive {
 	        l.pushthread();
 	        lua::ref cont;
 	        cont.set(l);
-	        common::intrusive_ptr<decompress_work> work(new decompress_work(std::move(cont),std::move(buf),dst_size));
+	        common::intrusive_ptr<lzma_decompress_work> work(new lzma_decompress_work(std::move(cont),std::move(buf),dst_size));
 	        int r = work->queue_work(l);
 	        if (r < 0) {
 	            work->reset(l);
@@ -199,7 +199,7 @@ namespace archive {
             l.pushthread();
             lua::ref cont;
             cont.set(l);
-            common::intrusive_ptr<decompress_params_work> work(new decompress_params_work(std::move(cont),std::move(params_buf),std::move(buf),dst_size));
+            common::intrusive_ptr<lzma_decompress_params_work> work(new lzma_decompress_params_work(std::move(cont),std::move(params_buf),std::move(buf),dst_size));
             auto msg = work->load_config(config);
             if (msg) {
                 work->reset(l);

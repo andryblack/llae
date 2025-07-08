@@ -17,7 +17,12 @@ namespace archive { namespace impl {
         static constexpr int STREAM_END = Z_STREAM_END;
         static constexpr int BUF_ERROR = Z_BUF_ERROR;
         static constexpr int FINISH = Z_FINISH;
+        using status_t = int;
         using stream = z_stream;
+        static void alloc(stream& z) {
+            memset(&z, 0, sizeof(z));
+        }
+        static void dealloc(stream&) {}
         static void fill_out(stream& z,void* base,size_t len) {
             z.next_out = static_cast<Bytef*>(base);
             z.avail_out = static_cast<uInt>(len);
@@ -29,10 +34,10 @@ namespace archive { namespace impl {
         static bool has_in(stream& z) {
             return z.avail_in;
         }
-        static bool has_out(stream& z) {
+        static size_t get_avail_out(stream& z) {
             return z.avail_out;
         }
-        static void pusherror(lua::state& l,stream& z,int err) {
+        static void pusherror(lua::state& l,stream& z,status_t err) {
             if (z.msg) {
                 l.pushstring(z.msg);
             } else {

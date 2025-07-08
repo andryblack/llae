@@ -14,7 +14,14 @@ namespace archive{
             static constexpr int BUF_ERROR = LZMA_BUF_ERROR;
             static constexpr int FINISH = LZMA_FINISH;
 
+            using status_t = int;
             using stream = lzma_stream;
+
+            static void alloc(stream& z) {
+                memset(&z, 0, sizeof(z));
+            }
+            static void dealloc(stream&) {
+            }
 
             static void fill_out(stream& z,void* base,size_t len) {
                 z.next_out = static_cast<uint8_t*>(base);
@@ -27,7 +34,7 @@ namespace archive{
             static bool has_in(stream& z) {
                 return z.avail_in;
             }
-            static bool has_out(stream& z) {
+            static size_t get_avail_out(stream& z) {
                 return z.avail_out;
             }
             static void pusherror(lua::state& l,stream& z,int err);

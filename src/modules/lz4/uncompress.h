@@ -14,7 +14,7 @@ namespace archive{
             static constexpr int STREAM_END = -2;
             static constexpr int BUF_ERROR = -1000;
             static constexpr int FINISH = -3;
-
+            using status_t = int;
             struct stream {
                 LZ4F_dctx* ctx;
                 char* next_in;
@@ -23,6 +23,14 @@ namespace archive{
                 size_t avail_out;
                 LZ4F_decompressOptions_t options;
             };
+            static void alloc(stream& z) {
+                memset(&z, 0, sizeof(z));
+                LZ4F_createDecompressionContext(&z.ctx,LZ4F_VERSION);
+            }
+            static void dealloc(stream& z) {
+                LZ4F_freeDecompressionContext(z.ctx);
+                z.ctx = nullptr;
+            }
             static void fill_out(stream& z,void* base,size_t len) {
                 z.next_out = static_cast<char*>(base);
                 z.avail_out = len;
@@ -34,7 +42,7 @@ namespace archive{
             static bool has_in(stream& z) {
                 return z.avail_in;
             }
-            static bool has_out(stream& z) {
+            static size_t get_avail_out(stream& z) {
                 return z.avail_out;
             }
             static void pusherror(lua::state& l,stream& z,int err);

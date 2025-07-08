@@ -19,7 +19,6 @@ namespace archive {
     }
 
     lz4uncompress::lz4uncompress() {
-        LZ4F_createDecompressionContext(&m_z.ctx,LZ4F_VERSION);
         m_z.options.stableDst = 0;
         m_z.options.skipChecksums = 0;
     }
@@ -62,7 +61,7 @@ namespace archive {
     }
     
     lz4uncompress::~lz4uncompress() {
-        LZ4F_freeDecompressionContext(m_z.ctx);
+        
     }
 
     

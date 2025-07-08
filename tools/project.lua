@@ -309,7 +309,7 @@ end
 
 function Project:check_script( file , m )
 	if self._scripts[file] then
-		log.error('reqrite script',file,'from module',m.name)
+		log.error('required script',file,'from module',m.name)
 		log.error('already installed by module',self._scripts[file].name)
 		error('script rewrite: ' .. file)
 	end
