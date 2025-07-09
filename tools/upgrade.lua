@@ -8,7 +8,6 @@ local log = require 'llae.log'
 
 local upgrade = class(tool)
 upgrade.descr = 'upgrade llae installation'
-local default_dir = path.join(assert(fs.home()),'.llae') 
 
 function upgrade:exec( args )
 	

@@ -336,44 +336,6 @@ function m:exec_res(bin,args)
 	return result
 end
 
-function m:shell( text , name)
-	local script = path.join(self.location,(name or 'temp') .. '.sh')
-	fs.unlink(script)
-	local f = assert(fs.open_write(script))
-	local template = require 'llae.template'
-	f:write('#!/bin/sh\n')
-	f:write('LLAE_PROJECT_ROOT=' .. self.root .. '\n')
-	f:write('PATH=$LLAE_PROJECT_ROOT/bin:$PATH' .. '\n')
-	f:write('cd $(dirname $0)\n')
-	f:write(template.compile(text,{env={escape=tostring}})(self))
-	f:close()
-	local logfilename = path.join(self.location, (name or 'shell_script') .. '_log.txt')
-	
-	log.info('cmd:',script,'>',logfilename)
-	fs.unlink(logfilename)
-	local logfile = assert(fs.open_write(logfilename))
-	local rpipe = uv.pipe.new(1)
-	local epipe = uv.pipe.new(1)
-	local p = assert(uv.process.spawn{
-		file = '/bin/sh',
-		args = {script},
-		streams = {
-			{uv.process.IGNORE},
-			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
-			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,epipe}
-		}
-	})
-	redirect_pipe(rpipe,logfile)
-	redirect_pipe(epipe,logfile)
-	
-	local code,sig = p:wait_exit()
-	if code ~= 0 or sig ~= 0 then
-		error(string.format('shell code:%d sig:%d',code,sig))
-	end
-	logfile:close()
-	rpipe:close()
-	epipe:close()
-end
 
 function m:get_absolute_location(...)
 	return path.getabsolute(path.join(self.location,...))

@@ -29,7 +29,7 @@ function install(tosystem)
 	end
 end
 
-function bootstrap()
+function bootstrap( config )
 	
 	local all_files = {}
 	for fn in foreach_file(dir .. '/data') do
@@ -41,7 +41,7 @@ function bootstrap()
 		LLAE_DL_DIR=project:get_dl_dir()
 	}
 	env.LUA_PATH = get_absolute_location(dir,'tools','?.lua') .. ';' .. get_absolute_location(dir,'scripts','?.lua')
-	cwd = root
+	local cwd = root
 	local bootstrap = get_self_exe()
 	assert(exec{
 		bin = bootstrap,
@@ -75,8 +75,9 @@ function bootstrap()
 
 end
 
-function upgrade()
+function upgrade( data )
 	
+	local install_root = data.install_root
 	local all_files = {}
 	for fn in foreach_file(dir .. '/data') do
 		all_files['data/' .. fn] = dir .. '/data/' .. fn
@@ -84,14 +85,42 @@ function upgrade()
 	all_files['llae-project.lua'] = dir .. '/llae-project.lua' 
 	install_files(all_files)
 
-	shell [[
-CURDIR=$PWD
-cd $LLAE_PROJECT_ROOT
-./bin/llae --root=$CURDIR/<%= dir %> install || exit 1
-./bin/llae --root=$CURDIR/<%= dir %> init || exit 1
-premake5$LLAE_EXE --file=build/premake5.lua gmake2 || exit 1
-make -C build config=release verbose=1 || exit 1
-	]]
+	local env = {
+		LLAE_DL_DIR=project:get_dl_dir()
+	}
+	local cwd = root
+	local llae_exe = path.join(root,'bin','llae')
+	local llae_root = path.join(cwd,dir)
+	assert(exec{
+		bin = llae_exe,
+		args = {'--root=' .. llae_root,'install'},
+		name = 'upgrade_install',
+		env = env,
+		cwd = cwd,
+	})
+	assert(exec{
+		bin = llae_exe,
+		args = {'--root=' .. llae_root,'init'},
+		name = 'upgrade_init',
+		env = env,
+		cwd = cwd,
+	})
+	local premake_exe = path.join(root,'bin','premake5')
+	assert(exec{
+		bin = premake_exe,
+		args = {'--file=build/premake5.lua'},
+		name = 'upgrade_premake',
+		env = env,
+		cwd = cwd,
+	})
+
+	assert(exec{
+		bin = 'make',
+		args = {'--C','build','config=release','verbose=1'},
+		name = 'upgrade_make',
+		env = env,
+		cwd = cwd,
+	})
 end
 
 project_config = {
