@@ -285,7 +285,7 @@ function m:exec(config)
 		err = string.format('process code:%d sig:%d',code,sig)
 	end
 	logfile:close()
-	if err and project:get_cmdargs().development then
+	if err and self._project:get_cmdargs().development then
 		log.error('Failed:',err)
 		log.info('cmd log:',fs.load_file(logfilename))
 	end
