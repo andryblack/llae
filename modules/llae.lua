@@ -108,7 +108,7 @@ function upgrade( data )
 	local premake_exe = path.join(root,'bin','premake5')
 	assert(exec{
 		bin = premake_exe,
-		args = {'--file=build/premake5.lua'},
+		args = {'--file=build/premake5.lua','gmake2'},
 		name = 'upgrade_premake',
 		env = env,
 		cwd = cwd,
