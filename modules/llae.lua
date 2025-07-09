@@ -90,7 +90,7 @@ function upgrade( data )
 	}
 	local cwd = root
 	local llae_exe = path.join(root,'bin','llae')
-	local llae_root = path.join(cwd,dir)
+	local llae_root = path.join(cwd,'build','modules','llae',dir)
 	assert(exec{
 		bin = llae_exe,
 		args = {'--root=' .. llae_root,'install'},

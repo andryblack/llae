@@ -74,8 +74,8 @@ local function exec_git(args,logfile)
 end
 
 function m:download_git(url,config)
-	log.info('download_git',self.name,url)
 	local dst = path.join(self.location,config.dir or 'src')
+	log.info('download_git',self.name,url,dst)
 	local tag = config.tag or config.branch or 'master'
 	local logfilename = path.join(self.location,'update_git_log.txt')
 	fs.unlink(logfilename)
