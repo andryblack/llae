@@ -38,7 +38,8 @@ function base:create_env(project)
 	local env = {
 		project = project,
 		log = log,
-		buffer = llae.buffer
+		buffer = llae.buffer,
+		path = path,
 	}
 	local super_env = {}
 	apply_functions(super_env,env)
