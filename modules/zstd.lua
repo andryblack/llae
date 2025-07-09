@@ -52,6 +52,9 @@ build_lib = {
 		'compress/zstd_preSplit',
 	},
 	project = [[
+		defines {
+			'ZSTD_DISABLE_ASM'
+		}
 		includedirs{
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
 			'include',
