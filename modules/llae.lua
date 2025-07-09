@@ -67,7 +67,7 @@ function bootstrap( config )
 	})
 	assert(exec{
 		bin = 'make',
-		args = {'-C','build','config=release','verbose=1','-j4'},
+		args = {'-C','build','config=release','verbose=1','-j'},
 		name = 'bootstrap2_make',
 		env = env,
 		cwd = cwd,
@@ -116,7 +116,7 @@ function upgrade( data )
 
 	assert(exec{
 		bin = 'make',
-		args = {'--C','build','config=release','verbose=1'},
+		args = {'--C','build','config=release','verbose=1','-j'},
 		name = 'upgrade_make',
 		env = env,
 		cwd = cwd,

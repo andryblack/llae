@@ -13,7 +13,7 @@ RUN cd llae && premake5 download
 RUN cd llae && premake5 unpack
 RUN cd llae && premake5 gmake2
 RUN make -C llae/build verbose=1 config=release 
-RUN cd llae && LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap bootstrap
+RUN cd llae && LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap bootstrap --development
 RUN ln -s $HOME/.llae/bin/llae /bin/llae
 RUN rm /bin/premake5
 RUN ln -s $HOME/.llae/bin/premake5 /bin/premake5

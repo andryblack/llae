@@ -34,7 +34,10 @@ function install:exec( args )
 
 		local modules = require 'modules'
 		local project = require 'project'
-		local p = project.new({location=install_dir})
+		local p = project.new{
+			location=install_dir,
+			cmdargs = args
+		}
 		for _,v in ipairs(embedded_modules) do
 			p:add_module(v,true)
 		end
