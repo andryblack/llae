@@ -101,27 +101,27 @@ steps:
    - make -C build verbose=1 clean
    - make -C build verbose=1 config=release 
 
-- name: build-windows-final
-  image: build-llae-windows
-  pull: never
-  volumes:
-  - name: dl_cache
-    path: /tmp/llae-dl
-  environment:
-    LLAE_DL_DIR: /tmp/llae-dl
-    LUA_PATH: tools/?.lua;scripts/?.lua
-    TOOLCHAIN: x86_64-w64-mingw32-
-    CC: x86_64-w64-mingw32-gcc
-    CXX: x86_64-w64-mingw32-g++
-    AR: x86_64-w64-mingw32-ar
-    LD: x86_64-w64-mingw32-ld
-  commands:
-    - ./bin/llae-bootstrap --root=. --inplace=true install --development
-    - ./bin/llae-bootstrap --root=. --inplace=true init
-    - premake5 --file=build/premake5.lua gmake2
-    - make -C build verbose=1 config=debug
-    - make -C build verbose=1 clean
-    - make -C build verbose=1 config=release 
+# - name: build-windows-final
+#   image: build-llae-windows
+#   pull: never
+#   volumes:
+#   - name: dl_cache
+#     path: /tmp/llae-dl
+#   environment:
+#     LLAE_DL_DIR: /tmp/llae-dl
+#     LUA_PATH: tools/?.lua;scripts/?.lua
+#     TOOLCHAIN: x86_64-w64-mingw32-
+#     CC: x86_64-w64-mingw32-gcc
+#     CXX: x86_64-w64-mingw32-g++
+#     AR: x86_64-w64-mingw32-ar
+#     LD: x86_64-w64-mingw32-ld
+#   commands:
+#     - ./bin/llae-bootstrap --root=. --inplace=true install --development
+#     - ./bin/llae-bootstrap --root=. --inplace=true init
+#     - premake5 --file=build/premake5.lua gmake2
+#     - make -C build verbose=1 config=debug
+#     - make -C build verbose=1 clean
+#     - make -C build verbose=1 config=release 
 
 - name: build-image
   image: docker
