@@ -211,6 +211,8 @@ namespace uv {
 	void readable_stream::add_read_buffer(llae::buffer_ptr&& b) {
         if (!b) return;
 		m_read_buffers.emplace_back(std::move(b));
+		if (m_read_buffers.size() > 16)
+			m_read_buffers.pop_back();
 	}
 
    
