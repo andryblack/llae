@@ -56,8 +56,9 @@ function client:start( cb )
 		return nil,'invalid response code: ' .. tostring(http_resp:get_code())
 	end
 
-	if http_resp:get_header('Upgrade') ~= 'websocket' then
-		return nil,'invalid upgrade'
+	local upgrade = string.lower(http_resp:get_header('Upgrade') or '')
+	if upgrade ~= 'websocket' then
+		return nil,'invalid upgrade(' .. upgrade .. ')'
 	end
 
 	local sec_resp = http_resp:get_header('Sec-WebSocket-Accept')
