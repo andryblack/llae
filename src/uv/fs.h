@@ -52,6 +52,7 @@ namespace uv {
 		static int stat(lua_State* L);
 		static int scandir(lua_State* L);
 		static int open(lua_State* L);
+		static int chmod(lua_State* L);
 		static void lbind(lua::state& l);
 	};
 }

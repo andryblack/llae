@@ -408,6 +408,35 @@ namespace uv {
 		return 0;
 	}
 
+	int fs::chmod(lua_State* L) {
+		lua::state l(L);
+		if (!l.isyieldable()) {
+			l.pushnil();
+			l.pushstring("chmod is async");
+			return 2;
+		}
+		{
+			auto path = l.checkstring(1);
+			int mode = int(l.checkinteger(2));
+			llae::app& app(llae::app::get(l));
+			lua::ref cont;
+			l.pushthread();
+			cont.set(l);
+			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+			req->add_ref();
+			int r = uv_fs_chmod(app.loop().native(),
+				req->get(),path,mode,&fs_req::fs_cb);
+			if (r < 0) {
+				req->remove_ref();
+				l.pushnil();
+				uv::push_error(l,r);
+				return 2;
+			} 
+		}
+		l.yield(0);
+		return 0;
+	}
+
 	file::file(uv_file f,uv_loop_t* l) : m_file(f),m_loop(l) {
 
 	}
@@ -620,6 +649,7 @@ namespace uv {
 		lua::bind::function(l,"stat",&uv::fs::stat);
 		lua::bind::function(l,"scandir",&uv::fs::scandir);
 		lua::bind::function(l,"open",&uv::fs::open);
+		lua::bind::function(l,"chmod",&uv::fs::chmod);
 		l.setfield(-2,"fs");
 	}
 }
