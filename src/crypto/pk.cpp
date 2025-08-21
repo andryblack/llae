@@ -69,6 +69,10 @@ namespace crypto {
 
 	lua::multiret pk::parse_public_key(lua::state& l) {
 		auto data = llae::buffer_view::get(l,2,true);
+		if (data.empty()) {
+			l.argerror(2,"data expected");
+			return {0};
+		}
 		auto res = mbedtls_pk_parse_public_key(&m_ctx,
 			static_cast<const unsigned char*>(data.get_base()),data.get_len());
 		return mbedtls_result(l,res);
@@ -103,6 +107,10 @@ namespace crypto {
 			return {2};
 		}
 		auto src = llae::buffer_base::get(l,2,true);
+		if (!src) {
+			l.argerror(2,"buffer expected");
+			return {0};
+		}
 		auto random = lua::stack<random_ptr>::get(l,3);
 		if (!random) {
 			random = random_ptr(new crypto::random());

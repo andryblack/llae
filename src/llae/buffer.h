@@ -23,6 +23,7 @@ namespace llae {
 
         const void* get_base() const { return m_data; }
         size_t get_len() const { return m_size; }
+        bool empty() const { return m_size == 0; }
 
         static buffer_view get(lua::state& l,int idx,bool check=false);
     };
