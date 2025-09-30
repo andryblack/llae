@@ -2,6 +2,7 @@ local g = _G
 local remove = {}
 local log = require 'llae.log'
 local fs = require 'llae.fs'
+local path = require 'llae.path'
 local function is_script_file(k)
 	local path = 'scripts'
 	while true do
@@ -41,10 +42,11 @@ local fs = require 'llae.fs'
 local path = require 'llae.path'
 local log = require 'llae.log'
 async.run(function()
-	for _,v in ipairs(fs.scandir('tests')) do
-		if v.isfile and v.name:sub(-4)=='.lua' and v.name:sub(1,5) == 'test_' then
-			log.debug('found file',v.name)
-			dofile(path.join('tests',v.name))
+	for _,v in ipairs(fs.scanfiles_r('tests')) do
+		local filename = path.basename(v)
+		if path.extension(v)=='lua' and filename:sub(1,5) == 'test_' then
+			log.debug('found file',v)
+			dofile(path.join('tests',v))
 		end
 	end
 	os.exit( lu.LuaUnit.run() )

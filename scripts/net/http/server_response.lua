@@ -51,14 +51,19 @@ function response:_init( client , req)
 	self._req = req
 	self._data = {}
 	self._code = 200
+	self._status = 'OK'
+	self._version = self._req._version or '1.0'
 	self._protocol = req:get_protocol()
-	local accept = self._req:get_header('Accept-Encoding')
-	if accept and string.find(accept,'gzip') then
-		self._compress = compress_encoding.new(archive.new_gzip_read{},'gzip')
-	elseif accept and string.find(accept,'deflate') then
-		self._compress = compress_encoding.new(archive.new_deflate_read(),'deflate')
-	end
 end
+
+function response:set_version(ver)
+	self._version = ver
+end
+
+function response:keep_alive(  )
+	self._keep_alive = true
+end
+
 
 function response:add_header( name, value )
 	local n = string.lower(name)
@@ -75,6 +80,114 @@ function response:add_header( name, value )
 	self._headers[name] = {value}
 end
 
+function response:disable_compress()
+	self:_reset_compress()
+end
+
+
+function response:remove_header( header )
+	assert(self._headers,'response already sended')
+	self:set_header(header,nil)
+end
+
+function response:status( code , status )
+	assert(self._headers,'response already sended')
+	self._code = code
+	self._status = status
+	return self
+end
+
+
+function response:_create_compress()
+	if self._disable_compress then
+		return
+	end
+	local accept = self._req:get_header('Accept-Encoding')
+	if accept and string.find(accept,'gzip') then
+		self._compress = compress_encoding.new(archive.new_gzip_read{},'gzip')
+	elseif accept and string.find(accept,'deflate') then
+		self._compress = compress_encoding.new(archive.new_deflate_read(),'deflate')
+	end
+end
+
+function response:_reset_compress()
+	self._compress = nil
+	self._disable_compress = true
+end
+
+
+function response:is_finished(  )
+	return not self._data
+end
+
+function response:get_connection(  )
+	return self._client
+end
+
+
+function response:start_write()
+	self:_send_response(false)
+	assert(not next(self._data))
+	self._direct_write = true
+end
+
+
+function response:write( data )
+	if self._direct_write then
+		return self:_write(data)
+	end
+	assert(self._data,'already finished')
+	table.insert(self._data,data)
+	return true
+end
+
+function response:finish( data )
+	--log.debug('response:finish')
+	if data then
+		if self._direct_write then
+			local res,err = self:_write(data,true)
+			if not res then
+				return nil,err
+			end
+		else
+			assert(self._data,'already finished')
+			table.insert(self._data,data)
+		end
+	end
+	if not self._direct_write then
+		self:_send_response(true)
+	elseif self._compress then
+		while true do
+			local ch,er = self._compress:read_buffer()
+			if er then
+				error( er )
+			end
+			if ch then
+				self._client:write(ch)
+			else
+				break
+			end
+		end
+	end
+	self:_finish()
+end
+
+function response:_write(data,last)
+	if self._compress then
+		if last then
+			self._compress:finish(data)
+		else
+			self._compress:write(data)
+		end
+		local ch,er = self._compress:read_buffer()
+		if er then
+			error( er )
+		end
+		return self._client:write(ch)
+	else
+		return self._client:write(data)
+	end
+end
 
 local function get_len(d)
 	if type(d) == 'string' then
@@ -92,19 +205,20 @@ function response:_send_response( with_data )
 	self:finish_headers()
 	if self._status and (self._status ~= 200) then
 		log.debug('reset compression for status',self._status)
-		self._compress = nil
+		self:_reset_compress()
 	end
 	if with_data and not next(self._data) then
 		log.debug('reset compression for emppty data')
-		self._compress = nil
+		self:_reset_compress()
 	end
 
-	if self._compress then
-		if self:get_header('Content-Encoding') then
-			self._compress = nil
-		else
-		 	self:set_header('Content-Encoding',self._compress.encoding)
-		end 
+	if self:get_header('Content-Encoding') then
+		self:_reset_compress()
+	else
+		self:_create_compress()
+		if self._compress then
+			self:set_header('Content-Encoding',self._compress.encoding)
+		end
 	end
 	
 	local send_data = nil 
@@ -146,8 +260,8 @@ function response:_send_response( with_data )
 		self._keep_alive = true
 	end
 	local r = {
-		self._protocol .. '/' .. (self._version or self._req._version or '1.0') ..
-			' ' .. (self._code or 200) .. ' ' .. (self._status or 'OK')
+		self._protocol .. '/' .. self._version ..
+			' ' .. self._code .. ' ' .. self._status 
 	}
 	--self:_dump_headers()
 	self:_write_headers(r)
@@ -168,33 +282,10 @@ function response:_send_response( with_data )
 			return res,err
 		end
 	end
-end
-
-
-function response:remove_header( header )
-	assert(self._headers,'response already sended')
-	self:set_header(header,nil)
-end
-
-function response:status( code , status )
-	assert(self._headers,'response already sended')
-	self._code = code
-	self._status = status
-	return self
-end
-
-function response:write( data )
-	assert(self._data,'already finished')
-	table.insert(self._data,data)
 	return true
 end
 
-function response:keep_alive(  )
-	self._keep_alive = true
-end
-function response:set_version( ver )
-	self._version = ver
-end
+
 function response:_finish( )
 	if not self._keep_alive then
 		self._closed = true
@@ -205,27 +296,6 @@ function response:_finish( )
 	end
 	self._client = nil
 end
-function response:finish( data )
-	--log.debug('response:finish')
-	if data then
-		assert(self._data and self._client,'already finished')
-		table.insert(self._data,data)
-	end
-	if not self._client then
-		return
-	end
-	self:_send_response(true)
-	self:_finish()
-end
-
-function response:is_finished(  )
-	return not self._data
-end
-
-function response:get_connection(  )
-	return self._client
-end
-
 
 local function send_404(resp,path,e) 
 	resp:status(404)
@@ -235,10 +305,11 @@ local function send_404(resp,path,e)
 end
 
 function response:_need_compress_file( ftype, conf )
-	if not self._compress then
+	if conf and conf.dnt_compress then
 		return false
 	end
-	if conf and conf.dnt_compress then
+	self:_create_compress()
+	if not self._compress then
 		return false
 	end
 	return true
@@ -329,13 +400,14 @@ function response:send_static_file( fpath , conf )
 							error( er )
 						end
 						if ch then
+							data_size = data_size + get_len(ch)
 							table.insert(self._data,ch)
 						else
 							break
 						end
 					end
 					self:set_header('Content-Encoding',self._compress.encoding)
-					self._compress = nil
+					self:_reset_compress()
 					self:set_header('Content-Length',data_size)
 					self:_send_response(true)
 					self:_finish()

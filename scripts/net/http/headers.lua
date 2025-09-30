@@ -5,6 +5,7 @@ local headers = class(nil,'http.headers')
 
 function headers:_init( init )
 	self._headers = init or {}
+	self._list = {}
 end
 
 function headers:get_header( name )
@@ -30,6 +31,7 @@ function headers:set_header( name , value )
 		end
 	end
 	self._headers[name] = value
+	table.insert(self._list,name)
 end
 
 function headers:foreach_header( )
@@ -49,13 +51,16 @@ function headers:_dump_headers()
 end
 
 function headers:_write_headers(r)
-	for hn,hv in pairs(self._headers) do
-		if type(hv) == 'table' then
-			for _,v in ipairs(hv) do
-				table.insert(r,hn..': ' .. v)
+	for _,hn in ipairs(self._list) do
+		local hv = self._headers[hn]
+		if hv then
+			if type(hv) == 'table' then
+				for _,v in ipairs(hv) do
+					table.insert(r,hn..': ' .. v)
+				end
+			else
+				table.insert(r,hn..': ' .. hv)
 			end
-		else
-			table.insert(r,hn..': ' .. hv)
 		end
 	end
 end
