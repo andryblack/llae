@@ -161,7 +161,7 @@ function _M.load( filename, options )
 end
 
 function _M.render(str, data, options)
-	local t = template.new()
+	local t = template.new(options)
 	t:parse(str)
 	return t:render(data)
 end
