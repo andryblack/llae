@@ -1,8 +1,8 @@
 name = 'zlib'
-version = '1.2.13'
+version = '1.3.1'
 archive = 'zlib-' .. version .. '.tar.gz'
 url = 'https://zlib.net/fossils/' .. archive
-hash = '9b8aa094c4e5765dabf4da391f00d15c'
+hash = '9855b6d802d7fe5b7bd5b196a2271655'
 dir = name .. '-' .. version
 
 function install()

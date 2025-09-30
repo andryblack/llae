@@ -1,10 +1,9 @@
 name = 'mbedtls'
-version = '3.4.0'
+version = '3.6.4'
 dir = name .. '-' .. version 
-archive = dir .. '.tar.gz'
-url = 'https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v'..version..'.tar.gz'
-hash = '3f6c2eadc1243e9895d65c67b46eb890'
-
+archive = dir .. '.tar.bz2'
+url = 'https://github.com/Mbed-TLS/mbedtls/releases/download/' .. dir .. '/'..archive
+hash = 'eb965a5bb8044bc43a49adb435fa72ee'
 
 local uncomment = {
 	['MBEDTLS_DEPRECATED_REMOVED'] = true,
@@ -51,7 +50,7 @@ local replace_line = {
 function install()
 	download(url,archive,hash)
 
-	unpack_tgz(archive,dir,1)
+	unpack_tbz2(archive,dir,1)
 
 	local includes = {}
 	for fn in foreach_file(dir .. '/include/mbedtls') do

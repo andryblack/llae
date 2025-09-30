@@ -2,9 +2,9 @@ local utils = require 'utils'
 
 local _M = {
 	name = 'mbedtls',
-	version = '3.4.0',
-	url = 'https://github.com/Mbed-TLS/mbedtls/archive/refs/tags/v3.4.0.tar.gz',
-	archive = 'tar.gz',
+	version = '3.6.4',
+	url = 'https://github.com/Mbed-TLS/mbedtls/releases/download/mbedtls-3.6.4/mbedtls-3.6.4.tar.bz2',
+	archive = 'tar.bz2',
 }
 
 local uncomment = {

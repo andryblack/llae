@@ -1,9 +1,9 @@
 
 name = 'libuv'
-version = 'v1.49.2'
+version = 'v1.51.0'
 archive = name .. '-' .. version .. '.tar.gz'
 url = 'https://dist.libuv.org/dist/'..version..'/' .. archive
-hash = 'add970d60a6f5942b948267a94353826'
+hash = '5e0109e19c3fed3a8cbecb958de39afa'
 dir = name .. '-' .. version
 
 function install()

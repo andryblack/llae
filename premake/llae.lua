@@ -26,12 +26,14 @@ function _M.normalize_path(path)
 end
 
 local components = { 'common','lua','meta','uv','llae','ssl','archive','crypto','posix' }
+local modules = {'bzip2'}
 
 local extlibs = {
 	require 'lua',
 	require 'libuv',
 	require 'mbedtls',
-	require 'zlib'
+	require 'zlib',
+	require 'bzip2',
 }
 
 function _M.extract_zip( zip_file, extlibs_folder )
@@ -42,6 +44,14 @@ function _M.extract_tar_gz( zip_file, extlibs_folder )
 	zip_file = _M.normalize_path(zip_file)
 	extlibs_folder = _M.normalize_path(extlibs_folder)
 	local cmd = 'tar -xzf ' .. zip_file .. ' -C ' .. extlibs_folder
+	print(cmd)
+	assert(os.execute(cmd))
+end
+
+function _M.extract_tar_bz2( zip_file, extlibs_folder )
+	zip_file = _M.normalize_path(zip_file)
+	extlibs_folder = _M.normalize_path(extlibs_folder)
+	local cmd = 'tar -xjf ' .. zip_file .. ' -C ' .. extlibs_folder
 	print(cmd)
 	assert(os.execute(cmd))
 end
@@ -117,6 +127,10 @@ function _M.lib(  )
 		for _,c in ipairs(components) do
 			table.insert(fls,path.join(_M.root,'src',c,'*.cpp'))
 			table.insert(fls,path.join(_M.root,'src',c,'*.h'))
+		end
+		for _,c in ipairs(modules) do
+			table.insert(fls,path.join(_M.root,'src','modules',c,'*.cpp'))
+			table.insert(fls,path.join(_M.root,'src','modules',c,'*.h'))
 		end
 		files(fls)
 

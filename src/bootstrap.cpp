@@ -19,6 +19,7 @@ int luaopen_llae(lua_State*);
 int luaopen_archive(lua_State*);
 int luaopen_crypto(lua_State*);
 int luaopen_posix(lua_State*);
+int luaopen_archive_bzip2(lua_State*);
 
 const lua::embedded_module lua::embedded_module::modules[] = {
 	{"uv",&luaopen_uv},
@@ -27,6 +28,7 @@ const lua::embedded_module lua::embedded_module::modules[] = {
 	{"archive",&luaopen_archive},
 	{"crypto",&luaopen_crypto},
 	{"posix",&luaopen_posix},
+	{"archive.bzip2",&luaopen_archive_bzip2},
 	{nullptr,nullptr}
 };
 
