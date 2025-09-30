@@ -1,9 +1,9 @@
 name = 'premake'
-version = '5.0.0-beta2'
+version = '5.0.0-beta7'
 dir = name .. '-' .. version 
 archive = dir .. '.tar.gz'
 url = 'https://github.com/premake/premake-core/archive/refs/tags/v'..version..'.tar.gz'
-hash = '887b0bd36fcb58f9d67f7e299a408ad6'
+hash = 'c428da57ea33cb72c1b22b549589d696'
 
 function install()
 
