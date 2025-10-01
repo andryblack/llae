@@ -34,6 +34,23 @@ function headers:set_header( name , value )
 	table.insert(self._list,name)
 end
 
+function headers:add_header( name, value )
+	local n = string.lower(name)
+	for hn,hv in pairs(self._headers) do
+		if string.lower(hn) == n then
+			if type(self._headers[hn]) ~= 'table' then
+				self._headers[hn] = {self._headers[hn],value}
+			else
+				table.insert(self._headers[hn],value)
+			end
+			return
+		end
+	end
+	self._headers[name] = {value}
+	table.insert(self._list,name)
+end
+
+
 function headers:foreach_header( )
 	return pairs(self._headers)
 end

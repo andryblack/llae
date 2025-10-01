@@ -66,26 +66,9 @@ function response:keep_alive(  )
 	self._keep_alive = true
 end
 
-
-function response:add_header( name, value )
-	local n = string.lower(name)
-	for hn,hv in pairs(self._headers) do
-		if string.lower(hn) == n then
-			if type(self._headers[hn]) ~= 'table' then
-				self._headers[hn] = {self._headers[hn],value}
-			else
-				table.insert(self._headers[hn],value)
-			end
-			return
-		end
-	end
-	self._headers[name] = {value}
-end
-
 function response:disable_compress()
 	self:_reset_compress()
 end
-
 
 function response:remove_header( header )
 	assert(self._headers,'response already sended')

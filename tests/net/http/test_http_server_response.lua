@@ -113,3 +113,18 @@ Connection: close
 
 ]])
 end
+
+function TestHttpServerResponse:test_add_header()
+	self._response:add_header('Cook','A')
+	self._response:add_header('Cook','B')
+	self._response:finish()
+	self:check_write([[
+HTTP/1.0 200 OK
+Cook: A
+Cook: B
+Content-Length: 0
+Content-Type: text/plain
+Connection: close
+
+]])
+end
