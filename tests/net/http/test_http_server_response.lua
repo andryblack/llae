@@ -89,3 +89,27 @@ Connection: close
 
 1234567890Data]])
 end
+
+function TestHttpServerResponse:test_default_status()
+	self._response:status(404)
+	self._response:finish()
+	self:check_write([[
+HTTP/1.0 404 Not Found
+Content-Length: 0
+Content-Type: text/plain
+Connection: close
+
+]])
+end
+
+function TestHttpServerResponse:test_unknown_status()
+	self._response:status(888)
+	self._response:finish()
+	self:check_write([[
+HTTP/1.0 888 Unknown
+Content-Length: 0
+Content-Type: text/plain
+Connection: close
+
+]])
+end

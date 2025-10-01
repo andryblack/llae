@@ -5,6 +5,7 @@ local archive = require 'archive'
 local log = require 'llae.log'
 local async = require 'llae.async'
 local timestamp = require 'net.http.timestamp'
+local default_status = require 'net.http.status'
 
 
 local response = class(require 'net.http.headers','http.server.response')
@@ -21,6 +22,7 @@ local default_content_type = {
 	['wasm'] ='application/wasm',
 	['mp4'] ='video/mp4',
 }
+
 
 
 local compress_encoding = class(nil,'http.server.compress_encoding')
@@ -93,7 +95,11 @@ end
 function response:status( code , status )
 	assert(self._headers,'response already sended')
 	self._code = code
-	self._status = status
+	if status then
+		self._status = status
+	else
+		self._status = default_status[code] or 'Unknown'
+	end
 	return self
 end
 
@@ -203,8 +209,8 @@ end
 function response:_send_response( with_data )
 	--log.debug('response:_send_response',with_data)
 	self:finish_headers()
-	if self._status and (self._status ~= 200) then
-		log.debug('reset compression for status',self._status)
+	if self._code and (self._code ~= 200) then
+		log.debug('reset compression for code',self._code)
 		self:_reset_compress()
 	end
 	if with_data and not next(self._data) then
