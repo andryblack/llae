@@ -59,13 +59,13 @@ namespace archive {
 		class compress_buffers : public compress_work {
 			LLAE_NAMED_ALLOC(alloc_tag)
 		private:
-			uv::write_buffers m_buffers;
+			llae::write_buffers m_buffers;
 		protected:
 			
 			virtual void on_work() override {
 				auto& z(this->m_stream->m_z);
 				for (auto& b:m_buffers.get_buffers()) {
-                    Lib::fill_in(z,b.base,b.len);
+                    Lib::fill_in(z,b.get_base(),b.get_len());
 					
 					while(Lib::has_in(z)) {
 						if (Lib::get_avail_out(z) == 0) {
@@ -97,11 +97,11 @@ namespace archive {
 				compress_work::on_after_work(status);
 			}
 		public:
-			compress_buffers(compressionstream_ptr&& stream) : compress_work(std::move(stream)) {
+			compress_buffers(compressionstream_ptr&& stream,llae::write_buffers&& buffers) : compress_work(std::move(stream)),m_buffers(std::move(buffers)) {
 			}
-			bool put(lua::state& l) {
-				return m_buffers.put(l);
-			}
+            void reset(lua::state& l) {
+                m_buffers.reset(l);
+            }
 		};
 
 		class compress_finish : public compress_buffers {
@@ -137,7 +137,7 @@ namespace archive {
 				}
 			}
 		public:
-			compress_finish(compressionstream_ptr&& stream) : compress_buffers(std::move(stream)) {}
+			compress_finish(compressionstream_ptr&& stream,llae::write_buffers&& buffers) : compress_buffers(std::move(stream),std::move(buffers)) {}
 		};
 
 
@@ -420,17 +420,24 @@ namespace archive {
 	            return {2};
 	        }
 	        {
-	            l.pushthread();
-	            m_write_cont.set(l);
-	            
-	            common::intrusive_ptr<compress_buffers> work(new compress_buffers(compressionstream_ptr(this)));
-	            l.pushvalue(2);
-                if (!work->put(l)) {
+                llae::write_buffers buffers;
+                l.pushvalue(2);
+                if (!buffers.put(l)) {
+                    buffers.reset(l);
                     l.argerror(2,"need data");
                     return {0};
                 }
+                if (buffers.empty()) {
+                    l.pushboolean(true);
+                    return {1};
+                }
+	            l.pushthread();
+	            m_write_cont.set(l);
+	            
+	            common::intrusive_ptr<compress_buffers> work(new compress_buffers(compressionstream_ptr(this),std::move(buffers)));
 	            int r = work->queue_work(llae::app::get(l).loop());
 	            if (r < 0) {
+                    work->reset(l);
 					l.pushnil();
 					uv::push_error(l,r);
 					return {2};
@@ -469,14 +476,17 @@ namespace archive {
 	        {
 	            l.pushthread();
 	            m_write_cont.set(l);
+                
+                llae::write_buffers buffers;
+                if (l.gettop()>1) {
+                    l.pushvalue(2);
+                    buffers.put(l);
+                }
 	            
-	            common::intrusive_ptr<compress_buffers> work(new compress_finish(compressionstream_ptr(this)));
-	            if (l.gettop()>1) {
-	            	l.pushvalue(2);
-	            	work->put(l);
-	            }
+	            common::intrusive_ptr<compress_buffers> work(new compress_finish(compressionstream_ptr(this),std::move(buffers)));
 	            int r = work->queue_work(llae::app::get(l).loop());
 	            if (r < 0) {
+                    work->reset(l);
 					l.pushnil();
 					uv::push_error(l,r);
 					return {2};

@@ -487,16 +487,14 @@ namespace uv {
 	class fs_write : public fs_cont {
 	private:
 		common::intrusive_ptr<file> m_file;
-		write_buffers m_buffers;
-		int64_t m_size = 0;
-        virtual void release() override {
+		llae::write_buffers m_buffers;
+		virtual void release() override {
             fs_cont::release();
             m_buffers.release();
         }
 	public:
-		fs_write(common::intrusive_ptr<file>&& file,lua::ref&& cont) : fs_cont(std::move(cont)),m_file(std::move(file)) {}
-		const std::vector<uv_buf_t>& buffers() const { return m_buffers.get_buffers(); }
-		int64_t size() { return m_size; }
+		fs_write(common::intrusive_ptr<file>&& file,lua::ref&& cont,llae::write_buffers&& buffers) : fs_cont(std::move(cont)),m_file(std::move(file)),m_buffers(std::move(buffers)) {}
+		int64_t size() { return m_buffers.get_total_size(); }
         void reset(lua::state& l) {
             m_buffers.reset(l);
             m_file.reset();
@@ -514,16 +512,17 @@ namespace uv {
 			l.pushinteger(res);
 			return 1;
 		}
-		void read(lua::state& l) {
-			int n = l.gettop();
-			for (int i=2;i<=n;++i) {
-				l.pushvalue(i);
-				if (!m_buffers.put(l)) {
-					l.argerror(i,"data expected");
-				}
-			}
-			m_size = m_buffers.get_total_size();
-		}
+        int start(loop& l) {
+            add_ref();
+            auto buffers = get_buffers(m_buffers.get_buffers());
+            int r = uv_fs_write(l.native(),
+                get(),m_file->get(),buffers.data(),
+                static_cast<unsigned int>(buffers.size()),m_file->get_offset(),&fs_req::fs_cb);
+            if (r < 0) {
+                remove_ref();
+            }
+            return r;
+        }
 	};
 
 	lua::multiret file::write(lua::state& l) {
@@ -533,19 +532,30 @@ namespace uv {
 			return {2};
 		}
 		{
+            llae::write_buffers buffers;
+            {
+                int n = l.gettop();
+                for (int i=2;i<=n;++i) {
+                    l.pushvalue(i);
+                    if (!buffers.put(l)) {
+                        buffers.reset(l);
+                        l.argerror(i,"data expected");
+                    }
+                }
+            }
+            if (buffers.empty()) {
+                l.pushinteger(0);
+                return {1};
+            }
+
 			llae::app& app(llae::app::get(l));
 			lua::ref cont;
 			l.pushthread();
 			cont.set(l);
-			common::intrusive_ptr<fs_write> req{new fs_write(common::intrusive_ptr<file>(this),std::move(cont))};
-			req->read(l);
-			req->add_ref();
-			int r = uv_fs_write(app.loop().native(),
-				req->get(),m_file,req->buffers().data(),
-				static_cast<unsigned int>(req->buffers().size()),m_offset,&fs_req::fs_cb);
-			if (r < 0) {
+			common::intrusive_ptr<fs_write> req{new fs_write(common::intrusive_ptr<file>(this),std::move(cont),std::move(buffers))};
+			int r = req->start(app.loop());
+            if (r < 0) {
                 req->reset(l);
-				req->remove_ref();
 				l.pushnil();
 				uv::push_error(l,r);
 				return {2};

@@ -1,24 +1,31 @@
 #include "write_buffers.h"
 #include "lua/stack.h"
 
-namespace uv {
+namespace llae {
 
    
     bool write_buffers::put_one(lua::state& l) {
         auto buf = lua::stack<llae::buffer_base_ptr>::get(l, -1);
         if (buf) {
-            m_refs.emplace_back();
-            m_refs.back().set(l);
-            auto base = const_cast<char*>(static_cast<const char*>(buf->get_base()));
-            m_bufs.emplace_back(uv_buf_init(base,buf->get_len()));
+            if (buf->get_len()) {
+                m_refs.emplace_back();
+                m_refs.back().set(l);
+                m_bufs.emplace_back(buf->get_base(),buf->get_len());
+            } else {
+                l.pop(1);
+            }
         } else {
             size_t size;
             
             const char* val = l.tolstring(-1,size);
-            if (val && size !=0) {
-                m_refs.emplace_back();
-                m_refs.back().set(l);
-                m_bufs.push_back(uv_buf_init(const_cast<char*>(val),static_cast<unsigned int>(size)));
+            if (val) {
+                if (size) {
+                    m_refs.emplace_back();
+                    m_refs.back().set(l);
+                    m_bufs.emplace_back(val,size);
+                } else {
+                    l.pop(1);
+                }
             } else {
                 return false;
             }

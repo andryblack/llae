@@ -6,7 +6,7 @@
 #include "common/intrusive_ptr.h"
 #include "lua/ref.h"
 #include "req.h"
-#include "write_buffers.h"
+#include "llae/write_buffers.h"
 #include <vector>
 
 namespace uv {
@@ -32,14 +32,12 @@ namespace uv {
 	class write_lua_req : public write_req {
 	private:
 		lua::ref m_cont;
-        write_buffers m_buffers;
+        llae::write_buffers m_buffers;
     protected:
     	virtual void on_write(int status) override;
     public:
-    	write_lua_req(stream_ptr&& stream,lua::ref&& cont);
-    	bool putm(lua::state& s,int base);
-        bool empty() const { return m_buffers.empty(); }
-        void reset(lua::state& s);
+    	write_lua_req(stream_ptr&& stream,lua::ref&& cont,llae::write_buffers&& buffers);
+    	void reset(lua::state& s);
 		int write();
 	};
 

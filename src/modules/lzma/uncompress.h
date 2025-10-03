@@ -27,8 +27,8 @@ namespace archive{
                 z.next_out = static_cast<uint8_t*>(base);
                 z.avail_out = len;
             }
-            static void fill_in(stream&  z,void* base,size_t len) {
-                z.next_in = reinterpret_cast<uint8_t*>(base);
+            static void fill_in(stream&  z,const void* base,size_t len) {
+                z.next_in = reinterpret_cast<const uint8_t*>(base);
                 z.avail_in = len;
             }
             static bool has_in(stream& z) {

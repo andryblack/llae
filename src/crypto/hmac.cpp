@@ -8,7 +8,7 @@
 #include "lua/bind.h"
 #include "lua/stack.h"
 #include "uv/luv.h"
-#include "uv/write_buffers.h"
+#include "llae/write_buffers.h"
 
 META_OBJECT_INFO(crypto::hmac,meta::object)
 
@@ -35,20 +35,20 @@ namespace crypto {
 
 	class hmac::update_async : public hmac::async {
 	private:
-		uv::write_buffers m_buffers;
+		llae::write_buffers m_buffers;
 	public:
-		explicit update_async(hmac_ptr&& m) : hmac::async(std::move(m)) {}
+		explicit update_async(hmac_ptr&& m,llae::write_buffers&& buffers) : hmac::async(std::move(m)), m_buffers(std::move(buffers)) {}
 		virtual void on_work() {
 			for (auto& b:m_buffers.get_buffers()) {
 				m_status = mbedtls_md_hmac_update(&m_hmac->m_ctx, 
-					reinterpret_cast<const unsigned char*>(b.base), b.len );
+					reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len() );
 				if (m_status != 0)
 					break;
 			}
 		}
-		bool put(lua::state& l) {
-			return m_buffers.put(l);
-		}
+        void reset(lua::state& l) {
+            m_buffers.reset(l);
+        }
 		virtual void on_after_work(int status) {
             if (llae::app::closed(get_loop())) {
                 m_buffers.release();
@@ -168,19 +168,27 @@ namespace crypto {
 		}
 		
 		{
-			common::intrusive_ptr<update_async> req{new update_async(hmac_ptr(this))};
-			l.pushvalue(2);
-			if (!req->put(l)) {
-				l.pushnil();
-				l.pushstring("md::update invalid data");
-				return {2};
-			}
-
+            llae::write_buffers buffers;
+            l.pushvalue(2);
+            if (!buffers.put(l)) {
+                buffers.reset(l);
+                l.pushnil();
+                l.pushstring("md::update invalid data");
+                return {2};
+            }
+            if (buffers.empty()) {
+                l.pushboolean(true);
+                return {1};
+            }
+            
+			common::intrusive_ptr<update_async> req{new update_async(hmac_ptr(this),std::move(buffers))};
+			
 			l.pushthread();
 			m_cont.set(l);
 			
 			int r = req->queue_work(llae::app::get(l).loop());
 			if (r < 0) {
+                req->reset(l);
 				m_cont.reset(l);
 				l.pushnil();
 				uv::push_error(l,r);

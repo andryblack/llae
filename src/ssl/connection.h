@@ -80,25 +80,25 @@ namespace ssl {
             llae::buffer_ptr data;
         };
         std::deque<readed_data> m_readed_data;
-        class write_buffers : public uv::write_buffers {
+        class write_buffers : public llae::write_buffers {
             size_t m_front_writed = 0;
         public:
             const unsigned char* get_write_ptr() const {
-                return reinterpret_cast<const unsigned char*>(get_buffers().front().base)+m_front_writed;
+                return reinterpret_cast<const unsigned char*>(get_buffers().front().get_base())+m_front_writed;
             }
             size_t get_write_size() const {
-                return get_buffers().front().len - m_front_writed;
+                return get_buffers().front().get_len() - m_front_writed;
             }
             void consume(lua::state& l,size_t size) {
                 m_front_writed += size;
-                if (m_front_writed >= get_buffers().front().len) {
+                if (m_front_writed >= get_buffers().front().get_len()) {
                     m_front_writed = 0;
                     pop_front(l);
                 }
             }
             void reset(lua::state& l) {
                 m_front_writed = 0;
-                uv::write_buffers::reset(l);
+                llae::write_buffers::reset(l);
             }
         } m_write_buffers;
         class shutdown_stream_req;

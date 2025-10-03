@@ -5,8 +5,8 @@
 #include "lua/state.h"
 #include "lua/ref.h"
 #include "llae/buffer.h"
+#include "llae/write_buffers.h"
 #include "req.h"
-#include "write_buffers.h"
 #include <vector>
 
 namespace uv {
@@ -33,13 +33,11 @@ namespace uv {
     class udp_send_lua_req : public udp_send_req {
     private:
         lua::ref m_cont;
-        write_buffers m_buffers;
+        llae::write_buffers m_buffers;
     protected:
         virtual void on_send(int status) override;
     public:
-        udp_send_lua_req(udp_ptr&& stream,lua::ref&& cont);
-        bool put(lua::state& s);
-        bool empty() const { return m_buffers.empty(); }
+        udp_send_lua_req(udp_ptr&& stream,lua::ref&& cont,llae::write_buffers&& buffers);
         void reset(lua::state& s);
         int send(const struct sockaddr* addr);
     };

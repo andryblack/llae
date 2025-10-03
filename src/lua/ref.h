@@ -2,7 +2,6 @@
 #define _LLAE_LUA_REF_H_INCLUDED_
 
 #include "state.h"
-#include <cassert>
 
 namespace lua {
 
@@ -13,7 +12,7 @@ namespace lua {
 		ref& operator = (const ref& ) = delete;
 	public:
 		ref() : m_ref(LUA_NOREF) {}
-		~ref() { assert(m_ref == LUA_NOREF); }
+        ~ref();
 		ref(ref&& r) : m_ref(r.m_ref) {
 			r.m_ref = LUA_NOREF;
 		}

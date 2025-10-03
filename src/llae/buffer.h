@@ -16,7 +16,7 @@ namespace llae {
     class buffer_view {
     protected:
         const void* m_data;
-        const size_t m_size;
+        size_t m_size;
     public:
         buffer_view() : m_data(nullptr),m_size(0) {}
         buffer_view(const void* data,size_t len) : m_data(data),m_size(len) {}

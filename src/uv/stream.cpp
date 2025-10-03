@@ -40,7 +40,7 @@ namespace uv {
 	}
 
 
-	write_lua_req::write_lua_req(stream_ptr&& s,lua::ref&& cont) : write_req(std::move(s)),m_cont(std::move(cont)) {
+	write_lua_req::write_lua_req(stream_ptr&& s,lua::ref&& cont,llae::write_buffers&& buffers) : write_req(std::move(s)),m_cont(std::move(cont)),m_buffers(std::move(buffers)) {
 	}
 
 	void write_lua_req::on_write(int status) {
@@ -77,12 +77,9 @@ namespace uv {
         m_cont.reset(l);
     }
 
-	bool write_lua_req::putm(lua::state& l,int base) {
-        return m_buffers.putm(l,base);
-	}
-
 	int write_lua_req::write() {
-		return start_write(m_buffers.get_buffers().data(),m_buffers.get_buffers().size());
+        auto buffers = get_buffers(m_buffers.get_buffers());
+		return start_write(buffers.data(),buffers.size());
 	}
 
 	write_buffer_req::write_buffer_req(stream_ptr&& s,llae::buffer_base_ptr&& b) : write_req(std::move(s)),m_buffer(std::move(b)) {
@@ -503,23 +500,23 @@ namespace uv {
 			return {2};
 		}
         {
-			l.pushthread();
-			lua::ref write_cont;
-			write_cont.set(l);
-
-			common::intrusive_ptr<write_lua_req> req{new write_lua_req(stream_ptr(this),std::move(write_cont))};
-		
-		  	if (!req->putm(l,2)) {
-                req->reset(l);
+            llae::write_buffers buffers;
+            if (!buffers.putm(l,2)) {
+                buffers.reset(l);
                 l.pushnil();
                 l.pushstring("stream::write invalid data");
                 return {2};
             }
-            if (req->empty()) {
-                req->reset(l);
+            if (buffers.empty()) {
                 l.pushboolean(true);
                 return {1};
             }
+            
+			l.pushthread();
+			lua::ref write_cont;
+			write_cont.set(l);
+
+			common::intrusive_ptr<write_lua_req> req{new write_lua_req(stream_ptr(this),std::move(write_cont),std::move(buffers))};
 
 			int r = req->write();
 			if (r < 0) {

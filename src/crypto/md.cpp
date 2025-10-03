@@ -8,7 +8,7 @@
 #include "lua/bind.h"
 #include "lua/stack.h"
 #include "uv/luv.h"
-#include "uv/write_buffers.h"
+#include "llae/write_buffers.h"
 
 META_OBJECT_INFO(crypto::md,meta::object)
 
@@ -35,13 +35,13 @@ namespace crypto {
 
 	class md::update_async : public md::async {
 	private:
-		uv::write_buffers m_buffers;
+		llae::write_buffers m_buffers;
 	public:
-		explicit update_async(md_ptr&& m) : md::async(std::move(m)) {}
+		explicit update_async(md_ptr&& m,llae::write_buffers&& buffers) : md::async(std::move(m)),m_buffers(std::move(buffers)) {}
 		virtual void on_work() {
 			for (auto& b:m_buffers.get_buffers()) {
 				m_status = mbedtls_md_update(&m_md->m_ctx, 
-					reinterpret_cast<const unsigned char*>(b.base), b.len );
+					reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len() );
 				if (m_status != 0)
 					break;
 			}
@@ -99,14 +99,20 @@ namespace crypto {
 			m_started = true;
 		}
 		{
-			common::intrusive_ptr<update_async> req{new update_async(md_ptr(this))};
+			llae::write_buffers buffers;
 			l.pushvalue(2);
-			if (!req->put(l)) {
+			if (!buffers.put(l)) {
+				buffers.reset(l);
 				l.pushnil();
 				l.pushstring("md::update invalid data");
 				return {2};
 			}
-
+			if (buffers.empty()) {
+				l.pushboolean(true);
+				return {1};
+			}
+			common::intrusive_ptr<update_async> req{new update_async(md_ptr(this),std::move(buffers))};
+			
 			l.pushthread();
 			m_cont.set(l);
 			

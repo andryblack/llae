@@ -5,7 +5,7 @@
 #include "uv/luv.h"
 #include "lua/bind.h"
 #include "crypto.h"
-#include "uv/write_buffers.h"
+#include "llae/write_buffers.h"
 
 META_OBJECT_INFO(crypto::cipher,meta::object)
 
@@ -22,19 +22,19 @@ namespace crypto {
 
 	class cipher::update_async : public cipher::async {
 	private:
-		uv::write_buffers m_buffers;
+		llae::write_buffers m_buffers;
 	public:
-		explicit update_async(cipher_ptr&& m) : cipher::async(std::move(m)) {}
+		explicit update_async(cipher_ptr&& m,llae::write_buffers&& buffers) : cipher::async(std::move(m)),m_buffers(std::move(buffers)) {}
 		virtual void on_work() override {
 			size_t blocksize = mbedtls_cipher_get_block_size(&m_cipher->m_ctx);
 			llae::buffer_ptr enc_buffer;
 			for (auto& b:m_buffers.get_buffers()) {
-				size_t osize = b.len + blocksize;
+				size_t osize = b.get_len() + blocksize;
 				if (!enc_buffer || enc_buffer->get_capacity() < osize) {
 					enc_buffer = llae::buffer::alloc(osize);
 				}
 				m_status = mbedtls_cipher_update(&m_cipher->m_ctx, 
-					reinterpret_cast<const unsigned char*>(b.base), b.len,
+					reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len(),
 					static_cast<unsigned char*>(enc_buffer->get_base()),&osize );
 				if (m_status != 0)
 					break;
@@ -50,8 +50,8 @@ namespace crypto {
 				}
 			}
 		}
-		bool put(lua::state& l) {
-			return m_buffers.put(l);
+		void reset(lua::state& l) {
+            m_buffers.reset(l);
 		}
 		virtual void on_after_work(int status) override {
             if (llae::app::closed(get_loop())) {
@@ -169,19 +169,27 @@ namespace crypto {
 			return {2};
 		}
 		{
-			common::intrusive_ptr<update_async> req{new update_async(cipher_ptr(this))};
-			l.pushvalue(2);
-			if (!req->put(l)) {
-				l.pushnil();
-				l.pushstring("cipher::update invalid data");
-				return {2};
-			}
+            llae::write_buffers buffers;
+            l.pushvalue(2);
+            if (!buffers.put(l)) {
+                buffers.reset(l);
+                l.pushnil();
+                l.pushstring("cipher::update invalid data");
+                return {2};
+            }
+            if (buffers.empty()) {
+                l.pushlstring("", 0);
+                return {1};
+            }
 
+			common::intrusive_ptr<update_async> req{new update_async(cipher_ptr(this),std::move(buffers))};
+						
 			l.pushthread();
 			m_cont.set(l);
 			
 			int r = req->queue_work(llae::app::get(l).loop());
 			if (r < 0) {
+                req->reset(l);
 				m_cont.reset(l);
 				l.pushnil();
 				uv::push_error(l,r);

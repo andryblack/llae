@@ -33,7 +33,7 @@ namespace uv {
     }
 
 
-    udp_send_lua_req::udp_send_lua_req(udp_ptr&& s,lua::ref&& cont) : udp_send_req(std::move(s)),m_cont(std::move(cont)) {
+    udp_send_lua_req::udp_send_lua_req(udp_ptr&& s,lua::ref&& cont,llae::write_buffers&& buffers) : udp_send_req(std::move(s)),m_cont(std::move(cont)),m_buffers(std::move(buffers)) {
     }
 
     void udp_send_lua_req::on_send(int status) {
@@ -65,12 +65,9 @@ namespace uv {
         m_cont.reset(l);
     }
 
-    bool udp_send_lua_req::put(lua::state& l) {
-        return m_buffers.put(l);
-    }
-
     int udp_send_lua_req::send(const struct sockaddr* addr) {
-        return start_send(m_buffers.get_buffers().data(),m_buffers.get_buffers().size(),addr);
+        auto buffers = get_buffers(m_buffers.get_buffers());
+        return start_send(buffers.data(),buffers.size(),addr);
     }
 
 
@@ -244,24 +241,24 @@ namespace uv {
             return {2};
         }
         {
-            l.pushthread();
-            lua::ref send_cont;
-            send_cont.set(l);
-
-            udp_send_lua_req_ptr req{new udp_send_lua_req(udp_ptr(this),std::move(send_cont))};
-        
+            llae::write_buffers buffers;
             l.pushvalue(2);
-            if (!req->put(l)) {
-                req->reset(l);
+            if (!buffers.put(l)) {
+                buffers.reset(l);
                 l.pushnil();
                 l.pushstring("udp::send invalid data");
                 return {2};
             }
-            if (req->empty()) {
-                req->reset(l);
+            if (buffers.empty()) {
                 l.pushboolean(true);
                 return {1};
             }
+            
+            l.pushthread();
+            lua::ref send_cont;
+            send_cont.set(l);
+
+            udp_send_lua_req_ptr req{new udp_send_lua_req(udp_ptr(this),std::move(send_cont),std::move(buffers))};
 
             int r = req->send((struct sockaddr*)(with_addr ? &addr : nullptr));
             if (r < 0) {

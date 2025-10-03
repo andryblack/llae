@@ -22,8 +22,8 @@ namespace archive{ namespace impl {
             z.next_out = static_cast<char*>(base);
             z.avail_out = static_cast<unsigned int>(len);
         }
-        static void fill_in(stream& z,void* base,size_t len) {
-            z.next_in = reinterpret_cast<char*>(base);
+        static void fill_in(stream& z,const void* base,size_t len) {
+            z.next_in = reinterpret_cast<char*>(const_cast<void*>(base));
             z.avail_in = static_cast<unsigned int>(len);
         }
         static bool has_in(stream& z) {

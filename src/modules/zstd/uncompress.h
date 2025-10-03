@@ -34,7 +34,7 @@ namespace archive{
                 z.output.size = len;
                 z.output.pos = 0;
             }
-            static void fill_in(stream&  z,void* base,size_t len) {
+            static void fill_in(stream&  z,const void* base,size_t len) {
                 z.input.src = base;
                 z.input.size = len;
                 z.input.pos = 0;
