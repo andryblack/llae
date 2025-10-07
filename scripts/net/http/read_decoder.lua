@@ -1,6 +1,8 @@
 local class = require 'llae.class'
 local log = require 'llae.log'
 
+---@class net.http.read_decoder
+---@field new fun(resp:any, connection: any, data: any, default_length: integer?)
 local decoder = class(nil,'net.http.read_decoder')
 
 

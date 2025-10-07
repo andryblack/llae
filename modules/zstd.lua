@@ -59,7 +59,7 @@ build_lib = {
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
 			'include',
 		}
-		sysincludedirs {
+		externalincludedirs {
 			'include'
 		}
 		files {

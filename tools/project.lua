@@ -8,7 +8,12 @@ local utils = require 'llae.utils'
 local llae = require 'llae'
 local tool = require 'tool'
 
+---@class Project_config
 
+
+---@class Project
+---@field env table<string, any>
+---@field new fun(config:Project_config):Project
 local Project = class(nil,'Project')
 
 
@@ -366,7 +371,8 @@ end
 
 function Project:write_premake(  )
 	local template_source_filename = tool.get_llae_path('data','premake5-template.lua')
-	local filename = path.join(self:get_root(),'build','premake5.lua')
+	local build_root = path.getabsolute(path.join(self:get_root(),'build'))
+	local filename = path.join(build_root,'premake5.lua')
 	log.info('generate premake5.lua',path.getrelative(template_source_filename,self:get_root()))
 	fs.mkdir_r(path.dirname(filename))
 	fs.unlink(filename)
@@ -378,7 +384,11 @@ function Project:write_premake(  )
 		path = path,
 		fs = fs,
 		log = log,
-		utils = utils
+		utils = utils,
+		get_relative = function(dir)
+			assert(path.isabsolute(dir))
+			return path.getrelative(dir,build_root)
+		end
 	}))
 	f:close()
 end

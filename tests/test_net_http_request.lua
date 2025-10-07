@@ -1,5 +1,5 @@
 local lu = require('luaunit')
-local request = require('net.http.request')
+local request = require 'net.http.request'
 local uv = require('uv')
 
 -- Mock for connection to simulate timeouts

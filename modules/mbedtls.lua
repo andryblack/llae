@@ -88,7 +88,7 @@ build_lib = {
 			'include',
 			<%= format_file(module.dir,'library') %>
 		}
-		sysincludedirs {
+		externalincludedirs {
 			'include',
 			<%= format_file(module.dir,'library') %>
 		}

@@ -8,8 +8,18 @@ local fs = require 'llae.fs'
 local dns = require 'net.dns'
 local connection = require 'net.connection'
 
+---@class net.http.request_args
+---@field url string
+---@field headers table<string,string|string[]>?
+---@field method string?
+---@field timeout integer?
+---@field version string?
+---@field body string|userdata?
 
-local request = class(require 'net.http.headers','http.request')
+---@class net.http.request : net.http.headers
+---@field baseclass net.http.headers
+---@field new fun(args: net.http.request_args):net.http.request
+local request = class(require 'net.http.headers','net.http.request')
 
 request.parser = require 'net.http.request_parser'
 request.response = require 'net.http.request_response'
@@ -22,6 +32,7 @@ function request.get_ssl_ctx()
 	return http.get_ssl_ctx()
 end
 
+---@param args net.http.request_args
 function request:_init( args )
 	assert(args.url,'need url')
 	request.baseclass._init(self,args.headers or {})

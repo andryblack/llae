@@ -3,7 +3,9 @@ local termios = require 'posix.termios'
 local class = require 'llae.class'
 local uv = require 'uv'
 
-local serial = class(nil,'serial')
+---@class posix.serial
+---@field new fun(fd:posix.fd):posix.serial
+local serial = class(nil,'posix.serial')
 
 function serial.open(path,conf)
 	local fd,err = posix.open(path,posix.O_RDWR  | posix.O_NOCTTY | posix.O_NONBLOCK)
@@ -22,6 +24,7 @@ function serial:_init(fd)
 	self._poll = uv.poll.new(fd)
 end
 
+---@type table<integer,integer>
 local baudrates = {
 	[9600  ] = termios.B9600  ,
 	[19200 ] = termios.B19200 ,

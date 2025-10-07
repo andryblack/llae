@@ -6,7 +6,7 @@ local async = require 'llae.async'
 local url = require 'net.url'
 local uv = require 'uv'
 
-
+---@class net.pop3 : net.connection
 local pop3 = class(require 'net.connection','net.pop3')
 
 function pop3:_init(  )
@@ -204,6 +204,22 @@ function pop3:get_count()
 	return tonumber(count)
 end
 
+local function parse_passv(data)
+	local a = {}
+	local arg = assert(string.match(data,'%(([%d,]+)%)'))
+	for n in string.gmatch(arg,'%d+') do
+		table.insert(a,tonumber(n))
+	end
+	assert( #a > 4 )
+	local host = table.concat({a[1],a[2],a[3],a[4]},'.')
+	local b = 0
+	for i=5,#a do
+		b = b * 256	
+		b = b | a[i]
+	end
+	return host,b
+end
+
 function pop3:getfile( name , to , cb)
 	self:_send_cmd('CWD ' .. path.dirname(name))
 	if not self:_expect_status(250) then
@@ -263,11 +279,12 @@ function pop3:getfile( name , to , cb)
 	if not st then
 		error('need 150')
 	end
-	total = tonumber(string.match(data,'%((%d+).+%)'))
+	local total = tonumber(string.match(data,'%((%d+).+%)'))
 
 	if not self:_expect_status(226) then
 		error('need 226')
 	end
+	return total
 end
 
 function pop3:get_and_delete(mailnum)
@@ -329,6 +346,22 @@ function pop3:close(  )
 	self:_send_cmd('QUIT')
 	self:_wait_ok()
 	self._cmd_con:shutdown()
+end
+
+function pop3:_expect_status( status , skip)
+	while true do
+		local cmd = self:_cmd_read()
+		if not cmd then
+			return false
+		end
+		if cmd[1] == status then
+			return true,cmd[2]
+		end
+		if not skip or cmd[1] ~= skip then
+			log.error('invalid status',cmd[1],status)
+			return false
+		end
+	end
 end
 
 return pop3

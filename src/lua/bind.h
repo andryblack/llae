@@ -1,5 +1,4 @@
-#ifndef __LLAE_LUA_BIND_H_INCLUDED__
-#define __LLAE_LUA_BIND_H_INCLUDED__
+#pragma once
 
 #include "stack.h"
 #include "metatable.h"
@@ -324,5 +323,3 @@ namespace lua {
 	
 
 }
-
-#endif /*__LLAE_LUA_BIND_H_INCLUDED__*/

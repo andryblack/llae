@@ -1,14 +1,8 @@
-#ifndef _LLAE_LUA_STATE_H_INCLUDED_
-#define _LLAE_LUA_STATE_H_INCLUDED_
+#pragma once
 
 #include <cstring>
-#include "lua/types.h"
+#include "types.h"
 
-extern "C" {
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
-}
 
 
 namespace lua {
@@ -145,5 +139,3 @@ namespace lua {
 		void open_libs();
 	};
 }
-
-#endif /*_LUA_STATE_H_INCLUDED_*/

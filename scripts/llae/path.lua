@@ -1,9 +1,14 @@
 local path = {}
 
+---@param p string
+---@return string
 function path.normalize(p)
-	return p:gsub("[/\\]+", "/")
+	local res = p:gsub("[/\\]+", "/")
+	return res
 end
 
+---@param p string
+---@return boolean
 function path.isabsolute(p)
 	if string.sub(p,1,1) == '/' then
 		return true
@@ -30,10 +35,14 @@ local function findlast(s, pattern, plain)
 	end
 end
 
+---@param ... string
+---@return string
 function path.join( ... )
 	return table.concat( table.pack(...) , '/' )
 end
 
+---@param path string
+---@return string
 function path.basename( path )
 	local i = findlast(path,"[/\\]")
 	if i then
@@ -43,6 +52,8 @@ function path.basename( path )
 	end
 end
 
+---@param path string
+---@return string
 function path.dirname( path )
 	local i = findlast(path,"[/\\]")
 	local r = i and string.sub(path,1,i-1) or ''
@@ -54,11 +65,15 @@ function path.dirname( path )
 	return r
 end
 
+---@param path string
+---@return string?
 function path.extension( path )
 	local i = findlast(path,".",true)
 	return i and string.sub(path,i+1)
 end
 
+---@param fn string
+---@return string
 function path.getabsolute( fn )
 	if path.isabsolute(fn) then
 		return fn
@@ -67,19 +82,27 @@ function path.getabsolute( fn )
 	return path.join(fs.pwd(),fn)
 end
 
-function path.getrelative( fn )
+---@param fn string
+---@param to string?
+---@return string
+function path.getrelative( fn, to )
 	if string.sub(fn,1,1) ~= '/' then
 		return fn
 	end
-	local fs = require 'llae.fs'
-	local pwd = fs.pwd()
-	local prepfn = string.sub(fn,1,#pwd)
-	if prepfn == pwd then
-		return string.sub(fn,#pwd+2) -- '/'
+	if not to then
+		local fs = require 'llae.fs'
+		to = fs.pwd()
+	end
+	local prepfn = string.sub(fn,1,#to)
+	if prepfn == to then
+		return string.sub(fn,#to+2) -- '/'
 	end
 	return fn
 end
 
+---@param fn string
+---@param count number
+---@return string?
 function path.remove_leading_dirs(fn,count)
 	local i = 1
 	for j = 1,count do

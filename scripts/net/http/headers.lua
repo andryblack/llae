@@ -1,8 +1,13 @@
 local class = require 'llae.class'
 local log = require 'llae.log'
 
+---@class net.http.headers
+---@field new fun(init:table<string,string|string[]>?) : net.http.headers
+---@field private _headers table<string,string|string[]>
+---@field private _list string[]
 local headers = class(nil,'http.headers')
 
+---@param init table<string,string|string[]>?
 function headers:_init( init )
 	self._headers = init or {}
 	self._list = {}
@@ -38,10 +43,11 @@ function headers:add_header( name, value )
 	local n = string.lower(name)
 	for hn,hv in pairs(self._headers) do
 		if string.lower(hn) == n then
-			if type(self._headers[hn]) ~= 'table' then
-				self._headers[hn] = {self._headers[hn],value}
+			local current = self._headers[hn]
+			if type(current) ~= 'table' then
+				self._headers[hn] = {current,value}
 			else
-				table.insert(self._headers[hn],value)
+				table.insert(current,value)
 			end
 			return
 		end
@@ -55,6 +61,7 @@ function headers:foreach_header( )
 	return pairs(self._headers)
 end
 
+---@protected
 function headers:_dump_headers()
 	for hn,hv in pairs(self._headers) do
 		if type(hv) == 'table' then
@@ -67,6 +74,7 @@ function headers:_dump_headers()
 	end
 end
 
+---@protected
 function headers:_write_headers(r)
 	for _,hn in ipairs(self._list) do
 		local hv = self._headers[hn]

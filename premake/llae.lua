@@ -104,7 +104,7 @@ function _M.solution(  )
    	linkoptions  { "-mmacosx-version-min=10.14" }
    	filter{}
 
-	sysincludedirs{
+	externalincludedirs{
 		path.join(_M.root,'build','include')
 	}	
 end
@@ -137,7 +137,7 @@ function _M.lib(  )
 end
 
 function _M.compile(  )
-	sysincludedirs {
+	externalincludedirs {
 		path.join(_M.root, 'build','include'),
 	}
 	includedirs{

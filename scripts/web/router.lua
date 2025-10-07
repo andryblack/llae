@@ -2,9 +2,12 @@ local class = require 'llae.class'
 local fs = require 'llae.fs'
 local log = require 'llae.log'
 
-local router = class(nil,'router')
+---@alias web.handler_fun fun(req:web.server_request,res:net.http.server_response)
 
-local methods = {'get','post'}
+---@class web.router
+---@field new fun(...):web.router
+local router = class(nil,'web.router')
+
 
 local _wildcard_byte = string.byte('*',1)
 local _colon_byte = string.byte(':',1)
@@ -12,6 +15,7 @@ local _wildcard = {}
 local _handler = {}
 local _token = {}
 
+---@param path string
 local function match_one_path(node, path, f)
 	for token in path:gmatch("[^/.]+") do
 		local b1 = token:byte(1)
@@ -81,7 +85,7 @@ local function resolve(path, node, params, handler)
 	return false
 end
 
-
+---@protected
 function router:_init( ... )
 	self._tree = {}
 end
@@ -94,6 +98,9 @@ function router:resolve(method, path, handler)
   	return resolve(path, node, {}, handler)
 end
 
+---@param method string[]|string
+---@param path string
+---@param func web.handler_fun
 function router:match(method,path,func)
 	if type(method) == 'string' then -- always make the method to table.
 		method = {method}
@@ -123,10 +130,15 @@ function router:match(method,path,func)
 	end
 end
 
-for _,method in ipairs(methods) do
-	router[method] = function(self,path,func)
-		return self:match('HTTP:'..method:upper(),path,func)
-	end
+---@param path string
+---@param func function
+function router:get(path,func)
+	return self:match('HTTP:GET',path,func)
+end
+---@param path string
+---@param func function
+function router:post(path,func)
+	return self:match('HTTP:POST',path,func)
 end
 
 return router

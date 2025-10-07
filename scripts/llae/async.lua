@@ -25,7 +25,9 @@ function _M.run( fn , handle_error )
 	_M.resume(th)
 end
 
-local lock = class()
+---@class llae.lock
+---@field new fun():llae.lock
+local lock = class(nil,'llae.lock')
 
 function lock:_init()
 	self._wait = {}
@@ -58,8 +60,9 @@ end
 
 _M.lock = lock
 
-
-local event = class()
+---@class llae.event
+---@field new fun():llae.event
+local event = class(nil,'llae.event')
 
 function event:_init()
 	self._wait = {}

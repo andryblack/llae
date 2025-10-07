@@ -1,5 +1,4 @@
-#ifndef __LLAE_LUA_STACK_H_INCLUDED__
-#define __LLAE_LUA_STACK_H_INCLUDED__
+#pragma once
 
 #include "state.h"
 #include "value.h"
@@ -236,5 +235,3 @@ namespace lua {
         stack<T>::push(s,std::forward<T>(val));
     }
 }
-
-#endif /*__LLAE_LUA_STACK_H_INCLUDED__*/

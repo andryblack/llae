@@ -1,4 +1,4 @@
-
+---@class db.pgsql.types
 local types = {}
 
 types.pg_type = {
@@ -66,7 +66,9 @@ types.pg_error = {
   ['table'] =  string.byte('t'),
   constraint =  string.byte('n')
 }
+---@param t table<string|integer,string|integer>
 local function make_inverse(t)
+  ---@type table<string|integer,string|integer>
 	local keys = {}
 	for k,v in pairs(t) do
 		keys[v] = k

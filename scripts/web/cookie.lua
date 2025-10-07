@@ -2,7 +2,9 @@ local class = require 'llae.class'
 local log = require 'llae.log'
 local timestamp = require 'net.http.timestamp'
 
-local cookie = class(require 'web.middle','cookie')
+---@class web.cookie : web.middle
+---@field new fun():web.cookie
+local cookie = class(require 'web.middle','web.cookie')
 
 function cookie.parse(str)
 	local res = {}

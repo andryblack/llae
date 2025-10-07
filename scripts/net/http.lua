@@ -33,12 +33,12 @@ function http.get_ssl_ctx()
 	return http._ssl_ctx
 end
 
-
+---@return net.http.request
 function http.createRequest( args )
 	return http.request.new(args)
 end
 
-
+---@return net.http.server
 function http.createServer( cb )
 	return http.server.new(cb)
 end

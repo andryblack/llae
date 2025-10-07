@@ -8,24 +8,42 @@ local json = require 'llae.json'
 local crypto = require 'llae.crypto'
 local sasl_auth = require 'db.pgsql.sasl_auth'
 
+
+---@class db.pgsql_config
+---@field database string?
+---@field user string?
+---@field password string?
+---@field host string?
+---@field port number?
+---@field ssl boolean?
+---@field convert_null boolean?
+---@field application_name string?
+
+---@class db.pgsql
+---@field new fun(conf:db.pgsql_config) : db.pgsql
+---@field _config db.pgsql_config
 local pgsql = class(nil,'db.pgsql')
 
-for n,v in pairs(require 'db.pgsql.types') do
+local types = require 'db.pgsql.types'
+for n,v in pairs(types) do
 	pgsql[n]=v
 end
 
+---@type db.pgsql_config
 pgsql.default_config = {
 	database = 'postgres',
 	user = 'postgres',
 	host = '127.0.0.1',
 	port = 5432,
-	ssl = false
+	ssl = false,
+	application_name = 'llae-client',
 }
 
+---@param conf db.pgsql_config
 function pgsql:_init(conf)
 	self._config = setmetatable({},{__index=self.default_config})
 	if conf then
-		for k,v in pairs(conf) do
+		for k,v in pairs(conf --[[@as table<string,any>]]) do
 			self._config[k] = v
 		end
 	end
@@ -79,7 +97,7 @@ end
 
 function pgsql:disconnect()
 	self._lock:lock()
-	self:send_message(self.message_type_f.terminate,{})
+	self:send_message(types.message_type_f.terminate,{})
 	self._conn:shutdown()
 	self._conn:close()
 	self._lock:unlock()
@@ -90,8 +108,8 @@ function pgsql:auth()
 	if not t then
 		return t,msg
 	end
-	if t ~= self.message_type_b.auth then
-		if t == self.message_type_b.error then
+	if t ~= types.message_type_b.auth then
+		if t == types.message_type_b.error then
 			return nil, self:parse_error(msg)
 		end
 		return nil,'need auth message'
@@ -114,9 +132,9 @@ function pgsql:cleartext_auth(msg)
 	if not self._config.password then
 		return nil,'need password for auth'
 	end
-	self:send_message(self.message_type_f.password,{
+	self:send_message(types.message_type_f.password,{
 		self._config.password,
-		self.NULL
+		types.NULL
 	})
 	return self:check_auth()
 end
@@ -134,10 +152,10 @@ function pgsql:md5_auth(msg)
 	local salt = msg:sub(5, 8)
 	local pass = md5(self._config.password .. self._config.user)
 	pass = md5(pass .. salt)
-	self:send_message(self.message_type_f.password,{
+	self:send_message(types.message_type_f.password,{
 		"md5",
 		tostring(pass),
-		self.NULL
+		types.NULL
 	})
 	return self:check_auth()
 end
@@ -174,9 +192,9 @@ function pgsql:check_auth()
 	if not t then
 		return nil,msg
 	end
-	if t == self.message_type_b.error then
+	if t == types.message_type_b.error then
 		return nil, self:parse_error(msg)
-	elseif t == self.message_type_b.auth then
+	elseif t == types.message_type_b.auth then
 		return true
 	else
 		return nil, 'invalid auth response'
@@ -221,13 +239,13 @@ function pgsql:send_startup_message()
 	end
 	local data = {
 		string.pack('>I4',196608),
-		'user',self.NULL,
-		self._config.user,self.NULL,
-		'database',self.NULL,
-		self._config.database,self.NULL,
-		'application_name',self.NULL,
-		(self._config.application_name or 'llae-client'),self.NULL,
-		self.NULL
+		'user',types.NULL,
+		self._config.user,types.NULL,
+		'database',types.NULL,
+		self._config.database,types.NULL,
+		'application_name',types.NULL,
+		self._config.application_name,types.NULL,
+		types.NULL
 	}
 	data = self:encode(data)
 	return self._conn:write(string.pack('>I4',#data+4)..data)
@@ -239,10 +257,10 @@ function pgsql:wait_until_ready()
 		if not t then
 			return nil,msg
 		end
-		if t == self.message_type_b.error then
+		if t == types.message_type_b.error then
 			return nil,self:parse_error(msg)
 		end
-		if t == self.message_type_b.ready_for_query then
+		if t == types.message_type_b.ready_for_query then
 			break
 		end
 	end
@@ -259,7 +277,7 @@ function pgsql:parse_error(err_msg)
 			break
 		end
 		offset = offset + 1 + #str + 1
-		local field = self.pg_error[t]
+		local field = types.pg_error[t]
 		if field then
 			error_data[field] = str
 		end
@@ -282,7 +300,7 @@ function pgsql:parse_row_desc(row_desc)
 		local name = row_desc:match("[^%z]+",offset)
 		offset = offset + #name + 1
 		local data_type = string.unpack('>I4',row_desc,offset+6)
-		data_type = self.pg_type[data_type] or 'string'
+		data_type = types.pg_type[data_type] or 'string'
 		local format = string.unpack('>I2',row_desc,offset+16)
 		assert(0 == format, "don't know how to handle format " .. tostring(format))
 		offset = offset + 18
@@ -335,8 +353,8 @@ function pgsql:parse_data_row(data_row,fields)
 			local len = string.unpack('>I4',data_row,offset)
 			offset = offset + 4
 			if len == 0xffffffff then
-				if self.convert_null then
-					out[field_name] = self.NULL
+				if self._config.convert_null then
+					out[field_name] = types.NULL
 				else
 					break
 				end
@@ -400,22 +418,22 @@ function pgsql:receive_query_result()
         if not t then
           return nil, msg
         end
-        if t == self.message_type_b.data_row then
+        if t == types.message_type_b.data_row then
         	if not data_rows then
         		data_rows = {}
         	end
         	table.insert(data_rows,msg)
-        elseif t == self.message_type_b.row_description then
+        elseif t == types.message_type_b.row_description then
           	row_desc = msg
-        elseif t == self.message_type_b.error then
+        elseif t == types.message_type_b.error then
         	err_msg = msg
-        elseif t == self.message_type_b.notice then
+        elseif t == types.message_type_b.notice then
         	if not notices then
         		notices = {}
         	end
         	local err_msg = self:parse_error(msg)
         	table.insert(notices,err_msg)
-        elseif t == self.message_type_b.command_complete then
+        elseif t == types.message_type_b.command_complete then
         	command_complete = msg
         	local next_result = self:format_query_result(row_desc,data_rows,command_complete)
         	num_queries = num_queries + 1
@@ -430,16 +448,16 @@ function pgsql:receive_query_result()
         		table.insert(result,next_result)
         	end
         	row_desc, data_rows, command_complete = nil
-        elseif t == self.message_type_b.ready_for_query then
+        elseif t == types.message_type_b.ready_for_query then
         	break
-        elseif t == self.message_type_b.notification then
+        elseif t == types.message_type_b.notification then
         	if not notifications then
         		notifications = {}
         	end
         	table.insert(notifications,self:parse_notification(msg))
-        elseif t == self.message_type_b.parse_complete or
-        	t == self.message_type_b.bind_complete or
-        	t == self.message_type_b.close_complete then
+        elseif t == types.message_type_b.parse_complete or
+        	t == types.message_type_b.bind_complete or
+        	t == types.message_type_b.close_complete then
         else
         	log.error("Unhandled message in query result: " , tostring(t))
         end
@@ -450,12 +468,16 @@ function pgsql:receive_query_result()
 	return result, num_queries, notifications, notices
 end
 
+function  pgsql:parse_notification(...)
+	error('unimplemented')
+end
+
 function pgsql:simple_query(q)
-	if q:find(self.NULL) then
+	if q:find(types.NULL) then
        return nil, "invalid null byte in query"
     end
 	self._lock:lock()
-	local res,err = self:send_message(self.message_type_f.query,{q,self.NULL})
+	local res,err = self:send_message(types.message_type_f.query,{q,types.NULL})
 	if not res then
 		self._lock:unlock()
 		return nil,err

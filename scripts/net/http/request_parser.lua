@@ -2,7 +2,9 @@ local class = require 'llae.class'
 
 local http_parser = require 'net.http.parser'
 
-local parser = class(http_parser,'http.request.parser')
+---@class net.http.request_parser : net.http.parser
+---@field new fun(response:any) : net.http.request_parser
+local parser = class(http_parser,'net.http.request_parser')
 
 function parser:_init( response )
 	parser.baseclass._init(self)

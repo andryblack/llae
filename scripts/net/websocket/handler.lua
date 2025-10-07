@@ -1,6 +1,7 @@
 local class = require 'llae.class'
 
-local handler = class()
+---@class net.websocket.handler
+local handler = class(nil,'net.websocket.handler')
 
 function handler:on_data(data)
 end

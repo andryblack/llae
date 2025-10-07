@@ -1,0 +1,6 @@
+CompileFlags:
+    Add: -Iinclude
+    CompilationDatabase: build
+InlayHints:
+    Enabled: true
+    ParameterNames: true

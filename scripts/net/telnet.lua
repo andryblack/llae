@@ -2,7 +2,8 @@ local class = require 'llae.class'
 local uv = require 'llae.uv'
 local log = require 'llae.log'
 
-local telnet = class()
+---@class net.telnet
+local telnet = class(nil,'net.telnet')
 
 function telnet:_init(host,port)
 	self._port = port or error('need port')

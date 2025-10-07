@@ -1,10 +1,6 @@
-#ifndef _LLAE_LUA_TYPES_H_ICNLUDED_
-#define _LLAE_LUA_TYPES_H_ICNLUDED_
+#pragma once
 
-
-extern "C" {
-#include <lua.h>
-}
+#include "headers.h"
 
 namespace lua {
 
@@ -37,4 +33,3 @@ namespace lua {
 
 }
 
-#endif /*_LLAE_LUA_TYPES_H_ICNLUDED_*/

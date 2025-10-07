@@ -14,7 +14,9 @@ local _clear_line = '\x1b[K'
 
 local colors = {'black','red','green','yellow','blue','magenta','cyan','white'}
 
+---@type table<string,string>
 _M.fg = {}
+---@type table<string,string>
 _M.bg = {}
 
 for i,v in ipairs(colors) do
@@ -57,7 +59,9 @@ function _M.warning( ... )
 end
 
 local class = require 'llae.class'
-local progress = class()
+---@class llae.log.progress
+---@field new fun(width:integer?) : llae.log.progress
+local progress = class(nil,'llae.log.progress')
 
 function progress:_init( width )
 	self._width = width or 70

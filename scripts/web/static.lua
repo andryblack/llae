@@ -3,9 +3,14 @@ local fs = require 'llae.fs'
 local path = require 'llae.path'
 local log = require 'llae.log'
 
-local static = class(require 'web.middle','static')
+---@class web.static : web.middle
+---@field new fun(root:string, options: {extensions:string[]?,path:string?}?) : web.static
+---@field private _extensions table<string,true>
+---@field private _check_cache table<string,boolean>
+local static = class(require 'web.middle','web.static')
 
-
+---@param root string
+---@param options {extensions:string[]?,path:string?}?
 function static:_init( root, options )
 	self._root = root
 	self._options = options or {}

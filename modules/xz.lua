@@ -116,7 +116,7 @@ build_lib = {
 			'HAVE_DECODER_LZMA1=1',
 			'HAVE_DECODER_LZMA2=1',
 		}
-		sysincludedirs {
+		externalincludedirs {
 			'include',
 		}
 		files {

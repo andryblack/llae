@@ -1,7 +1,9 @@
 local class = require 'llae.class'
 local json = require 'json'
 
-local middle = class(nil,'json')
+---@class web.json : web.middle
+---@field new fun(): web.json
+local middle = class(require 'web.middle','web.json')
 
 function middle:_init( )
 end

@@ -31,7 +31,6 @@ function file.load(project,url,install)
 		end
 	end
 	local m = require 'modules.functions'
-	local dst = tag
 	local root = project:get_root()
 	local fm = {
 		location = path.join(root,host,rpath),

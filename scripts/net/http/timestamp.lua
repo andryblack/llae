@@ -3,6 +3,7 @@
 local months_s = {
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" 
 }
+---@type table<string,integer>
 local months = {}
 for i,n in ipairs(months_s) do
 	months[n]=i

@@ -1,8 +1,16 @@
 local log = require 'llae.log'
 local uv = require 'llae.uv'
 
+---@class net.dnd.ip_entry
+
+---@class net.dns.cache_entry
+---@field time integer
+---@field ip_list uv.getaddrinfo.item[]
+
 local dns = {
+	---@type table<string,net.dns.cache_entry>
 	_resolve_cache = {},
+	---@type table<string,uv.getaddrinfo.item[]>
 	_override = {}
 }
 

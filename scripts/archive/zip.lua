@@ -299,7 +299,7 @@ function zip_file:read( size )
 					end
 				end
 				--log.info('read compressor')
-				local ch,er = self._deflate:read(false)
+				local ch,err = self._deflate:read(false)
 				--log.info('readed',ch and #ch or 'nil',er)
 				if ch then
 					self._data = ch
@@ -335,7 +335,7 @@ function zip:_read_file( info )
 	local f = zip_file.new(self._reader,info,self._byte_before_the_zipfile)
 	local d = {}
 	while true do
-		local ch,er = f:read(1024*4)
+		local ch,err = f:read(1024*4)
 		if not ch then
 			if err then
 				return ch,err
@@ -392,7 +392,7 @@ function zip.unpack_zip( filename , dst )
 
 		local cf = assert(z:open_file(v))
 		local dest_fn = path.join(dst,v)
-		log.debug('write file',dest_fn,type(d))
+		log.debug('write file',dest_fn,type(dst))
 		fs.mkdir_r(path.dirname(dest_fn))
 		fs.unlink(dest_fn)
 		local f = fs.open(dest_fn,fs.O_WRONLY|fs.O_CREAT)

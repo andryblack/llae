@@ -7,8 +7,9 @@ local async = require 'llae.async'
 local timestamp = require 'net.http.timestamp'
 local default_status = require 'net.http.status'
 
-
-local response = class(require 'net.http.headers','http.server.response')
+---@class net.http.server_response : net.http.headers
+---@field baseclass net.http.headers
+local response = class(require 'net.http.headers','net.http.server_response')
 
 -- mime
 local default_content_type = {

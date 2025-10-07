@@ -1,5 +1,4 @@
-#ifndef _LLAE_LUA_EMBEDDED_H_INCLUDED_
-#define _LLAE_LUA_EMBEDDED_H_INCLUDED_
+#pragma once
 
 #include "state.h"
 
@@ -23,5 +22,3 @@ namespace lua {
 	};
 	void attach_embedded_modules(lua::state& lua);
 }
-
-#endif /*_LLAE_LUA_EMBEDDED_H_INCLUDED_*/

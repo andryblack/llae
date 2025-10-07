@@ -5,13 +5,21 @@ local fs = require 'llae.fs'
 local async = require 'llae.async'
 local uv = require 'uv'
 
-
+---@class net.ftp : net.connection
+---@field new fun() : net.ftp
 local ftp = class(require 'net.connection','net.fpt')
 
 function ftp:_init( data )
 	self._received_cmds = {}
 	self._received_data = ''
 	self:_configure_connection(data or {})
+end
+
+function ftp:_close()
+	if not self._closed then
+		self._cmd_con:shutdown()
+		self._closed = true
+	end
 end
 
 function ftp:_cmd_read( )
@@ -130,7 +138,7 @@ function ftp:connect( addr, port )
 	local res,err = self._cmd_con:connect(ip,self._port)
 	if not res then
 		log.error('failed connect to',ip,self._port)
-		self._connection:close()
+		self:_close()
 		return nil,err
 	end
 	log.debug('connected')
@@ -226,6 +234,7 @@ end
 
 function ftp:close(  )
 	self:_send_cmd('QUIT')
+	self:_close()
 end
 
 return ftp

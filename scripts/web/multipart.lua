@@ -5,7 +5,9 @@ local log = require 'llae.log'
 local llae = require 'llae'
 local headers = require 'net.http.headers'
 
-local multipart = class(require 'web.middle','multipart')
+---@class web.multipart : web.middle
+---@field new fun():web.multipart
+local multipart = class(require 'web.middle','web.multipart')
 
 function multipart.parse(str,bound)
 	local pos = 1

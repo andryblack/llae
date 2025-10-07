@@ -6,10 +6,17 @@ local log = require 'llae.log'
 local llae = require 'llae'
 local handler = require 'net.websocket.handler'
 
-local client = class(require 'net.websocket.protocol')
+---@class net.websocket.client.args
+---@field url string
+
+---@class net.websocket.client : net.websocket.protocol
+---@field baseclass net.websocket.protocol
+---@field new fun(args:net.websocket.client.args) : net.websocket.client
+local client = class(require 'net.websocket.protocol','net.websocker.client')
 
 client.counter = 0
 
+---@param args net.websocket.client.args
 function client:_init(args)
 	assert(args.url,'need url')
 	client.baseclass._init(self,true)

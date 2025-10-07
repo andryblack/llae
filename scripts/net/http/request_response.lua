@@ -3,10 +3,18 @@ local log = require 'llae.log'
 local utils = require 'llae.utils'
 local archive = require 'archive'
 
+---@class net.http.request_response_data
+---@field headers table<string,string|string[]>
+---@field version string
+---@field code integer
+---@field message string
+---@field connection any
+---@field tail string?
 
+---@class net.htt.request_response : net.http.headers
+local response = class(require 'net.http.headers','net.http.request_response')
 
-local response = class(require 'net.http.headers','http.request.response')
-
+---@param data net.http.request_response_data
 function response:_init( data  )
 	self._headers = data.headers
 	self._version = data.version

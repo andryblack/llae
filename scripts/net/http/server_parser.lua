@@ -2,7 +2,12 @@
 local class = require 'llae.class'
 local log = require 'llae.log'
 
-local parser = class(require 'net.http.parser','http.server.parser')
+
+---@class net.http.server_parser : net.http.parser
+---@field baseclass net.http.parser
+---@field new fun(cb:function)
+---@field request any
+local parser = class(require 'net.http.parser','net.http.server_parser')
 
 
 function parser:_init( cb  )

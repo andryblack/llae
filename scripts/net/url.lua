@@ -100,6 +100,7 @@ function M:build()
 		end
 	end
 	if self.host then
+		---@type string
 		local authority = self.host
 		if self.port and self.scheme and M.services[self.scheme] ~= self.port then
 			authority = authority .. ':' .. self.port

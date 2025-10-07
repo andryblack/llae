@@ -40,7 +40,7 @@ build_lib = {
 		defines{
 			'LZ4LIB_VISIBILITY=',
 		}
-		sysincludedirs {
+		externalincludedirs {
 			'include',
 		}
 		files {

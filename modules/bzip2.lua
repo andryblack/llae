@@ -34,7 +34,7 @@ build_lib = {
 		defines{
 			'BZ_NO_STDIO'
 		}
-		sysincludedirs {
+		externalincludedirs {
 			'include',
 		}
 		files {

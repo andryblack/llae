@@ -1,6 +1,6 @@
 <% for _,mod in project:foreach_module() do %>
 <% if mod.premake_setup then %>
--- module <%= mod.name %> / <%= mod.location %>
+-- module <%= mod.name %> / <%= get_relative(mod.location) %>
 -- premake_setup >>>>>>
 <%= template.compile(mod.premake_setup,{env=...})(mod) %>
 -- premake_setup <<<<<<
@@ -39,14 +39,15 @@ solution '<%= project:name() %>'
 
 <% for _,mod in project:foreach_module() do %>
 <% if mod.solution then %>
-	-- module <%= mod.name %> / <%= mod.location %>
+	-- module <%= mod.name %> / <%= get_relative(mod.location) %>
 	-- solution
 	<%= template.compile(mod.solution,{env=...})(mod) %>
 <% end %>
 <% end %>
 <% local function make_path(mod,first,...)
-		local t = path.isabsolute(first) and {path.normalize(first)} or {
-			path.normalize(mod.location),
+		assert(not path.isabsolute(first))
+		local t = {
+			get_relative(mod.location),
 			first
 		}
 		for _,v in ipairs(table.pack(...)) do
@@ -63,17 +64,17 @@ solution '<%= project:name() %>'
 <% end %>
 
 	<% for _,mod in project:foreach_module() do %>
-	-- module <%= mod.name %> / <%= mod.location %>
+	-- module <%= mod.name %> / <%= get_relative(mod.location) %>
 		
 		
 		<% if mod.build_lib then %>
-			project "module-<%= mod.name %>"
-			kind 'StaticLib'
-			targetdir 'lib'
-			filter{'action:gmake or gmake2'}
-				location 'project'
-			filter{}
-			<%= template.compile(mod.build_lib.project,{name=mod.name .. ':build_lib', env=...}){
+	project "module-<%= mod.name %>"
+		kind 'StaticLib'
+		targetdir 'lib'
+		filter{'action:gmake or gmake2'}
+			location 'project'
+		filter{}
+<%= template.compile(mod.build_lib.project,{name=mod.name .. ':build_lib', env=...}){
 				module = mod,
 				lib = mod.build_lib,
 				format_mod_file = function(m,...)
@@ -102,7 +103,7 @@ solution '<%= project:name() %>'
 		filter{}
 
 
-		sysincludedirs {
+		externalincludedirs {
 			'include'
 		}
 
@@ -144,7 +145,8 @@ solution '<%= project:name() %>'
 	-- project premake project
 	<%= template.compile(project:get_premake().project,{env=...}){
 		format_file = function (first,...)
-			local t = path.isabsolute(first) and {path.normalize(first)} or {
+			assert(not path.isabsolute(first))
+			local t = {
 				'..',
 				first
 			}

@@ -1,6 +1,8 @@
 local class = require 'llae.class'
 
-local http_parser = class(require 'net.http.headers','http.parser')
+---@class net.http.parser : net.http.headers
+---@field baseclass net.http.headers
+local http_parser = class(require 'net.http.headers','net.http.parser')
 
 
 http_parser.max_method_len = 1024
@@ -8,7 +10,7 @@ http_parser.max_header_len = 1024*8
 http_parser.max_start_len = 1024
 
 function http_parser:_init(  )
-	self._headers = {}
+	http_parser.baseclass._init(self)
 	self._data = ''
 end
 

@@ -5,8 +5,13 @@ local log = require 'llae.log'
 local template = require 'llae.template'
 local utils = require 'llae.utils'
 
-local views = class(nil,'static')
+---@class web.views : web.middle
+---@field private _cache table<string,function>
+---@field new fun(root:string,data:table) : web.views
+local views = class(require 'web.middle','web.views')
 
+---@param root string
+---@param options {ext:string?,env:table?,nocache:boolean?}?
 function views:_init( root, options )
 	self._root = root
 	self._options = options
@@ -78,12 +83,11 @@ end
 
 function views:use( app )
 	self._app = app
-	local sself = self
 	app:register_handler( function (request, resp )
 		resp.render = function (_,view, ...) 
-			local t = sself:get(view)
+			local t = self:get(view)
 			resp:set_header("Content-Type", "text/html")
-			resp:finish(t(utils.merge(sself._options.env,sself._funcs,...)))
+			resp:finish(t(utils.merge(self._options.env,self._funcs,...)))
 		end
 	end)
 end

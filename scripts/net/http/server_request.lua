@@ -2,9 +2,21 @@ local class = require 'llae.class'
 local archive = require 'archive'
 local log = require 'llae.log'
 
-local request = class(require 'net.http.headers','http.server.request')
+---@class net.http.server_request.data
+---@field method string
+---@field protocol string
+---@field path string
+---@field version string
+---@field client any
+---@field data string?
+---@field headers table<string,string|string[]>?
 
+---@class net.http.server_request : net.http.headers
+---@field baseclass net.http.headers
+---@field new fun(net.http.server_request.data) : net.http.server_request
+local request = class(require 'net.http.headers','net.http.server_request')
 
+---@param data net.http.server_request.data
 function request:_init( data )
 	request.baseclass._init(self,data.headers)
 	self._method = data.method
@@ -36,10 +48,12 @@ function request:get_path(  )
 	return self._path
 end
 
+---@return string
 function request:get_protocol( )
 	return self._protocol
 end
 
+---@return string
 function request:get_method( )
 	return self._method
 end

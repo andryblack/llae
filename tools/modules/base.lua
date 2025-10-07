@@ -10,8 +10,10 @@ local log = require 'llae.log'
 
 local tool = require 'tool'
 
-
-local base = class()
+---@class base
+---@class modules.base
+---@field new fun(name:string) : modules.base
+local base = class(nil,'modules.base')
 
 function base:_init(name)
 	self._name = name

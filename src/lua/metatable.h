@@ -1,5 +1,4 @@
-#ifndef _LLAE_LUA_METATABLE_H_INCLUDED_
-#define _LLAE_LUA_METATABLE_H_INCLUDED_
+#pragma once
 
 #include "state.h"
 #include "meta/object.h"
@@ -131,5 +130,3 @@ namespace lua {
     }
 
 }
-
-#endif /*_LLAE_LUA_METATABLE_H_INCLUDED_*/ 

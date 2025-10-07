@@ -3,7 +3,9 @@ local log = require 'llae.log'
 local uv = require 'llae.uv'
 local async = require 'llae.async'
 
-local protocol = class()
+---@class net.websocket.protocol
+---@field _handler net.websocket.handler
+local protocol = class(nil,'net.websocker.protocol')
 
 protocol.opcode = {
 	cont    = 0,
@@ -29,6 +31,14 @@ function protocol:_init(mask)
 	self._rc_fragments = {}
 	self._mask = mask
 	self._wr_lock = async.lock.new()
+end
+
+function protocol:_close()
+	error 'need override'
+end
+
+function  protocol:_write_packet()
+	
 end
 
 function protocol:_handle_msg(opcode)

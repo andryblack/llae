@@ -3,13 +3,8 @@
 #include <iostream>
 #include <string>
 
-#include "lua/state.h"
+#include "lua/types.h"
 #include "lua/embedded.h"
-#include "lua/value.h"
-#include "uv/loop.h"
-#include "uv/handle.h"
-#include "llae/app.h"
-#include "llae/diag.h"
 #include "lua/embedded.h"
 
 

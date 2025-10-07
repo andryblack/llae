@@ -1,13 +1,27 @@
 local class = require 'llae.class'
 local _M = {}
 
-local field_def = class()
+---@class llae.struct.field_def
+local field_def = class(nil,'llae.struct.field_def')
+local simple_field_def
 
 function field_def:_init(name,fdef)
 	self.name = name
 	if fdef then
 		self._default = fdef.default
 	end
+end
+
+function field_def:write_data(...)
+	error('need override')
+end
+
+function field_def:read_data()
+	error('need override')
+end
+
+function field_def:format()
+	return 'unknown'
 end
 
 function field_def:load(dst,src)
@@ -29,8 +43,11 @@ function field_def:read(dst,d,o)
 	return o
 end
 
-
-local array_field_def = class(field_def)
+---@class llae.struct.array_field_def : llae.struct.field_def
+---@field baseclass llae.struct.field_def
+---@field new fun() : llae.struct.array_field_def
+---@field size integer
+local array_field_def = class(field_def,'llae.struct.array_field_def')
 
 
 function array_field_def:_init(data,length)
@@ -88,7 +105,9 @@ function array_field_def:write(dst,src)
 	self:write_data(dst,arr)
 end
 
-local byte_array_field_def = class(array_field_def)
+---@class llae.struct.byte_array_field_def : llae.struct.array_field_def
+---@field new fun() : llae.struct.byte_array_field_def
+local byte_array_field_def = class(array_field_def,'llae.struct.byte_array_field_def')
 
 function byte_array_field_def:_init(name,length)
 	field_def._init(self,name)
@@ -227,8 +246,9 @@ local data_types = {
 
 
 
-
-local field_stub = class()
+---@class llaes.struct.field_stub
+---@field new fun() : llaes.struct.field_stub
+local field_stub = class(nil,'llaes.struct.field_stub')
 function field_stub:_init(size)
 	self.size = size
 end
@@ -246,7 +266,8 @@ end
 function field_stub:dump()
 end
 
-local simple_field_def = class(field_def)
+---@class llae.struct.simple_field_def : llae.struct.field_def
+simple_field_def = class(field_def,'llae.struct.simple_field_def')
 
 function simple_field_def:dump_data(data,out,o)
 	out(o..self:format(data))
@@ -256,10 +277,9 @@ function simple_field_def:dump(data,out,o)
 	out(o..self.name,self:format(data[self.name]))
 end
 
-
-
 local function make_simple_def(def,pack)
-	local cls = class(simple_field_def)
+	---@class tmp.field_def : llae.struct.simple_field_def
+	local cls = class(simple_field_def,'tmp_simple_def')
 	cls.size = def.size
 	function cls:read_data(data,offset)
 		local res = data.unpack(pack,data,offset+1)
@@ -300,13 +320,22 @@ for _,v in pairs(data_types) do
 	end
 end
 
-local struct_def = class(nil,'struct_def')
-local field_struct_def = class(struct_def)
-local field_struct_def_wrap = class(field_def)
+---@class llae.struct.struct_def 
+---@field new fun() : llae.struct.struct_def 
+local struct_def = class(nil,'llae.struct.struct_def')
+---@class llae.struct.field_struct_def : llae.struct.struct_def
+---@field baseclass llae.struct.struct_def
+---@field new fun() : llae.struct.field_struct_def
+local field_struct_def = class(struct_def,'llae.struct.field_struct_def')
+---@class llae.struct.field_struct_def_wrap : llae.struct.field_def
+---@field baseclass llae.struct.field_def
+---@field new fun() : llae.struct.field_struct_def_wrap
+local field_struct_def_wrap = class(field_def,'llae.struct.field_struct_def_wrap')
 
 function struct_def:_init(fields,endian)
 	self._fields = {}
 	self._endian = fields.endian or endian or 'le'
+	---@type string
 	local cls_name = 'cls_' .. self._endian
 	self.size = 0
 	for _,f in ipairs(fields) do
@@ -383,14 +412,6 @@ function struct_def:tostring_fields(data,o)
 		end
 	end
 	return table.concat(r,',' .. (o or ''))
-end
-
-function struct_def:tostring_fields(data,o)
-	local res = {}
-	for _,v in ipairs(self._fields) do
-		table.insert(res, v:tostring(data,o))
-	end
-	return table.concat(res,',')
 end
 
 function struct_def:read_fields(dst,d,o)
@@ -488,8 +509,9 @@ function field_struct_def_wrap:read_data(d,o)
 end
 
 
-
-local struct = class(nil,'struct')
+---@class llae.struct
+---@field new fun() : llae.struct
+local struct = class(nil,'llae.struct')
 
 function struct:_init(s,d)
 	if s.is_a then
@@ -568,6 +590,7 @@ function _M.build( struct_def, data )
 	return r:build()
 end
 
+---@return table
 function _M.read( d, struct_def, offset )
 	local r = struct.new(struct_def)
 	local o = r:read(d,offset)

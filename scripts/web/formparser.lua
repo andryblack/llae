@@ -1,6 +1,8 @@
 local class = require 'llae.class'
 local url = require 'net.url'
 
+---@class web.formparser : web.middle
+---@field new fun():web.formparser
 local formparser = class(require 'web.middle','formparser')
 
 function formparser.parse(str)

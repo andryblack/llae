@@ -1,5 +1,8 @@
 local class = require 'llae.class'
 local log = require 'llae.log'
+
+---@class net.http.uncompress_decoder
+---@field new fun(resp:net.http.server_response,uncompress:any) : net.http.uncompress_decoder
 local decoder = class(nil,'net.http.uncompress_decoder')
 
 

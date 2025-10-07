@@ -6,8 +6,17 @@ local path = require 'llae.path'
 local router = require 'web.router'
 local url = require 'net.url'
 
-local web = class(router,'web')
+---@class web.server_request : net.http.server_request
+---@field query table<string,string>
+---@field fragment string?
+---@field path string
 
+
+---@class web.application : web.router
+---@field new fun():web.application
+---@field baseclass web.router
+---@field private _handlers (fun(req:web.server_request,res:net.http.server_response))[]
+local web = class(router,'web.application') ---[[@as class web.application]]
 
 function web:_init( ... )
 	web.baseclass._init(self,...)
@@ -21,17 +30,26 @@ function web:set_fs_root(root)
 	self._fs_root = path.getabsolute(root)
 end
 
+---@return string?
 function web:get_fs_root()
 	return self._fs_root
 end
 
+---get fs path
+---@param fn string
+---@return string
 function web:get_fs_path(fn)
 	return (self._fs_root and not path.isabsolute(fn)) and path.join(self._fs_root,fn) or fn
 end
 
-function web:handle_request( req, res )
+
+
+---@param req_base net.http.server_request
+---@param res net.http.server_response
+function web:handle_request( req_base, res )
 	--log.info('handle',req:get_method(),req:get_path())
 	
+	local req = req_base --[[@as web.server_request]]
 	local components = url.parse(req:get_path())
 	req.query = components.query
 	req.fragment = components.fragment
@@ -74,12 +92,13 @@ function web:register_handler( f )
 	table.insert(self._handlers, f)
 end
 
-
+---@param middl web.middle
 function web:use( middl )
 	middl:use(self)
 	return middl
 end
 
+---@param options {host:string?,port:integer?,backlog:integer?}?
 function web:listen( options )
 	local port = options and options.port or 8080
 	local host = options and options.host or '127.0.0.1'
@@ -101,24 +120,24 @@ function web.views( root, data )
 	return views.new(root,data)
 end
 
-function web.json( )
+function web.json(...)
 	local json = require 'web.json'
-	return json.new()
+	return json.new(...)
 end
 
-function web.cookie( )
+function web.cookie(...)
 	local cookie = require 'web.cookie'
-	return cookie.new()
+	return cookie.new(...)
 end
 
-function web.formparser( )
+function web.formparser(...)
 	local formparser = require 'web.formparser'
-	return formparser.new()
+	return formparser.new(...)
 end
 
-function web.multipart( )
+function web.multipart(...)
 	local multipart = require 'web.multipart'
-	return multipart.new()
+	return multipart.new(...)
 end
 
 

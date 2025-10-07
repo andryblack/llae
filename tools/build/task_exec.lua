@@ -21,7 +21,7 @@ local function redirect_pipe(pipe,logbuf,level)
 				if err then
 					error(err)
 				else
-					table.insert(logbuf,{level,d:sub(1,el-1)})
+					table.insert(logbuf,{level,d})
 					break
 				end
 			else

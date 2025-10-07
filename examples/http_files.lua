@@ -40,7 +40,7 @@ http.createServer(function (req, res)
 				if f then
 					res:set_header('Content-Length',s.size)
 					res:flush()
-					f:send(res:get_connection())
+					res:get_connection():send(f)
 					res:finish()
 					return
 				end

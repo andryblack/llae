@@ -1,0 +1,49 @@
+{
+    "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+    "runtime": {
+        "version": "Lua 5.3",
+        "path": [
+            "scripts/?.lua",
+            "tools/?.lua",
+            "build/scripts/?.lua"
+        ]
+    },
+    "workspace": {
+        "library": ["lua-meta","build/scripts"],
+        "ignoreDir": [
+            "/data/",
+            "/build/",
+            "llae-project.lua",
+            "/modules/",
+            "/premake5.lua",
+            "/premake/",
+            "/examples/build/"
+        ]
+    },
+    "doc": {
+        "privateName": ["_*"]
+    },
+    "format": {
+        "indentSize": 4,
+        "lineEnding": "lf",
+        "columnLimit": 120
+    },
+    "hint.enable": false,
+    "diagnostics": {
+        "enable": true,
+        "groupFileStatus": {
+            "global": "Any",
+            "type-check": "Any",
+            "strong": "Any",
+            "ambiguity": "Any"
+        },
+        "severity": {
+            "undefined-global": "Error!",
+            "lowercase-global": "Hint!",
+            "undefined-field": "Error!",
+            "redundant-parameter": "Warning!"
+        },
+        "ignoredFiles": "Disable",
+        "libraryFiles": "Enable"
+    }
+  }

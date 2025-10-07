@@ -1,5 +1,4 @@
-#ifndef _LLAE_LUA_VALUE_H_INCLUDED_
-#define _LLAE_LUA_VALUE_H_INCLUDED_
+#pragma once
 
 #include "state.h"
 
@@ -39,5 +38,3 @@ namespace lua {
 	};
 
 }
-
-#endif /*_LLAE_LUA_VALUE_H_INCLUDED_*/

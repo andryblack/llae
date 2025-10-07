@@ -1,5 +1,4 @@
-#ifndef _LLAE_LUA_RAW_BIND_H_INCLUDED_
-#define _LLAE_LUA_RAW_BIND_H_INCLUDED_
+#pragma once
 
 #include "state.h"
 #include "stack.h"
@@ -161,5 +160,3 @@ namespace lua {
 
 
 }
-
-#endif /*_LLAE_LUA_RAW_BIND_H_INCLUDED_*/ 

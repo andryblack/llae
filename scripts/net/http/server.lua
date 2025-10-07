@@ -5,7 +5,9 @@ local log = require 'llae.log'
 
 local class = require 'llae.class'
 
-local server = class(nil,'http.server')
+---@class net.http.server
+---@field new fun(cb:function) : net.http.server
+local server = class(nil,'net.http.server')
 
 server.parser = require 'net.http.server_parser'
 server.request = require 'net.http.server_request'
@@ -21,8 +23,11 @@ function server:_init( cb  )
 	self.active_connections = 0
 end
 
+---@param port integer
+---@param addr string?
+---@param backlog integer?
 function server:listen( port, addr , backlog )
-	local res,err = self._server:bind(addr,port)
+	local res,err = self._server:bind(addr or '127.0.0.1',port)
 	if not res then return nil,err end
 	return self._server:listen(backlog or server.defaults.backlog,function(err)
 		self:on_connection(err)

@@ -171,7 +171,7 @@ build_lib = {
 			'<%= path.join(module.inplace_dir,'src',f,'**.h') %>',
 			'<%= path.join(module.inplace_dir,'src',f,'**.cpp') %>',<% end %>
 		}
-		sysincludedirs {
+		externalincludedirs {
 			'include',
 		}
 		includedirs{
@@ -183,7 +183,7 @@ build_lib = {
 			<%= format_file(module.dir,'src',f,'**.h') %>,
 			<%= format_file(module.dir,'src',f,'**.cpp') %>,<% end %>
 		}
-		sysincludedirs {
+		externalincludedirs {
 			'include',
 		}
 		includedirs{
@@ -198,7 +198,7 @@ project_main = [[
 		<%= format_file(module.dir,'src/main.cpp') %>
 	}
 	<% end %>
-	sysincludedirs {
+	externalincludedirs {
 		<%= format_file(module.dir,'src') %>
 	}
 	filter "system:windows"

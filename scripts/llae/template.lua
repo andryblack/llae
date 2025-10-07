@@ -2,7 +2,14 @@ local class = require 'llae.class'
 local fs = require 'llae.fs'
 local path = require 'llae.path'
 
-local template = class(nil,'template')
+---@class llae.template.options
+---@field name string?
+---@field debug boolean?
+---@field env table<string,any>?
+
+---@class llae.template
+---@field new fun(llae.template.options) : llae.template
+local template = class(nil,'llae.template')
 
 local html_escape = {
     ["&"] = "&amp;",
@@ -20,6 +27,7 @@ local function escape(str)
     return tostring(str)
 end
 
+---@param options llae.template.options?
 function template:_init( options )
 	self._name = (options and options.name) or 'template'
 	self._env = {
