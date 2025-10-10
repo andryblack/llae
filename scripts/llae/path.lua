@@ -24,6 +24,10 @@ function path.isabsolute(p)
 	return false
 end
 
+---@param s string
+---@param pattern string
+---@param plain boolean?
+---@return integer?
 local function findlast(s, pattern, plain)
 	local curr = 0
 	repeat

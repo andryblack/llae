@@ -13,7 +13,7 @@ local uncomment = {
 	['MBEDTLS_SSL_PROTO_TLS1_2'] = true,
 	['MBEDTLS_SSL_PROTO_TLS1_3'] = true,
 	['MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE'] = true,
-	['MBEDTLS_NO_PLATFORM_ENTROPY'] = true,
+	['MBEDTLS_NO_PLATFORM_ENTROPY'] = false,
 }
 local comment = {
 	['MBEDTLS_NO_UDBL_DIVISION'] = true,
