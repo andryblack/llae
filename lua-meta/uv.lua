@@ -23,8 +23,7 @@ uv.cwd = function() end
 ---@return boolean?
 ---@return string?
 uv.chdir = function(dir) end
----@param pause boolean
----@return boolean
+---@param pause integer
 uv.pause = function(pause) end
 ---@return number
 ---@return integer

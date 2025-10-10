@@ -120,7 +120,7 @@ function fs.mkdir_r(dir)
 		dir = path.dirname(dir)
 	end
 	if dir == '' then
-		dir = fs.pwd()
+		dir = assert(fs.pwd())
 	end
 	for _,c in ipairs(components) do
 		dir = path.join(dir,c)
@@ -224,7 +224,7 @@ function fs.find_exe(bin)
 		end
 		return bin
 	end
-	local exename = find_exe(os.getenv('PATH'),bin)
+	local exename = find_exe(os.getenv('PATH') or '',bin)
 	if not exename then
 		error('not found exe ' .. tostring(bin))
 	end

@@ -2,15 +2,13 @@ local uv = require 'uv'
 
 local llae = require 'llae'
 
----@class llae.os
----@field [string] function
-local _M = {}
-for k,v in pairs(os) do
-	_M[k]=v
-end
+---@class llae.os : uv.os
+local _M = setmetatable({},{__index=uv.os})
+
 
 _M.hostname = uv.os.gethostname
 _M.at_exit = llae.at_exit
 _M.stop = llae.stop
 
-return setmetatable(_M,{__index=uv.os})
+
+return _M

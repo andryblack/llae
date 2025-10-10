@@ -14,6 +14,7 @@ function pop3:_init(  )
 	self._received_data = ''
 end
 
+---@return string?
 function pop3:_cmd_read( )
 	while not self._received_cmds[1] and self._cmd_con do
 		--log.debug('read>')

@@ -5,6 +5,19 @@ local log = require 'llae.log'
 local llae = require 'llae'
 local headers = require 'net.http.headers'
 
+---@class web.multipart.part
+---@field headers net.http.headers
+---@field data string?
+---@field name string?
+---@field filename string?
+---@field new fun():web.multipart.part
+---@field [string] string
+local part = class(nil,'web.multipart.part')
+
+function part:_init()
+	self.headers = headers.new()
+end
+
 ---@class web.multipart : web.middle
 ---@field new fun():web.multipart
 local multipart = class(require 'web.middle','web.multipart')
@@ -32,7 +45,7 @@ function multipart.parse(str,bound)
 			break
 		end
 		pos = bpos + 2
-		local part = {headers=headers.new()}
+		local part = part.new()
 		--log.debug('---parse-headers---')
 		while pos < #str do
 			local eline = string.find(str,'\r\n',pos,true)

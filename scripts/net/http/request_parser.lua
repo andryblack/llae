@@ -33,6 +33,8 @@ function parser:parse_start( client )
 end
 
 
+---@return net.http.request_response?
+---@return string?
 function parser:load( client )
 	while not self:parse_start(client) do 
 		local ch,err = self:read(client)
@@ -46,6 +48,7 @@ function parser:load( client )
 			return nil,'unexpected end in parse headers: ' .. tostring(err)
 		end
 	end
+	---@type net.http.request_response
 	local resp = self.response.new{
 		headers = self._headers,
 		version = self._version,

@@ -9,6 +9,7 @@ local async = require 'llae.async'
 ---It supports all standard Redis commands, pipelining, and pub/sub functionality.
 ---@class db.redis
 ---@field new fun(): db.redis
+---@field [string] function Redis command functions
 local redis = class(nil,'db.redis')
 
 redis.resp = require 'db.redis.resp'
@@ -23,7 +24,7 @@ end
 --print('122')
 
 --- Connects to Redis server using TCP or Unix socket.
----@param addr string|number Redis server address (IP address for TCP, or Unix socket path)
+---@param addr string Redis server address (IP address for TCP, or Unix socket path)
 ---@param port number? TCP port number (if not provided, assumes Unix socket)
 ---@return boolean? True on success
 ---@return string? Error message if connection fails

@@ -11,7 +11,8 @@ local archive = require 'archive'
 ---@field connection any
 ---@field tail string?
 
----@class net.htt.request_response : net.http.headers
+---@class net.http.request_response : net.http.headers
+---@field new fun(data:net.http.request_response_data):net.http.request_response
 local response = class(require 'net.http.headers','net.http.request_response')
 
 ---@param data net.http.request_response_data

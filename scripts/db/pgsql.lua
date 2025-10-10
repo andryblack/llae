@@ -19,7 +19,7 @@ local sasl_auth = require 'db.pgsql.sasl_auth'
 ---@field convert_null boolean?
 ---@field application_name string?
 
----@class db.pgsql
+---@class db.pgsql 
 ---@field new fun(conf:db.pgsql_config) : db.pgsql
 ---@field _config db.pgsql_config
 local pgsql = class(nil,'db.pgsql')

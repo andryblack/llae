@@ -24,6 +24,7 @@ async.run(function()
 		log.info('HGETALL:',rds:hgetall('test.not.exist'))
 		log.info('HGETALL:',rds:hgetall('test.a.1'))
 
+		---@type [string,string[]]
 		local r = assert(rds:scan("0",'MATCH','test.*'))
 		log.info(json.encode(r))
 		while true do

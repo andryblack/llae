@@ -40,7 +40,7 @@ app:get('/test1/:sub',function(req,res)
 		content = [[
 <a href="/">..</a><p>
 at: ]] .. req.params.sub .. [[
-		]]
+		]] --[[@as string]]
 	})
 end)
 
@@ -60,7 +60,7 @@ app:get('/files',function(req,res)
 	local r = {[[
 		<a href="/">..</a><p>
 ]]}
-	local files = fs.scandir('./examples')
+	local files = assert(fs.scandir('./examples'))
 			
 	for _,f in ipairs(files) do
 		if f.isfile then
@@ -75,7 +75,7 @@ app:get('/files/:file.lua',function(req,res)
 		content = [[
 <a href="/files">..</a><p>
 ]]..req.params.file..[[<p><a href="/]]..req.params.file..[[.lua">download</a>
-		]]
+		]] --[[@as string]]
 	})
 end)
 
@@ -84,14 +84,14 @@ app:get('/files/*file',function(req,res)
 		content = [[
 <a href="/files">..</a><p>
 ]]..req.params.file..[[<p>
-		]]
+		]] --[[@as string]]
 	})
 end)
 
 app:post('/upload',function(req,res,next)
 	log.info('post upload')
 	if req.multipart then
-		for _,v in ipairs(req.multipart) do
+		for _,v in ipairs(req.multipart--[[@as table<integer,web.multipart.part>]]) do
 			log.info('data:',v.name,v.filename,#v.data)
 		end
 	end

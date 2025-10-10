@@ -1,6 +1,7 @@
 
 local res = {}
 
+---@type fun(array:any[], fn:fun(any):any, pg:db.pgsql):any[]
 local convert_values
 
 convert_values = function(array, fn, pg)

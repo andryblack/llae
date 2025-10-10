@@ -20,7 +20,7 @@ local auth_token = '123456'
 
 function auth_mittleware:use(web)
 	web:register_handler(function(req,res)
-		local cookie = req:get_cookie('_auth')
+		local cookie = req:get_cookie('_auth')--[[@as string]]
 		log.info('auth get',req:get_path(),'['..cookie..']')
 		if cookie ~= auth_token then
 			if req:get_path()~='/login' then

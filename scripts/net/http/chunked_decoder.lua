@@ -2,6 +2,7 @@ local class = require 'llae.class'
 local log = require 'llae.log'
 
 ---@class net.http.chunked_decoder
+---@field new fun(resp:any) : net.http.chunked_decoder
 local decoder = class(nil,'net.http.chunked_decoder')
 
 

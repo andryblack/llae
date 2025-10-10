@@ -100,6 +100,8 @@ function request:_on_timeout()
 	end
 end
 
+---@return net.http.request_response?
+---@return string?
 function request:exec(  )
 	local res,err = self:resolve()
 	if not res then
@@ -113,7 +115,8 @@ function request:exec(  )
 			self:_on_timeout()
 		end,math.floor(self._timeout*1000))
 	end
-	local port = self._url.port or url.services[self._url.scheme]
+	---@type integer
+	local port = self._url.port or url.services[self._url.scheme] or 80
 	res,err = self:_connect(port)
 	if not res then
 		if self._timeout_error then	
@@ -124,9 +127,9 @@ function request:exec(  )
 	
 	--log.debug('connected')
 
-	self._headers['Content-Length'] = #self._body
+	self:set_header('Content-Length',tostring(#self._body))
 	if not self:get_header('Connection') then
-		self._headers['Connection'] = 'close'
+		self:set_header('Connection', 'close')
 	end
 
 	local headers = {}
@@ -136,9 +139,7 @@ function request:exec(  )
 	if not self:get_header('Accept-Encoding') then
 		table.insert(headers,'Accept-Encoding: deflate, gzip')
 	end
-	for k,v in pairs(self._headers) do
-		table.insert(headers,k..': ' .. v)
-	end
+	self:_write_headers(headers)
 
 	if self._url.scheme == 'https' then
 		--log.debug('open ssl connection')
@@ -147,16 +148,16 @@ function request:exec(  )
 		self._connection = self._ssl
 		local res,err = self._ssl:configure()
 		if not res then
-			return res,err
+			return nil,err
 		end
 		res,err = self._ssl:set_host(self._url.host)
 		if not res then
-			return res,err
+			return nil,err
 		end
 		--log.debug('handshake')
 		res,err = self._ssl:handshake()
 		if not res then
-			return res,err
+			return nil,err
 		end
 		--log.debug('handshake success')
 	end
@@ -174,7 +175,7 @@ function request:exec(  )
 	end
 	local res,err = self._connection:write(send_data)
 	if not res then
-		return res,err
+		return nil,err
 	end
 	local p = self.parser.new(self.response)
 	

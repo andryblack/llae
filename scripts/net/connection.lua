@@ -6,6 +6,7 @@ local uv = require 'llae.uv'
 ---@class net.connection
 local connection = class(nil,'net.connection')
 
+---@public
 function connection:_create_connection()
 	if self._proxy then
 		return self._proxy:create()
@@ -13,7 +14,7 @@ function connection:_create_connection()
 	return uv.tcp_connection.new()
 end
 
----@protected
+---@public
 function connection:_configure_connection(data)
 	if data.proxy then
 		local proxy = url.parse(data.proxy)

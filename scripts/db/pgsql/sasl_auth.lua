@@ -4,6 +4,9 @@ local log = require 'llae.log'
 local llae = require 'llae'
 local crypto = require 'llae.crypto'
 
+---@class db.pgsql.sasl_auth
+---@field new fun(config:db.pgsql_config):db.pgsql.sasl_auth
+---@field _config db.pgsql_config
 local sasl_auth = class()
 
 function sasl_auth:_init(config)
@@ -11,7 +14,7 @@ function sasl_auth:_init(config)
 end
 
 function sasl_auth:create_client_first_message()
-	local rand_str = uv.random(32)
+	local rand_str = assert(uv.random(32))
 	self._sasl_nonce = tostring(llae.buffer.hex_encode(rand_str))
 	self._client_first_message_bare = 'n=' .. self._config.user .. ',r='..self._sasl_nonce
 	self._client_first_message = 'n,,' .. self._client_first_message_bare
@@ -93,7 +96,9 @@ function sasl_auth:process_server_first_message(server_first_message)
 	local salted_password = sasl_hi(self._config.password,salt,tonumber(p.i))
 	local client_key = sasl_hmac(salted_password,'Client Key')
 	local stored_key = sasl_h(client_key)
+	---@type string
 	local client_final_message = 'c=biws,r=' .. p.r
+	---@type string
 	local auth_message = self._client_first_message_bare .. ',' .. server_first_message .. ',' .. client_final_message
 	local client_signature = sasl_hmac(stored_key,auth_message)
 	local client_proof = xor_data(client_key,client_signature)
