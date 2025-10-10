@@ -9,8 +9,18 @@ local headers = class(nil,'http.headers')
 
 ---@param init table<string,string|string[]>?
 function headers:_init( init )
-	self._headers = init or {}
+	self._headers = {}
 	self._list = {}
+	if init then
+		local names = {}
+		for name,value in pairs(init) do
+			table.insert(names,name)
+		end
+		table.sort(names)
+		for _,name in ipairs(names) do
+			self:set_header(name,init[name])
+		end
+	end
 end
 
 function headers:get_header( name )

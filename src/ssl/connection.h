@@ -110,6 +110,7 @@ namespace ssl {
         void end_op(const char* op);
         common::intrusive_ptr<connection> m_active_op_lock;
         
+        static bool m_verbose;
 	public:
 		explicit connection( ctx_ptr&& ctx, uv::stream_ptr&& stream );
 		~connection();
@@ -121,7 +122,7 @@ namespace ssl {
         lua::multiret read(lua::state& l);
         lua::multiret close(lua::state& l);
         lua::multiret shutdown(lua::state& l);
-        
+        static void set_verbose(bool v) { m_verbose = v; }
         void add_read_buffer(llae::buffer_ptr&& b) { readable_stream::add_read_buffer(std::move(b)); }
         int start_read( const uv::stream_read_consumer_ptr& consumer ) override;
         void stop_read() override;

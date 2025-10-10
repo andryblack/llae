@@ -33,7 +33,7 @@ function ctx:load_system_certs() end
 
 --- Sets the debug threshold for SSL debugging output.
 ---@param threshold integer Debug threshold level
-function ctx:set_debug_threshold(threshold) end
+function ctx.set_debug_threshold(threshold) end
 
 ssl.ctx = ctx
 

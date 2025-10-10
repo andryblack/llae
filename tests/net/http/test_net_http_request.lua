@@ -6,6 +6,7 @@ local uv = require('uv')
 local MockConnection = {}
 function MockConnection.new(request_obj)
   local self = {}
+  self.data = ''
   self.connected = false
   self.closed = false
   self.request = request_obj
@@ -16,7 +17,14 @@ function MockConnection.new(request_obj)
     return true
   end
 
-  function self:write()
+  function self:write(data)
+    if type(data) == 'table' then
+      for _,v in ipairs(data) do
+        self.data = self.data .. v
+      end
+    else
+      self.data = self.data .. tostring(data)
+    end
     -- Return success for write
     return true
   end
@@ -30,6 +38,11 @@ function MockConnection.new(request_obj)
   
   function self:close()
     self.closed = true
+  end
+
+  function self:check_write(data)
+    lu.assertEquals(self.data:gsub('\r\n','\n'),data:gsub('\r\n','\n'))
+
   end
   
   return self
@@ -156,4 +169,46 @@ function TestHttpRequest:test_request_no_timeout()
   local response, err = req:exec()
   lu.assertNil(response)
   lu.assertEquals(err, "dns error")
+end
+
+function TestHttpRequest:test_request_headers()
+  local req
+  local mock_connection
+  request._create_connection = function()
+    mock_connection = MockConnection.new(req)
+    return mock_connection
+  end
+  
+  -- Create request with 1 second timeout
+  req = request.new{
+    url = "http://example.com",
+    headers = {
+      ['X-Test'] = 'test'
+    },
+    timeout = 1
+  }
+  
+  -- Override resolve at instance level, not class level
+  function req.resolve(self)
+    self._ip_list = {{addr = "127.0.0.1", socktype = "tcp"}}
+    return true
+  end
+  
+  -- Execute request and check results
+  local response, err = req:exec()
+  lu.assertNil(response)
+  lu.assertEquals(err, "timeout")
+  
+  -- Verify that the actual connection was closed
+  lu.assertTrue(mock_connection.closed)
+
+  mock_connection:check_write([[
+GET / HTTP/1.1
+Host: example.com
+Accept-Encoding: deflate, gzip
+X-Test: test
+Content-Length: 0
+Connection: close
+
+]])
 end

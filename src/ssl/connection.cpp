@@ -13,6 +13,8 @@ META_OBJECT_INFO(ssl::connection,meta::object)
 namespace ssl {
     using crypto::push_error;
 
+    bool connection::m_verbose = false;
+
 	connection::connection( ctx_ptr&& ctx, uv::stream_ptr&& stream ) : m_ctx(std::move(ctx)), m_stream(std::move(stream)) {
         
         mbedtls_ssl_init( &m_ssl );
@@ -405,10 +407,14 @@ namespace ssl {
 
 	int connection::ssl_recv( unsigned char *buf,
                                 size_t len) {
-        //std::cout << "ssl_recv " << len << std::endl;
+        if (m_verbose) {
+            std::cout << "ssl_recv " << len << std::endl;
+        }
         if (m_read_state == RS_NONE) {
             m_read_state = RS_ACTIVE;
-            //std::cout << "start read " << std::endl;
+            if (m_verbose) {
+                std::cout << "start read " << std::endl;
+            }
             int r = m_stream->start_read(uv::stream_read_consumer_ptr(this));
             if (r < 0) {
                 return MBEDTLS_ERR_SSL_WANT_READ;
@@ -435,7 +441,9 @@ namespace ssl {
             if (rsize > len) {
                 rsize = len;
             }
-            //std::cout << "ssl_recv readed " << rsize << std::endl;
+            if (m_verbose) {
+                std::cout << "ssl_recv readed " << rsize << std::endl;
+            }
             ::memcpy(buf, static_cast<const unsigned char*>(d.data->get_base())+d.readded, rsize);
             buf += rsize;
             len -= rsize;
@@ -502,12 +510,18 @@ namespace ssl {
         if (m_active_op) {
             std::cerr << "begin op with active: " << op << "/" << m_active_op << std::endl;
         }
+        if (m_verbose) {
+            std::cout << "begin_op: " << op << std::endl;
+        }
         m_active_op = op;
         m_active_op_lock.reset(this);
     }
     void connection::end_op(const char* op) {
         if (!m_active_op || strcmp(m_active_op, op)!=0) {
             std::cerr << "finish status with different op: " << op << "/" << (m_active_op?m_active_op:"null") << std::endl;
+        }
+        if (m_verbose) {
+            std::cout << "end_op: " << op << std::endl;
         }
         m_active_op = nullptr;
         m_active_op_lock.reset();
@@ -675,5 +689,6 @@ namespace ssl {
         lua::bind::function(l,"start_read",&connection::start_read);
         lua::bind::function(l,"stop_read",&connection::stop_read);
         lua::bind::function(l,"add_read_buffer",&connection::add_read_buffer);
+        lua::bind::function(l,"set_verbose",&connection::set_verbose);
 	}
 }
