@@ -5,6 +5,7 @@ local log = require 'llae.log'
 
 local class = require 'llae.class'
 
+---HTTP server implementation supporting both HTTP and HTTPS protocols.
 ---@class net.http.server
 ---@field new fun(cb:function) : net.http.server
 local server = class(nil,'net.http.server')
@@ -23,9 +24,12 @@ function server:_init( cb  )
 	self.active_connections = 0
 end
 
----@param port integer
----@param addr string?
----@param backlog integer?
+--- Starts the server listening for connections.
+---@param port integer TCP port to listen on
+---@param addr string? IP address to bind to (default: '127.0.0.1')
+---@param backlog integer? Connection backlog size (default: 128)
+---@return boolean? True if successful
+---@return string? Error message if failed
 function server:listen( port, addr , backlog )
 	local res,err = self._server:bind(addr or '127.0.0.1',port)
 	if not res then return nil,err end
@@ -34,6 +38,7 @@ function server:listen( port, addr , backlog )
 	end)
 end
 
+--- Stops the server and closes all connections.
 function server:stop(  )
 	self._server:stop()
 end

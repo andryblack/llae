@@ -1,7 +1,9 @@
+---Creates a new class with optional inheritance and type checking.
+---Supports single inheritance with automatic method copying and type checking.
 ---@generic T, U
----@param base `U`?
----@param name `T`
----@return {} : U
+---@param base `U`? Base class to inherit from. Defaults to an empty table.
+---@param name `T`? Optional name for the class (useful for type checking)
+---@return {} : U A new class table with constructor, inheritance tracking, and base class reference
 local class_func = function(base,name)
   -- inheristance via copy
   ---@diagnostic disable
@@ -30,6 +32,9 @@ local class_func = function(base,name)
   end
 
   function class.new(...)
+    --- Creates a new instance of the class.
+    --- If the class has an _init method, it's called with the provided arguments.
+    ---@return table A new instance with the class as its metatable
     local instance = setmetatable({},class)
     ---@type fun(...)
     local init = instance._init

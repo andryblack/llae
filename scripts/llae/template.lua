@@ -112,6 +112,8 @@ function template:parse( data )
 	return self:compile(chunks)
 end
 
+---@param str string
+---@return string
 local function build_lines(str)
 	local d = {}
 	local linenum = 1

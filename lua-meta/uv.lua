@@ -3,7 +3,8 @@
 ---@class uv
 local uv = {}
 
----@return string
+---@return string?
+---@return string?
 uv.exepath = function() end
 
 ---@class uv.getaddrinfo.item
@@ -15,36 +16,49 @@ uv.exepath = function() end
 ---@return uv.getaddrinfo.item[]?
 ---@return string?
 uv.getaddrinfo = function(host) end
----@return string
+---@return string?
+---@return string?
 uv.cwd = function() end
 ---@param dir string
----@return boolean
+---@return boolean?
+---@return string?
 uv.chdir = function(dir) end
 ---@param pause boolean
 ---@return boolean
 uv.pause = function(pause) end
 ---@return number
+---@return integer
 uv.gettimeofday = function() end
----@return table
+---@class uv.interface_address
+---@field name string
+---@field internal boolean
+---@field family integer
+---@field address string
+---@field netmask string
+
+---@return uv.interface_address[]?
+---@return string?
 uv.interface_addresses = function() end
 ---@param title string
----@return boolean
+---@return boolean?
+---@return string?
 uv.set_process_title = function(title) end
----@return number
+---@return integer
 uv.get_free_memory = function() end
----@return number
+---@return integer
 uv.get_total_memory = function() end
----@return number
+---@return integer
 uv.get_constrained_memory = function() end
----@return number
+---@return integer
 uv.hrtime = function() end
----@param ms number
----@return boolean
+---@param ms integer
 uv.sleep = function(ms) end
----@return number
-uv.random = function(s) end
----@return boolean
-uv.print_handles = function() end
+---@param size integer
+---@return string?
+---@return string?
+uv.random = function(size) end
+---@param active boolean?
+uv.print_handles = function(active) end
 ---@type number
 uv.AF_INET = 0
 ---@type number
@@ -55,9 +69,18 @@ local handle = {}
 
 ---@class uv.stream : uv.handle
 local stream = {}
+---@return llae.buffer?
+---@return string?
 function stream:read() end
+---@return boolean?
+---@return string?
 function stream:write(...) end
-function stream:send() end
+---@param file uv.file
+---@return boolean?
+---@return string?
+function stream:send(file) end
+---@return boolean?
+---@return string?
 function stream:shutdown() end
 function stream:close() end
 function stream:stop_read() end
@@ -68,8 +91,12 @@ function stream:add_read_buffer(buffer) end
 local server = {}
 ---@param backlog integer
 ---@param func function
+---@return boolean?
+---@return string?
 function server:listen(backlog,func) end
 ---@param client uv.stream
+---@return boolean?
+---@return string?
 function server:accept(client) end
 function server:stop() end
 
@@ -89,11 +116,21 @@ local tcp_connection = {}
 function tcp_connection.new() end
 ---@param host string
 ---@param port integer
----@return boolean?,string?
+---@return boolean?
+---@return string?
 function tcp_connection:connect(host,port) end
+---@return string?
+---@return integer|string?
 function tcp_connection:getppername() end
-function tcp_connection:keepalive() end
-function tcp_connection:nodelay() end
+---@param enable boolean
+---@param delay integer?
+---@return integer?
+---@return string?
+function tcp_connection:keepalive(enable, delay) end
+---@param enable boolean
+---@return integer?
+---@return string?
+function tcp_connection:nodelay(enable) end
 uv.tcp_connection = tcp_connection
 
 
@@ -104,26 +141,72 @@ function udp.new() end
 ---@param host string?
 ---@param port integer?
 ---@param flags integer?
+---@return boolean?
+---@return string?
 function udp:bind(host,port,flags) end
 ---@param data any
 ---@param host string?
 ---@param port integer?
+---@return boolean?
+---@return string?
 function udp:send(data,host,port) end
-function udp:try_send() end
+---@param data any
+---@param host string?
+---@param port integer?
+---@return integer?
+---@return string?
+function udp:try_send(data, host, port) end
+---@return llae.buffer?
+---@return string?
 function udp:recv() end
-function udp:connect() end
+---@param host string
+---@param port integer
+---@return boolean?
+---@return string?
+function udp:connect(host, port) end
 function udp:disconnect() end
 function udp:stop_recv() end
-function udp:add_buffer() end
+---@param buffer llae.buffer
+function udp:add_buffer(buffer) end
 function udp:close() end
-function udp:set_ttl() end
-function udp:set_broadcast() end
-function udp:set_membershift() end
-function udp:set_source_membership() end
-function udp:set_multicast_loop() end
-function udp:set_multicast_ttl() end
-function udp:set_multicast_interface() end
+---@param ttl integer
+---@return integer?
+---@return string?
+function udp:set_ttl(ttl) end
+---@param enable boolean
+---@return integer?
+---@return string?
+function udp:set_broadcast(enable) end
+---@param multicast_addr string
+---@param interface_addr string
+---@param membership integer
+---@return integer?
+---@return string?
+function udp:set_membershift(multicast_addr, interface_addr, membership) end
+---@param multicast_addr string
+---@param interface_addr string
+---@param source_addr string
+---@param membership integer
+---@return integer?
+---@return string?
+function udp:set_source_membership(multicast_addr, interface_addr, source_addr, membership) end
+---@param enable boolean
+---@return integer?
+---@return string?
+function udp:set_multicast_loop(enable) end
+---@param ttl integer
+---@return integer?
+---@return string?
+function udp:set_multicast_ttl(ttl) end
+---@param interface_addr string
+---@return integer?
+---@return string?
+function udp:set_multicast_interface(interface_addr) end
+---@return string?
+---@return integer|string?
 function udp:getpeername() end
+---@return string?
+---@return integer|string?
 function udp:getsockname() end
 
 udp.IPV6ONLY = 0
@@ -140,7 +223,12 @@ local tty = {}
 
 ---@return uv.tty
 function tty.new() end
-function tty:set_mode() end
+---@param mode integer
+---@return integer?
+---@return string?
+function tty:set_mode(mode) end
+---@return integer?
+---@return string?
 function tty:reset_mode() end
 
 tty.MODE_NORMAL = 0
@@ -159,7 +247,10 @@ local poll = {}
 ---@return uv.poll
 function poll.new() end
 function poll:stop() end
-function poll:poll() end
+---@param events integer
+---@return boolean?
+---@return string?
+function poll:poll(events) end
 poll.READABLE = 0
 poll.WRITABLE = 0
 poll.PRIORITIZED = 0
@@ -180,7 +271,12 @@ local process = {}
 ---@param args uv.process.spawn_args
 ---@return uv.process?,string?
 function process.spawn(args) end
-function process:kill() end
+---@param signal integer
+---@return integer?
+---@return string?
+function process:kill(signal) end
+---@return integer?
+---@return string?
 function process:wait_exit() end
 
 process.IGNORE = 0
@@ -201,6 +297,8 @@ local pipe = {}
 ---@return uv.pipe
 function pipe.new(fd) end
 ---@param path string
+---@return boolean?
+---@return string?
 function pipe:connect(path) end
 uv.pipe = pipe
 
@@ -259,17 +357,51 @@ uv.async = async_wait
 
 ---@class uv.os
 local os = {}
+---@class uv.os.uname
+---@field sysname string
+---@field release string
+---@field version string
+---@field machine string
+
+---@return string?
+---@return string?
 function os.homedir() end
+---@return string?
+---@return string?
 function os.tmpdir() end
-function os.getenv() end
-function os.setenv() end
+---@param name string
+---@return string?
+---@return string?
+function os.getenv(name) end
+---@param name string
+---@param value string
+---@return boolean?
+---@return string?
+function os.setenv(name, value) end
+---@return table<string,string>?
+---@return string?
 function os.getallenv() end
-function os.unsetenv() end
+---@param name string
+---@return boolean?
+---@return string?
+function os.unsetenv(name) end
+---@return string?
+---@return string?
 function os.gethostname() end
+---@return uv.os.uname?
+---@return string?
 function os.uname() end
+---@return integer
 function os.getpid() end
-function os.getpriority() end
-function os.setpriority() end
+---@param pid integer?
+---@return integer?
+---@return string?
+function os.getpriority(pid) end
+---@param pid integer?
+---@param priority integer
+---@return boolean?
+---@return string?
+function os.setpriority(pid, priority) end
 
 uv.os = os
 
@@ -277,15 +409,29 @@ uv.os = os
 local fs = {}
 
 ---@param path string
-function fs.mkdir(path) end
+---@param mode integer?
+---@return boolean?
+---@return string?
+function fs.mkdir(path, mode) end
 ---@param path string
+---@return boolean?
+---@return string?
 function fs.rmdir(path) end
 ---@param filename string
 ---@return true?
 ---@return string?
 function fs.unlink(filename) end
-function fs.copyfile() end
-function fs.rename() end
+---@param src string
+---@param dst string
+---@param flags integer?
+---@return boolean?
+---@return string?
+function fs.copyfile(src, dst, flags) end
+---@param src string
+---@param dst string
+---@return boolean?
+---@return string?
+function fs.rename(src, dst) end
 
 ---@class uv.fs.stat.result
 ---@field isfile true?
@@ -313,7 +459,11 @@ function fs.scandir(path) end
 ---@return uv.file?
 ---@return string?
 function fs.open(filename,flags) end
-function fs.chmod() end
+---@param path string
+---@param mode integer
+---@return boolean?
+---@return string?
+function fs.chmod(path, mode) end
 
 fs.O_RDONLY = 0
 fs.O_RDWR = 0
@@ -323,12 +473,26 @@ fs.O_APPEND = 0
 
 ---@class uv.file
 local file = {}
+---@return boolean?
+---@return string?
 function file:close() end
+---@return boolean?
+---@return string?
 function file:write(...) end
 ---@param size integer?
+---@return llae.buffer?
+---@return string?
 function file:read(size) end
-function file:seek() end
+---@param offset integer
+---@param whence integer?
+---@return integer?
+---@return string?
+function file:seek(offset, whence) end
+---@return integer?
+---@return string?
 function file:tell() end
+---@return integer?
+---@return string?
 function file:get_handle() end
 fs.file = file
 

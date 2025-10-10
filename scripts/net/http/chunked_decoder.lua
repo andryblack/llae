@@ -1,7 +1,8 @@
 local class = require 'llae.class'
 local log = require 'llae.log'
 
-local decoder = class(nil,'net.http.uncompress_decoder')
+---@class net.http.chunked_decoder
+local decoder = class(nil,'net.http.chunked_decoder')
 
 
 function decoder:_init( resp  )
@@ -14,7 +15,8 @@ function decoder:is_end(  )
 	return self._finished
 end
 
-
+---@return string?
+---@return string?
 function decoder:read( )
 	if self._finished then
 		return nil

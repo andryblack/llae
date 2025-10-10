@@ -1,6 +1,8 @@
 local class = require 'llae.class'
 local _M = {}
 
+---@diagnostic disable
+
 ---@class llae.struct.field_def
 local field_def = class(nil,'llae.struct.field_def')
 local simple_field_def
@@ -549,6 +551,7 @@ function struct:build( )
 	return table.concat(r,'')
 end
 
+---@return integer
 function _M.sizeof( s )
 	local r = 0
 	if s.size then

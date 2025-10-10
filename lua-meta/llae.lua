@@ -3,9 +3,9 @@
 ---@class llae
 local llae = {}
 
----@param code number?
+---@param code integer?
 function llae.stop(code) end
----@param func fun()
+---@param func function
 function llae.at_exit(func) end
 function llae.cancel_sigint() end
 ---@param obj any
@@ -19,36 +19,62 @@ function llae.get_host_platform() end
 ---@class llae.buffer_base
 local buffer_base = {}
 
-function buffer_base:__concat() end
+---@param other llae.buffer_base|string
+---@return string
+function buffer_base:__concat(other) end
+---@return string
 function buffer_base:__tostring() end
-function buffer_base:__eq() end
+---@param other llae.buffer_base|string
+---@return boolean
+function buffer_base:__eq(other) end
+---@return integer
 function buffer_base:get_len() end
-function buffer_base:sub() end
-function buffer_base:find() end
-function buffer_base:byte() end
+---@param start integer
+---@param finish integer?
+---@return string
+function buffer_base:sub(start, finish) end
+---@param pattern string
+---@param init integer?
+---@return integer?
+function buffer_base:find(pattern, init) end
+---@param start integer?
+---@param finish integer?
+---@return ...integer
+function buffer_base:byte(start, finish) end
+---@return llae.buffer_base
 function buffer_base:reverse() end
-function buffer_base.hex_decode() end
----@param data any
+---@param data string
+---@return llae.buffer?
+---@return string?
+function buffer_base.hex_decode(data) end
+---@param data string|llae.buffer_base
+---@return llae.buffer
 function buffer_base.hex_encode(data) end
-function buffer_base.base64_decode() end
-function buffer_base.base64_encode() end
+---@param data string|llae.buffer_base
+---@return llae.buffer?
+---@return string?
+function buffer_base.base64_decode(data) end
+---@param data string|llae.buffer_base
+---@return llae.buffer
+function buffer_base.base64_encode(data) end
 
 ---@class llae.buffer : llae.buffer_base
 local buffer = {}
 
 ---@return integer
 function buffer:__len() end
-
-function buffer:__concat() end
-
-function buffer:__eq() end
-
+---@param other llae.buffer|string
+---@return string
+function buffer:__concat(other) end
+---@param other llae.buffer|string
+---@return boolean
+function buffer:__eq(other) end
+---@param size integer?
 ---@return llae.buffer
-function buffer.new() end
-
+function buffer.new(size) end
+---@param size integer
 ---@return llae.buffer
-function buffer.alloc() end
-
+function buffer.alloc(size) end
 ---@return integer
 function buffer:get_allocated() end
 

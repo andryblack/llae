@@ -1,7 +1,11 @@
 local json = require 'json'
+---The llae.json module provides JSON encoding and decoding functionality with additional features for sorted encoding.
+---It extends the core json C module with Lua-specific enhancements.
+---@class llae.json : json
 local _M = setmetatable({},{__index=json})
 
 
+---@type fun(gen:json.gen,data:any)
 local encode_impl;
 
 encode_impl = function (gen,data)
@@ -9,14 +13,15 @@ encode_impl = function (gen,data)
 	if t == 'table' then
 		if data[1] or json.is_array(data) then
 			gen:array_open()
-			for i,v in ipairs(data) do
+			for _,v in ipairs(data--[[@as any[] ]]) do
 				encode_impl(gen,v)
 			end
 			gen:array_close()
 		else
 			gen:map_open()
+			---@type string[]
 			local keys = {}
-			for key,_ in pairs(data) do
+			for key,_ in pairs(data--[[@as table<any,any>]]) do
 				table.insert(keys,tostring(key))
 			end
 			table.sort(keys)
@@ -41,6 +46,11 @@ encode_impl = function (gen,data)
 	end
 end
 
+--- Encodes a Lua value into a JSON string with sorted object keys.
+--- Object keys are sorted alphabetically for consistent output.
+---@param data any The Lua value to encode (table, string, number, boolean, or nil)
+---@param formatted boolean? Whether to format the output with indentation (default: false)
+---@return string The JSON string with sorted keys
 function _M.encode_sorted(data,formatted)
 	local gen = json.gen.new(formatted)
 	encode_impl(gen,data)

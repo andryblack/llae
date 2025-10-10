@@ -11,6 +11,7 @@ local log = require 'llae.log'
 ---@field data string?
 ---@field headers table<string,string|string[]>?
 
+---HTTP server request object containing parsed request data and methods.
 ---@class net.http.server_request : net.http.headers
 ---@field baseclass net.http.headers
 ---@field new fun(net.http.server_request.data) : net.http.server_request

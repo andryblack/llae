@@ -5,6 +5,10 @@ local uv = require 'llae.uv'
 local log = require 'llae.log'
 local async = require 'llae.async'
 
+---The redis module provides an asynchronous Redis client implementation using coroutines.
+---It supports all standard Redis commands, pipelining, and pub/sub functionality.
+---@class db.redis
+---@field new fun(): db.redis
 local redis = class(nil,'db.redis')
 
 redis.resp = require 'db.redis.resp'
@@ -18,6 +22,11 @@ end
 
 --print('122')
 
+--- Connects to Redis server using TCP or Unix socket.
+---@param addr string|number Redis server address (IP address for TCP, or Unix socket path)
+---@param port number? TCP port number (if not provided, assumes Unix socket)
+---@return boolean? True on success
+---@return string? Error message if connection fails
 function redis:connect( addr , port )
 	if self._conn then
 		return false, 'already'
@@ -33,6 +42,7 @@ function redis:connect( addr , port )
 	end
 end
 
+--- Closes the Redis connection.
 function redis:close(  )
 	self._lock:lock()
 	if self._conn then
@@ -115,6 +125,9 @@ local function read_reply( self )
 end
 
 
+--- Executes a Redis command and throws an error if it fails.
+---@param ... any Redis command name and arguments
+---@return any Command result
 function redis:cmd(  ... )
 	if not self._conn then
 		error('closed')
@@ -135,6 +148,10 @@ function redis:cmd(  ... )
 	return res
 end
 
+--- Executes a Redis command and returns error instead of throwing.
+---@param ... any Redis command name and arguments
+---@return any? Command result or nil on error
+---@return string? Error message if command failed
 function redis:try_cmd(  ... )
 	if not self._conn then
 		return nil,'closed'
@@ -152,6 +169,10 @@ function redis:try_cmd(  ... )
 	return res,err
 end
 
+--- Executes multiple commands in a pipeline.
+---@param encoded_commands string[] Array of encoded Redis commands
+---@return any[]? Array of command results on success
+---@return string? Error message if pipeline failed
 function redis:pipelining( encoded_commands )
 	self._lock:lock()
 	--print('send: ',req)
@@ -168,6 +189,9 @@ function redis:pipelining( encoded_commands )
 	return result
 end
 
+--- Encodes Redis command arguments into RESP format.
+---@param ... any Command arguments
+---@return string Encoded command in RESP format
 function redis.encode( ... )
 	return redis.resp.gen_req(...)
 end
@@ -269,6 +293,10 @@ function redis:try_start_subscribe()
 	llae.resume(self._sub_thread,self)
 end
 
+--- Subscribes to one or more Redis channels.
+---@param ... string|function Channel names and handler function (handler should be the last argument)
+---@return boolean? True on success
+---@return string? Error message if subscription fails
 function redis:subscribe( ... )
 	local args = {...}
 	local handler = table.remove(args,#args)

@@ -6,12 +6,14 @@ local path = require 'llae.path'
 local router = require 'web.router'
 local url = require 'net.url'
 
+---Extended HTTP server request with parsed query parameters and path components.
 ---@class web.server_request : net.http.server_request
----@field query table<string,string>
----@field fragment string?
----@field path string
+---@field query table<string,string> Parsed query parameters
+---@field fragment string? URL fragment
+---@field path string Request path
 
-
+---Web application framework providing middleware-based architecture.
+---Inspired by Express.js with similar middleware and routing capabilities.
 ---@class web.application : web.router
 ---@field new fun():web.application
 ---@field baseclass web.router
@@ -26,26 +28,30 @@ function web:_init( ... )
 	self._handlers = {}
 end
 
+--- Sets the filesystem root for static file serving.
+---@param root string The root directory path
 function web:set_fs_root(root)
 	self._fs_root = path.getabsolute(root)
 end
 
----@return string?
+--- Gets the filesystem root directory.
+---@return string? The filesystem root directory
 function web:get_fs_root()
 	return self._fs_root
 end
 
----get fs path
----@param fn string
----@return string
+--- Gets the full filesystem path for a file.
+---@param fn string The file path
+---@return string The full filesystem path
 function web:get_fs_path(fn)
 	return (self._fs_root and not path.isabsolute(fn)) and path.join(self._fs_root,fn) or fn
 end
 
 
 
----@param req_base net.http.server_request
----@param res net.http.server_response
+--- Handles incoming HTTP requests through middleware and routing.
+---@param req_base net.http.server_request The incoming request
+---@param res net.http.server_response The response object
 function web:handle_request( req_base, res )
 	--log.info('handle',req:get_method(),req:get_path())
 	
@@ -88,17 +94,24 @@ function web:handle_request( req_base, res )
 	end
 end
 
+--- Registers a middleware handler function.
+---@param f function Middleware function receiving (req, res) arguments
 function web:register_handler( f )
 	table.insert(self._handlers, f)
 end
 
----@param middl web.middle
+--- Adds middleware to the application.
+---@param middl web.middle The middleware to add
+---@return web.middle The middleware that was added
 function web:use( middl )
 	middl:use(self)
 	return middl
 end
 
----@param options {host:string?,port:integer?,backlog:integer?}?
+--- Starts the HTTP server listening for connections.
+---@param options {host:string?,port:integer?,backlog:integer?}? Server options
+---@return boolean? True if successful
+---@return string? Error message if failed
 function web:listen( options )
 	local port = options and options.port or 8080
 	local host = options and options.host or '127.0.0.1'
@@ -106,10 +119,15 @@ function web:listen( options )
 	assert(self._server:listen(port,host,options and options.backlog))
 end
 
-function web:stop()
+--- Stops the HTTP server.
+function web:stop(  )
 	self._server:stop()
 end
 
+--- Creates a static file middleware.
+---@param root string Root directory for static files
+---@param options table? Static file options
+---@return web.static Static file middleware
 function web.static( root, options )
 	local static = require 'web.static'
 	return static.new(root,options)
