@@ -97,3 +97,9 @@ build_lib = {
 		}
 ]]
 }
+
+project_main = [[
+	filter "system:windows"
+		links{ 'bcrypt' }
+	filter {}
+]]
