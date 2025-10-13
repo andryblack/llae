@@ -7,6 +7,7 @@ module 'xz'
 module 'zstd'
 
 if cmdargs and (cmdargs.development or cmdargs.inplace) then
+	module 'lz4'
 	module 'luaunit'
 	module 'premake-ecc'
 end

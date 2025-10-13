@@ -17,7 +17,7 @@ namespace archive{
             using status_t = int;
             struct stream {
                 LZ4F_dctx* ctx;
-                char* next_in;
+                const char* next_in;
                 char* next_out;
                 size_t avail_in;
                 size_t avail_out;
@@ -35,8 +35,8 @@ namespace archive{
                 z.next_out = static_cast<char*>(base);
                 z.avail_out = len;
             }
-            static void fill_in(stream&  z,void* base,size_t len) {
-                z.next_in = reinterpret_cast<char*>(base);
+            static void fill_in(stream&  z,const void* base,size_t len) {
+                z.next_in = reinterpret_cast<const char*>(base);
                 z.avail_in = len;
             }
             static bool has_in(stream& z) {
