@@ -69,6 +69,9 @@ function _M.lib( root )
 end
 
 function _M.link(  )
+	filter "system:windows"
+		links{ 'bcrypt' }
+	filter {}
 	links{ 'llae-'.._M.name }
 end
 
