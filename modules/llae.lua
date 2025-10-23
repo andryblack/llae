@@ -65,9 +65,15 @@ function bootstrap( config )
 		env = env,
 		cwd = cwd,
 	})
+	local parallel = ''
+	local arg = project:get_cmdargs()['j']
+	if arg then
+		parallel = arg
+	end
+	local parallel_opt = '-j' .. parallel
 	assert(exec{
 		bin = 'make',
-		args = {'-C','build','config=release','verbose=1','-j'},
+		args = {'-C','build','config=release','verbose=1',parallel_opt},
 		name = 'bootstrap2_make',
 		env = env,
 		cwd = cwd,
