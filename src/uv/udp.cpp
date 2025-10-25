@@ -130,8 +130,8 @@ namespace uv {
     };
 
 
-    udp::udp(uv::loop& loop) {
-        int r = uv_udp_init(loop.native(),&m_udp);
+    udp::udp(uv::loop& loop,int af) {
+        int r = uv_udp_init_ex(loop.native(),&m_udp,af);
         UV_DIAG_CHECK(r);
         attach();
     }
@@ -480,7 +480,8 @@ namespace uv {
     }
 
     lua::multiret udp::lnew(lua::state& l) {
-        common::intrusive_ptr<udp> server{new udp(llae::app::get(l).loop())};
+        auto af = l.optinteger(1,AF_UNSPEC);
+        common::intrusive_ptr<udp> server{new udp(llae::app::get(l).loop(),af)};
         lua::push(l,std::move(server));
         return {1};
     }

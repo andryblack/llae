@@ -68,7 +68,7 @@ namespace uv {
         virtual void on_closed() override;
         bool on_recv(ssize_t nread, llae::buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags);
     public:
-        explicit udp(uv::loop& loop);
+        explicit udp(uv::loop& loop,int af);
         
         static lua::multiret lnew(lua::state& l);
         static void lbind(lua::state& l);
