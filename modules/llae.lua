@@ -29,6 +29,16 @@ function install(tosystem)
 	end
 end
 
+local function get_parallel_opt()
+	local parallel = ''
+	local arg = project:get_cmdargs()['j']
+	if arg then
+		parallel = arg
+	end
+	local parallel_opt = '-j' .. parallel
+	return parallel_opt
+end	
+
 function bootstrap( config )
 	
 	local all_files = {}
@@ -65,15 +75,10 @@ function bootstrap( config )
 		env = env,
 		cwd = cwd,
 	})
-	local parallel = ''
-	local arg = project:get_cmdargs()['j']
-	if arg then
-		parallel = arg
-	end
-	local parallel_opt = '-j' .. parallel
+	
 	assert(exec{
 		bin = 'make',
-		args = {'-C','build','config=release','verbose=1',parallel_opt},
+		args = {'-C','build','config=release','verbose=1',get_parallel_opt()},
 		name = 'bootstrap2_make',
 		env = env,
 		cwd = cwd,
@@ -122,7 +127,7 @@ function upgrade( data )
 
 	assert(exec{
 		bin = 'make',
-		args = {'-C','build','config=release','verbose=1','-j'},
+		args = {'-C','build','config=release','verbose=1',get_parallel_opt()},
 		name = 'upgrade_make',
 		env = env,
 		cwd = cwd,
