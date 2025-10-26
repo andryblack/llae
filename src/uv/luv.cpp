@@ -203,6 +203,12 @@ static int lua_uv_get_constrained_memory(lua_State* L) {
 	return 1;
 }
 
+static int lua_uv_get_available_memory(lua_State* L) {
+	lua::state l(L);
+	l.pushinteger(uv_get_available_memory());
+	return 1;
+}
+
 static int lua_uv_hrtime(lua_State* L) {
 	lua::state l(L);
 	l.pushinteger(uv_hrtime());
@@ -330,6 +336,55 @@ static int lua_uv_print_handles(lua_State* L) {
     return 0;
 }
 
+static int lua_uv_cpu_info(lua_State* L) {
+	lua::state l(L);
+	uv_cpu_info_t *cpu_infos = nullptr;
+	int count = 0;
+	auto r = uv_cpu_info(&cpu_infos,&count);
+	if (r < 0) {
+		l.pushnil();
+		uv::push_error(l,r);
+		return 2;
+	}
+	l.createtable(count,0);
+	for (int i=0;i<count;++i) {
+		l.createtable(0,4);
+		l.pushstring(cpu_infos[i].model);
+		l.setfield(-2,"model");
+		l.pushinteger(cpu_infos[i].speed);
+		l.setfield(-2,"speed");
+		l.createtable(0,4);
+		{
+			l.pushinteger(cpu_infos[i].cpu_times.user);
+			l.setfield(-2,"user");
+			l.pushinteger(cpu_infos[i].cpu_times.nice);
+			l.setfield(-2,"nice");
+			l.pushinteger(cpu_infos[i].cpu_times.sys);
+			l.setfield(-2,"sys");
+			l.pushinteger(cpu_infos[i].cpu_times.idle);
+			l.setfield(-2,"idle");
+		}
+		l.setfield(-2,"cpu_times");
+	}
+	uv_free_cpu_info(cpu_infos,count);
+	return 1;
+}
+
+int lua_uv_clock_gettime(lua_State* L) {
+	lua::state l(L);
+	auto clock_id = static_cast<uv_clock_id>(l.checkinteger(1));
+	uv_timespec64_t time;
+	auto r = uv_clock_gettime(clock_id,&time);
+	if (r < 0) {
+		l.pushnil();
+		uv::push_error(l,r);
+		return 2;
+	}
+	l.pushinteger(time.tv_sec);
+	l.pushinteger(time.tv_nsec);
+	return 2;
+}
+
 int luaopen_uv(lua_State* L) {
 	lua::state l(L);
 
@@ -391,16 +446,24 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"get_free_memory",&lua_uv_get_free_memory);
 	lua::bind::function(l,"get_total_memory",&lua_uv_get_total_memory);
 	lua::bind::function(l,"get_constrained_memory",&lua_uv_get_constrained_memory);
+	lua::bind::function(l,"get_get_available_memory",&lua_uv_get_available_memory);
 	lua::bind::function(l,"hrtime",&lua_uv_hrtime);
 	lua::bind::function(l,"sleep",&lua_uv_sleep);
 	lua::bind::function(l,"random",&lua_uv_random);
     lua::bind::function(l,"print_handles", &lua_uv_print_handles);
+	lua::bind::function(l,"available_parallelism", &uv_available_parallelism);
+	lua::bind::function(l,"cpu_info", &lua_uv_cpu_info);
 
 	l.pushinteger(AF_INET);
     l.setfield(-2,"AF_INET");
     l.pushinteger(AF_INET6);
     l.setfield(-2,"AF_INET6");
 
+	l.pushinteger(UV_CLOCK_MONOTONIC);
+    l.setfield(-2,"CLOCK_MONOTONIC");
+	l.pushinteger(UV_CLOCK_REALTIME);
+    l.setfield(-2,"CLOCK_REALTIME");
+	
 	uv::fs::lbind(l);
 	uv::os::lbind(l);
 	return 1;
