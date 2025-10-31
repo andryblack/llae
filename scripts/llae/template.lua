@@ -6,6 +6,8 @@ local path = require 'llae.path'
 ---@field name string?
 ---@field debug boolean?
 ---@field env table<string,any>?
+---@field open_tag string?
+---@field close_tag string?
 
 ---@class llae.template
 ---@field new fun(llae.template.options) : llae.template
@@ -34,6 +36,8 @@ function template:_init( options )
 		escape = escape
 	}
 	self._debug = options and options.debug
+	self._open_tag = options and options.open_tag or '<%'
+	self._close_tag = options and options.close_tag or '%>'
 	if options and options.env then
 		for k,v in pairs(options.env) do
 			self._env[k]=v
@@ -41,12 +45,23 @@ function template:_init( options )
 	end
 end
 
+---@param filename string
+---@param name string?
+---@return fun(context: table<string,any>?): string
 function template:load( filename , name)
 	self._name = name or path.getrelative(filename)
 	local data = fs.load_file(filename)
 	return self:parse(data)
 end
 
+---@param code string
+---@return string
+function template:process_code( code )
+	return code
+end
+
+---@param data string
+---@return fun(context: table<string,any>?): string
 function template:parse( data )
 	assert(type(data)=='string')
 	local st = 1
@@ -57,7 +72,7 @@ function template:parse( data )
 		'local _s = function(ch) _p(tostring(ch)) end;',
 		'local _e = function(ch) _p(_escape(ch)) end;',
 	}
-	local widx = #chunks + 1
+	
 	local ssub = string.sub
 	local function plain(str) 
 		if str == '' then
@@ -65,50 +80,48 @@ function template:parse( data )
 		end
 
 		if ssub(str,1,1) == '\n' then
-			chunks[widx] = '_p[===[\n'
+			table.insert(chunks,'_p[===[\n')
 		else
-			chunks[widx] = '_p[===['
+			table.insert(chunks,'_p[===[')
 		end
-		chunks[widx+1] = str
-		chunks[widx+2] = ']===];'
-		widx = widx + 3
+		table.insert(chunks,str)
+		table.insert(chunks,']===];')
 	end
 	local sfind = string.find
-	local s = sfind(data,'<%',1, true)
+	local open_tag = self._open_tag
+	local close_tag = self._close_tag
+	local open_tag_len = #open_tag
+	local close_tag_len = #close_tag
+	local s = sfind(data,open_tag,1, true)
 	
 	while s do
-		local m = ssub(data,s+2,s+2)
-		local e = sfind(data,'%>',s+2,true)
+		local tag_end = s + open_tag_len
+		local m = ssub(data,tag_end,tag_end)
+		local e = sfind(data,close_tag,tag_end,true)
 		if e then
 			plain(ssub(data,st,s-1))
 				
 			if m == '=' then
-				local val = ssub(data,s+3,e-1)
-			
-				chunks[widx] = '_e(' .. val .. ');'
-				widx = widx + 1
+				local val = ssub(data,tag_end+1,e-1)
+				table.insert(chunks,'_e(' .. val .. ');')
 			elseif m == '-' then
-				local val = ssub(data,s+3,e-1)
-			
-				chunks[widx] = '_s(' .. val .. ');'
-				widx = widx + 1
+				local val = ssub(data,tag_end+1,e-1)
+				table.insert(chunks,'_s(' .. val .. ');')
 			else
-				local val = ssub(data,s+2,e-1)
-				chunks[widx] = val .. ';'
-				widx = widx + 1
+				local val = ssub(data,tag_end,e-1)
+				table.insert(chunks,self:process_code(val) .. ';')
 			end
 
-			st = e+2
+			st = e + close_tag_len
 		else
-			st = s+2
+			st = tag_end
 		end
-		s = sfind(data,'<%',st,true)
+		s = sfind(data,open_tag,st,true)
 	end
-	if st ~= #data then
+	if st <= #data then
 		plain(ssub(data,st,#data))
 	end
-	chunks[widx] = 'return table.concat(_res)'
-	--print(table.concat(chunks))
+	table.insert(chunks,'return table.concat(_res)')
 	return self:compile(chunks)
 end
 
@@ -125,6 +138,8 @@ local function build_lines(str)
 	return table.concat(d,'\n')
 end
 
+---@param chunks string[]
+---@return fun(context: table<string,any>?): string
 function template:compile( chunks )
 	--self._chunks = chunks
 	local env = {
@@ -152,6 +167,8 @@ function template:compile( chunks )
 	return self._compiled
 end
 
+---@param context table<string,any>?
+---@return string
 function template:render( context )
 	return self._compiled(context)
 end
@@ -160,22 +177,36 @@ local _M = {
 	escape = escape
 }
 
+---@param str string
+---@param options llae.template.options?
+---@return fun(context: table<string,any>?): string
 function _M.compile( str, options )
 	local t = template.new(options)
 	return t:parse(str)
 end
 
+---@param filename string
+---@param options llae.template.options?
+---@return fun(context: table<string,any>?): string
 function _M.load( filename, options )
 	local t = template.new(options)
 	return t:load(filename,options and options.name)
 end
 
+---@param str string
+---@param data table<string,any>?
+---@param options llae.template.options?
+---@return string
 function _M.render(str, data, options)
 	local t = template.new(options)
 	t:parse(str)
 	return t:render(data)
 end
 
+---@param filename string
+---@param data table<string,any>?
+---@param options llae.template.options?
+---@return string
 function _M.render_file(filename, data, options)
 	local t = template.new(options)
 	t:load(filename,options and options.name)
