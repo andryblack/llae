@@ -174,7 +174,8 @@ function template:render( context )
 end
 
 local _M = {
-	escape = escape
+	escape = escape,
+	template = template
 }
 
 ---@param str string
