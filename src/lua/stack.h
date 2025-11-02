@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <string>
 #include <string_view>
+#include <optional>
 
 namespace lua {
 
@@ -219,6 +220,31 @@ namespace lua {
     	static T* get(state& s,int idx) {
     		auto res = s.checkudata(idx,MT::name);
     		return static_cast<T*>(res);
+        }
+    };
+
+    template <class T>
+    struct stack<std::optional<T>> {
+    	using up = stack<T>;
+    	static std::optional<T> get(state& s,int idx) {
+    		if (s.isnoneornil(idx)) {
+    			return {};
+    		}
+    		return up::get(s,idx);
+    	}
+    	static void push(state& s,const std::optional<T>& v) {
+            if (!v) {
+            	s.pushnil();
+            } else {
+            	up::push(s,*v);
+            }
+        }
+        static void push(state& s, std::optional<T>&& v) {
+            if (!v) {
+            	s.pushnil();
+            } else {
+            	up::push(s,std::move(*v));
+            }
         }
     };
 	
