@@ -27,9 +27,9 @@ namespace uv {
 	class lua_cont_work : public work {
 	private:
 		lua::ref m_cont;
+	protected:
 		void release();
 		virtual void on_after_work(int satus) override;
-	protected:
 		virtual int resume_args(lua::state& l,int status) = 0;
 	public:
 		lua_cont_work() {}
