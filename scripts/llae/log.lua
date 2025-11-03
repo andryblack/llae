@@ -37,6 +37,7 @@ _M.italic = _italic
 --- Reset all styles and colors.
 _M.reset = _reset
 
+
 --- Sets the verbosity level for debug messages.
 ---@param v boolean If true, debug messages will be shown
 function _M.set_verbose( v )
@@ -126,5 +127,80 @@ end
 
 --- ANSI escape sequence to move cursor up one line and clear it. Useful for updating the current line.
 _M.restart_line = _prev_line.._clear_line
+
+
+function _M.decolorize()
+	_red = ''
+	_white = ''
+	_green = ''
+	_blue = ''
+	_yellow = ''
+	_reset = ''
+	_bold = ''
+	_italic = ''
+	_M.bold = ''
+	_M.italic = ''
+	_M.reset = ''
+	prefix_debuf = ''
+	prefix_info = ''
+	prefix_error = ''
+	prefix_warning = ''
+	for _,v in ipairs(colors) do
+		_M.fg[v] = ''
+		_M.bg[v] = ''
+		_M.fg['bright_'..v] = ''
+		_M.bg['bright_'..v] = ''
+	end
+end
+
+_M._log_file_handler = nil
+
+function _M.redirect(filename,with_time)
+	_M.decolorize()
+	local llae = require 'llae'
+	if _M._log_file_handler then
+		llae.log.remove_handler(_M._log_file_handler)
+	else
+		llae.log.remove_stdout_handler()
+	end
+	local fs = require 'llae.fs'
+	local file = fs.open(filename,fs.O_WRONLY|fs.O_CREAT|fs.O_APPEND)
+	if not file then
+		error('failed to open file: ' .. filename)
+	end
+
+	function _M.debug( ... )
+		local s = {}
+		for _,v in ipairs{...} do
+			table.insert(s,tostring(v))
+		end
+		llae.log.write(llae.log.level.debug,table.concat(s,' '))
+	end
+
+	function _M.info( ... )
+		local s = {}
+		for _,v in ipairs{...} do
+			table.insert(s,tostring(v))
+		end
+		llae.log.write(llae.log.level.info,table.concat(s,' '))
+	end
+	
+	function _M.warning( ... )
+		local s = {}
+		for _,v in ipairs{...} do
+			table.insert(s,tostring(v))
+		end
+		llae.log.write(llae.log.level.warning,table.concat(s,' '))
+	end
+	function _M.error( ... )
+		local s = {}
+		for _,v in ipairs{...} do
+			table.insert(s,tostring(v))
+		end
+		llae.log.write(llae.log.level.error,table.concat(s,' '))
+	end
+	_M._log_file_handler = llae.log.add_file_handler(file,with_time)
+end
+
 
 return _M

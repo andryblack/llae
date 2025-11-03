@@ -1,6 +1,5 @@
 #include "loop.h"
 
-META_OBJECT_INFO(uv::loop,meta::object)
 
 namespace uv {
 
@@ -24,5 +23,9 @@ namespace uv {
 
 	void loop::stop() {
 		uv_stop(m_loop);
+	}
+
+	loop loop::default_loop() {
+		return loop(uv_default_loop());
 	}
 }

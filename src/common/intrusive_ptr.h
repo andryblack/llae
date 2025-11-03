@@ -2,6 +2,7 @@
 #define __LAE_COMMON_INTRUSIVE_PTR_H_INCLUDED__
 
 #include <cassert>
+#include <utility>
 
 namespace common {
 	template <class T>
@@ -103,6 +104,11 @@ namespace common {
             return m_ptr >= o.m_ptr;
         }
     };
+
+    template <class T,typename... Args>
+    static inline intrusive_ptr<T> make_intrusive(Args&&... args) {
+        return intrusive_ptr<T>(new T(std::forward<Args...>(args)...));
+    }
 }
 
 #endif /*__COMMON_INTRUSIVE_PTR_H_INCLUDED__*/

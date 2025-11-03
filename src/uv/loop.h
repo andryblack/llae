@@ -1,16 +1,17 @@
 #ifndef __LLAE_UV_LOOP_H_INCLUDED__
 #define __LLAE_UV_LOOP_H_INCLUDED__
 
-#include "meta/object.h"
 #include "decl.h"
-#include "lua/state.h"
 
 namespace uv {
 
-	class loop : public meta::object {
-		META_OBJECT
+	class loop {
 	private:
 		uv_loop_t* m_loop;
+		loop(const loop&) = delete;
+		loop& operator=(const loop&) = delete;
+		loop(loop&&) = delete;
+		loop& operator=(loop&&) = delete;
 	public:
 		explicit loop(uv_loop_t* l);
 		~loop();
@@ -19,6 +20,7 @@ namespace uv {
 		void stop();
 		bool is_alive() const;
 		uint64_t now() const;
+		static loop default_loop();
 	};
 
 }

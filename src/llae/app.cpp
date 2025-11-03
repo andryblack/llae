@@ -3,12 +3,14 @@
 #include "meta/object.h"
 #include "lua/metatable.h"
 #include "uv/handle.h"
+#include "logger.h"
 #include <psa/crypto.h>
-
-#include <iostream>
 
 namespace llae {
 
+    static void show_lua_error(lua::state& l,lua::status e) {
+        log::write(log::level::error,lua::get_error_message(l,e));
+    }
 
     class app::lua_at_exit_handler : public at_exit_handler {
         lua::ref m_ref;
@@ -24,19 +26,19 @@ namespace llae {
             l.pushinteger(arg);
             auto res = l.pcall(1,0,0);
             if (res != lua::status::ok) {
-                app::show_lua_error(l,res);
+                show_lua_error(l,res);
             }
         }
     };
 
     static int at_panic(lua_State* L) {
-        std::cout << "PANIC: ";
+        log::write(log::level::error,"PANIC: ");
         lua::state l(L);
         lua::value err(l,-1);
         if (err.is_string()) {
-            std::cout << err.tostring() << std::endl;
+            log::write(log::level::error,err.tostring());
         } else {
-            std::cout << "unknown" << std::endl;
+            log::write(log::level::error,"unknown");
         }
         app::get(L).stop(1);
         return 0;
@@ -133,44 +135,18 @@ namespace llae {
         loop().stop();
     }
 
-    void app::show_lua_error(lua::state& l,lua::status e) {
-        switch(e) {
-            case lua::status::yield:
-                std::cout << "YIELD:\t";
-                break;
-            case lua::status::errun:
-                std::cout << "ERRRUN:\t";
-                break;
-            case lua::status::errsyntax:
-                std::cout << "ERRSYNTAX:\t";
-                break;
-            case lua::status::errmem:
-                std::cout << "ERRMEM:\t";
-                break;
-            case lua::status::errgcmm:
-                std::cout << "ERRGCMM:\t";
-                break;
-            case lua::status::errerr:
-                std::cout << "ERRERR:\t";
-                break;
-            default:
-                std::cout << "UNKNOWN:\t";
-                break;
-        };
-        lua::value err(l,-1);
-        if (err.is_string()) {
-            std::cout << err.tostring() << std::endl;
-        } else {
-            std::cout << "unknown" << std::endl;
-        }
-    }
     void app::show_error(lua::state& l,lua::status e, bool pop) {
+        auto& self(get(l));
         show_lua_error(l,e);
-        lua::state& ms(get(l).lua());
+        lua::state& ms(self.lua());
         luaL_traceback(ms.native(),l.native(),NULL,1);
-        std::cout << lua::value(ms,-1).tostring() << std::endl;
+        log::write(log::level::error,lua::value(ms,-1).tostring());
         ms.pop(1);
-        get(l).stop(1);
+        if (self.m_error_handler) {
+            self.m_error_handler->handle_error(self,l,e);
+        } else {
+            self.stop(1);
+        }
     }
 
     void app::lua_resume(lua::state& l) {
@@ -183,43 +159,20 @@ namespace llae {
         }
         auto s = t.resume(l,n-1);
         if (s!=lua::status::yield && s!=lua::status::ok) {
+            auto& self(get(l));
             show_lua_error(t,s);
             luaL_traceback(l.native(),t.native(),NULL,1);
-            std::cout << lua::value(l,-1).tostring() << std::endl;
-            get(l).stop(1);
+            log::write(log::level::error,lua::value(l,-1).tostring());
+            l.pop(1);
+            if (self.m_error_handler) {
+                self.m_error_handler->handle_error(self,t,s);
+            } else {
+                self.stop(1);
+            }
         }
     }
     
-    static void printfuncname(lua_State* L,lua_Debug* ar) {
-        if (*ar->namewhat != '\0')  /* is there a name from code? */
-            std::cout << ar->namewhat << " '" << ar->name << "'";
-        else if (*ar->what == 'm')  /* main? */
-            std::cout << "main chunk";
-        else if (*ar->what != 'C')  /* for Lua functions, use <file:line> */
-            std::cout << "function <" << ar->short_src << ":" << ar->linedefined << ">";
-        else  /* nothing left... */
-            std::cout << "?";
-    }
 
-    void app::print_backtrace(lua_State* L) {
-        luaL_checkstack(L, 10, NULL);
-        std::cout << "\nstack traceback:";
-        lua_State* L1 = L;
-        lua_Debug ar;
-        int level = 1;
-        //int n1 = 10;
-        while (lua_getstack(L1, level++, &ar)) {
-            lua_getinfo(L1, "Slnt", &ar);
-            std::cout << "\n\t" << ar.short_src << ":";
-            if (ar.currentline > 0)
-                std::cout << ar.currentline << ":";
-            std::cout << " in ";
-            printfuncname(L, &ar);
-            if (ar.istailcall)
-                std::cout << "\n\t(...tail call...)";
-        }
-        std::cout << std::endl;
-    }
    
 }
 

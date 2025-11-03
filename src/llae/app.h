@@ -11,6 +11,13 @@
 
 namespace llae {
 
+	class app;
+	class error_handler : public common::ref_counter_base {
+	public:
+		virtual void handle_error(app& a,lua::state& l,lua::status e) = 0;
+	};
+	using error_handler_ptr = common::intrusive_ptr<error_handler>;
+	
 	class app {
 		lua::main_state m_lua;
 		uv::loop 	m_loop;
@@ -22,6 +29,7 @@ namespace llae {
 		};
 		class lua_at_exit_handler;
 		std::vector<common::intrusive_ptr<at_exit_handler>> m_at_exit;
+		common::intrusive_ptr<error_handler> m_error_handler;
 	protected:
 		void end_run(int res);
 		void close();
@@ -38,7 +46,7 @@ namespace llae {
 
 		int run();
 		void stop(int code);
-		static void show_lua_error(lua::state& l,lua::status e);
+
 		static void show_error(lua::state& l,lua::status e,bool pop=false);
 		static void lua_resume(lua::state& l);
 		
@@ -64,7 +72,6 @@ namespace llae {
 			l.pop(1);// thread
 		}
         
-        static void print_backtrace(lua_State* L);
 	};
 
 }

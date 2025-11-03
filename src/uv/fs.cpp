@@ -455,10 +455,33 @@ namespace uv {
 		meta::object::destroy();
 	}
 
-	lua::multiret file::close(lua::state& l) {
+	class file_close_req : public fs_none {
+	private:
+	public:
+		file_close_req() {}
+	};
+	fs_req_ptr file::close(loop& l) {
+		auto req = common::make_intrusive<file_close_req>();
+		auto f = m_file;
+		m_file = 0;
+		int r = uv_fs_close(l.native(),
+			req->get(),m_file,&fs_req::fs_cb);
+		if (r < 0) {
+			m_file = f;
+			return {};
+		}
+        req->add_ref();
+		return req;
+	}
+	lua::multiret file::fclose(lua::state& l) {
 		if (!l.isyieldable()) {
 			l.pushnil();
 			l.pushstring("close is async");
+			return {2};
+		}
+		if (!m_file) {
+			l.pushnil();
+			l.pushstring("file already closed");
 			return {2};
 		}
 		{
@@ -525,10 +548,38 @@ namespace uv {
         }
 	};
 
-	lua::multiret file::write(lua::state& l) {
+	class file_write_req : public fs_none {
+	private:
+        llae::buffer_base_ptr m_hold;
+	public:
+		file_write_req(llae::buffer_base_ptr&& data) : m_hold(std::move(data)) {}
+        uv_buf_t get_buffer() {
+            return ::uv::get_buffer(m_hold);
+        }
+	};
+	fs_req_ptr file::write(loop& l,const llae::buffer_view& data) {
+        auto store = llae::buffer::hold(data);
+		auto req = common::make_intrusive<file_write_req>(std::move(store));
+		auto buffer = req->get_buffer();
+		auto res = uv_fs_write(l.native(),
+			req->get(),m_file,&buffer,1,get_offset(),&fs_req::fs_cb);
+		if (res < 0) {
+			return {};
+		}
+        req->add_ref();
+		m_offset += data.get_len();
+		return req;
+	}
+
+	lua::multiret file::lwrite(lua::state& l) {
 		if (!l.isyieldable()) {
 			l.pushnil();
 			l.pushstring("write is async");
+			return {2};
+		}
+		if (!m_file) {
+			l.pushnil();
+			l.pushstring("file already closed");
 			return {2};
 		}
 		{
@@ -601,6 +652,11 @@ namespace uv {
             l.pushstring("write is async");
             return {2};
         }
+        if (!m_file) {
+            l.pushnil();
+            l.pushstring("file already closed");
+            return {2};
+        }
         {
             llae::app& app(llae::app::get(l));
             lua::ref cont;
@@ -626,8 +682,8 @@ namespace uv {
 
 
 	void file::lbind(lua::state& l) {
-		lua::bind::function(l,"close",&file::close);
-		lua::bind::function(l,"write",&file::write);
+		lua::bind::function(l,"close",&file::fclose);
+		lua::bind::function(l,"write",&file::lwrite);
         lua::bind::function(l,"read",&file::read);
         lua::bind::function(l,"seek",&file::seek);
         lua::bind::function(l,"tell",&file::tell);

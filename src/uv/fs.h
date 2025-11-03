@@ -6,6 +6,11 @@
 #include "lua/state.h"
 #include "lua/ref.h"
 #include "common/intrusive_ptr.h"
+#include "meta/object.h"
+
+namespace llae {
+	class buffer_view;
+}
 
 namespace uv {
 
@@ -22,6 +27,7 @@ namespace uv {
 		uv_fs_t* get() { return &m_fs; }
 		static void fs_cb(uv_fs_t* req);
 	};
+	using fs_req_ptr = common::intrusive_ptr<fs_req>;
 
 	class file : public meta::object {
 		META_OBJECT
@@ -34,12 +40,14 @@ namespace uv {
 		explicit file(uv_file f,uv_loop_t* l);
 		uv_file get() const { return m_file; }
 		static void lbind(lua::state& l);
-		lua::multiret close(lua::state& l);
-		lua::multiret write(lua::state& l);
+		lua::multiret fclose(lua::state& l);
+		lua::multiret lwrite(lua::state& l);
         lua::multiret read(lua::state& l);
         void seek(size_t pos) { m_offset = pos; }
         int64_t get_offset() const { return m_offset;}
         size_t tell() const { return m_offset; }
+		fs_req_ptr write(loop& l,const llae::buffer_view& data);
+		fs_req_ptr close(loop& l);
 	};
 	typedef common::intrusive_ptr<file> file_ptr;
 

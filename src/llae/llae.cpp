@@ -1,6 +1,8 @@
 #include "app.h"
 #include "buffer.h"
 #include "lua/bind.h"
+#include "logger.h"
+#include "uv/fs.h"
 
 #if defined(__APPLE__)
 /* lets us know what version of Mac OS X we're compiling on */
@@ -76,6 +78,10 @@ namespace llae {
     }
 }
 
+static void log_handler_bind(lua::state& l) {
+    lua::bind::function(l,"close",llae::log::close);
+}
+
 int luaopen_llae(lua_State* L) {
 
    
@@ -84,6 +90,8 @@ int luaopen_llae(lua_State* L) {
 
     lua::bind::object<llae::buffer_base>::register_metatable(l,&llae::buffer_base::lbind);
 	lua::bind::object<llae::buffer>::register_metatable(l,&llae::buffer::lbind);
+
+    lua::bind::object<llae::log_handler>::register_metatable(l,&log_handler_bind);
     
     l.createtable();
     lua::bind::function(l, "stop", llae::lua_stop );
@@ -96,5 +104,19 @@ int luaopen_llae(lua_State* L) {
     lua::bind::object<llae::buffer>::get_metatable(l);
 	l.setfield(-2,"buffer");
 	
+    l.createtable();
+    l.createtable();
+    lua::bind::value(l,"debug",llae::log::level::debug);
+    lua::bind::value(l,"info",llae::log::level::info);
+    lua::bind::value(l,"warning",llae::log::level::warning);
+    lua::bind::value(l,"error",llae::log::level::error);
+    lua::bind::value(l,"fatal",llae::log::level::fatal);
+    l.setfield(-2,"level");
+    lua::bind::function(l,"write",llae::log::write);
+    lua::bind::function(l,"add_stdout_handler",llae::log::add_stdout_handler);
+    lua::bind::function(l,"remove_stdout_handler",llae::log::remove_stdout_handler);
+    lua::bind::function(l,"add_file_handler",llae::log::add_file_handler);
+    l.setfield(-2,"log");
+
     return 1;
 }

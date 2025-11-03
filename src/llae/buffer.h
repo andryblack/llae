@@ -81,6 +81,11 @@ namespace llae {
             std::memcpy(res->get_base(),data,size);
             return res;
         }
+        static buffer_ptr hold(buffer_view view) {
+            auto res = alloc(view.get_len());
+            std::memcpy(res->get_base(),view.get_base(),view.get_len());
+            return res;
+        }
         template <class Extend,typename...Args>
         static common::intrusive_ptr<Extend> alloc_obj(size_t size,Args...args) {
             void* mem = allocator_t::alloc(sizeof(Extend)+size);

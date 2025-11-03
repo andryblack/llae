@@ -2,7 +2,8 @@
 
 #include <cstring>
 #include "types.h"
-
+#include <vector>
+#include <string>
 
 
 namespace lua {
@@ -124,8 +125,13 @@ namespace lua {
         bool next(int idx) const { return lua_next(m_L,idx) != 0; }
 
         static int upvalueindex(int idx) { return lua_upvalueindex(idx); }
+
+		std::vector<std::string> get_backtrace() const;
 	};
 
+	std::string get_error_message(state& l,status e);
+	class main_state;
+	
 	class main_state : public state {
 	private:
 		main_state(const main_state&) = delete;

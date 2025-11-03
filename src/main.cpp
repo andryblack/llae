@@ -9,6 +9,7 @@
 #include "llae/app.h"
 #include "llae/diag.h"
 #include "llae/buffer.h"
+#include "llae/logger.h"
 
 #ifndef WIN32
 #include <signal.h>
@@ -41,6 +42,7 @@ int main(int argc,char** argv) {
 		setrlimit(RLIMIT_STACK,&lim);
 	}
 #endif
+	llae::log::add_stdout_handler();
 	auto loop = uv_default_loop();
 	int retcode = 0;
     {
@@ -77,8 +79,9 @@ int main(int argc,char** argv) {
         }
     }
 
-	LLAE_DIAG(std::cout << "meta objects:  " << meta::object::get_total_count() << std::endl;)
-	LLAE_DIAG(std::cout << "buffers alloc: " << llae::named_alloc<llae::buffer>::get_allocated() << std::endl;)
-
+	LOG_DEBUG("meta objects:  " << meta::object::get_total_count());
+	LOG_DEBUG("buffers alloc: " << llae::named_alloc<llae::buffer>::get_allocated());
+	llae::log::close();
+	
 	return retcode;
 }

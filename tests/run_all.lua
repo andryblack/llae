@@ -35,12 +35,13 @@ local lu = require 'luaunit'
 
 if args.verbose then
 	lu:setVerbosity(lu.VERBOSITY_VERBOSE)
+else
+	log.redirect('build/test.log.txt',true)
 end
 
 local async = require 'llae.async'
 local fs = require 'llae.fs'
 local path = require 'llae.path'
-local log = require 'llae.log'
 async.run(function()
 	for _,v in ipairs(fs.scanfiles_r('tests')) do
 		local filename = path.basename(v)

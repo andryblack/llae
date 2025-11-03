@@ -29,12 +29,14 @@ namespace uv {
 		auto base = const_cast<char*>(static_cast<const char*>(buf->get_base()));
 		return uv_buf_init(base,static_cast<unsigned int>(buf->get_len()));
 	}
+	static inline uv_buf_t get_buffer(const llae::buffer_view& buf) {
+		return uv_buf_init(const_cast<char*>(static_cast<const char*>(buf.get_base())),static_cast<unsigned int>(buf.get_len()));
+	}
     static inline std::vector<uv_buf_t> get_buffers(const std::vector<llae::buffer_view>& buffers) {
         std::vector<uv_buf_t> res;
         res.reserve(buffers.size());
         for (auto& b:buffers) {
-            auto base = const_cast<char*>(static_cast<const char*>(b.get_base()));
-            res.emplace_back(uv_buf_init(base,static_cast<unsigned int>(b.get_len())));
+			res.emplace_back(get_buffer(b));
         }
         return res;
     }
