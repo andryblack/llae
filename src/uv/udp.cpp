@@ -506,15 +506,10 @@ namespace uv {
         lua::bind::function(l,"getpeername",&udp::getpeername);
         lua::bind::function(l,"getsockname",&udp::getsockname);
 
-        l.pushinteger(UV_UDP_IPV6ONLY);
-        l.setfield(-2,"IPV6ONLY");
-        l.pushinteger(UV_UDP_REUSEADDR);
-        l.setfield(-2,"REUSEADDR");
-        l.pushinteger(UV_UDP_PARTIAL);
-        l.setfield(-2,"PARTIAL");
-        l.pushinteger(UV_LEAVE_GROUP);
-        l.setfield(-2,"LEAVE_GROUP");
-        l.pushinteger(UV_JOIN_GROUP);
-        l.setfield(-2,"JOIN_GROUP");
+        lua::bind::value(l, "IPV6ONLY", UV_UDP_IPV6ONLY);
+        lua::bind::value(l, "REUSEADDR", UV_UDP_REUSEADDR);
+        lua::bind::value(l, "PARTIAL", UV_UDP_PARTIAL);
+        lua::bind::value(l, "LEAVE_GROUP", UV_LEAVE_GROUP);
+        lua::bind::value(l, "JOIN_GROUP", UV_JOIN_GROUP);
     }
 }

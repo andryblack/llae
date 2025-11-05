@@ -111,7 +111,7 @@ namespace lua {
 	};
 	template <>
 	struct stack<std::string> {
-		static std::string get(state& s,int idx) { return s.tostring(idx); }
+		static std::string get(state& s,int idx) { return s.checkstring(idx); }
 		static void push(state& s,const std::string& v) { s.pushstring(v.c_str()); }
 	};
 	template <>
@@ -127,9 +127,9 @@ namespace lua {
 	template <class T>
 	struct stack<common::intrusive_ptr<T> > {
 		static common::intrusive_ptr<T> get(state& s,int idx) { 
-			auto hdr = object_holder_t::get(s,idx);
+			auto hdr = object_holder_t<T>::get(s,idx);
 			if (!hdr) return common::intrusive_ptr<T>{};
-			return hdr->get_intrusive<T>();
+			return hdr->template get_intrusive<T>();
 		}
 		static void push(state& s,common::intrusive_ptr<T>&& v) { 
 			if (!v) {
@@ -149,11 +149,11 @@ namespace lua {
     template <class T>
     struct stack<check<common::intrusive_ptr<T> > > {
         static common::intrusive_ptr<T> get(state& s,int idx) {
-        	auto hdr = object_holder_t::get(s,idx);
+        	auto hdr = object_holder_t<T>::get(s,idx);
             if (!hdr) {
                 s.argerror(idx,T::get_class_info()->name);
             }
-            return hdr->get_intrusive<T>();
+            return hdr->template get_intrusive<T>();
         }
         static void push(state& s,common::intrusive_ptr<T>&& v) {
             if (!v) {

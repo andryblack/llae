@@ -468,6 +468,7 @@ end
 local function create_env( cmdargs  )
 	local env = {
 		modules = {},
+		args = cmdargs,
 	}
 	local global_env = {}
 	local write_env = {}

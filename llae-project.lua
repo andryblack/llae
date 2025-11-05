@@ -26,6 +26,19 @@ else
 	config('llae','embed_scripts','build/modules/llae/llae-src/tools')
 end
 
+if cmdargs and cmdargs.development then
+	cmodule 'bind_tests'
+	premake {
+		project = [[
+			files{
+				<%= format_file('src','tests','*.cpp')%>,
+				<%= format_file('src','tests','*.h')%>,
+			}
+]]
+	}
+	print("development mode")
+end
+
 generate_src{
 	template = 'data/build_config-template.lua',
 	filename = 'build/_build_config.lua',

@@ -23,9 +23,9 @@ namespace llae {
 
     static int lua_release_object(lua_State* L) {
         lua::state s(L);
-        auto holder = lua::object_holder_t::get(s,1);
+        auto holder = lua::object_holder_base_t::get(s,1);
         if (holder) {
-            holder->hold.reset();
+            holder->release();
         }
         return 0;
     }

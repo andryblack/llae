@@ -8,12 +8,64 @@ namespace lua {
 
 	namespace bind {
 
-		
+		template <typename T>
+		static T* get_self_object(state& l,int idx) {
+			bool is_const_invalid = false;
+			auto obj = meta_holder_base_t::get_ptr<T>(l,idx,is_const_invalid);
+			if (!obj) {
+				if (is_const_invalid) {
+					l.error("invalid self object %s is const",meta::info<T>::get()->name);
+				} else {
+					l.error("invalid self object %s",meta::info<T>::get()->name);
+				}
+			}
+			return obj;
+		}
 
-		template <typename R,typename T,typename ... Args>
+		struct default_policy {
+			template <typename R>
+			static void push_result(state& s,R&& result) {
+				stack<R>::push(s,std::forward<R>(result));
+			}
+			template <typename R>
+			static void push_value(state& s,const R& result) {
+				stack<R>::push(s,result);
+			}
+		};
+
+		template <int idx = 1>
+		struct return_ref_policy {
+			template <typename R>
+			static void push_result(state& s,R&& result) {
+				default_policy::push_result(s,std::forward<R>(result));
+				ref_value(s,-1,idx);
+			}
+			template <typename R>
+			static void push_result(state& s,R* result) {
+				push_ptr(s,result);
+				ref_value(s,-1,idx);
+			}
+			template <typename R>
+			static void push_value(state& s,const R& result) {
+				default_policy::push_value(s,result);
+				ref_value(s,-1,idx);
+			}
+		};
+
+		template <int idx = 1>
+		struct return_arg_policy {
+			template <typename R>
+			static void push_result(state& s,R&&) {
+				s.pushvalue(idx);
+			}
+		};
+		using return_self_policy = return_ref_policy<1>;
+
+		template <typename P,typename R,typename T,typename ... Args>
 		struct helper {
-			typedef R (T::*func_t)(Args ... args);
-			typedef R (T::*cfunc_t)(Args ... args) const;
+			using policy_t = P;
+			using func_t = R (T::*)(Args ... args);
+			using cfunc_t = R (T::*)(Args ... args) const;
 			template <size_t... Is>
 			static R apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
 				return (obj->*func)(stack<Args>::get(l,2+Is)...);
@@ -25,28 +77,22 @@ namespace lua {
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				auto obj = stack<T*>::get(l,1);
-				if (!obj) {
-					l.argerror(1,T::get_class_info()->name);
-				}
-				stack<R>::push(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
+				auto obj = get_self_object<T>(l,1);
+				policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
 				return 1;
 			}
 			static int cfunction(lua_State* L) {
 				auto f = static_cast<cfunc_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				auto obj = stack<T*>::get(l,1);
-				if (!obj) {
-					l.argerror(1,T::get_class_info()->name);
-				}
-				stack<R>::push(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
+				auto obj = get_self_object<const T>(l,1);
+				policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
 				return 1;
 			}
 		};
 
 
-		template <>
-		struct helper<void,void,state&> {
+		template <typename P>
+		struct helper<P,void,void,state&> {
 			typedef void (*func_t)(state&);
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -57,8 +103,8 @@ namespace lua {
 		};
 
 
-		template <typename ... Args>
-		struct helper<void,void,state&,Args...> {
+		template <typename P,typename ... Args>
+		struct helper<P,void,void,state&,Args...> {
 			typedef void (*func_t)(state&,Args ... args);
 			template <size_t... Is>
 			static void apply(state&l,func_t func,const std::index_sequence<Is...>) {
@@ -72,8 +118,8 @@ namespace lua {
 			}
 		};
 
-		template <typename ... Args>
-		struct helper<void,void,Args...> {
+		template <typename P,typename ... Args>
+		struct helper<P,void,void,Args...> {
 			typedef void (*func_t)(Args ... args);
 			template <size_t... Is>
 			static void apply(state&l,func_t func,const std::index_sequence<Is...>) {
@@ -87,9 +133,10 @@ namespace lua {
 			}
 		};
 		
-		template <class T,typename ... Args>
-		struct helper<void,T,state&,Args...> {
-			typedef void (T::*func_t)(state&,Args ... args);
+		template <typename P,class T,typename ... Args>
+		struct helper<P,void,T,state&,Args...> {
+			using policy_t = P;
+			using func_t = void (T::*)(state&,Args ... args);
 			template <size_t... Is>
 			static void apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
 				(obj->*func)(l,stack<Args>::get(l,2+Is)...);
@@ -101,10 +148,7 @@ namespace lua {
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				auto obj = stack<T*>::get(l,1);
-				if (!obj) {
-					l.argerror(1,meta::info<T>::get()->name);
-				}
+				auto obj = get_self_object<T>(l,1);
 				apply(l,obj,*f,std::index_sequence_for<Args...>());
 				return 0;
 			}
@@ -116,9 +160,10 @@ namespace lua {
             }
 		};
 
-		template <class T,typename ... Args>
-		struct helper<void,T,Args...> {
-			typedef void (T::*func_t)(Args ... args);
+		template <typename P,class T,typename ... Args>
+		struct helper<P,void,T,Args...> {
+			using policy_t = P;
+			using func_t = void (T::*)(Args ... args);
 			template <size_t... Is>
 			static void apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
 				(obj->*func)(stack<Args>::get(l,2+Is)...);
@@ -127,13 +172,15 @@ namespace lua {
             static T* apply_ctr(state&l,const std::index_sequence<Is...>) {
                 return new T(stack<Args>::get(l,1+Is)...);
             }
+			template <size_t... Is>
+            static void apply_inplace_ctr(state&l,const std::index_sequence<Is...>) {
+				construct_raw<T,Args...>(l,stack<Args>::get(l,1+Is)...);
+            }
+			
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				auto obj = stack<T*>::get(l,1);
-				if (!obj) {
-					l.argerror(1,meta::info<T>::get()->name);
-				}
+				auto obj = get_self_object<T>(l,1);
 				apply(l,obj,*f,std::index_sequence_for<Args...>());
 				return 0;
 			}
@@ -143,10 +190,15 @@ namespace lua {
                 stack<common::intrusive_ptr<T> >::push(l,std::move(res));
                 return 1;
             }
+            static int raw_ctr(lua_State* L) {
+                state l(L);
+                apply_inplace_ctr(l,std::index_sequence_for<Args...>());
+                return 1;
+            }
 		};
 
 		template <class T,typename ... Args>
-		struct helper<multiret,T,state&,Args...> {
+		struct helper<default_policy,multiret,T,state&,Args...> {
 			typedef multiret (T::*func_t)(state&,Args ... args);
 			typedef multiret (T::*cfunc_t)(state&,Args ... args)const;
 			template <size_t... Is>
@@ -160,27 +212,22 @@ namespace lua {
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				auto obj = stack<T*>::get(l,1);
-				if (!obj) {
-					l.argerror(1,meta::info<T>::get()->name);
-				}
+				auto obj = get_self_object<T>(l,1);
 				auto r = apply(l,obj,*f,std::index_sequence_for<Args...>());
 				return r.val;
 			}
 			static int cfunction(lua_State* L) {
 				auto f = static_cast<cfunc_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				auto obj = stack<const T*>::get(l,1);
-				if (!obj) {
-					l.argerror(1,T::get_class_info()->name);
-				}
+				auto obj = get_self_object<const T>(l,1);
 				auto r = apply(l,obj,*f,std::index_sequence_for<Args...>());
 				return r.val;
 			}
 		};
 
-		template <class R,class T,typename ... Args>
-		struct helper<R,T,state&,Args...> {
+		template <typename P,class R,class T,typename ... Args>
+		struct helper<P,R,T,state&,Args...> {
+			using policy_t = P;
 			typedef R (T::*func_t)(state&,Args ... args);
 			template <size_t... Is>
 			static R apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
@@ -189,17 +236,14 @@ namespace lua {
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				auto obj = stack<T*>::get(l,1);
-				if (!obj) {
-					l.argerror(1,T::get_class_info()->name);
-				}
-				stack<R>::push(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
+				auto obj = get_self_object<T>(l,1);
+				policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
 				return 1;
 			}
 		};
 
 		template <typename ... Args>
-		struct helper<multiret,void,state&,Args...> {
+		struct helper<default_policy,multiret,void,state&,Args...> {
 			typedef multiret (*func_t)(state&,Args ... args);
 			template <size_t... Is>
 			static multiret apply(state&l,func_t func,const std::index_sequence<Is...>) {
@@ -213,8 +257,9 @@ namespace lua {
 			}
 		};
 
-		template <class R,typename ... Args>
-		struct helper<R,void,state&,Args...> {
+		template <typename P,class R,typename ... Args>
+		struct helper<P,R,void,state&,Args...> {
+			using policy_t = P;
 			typedef R (*func_t)(state&,Args ... args);
 			template <size_t... Is>
 			static R apply(state&l,func_t func,const std::index_sequence<Is...>) {
@@ -228,8 +273,9 @@ namespace lua {
 			}
 		};
     
-        template <class R,typename ... Args>
-        struct helper<R,void,Args...> {
+        template <typename P,class R,typename ... Args>
+        struct helper<P,R,void,Args...> {
+			using policy_t = P;
             typedef R (*func_t)(Args ... args);
             template <size_t... Is>
             static R apply(state&l,func_t func,const std::index_sequence<Is...>) {
@@ -238,66 +284,136 @@ namespace lua {
             static int function(lua_State* L) {
                 auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
                 state l(L);
-                stack<R>::push(l,apply(l,*f,std::index_sequence_for<Args...>()));
+                policy_t::push_result(l,apply(l,*f,std::index_sequence_for<Args...>()));
                 return 1;
             }
         };
+
+		template <class R,class T,typename P = default_policy>
+		struct field_helper {
+			using policy_t = P;
+			using field_t = R (T::*);
+			static int get(lua_State* L) {
+				state s(L);
+				auto obj = get_self_object<const T>(s,1);
+				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				policy_t::push_value(s,obj->*field);
+				return 1;
+			}
+			static int set(lua_State* L) {
+				state s(L);
+				auto obj = get_self_object<T>(s,1);
+				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				obj->*field = stack<R>::get(s,2);
+				return 0;
+			}
+		};
 		
 		static void function(state& s,const char* name,int (*func)(lua_State*)) {
 			s.pushcclosure(func,0);
-			s.setfield(-2,name);
+            metatable_set_method(s,name,-2);
 		}
-		template <class R,class T,typename ... Args>
-		static void function(state& s,const char* name,R (T::*func)(state& l,Args ... args)) {
-			typedef helper<R,T,state&,Args...> hpr;
-			typedef typename hpr::func_t func_t; 
-			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
-			*func_data = func;
-			s.pushcclosure(hpr::function,1);
-			s.setfield(-2,name);
-		}
+		// template <class R,class T,typename ... Args>
+		// static void function(state& s,const char* name,R (T::*func)(state& l,Args ... args)) {
+		// 	using hpr = helper<default_policy,R,T,state&,Args...>;
+		// 	using func_t = typename hpr::func_t; 
+		// 	func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
+		// 	*func_data = func;
+		// 	s.pushcclosure(hpr::function,1);
+        //     metatable_set_method(s,name,-2);
+		// }
 
 		template <class R,class T,typename ... Args>
 		static void function(state& s,const char* name,R (T::*func)(Args ... args)) {
-			typedef helper<R,T,Args...> hpr;
-			typedef typename hpr::func_t func_t; 
+			using hpr = helper<default_policy,R,T,Args...>;
+			using func_t = typename hpr::func_t; 
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
 			*func_data = func;
 			s.pushcclosure(hpr::function,1);
-			s.setfield(-2,name);
+            metatable_set_method(s,name,-2);
+		}
+
+		template <class P,class R,class T,typename ... Args>
+		static void function(state& s,const char* name,R (T::*func)(Args ... args),P) {
+			using hpr = helper<P,R,T,Args...>;
+			using func_t = typename hpr::func_t; 
+			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
+			*func_data = func;
+			s.pushcclosure(hpr::function,1);
+            metatable_set_method(s,name,-2);
 		}
 
 		template <class R,class T,typename ... Args>
 		static void function(state& s,const char* name,R (T::*func)(Args ... args) const) {
-			typedef helper<R,T,Args...> hpr;
-			typedef typename hpr::cfunc_t func_t; 
+			using hpr = helper<default_policy,R,T,Args...>;
+			using func_t = typename hpr::cfunc_t; 
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
 			*func_data = func;
 			s.pushcclosure(hpr::cfunction,1);
-			s.setfield(-2,name);
+            metatable_set_method(s,name,-2);
+		}
+
+		template <class P,class R,class T,typename ... Args>
+		static void function(state& s,const char* name,R (T::*func)(Args ... args) const,P) {
+			using hpr = helper<P,R,T,Args...>;
+			using func_t = typename hpr::cfunc_t; 
+			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
+			*func_data = func;
+			s.pushcclosure(hpr::cfunction,1);
+            metatable_set_method(s,name,-2);
 		}
 
 		template <class R,typename ... Args>
 		static void function(state& s,const char* name,R (*func)(Args ... args)) {
-			typedef helper<R,void,Args...> hpr;
-			typedef typename hpr::func_t func_t; 
+			using hpr = helper<default_policy,R,void,Args...>;
+			using func_t = typename hpr::func_t;
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
 			*func_data = func;
 			s.pushcclosure(hpr::function,1);
-			s.setfield(-2,name);
+            metatable_set_method(s,name,-2);
+		}
+
+		template <class R,class T>
+		static void field_ro(state& s,const char* name,R (T::*field)) {
+			using hpr = field_helper<R,T>;
+			using field_t = typename hpr::field_t;
+			field_t* field_data = static_cast<field_t*>(s.newuserdata(sizeof(field_t)));
+			*field_data = field;
+			s.pushcclosure(hpr::get,1);
+			metatable_set_getter(s,name,-2);
+		}
+
+		template <class R,class T>
+		static void field(state& s,const char* name,R (T::*field)) {
+			using hpr = field_helper<R,T>;
+			using field_t = typename hpr::field_t;
+			field_t* field_data = static_cast<field_t*>(s.newuserdata(sizeof(field_t)));
+			*field_data = field;
+			s.pushvalue(-1);
+			s.pushcclosure(hpr::get,1);
+			metatable_set_getter(s,name,-3);
+			s.pushcclosure(hpr::set,1);
+			metatable_set_setter(s,name,-2);
 		}
     
         template <class T,typename ... Args>
         static void constructor(state& s) {
-            typedef helper<void,T,Args...> hpr;
+            typedef helper<default_policy,void,T,Args...> hpr;
             s.pushcclosure(hpr::ctr,0);
-            s.setfield(-2,"new");
+            metatable_set_method(s,"new",-2);
+        }
+		
+		template <class T,typename ... Args>
+        static void raw_constructor(state& s) {
+            typedef helper<default_policy,void,T,Args...> hpr;
+            s.pushcclosure(hpr::raw_ctr,0);
+			metatable_set_method(s,"new",-2);
         }
     
         template <class T>
         static void value(state& s,const char* name,T v) {
             stack<T>::push(s,v);
-            s.setfield(-2,name);
+            metatable_set_field(s,name,-2);
         }
 
 

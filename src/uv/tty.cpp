@@ -67,12 +67,8 @@ namespace uv {
 		lua::bind::function(l,"set_mode",&tty::set_mode);
 		lua::bind::function(l,"reset_mode",&tty::reset_mode);
 
-		l.pushinteger(UV_TTY_MODE_NORMAL);
-		l.setfield(-2,"MODE_NORMAL");
-		l.pushinteger(UV_TTY_MODE_RAW);
-		l.setfield(-2,"MODE_RAW");
-		l.pushinteger(UV_TTY_MODE_IO);
-		l.setfield(-2,"MODE_IO");
-		
+		lua::bind::value(l,"MODE_NORMAL",UV_TTY_MODE_NORMAL);
+		lua::bind::value(l,"MODE_RAW",UV_TTY_MODE_RAW);
+		lua::bind::value(l,"MODE_IO",UV_TTY_MODE_IO);
 	}
 }

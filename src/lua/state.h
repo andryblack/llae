@@ -41,13 +41,16 @@ namespace lua {
 		void pushlightuserdata(void *p) { lua_pushlightuserdata(m_L,p); }
 		void pushnil() { lua_pushnil(m_L); }
 		void pushthread() { lua_pushthread(m_L); }
-		void rawseti(int tidx,int idx) { lua_rawseti(m_L,tidx,idx); }
-		void rawgeti(int tidx,int idx) { lua_rawgeti(m_L,tidx,idx); }
+		value_type gettable(int idx) { return static_cast<value_type>(lua_gettable(m_L,idx)); }
+		void rawseti(int tidx,lua_Integer idx) { lua_rawseti(m_L,tidx,idx); }
+		value_type rawgeti(int tidx,lua_Integer idx) { return static_cast<value_type>(lua_rawgeti(m_L,tidx,idx)); }
+		value_type rawget(int tidx) { return static_cast<value_type>(lua_rawget(m_L,tidx)); }
+		void rawset(int tidx) { lua_rawset(m_L,tidx); }
 		size_t len(int idx) { return luaL_len(m_L,idx); }
 		size_t rawlen(int idx) { return lua_rawlen(m_L,idx); }
 		void setfield(int index, const char *k) { lua_setfield(m_L,index,k); }
 		void seti(int index, lua_Integer n) { lua_seti(m_L,index,n); }
-		void geti(int index, lua_Integer n) { lua_geti(m_L,index,n); }
+		value_type geti(int index, lua_Integer n) { return static_cast<value_type>(lua_geti(m_L,index,n)); }
 		void settable(int index) { lua_settable(m_L,index); }
 		void setglobal(const char* name) { lua_setglobal(m_L,name); }
 		value_type getglobal(const char* name) { return static_cast<value_type>(lua_getglobal(m_L,name)); }
@@ -104,9 +107,12 @@ namespace lua {
 		value_type getmetafield(int idx,const char* fname) { return static_cast<value_type>(luaL_getmetafield(m_L,idx,fname));}
 		void setmetatable(const char* mname) { luaL_setmetatable(m_L,mname); }
 		void setmetatable(int idx) { lua_setmetatable(m_L,idx); }
+		bool getmetatable(int idx) { return lua_getmetatable(m_L,idx); }
 		void checkstack(int size) {lua_checkstack(m_L,size); }
         char* buffinitsize(luaL_Buffer& b,size_t sz) { return luaL_buffinitsize(m_L,&b,sz); }
         void pushresultsize(luaL_Buffer& b,size_t sz) { luaL_pushresultsize(&b,sz); }
+
+		bool rawequal(int idx1,int idx2) { return lua_rawequal(m_L,idx1,idx2); }
 
         bool isnil(int idx) const { return lua_isnil(m_L,idx); }
         bool isnone(int idx) const { return lua_isnone(m_L,idx); }
@@ -123,6 +129,9 @@ namespace lua {
         bool isyieldable() const { return lua_isyieldable(m_L); }
         
         bool next(int idx) const { return lua_next(m_L,idx) != 0; }
+
+		void setuservalue(int idx) { lua_setuservalue(m_L,idx); }
+		value_type getuservalue(int idx) { return static_cast<value_type>(lua_getuservalue(m_L,idx)); }
 
         static int upvalueindex(int idx) { return lua_upvalueindex(idx); }
 

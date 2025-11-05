@@ -191,14 +191,9 @@ namespace uv {
 		lua::bind::function(l,"stop",&poll::lstop);
 		lua::bind::function(l,"new",&poll::lnew);
 
-		l.pushinteger(UV_READABLE);
-		l.setfield(-2,"READABLE");
-		l.pushinteger(UV_WRITABLE);
-		l.setfield(-2,"WRITABLE");
-		l.pushinteger(UV_PRIORITIZED);
-		l.setfield(-2,"PRIORITIZED");
-		l.pushinteger(UV_DISCONNECT);
-		l.setfield(-2,"DISCONNECT");
-		
+		lua::bind::value(l,"READABLE",UV_READABLE);
+		lua::bind::value(l,"WRITABLE",UV_WRITABLE);
+		lua::bind::value(l,"PRIORITIZED",UV_PRIORITIZED);
+		lua::bind::value(l,"DISCONNECT",UV_DISCONNECT);
 	}
 }

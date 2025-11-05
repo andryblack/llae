@@ -35,7 +35,7 @@ $ llae run examples/info.lua
 ### Build inplace
 ```bash
 LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap --root=. --inplace=true install --development
-LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap --root=. --inplace=true init 
+LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap --root=. --inplace=true init --development
 premake5 --file=build/premake5.lua gmake2
 premake5 --file=build/premake5.lua ecc
 # build
