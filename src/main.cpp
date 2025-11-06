@@ -70,6 +70,8 @@ int main(int argc,char** argv) {
 		}
 	}
 
+	llae::log::close();
+	
 	size_t wait_cnt = 0;
     while (uv_loop_close(loop) == UV_EBUSY) {
         uv_run(loop, UV_RUN_ONCE);
@@ -81,7 +83,7 @@ int main(int argc,char** argv) {
 
 	LOG_DEBUG("meta objects:  " << meta::object::get_total_count());
 	LOG_DEBUG("buffers alloc: " << llae::named_alloc<llae::buffer>::get_allocated());
-	llae::log::close();
+	
 	
 	return retcode;
 }
