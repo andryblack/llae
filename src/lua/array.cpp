@@ -1,5 +1,4 @@
 #include "array.h"
-#include <format>
 
 namespace lua {
 
