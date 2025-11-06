@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include <ctime>
 #include "uv/fs.h"
 #include "llae/buffer.h"
 
@@ -64,9 +65,8 @@ namespace llae {
         explicit time_file_log_handler(uv::file_ptr file) : file_log_handler(std::move(file)) {}
         virtual void write(log::level level, std::string_view message) override {
             time_t now = time(nullptr);
-            struct tm tm;
-            localtime_r(&now,&tm);
-            strftime(m_time_buf,sizeof(m_time_buf),"%Y-%m-%d %H:%M:%S",&tm);
+            auto tm = localtime(&now);
+            strftime(m_time_buf,sizeof(m_time_buf),"%Y-%m-%d %H:%M:%S",tm);
             std::stringstream ss;
             ss << m_time_buf << " " << level_to_string(level) << " " << message << std::endl;
             auto str = ss.str();
