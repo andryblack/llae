@@ -37,6 +37,8 @@ namespace lua {
 		}
 	};
 
+	template <typename T>
+	struct stack<const T> : stack<T> {};
 
 	template <>
 	struct stack<char> {
@@ -173,7 +175,11 @@ namespace lua {
 	template <class T>
 	struct stack<T*> {
 		static T* get(state& s,int idx) {
-            return meta_holder_base_t::get_ptr<T>(s,idx);
+			auto obj = meta_holder_base_t::get_ptr<T>(s,idx);
+			if (obj.first && !std::is_const<T>::value && obj.second) {
+				s.error("invalid pointer %s is const",meta::info<T>::get()->name);
+			}
+            return obj.first;
 		}
 	};
 
@@ -247,6 +253,7 @@ namespace lua {
             }
         }
     };
+
 	
     template <class T>
     static void push(state& s,const T& val) {

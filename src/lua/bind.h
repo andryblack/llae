@@ -2,6 +2,7 @@
 
 #include "stack.h"
 #include "metatable.h"
+#include "array.h"
 #include <utility>
 
 namespace lua {
@@ -10,26 +11,29 @@ namespace lua {
 
 		template <typename T>
 		static T* get_self_object(state& l,int idx) {
-			bool is_const_invalid = false;
-			auto obj = meta_holder_base_t::get_ptr<T>(l,idx,is_const_invalid);
-			if (!obj) {
-				if (is_const_invalid) {
-					l.error("invalid self object %s is const",meta::info<T>::get()->name);
-				} else {
-					l.error("invalid self object %s",meta::info<T>::get()->name);
-				}
+			auto obj = meta_holder_base_t::get_ptr<T>(l,idx);
+			if (!obj.first) {
+				l.error("invalid self object %s",meta::info<T>::get()->name);
 			}
-			return obj;
+			if (!std::is_const<T>::value && obj.second) {
+				l.error("invalid self object %s is const",meta::info<T>::get()->name);
+			}
+			return obj.first;
 		}
 
 		struct default_policy {
+			static constexpr bool allow_set_field = true;
 			template <typename R>
 			static void push_result(state& s,R&& result) {
 				stack<R>::push(s,std::forward<R>(result));
 			}
 			template <typename R>
-			static void push_value(state& s,const R& result) {
+			static void push_field(state& s,const R& result) {
 				stack<R>::push(s,result);
+			}
+			template <typename R>
+			static R get_field(state& s, int idx) {
+				return stack<R>::get(s,idx);
 			}
 		};
 
@@ -46,9 +50,14 @@ namespace lua {
 				ref_value(s,-1,idx);
 			}
 			template <typename R>
-			static void push_value(state& s,const R& result) {
-				default_policy::push_value(s,result);
+			static void push_field(state& s, R& result) {
+				push_ptr(s,&result);
 				ref_value(s,-1,idx);
+			}
+			template <typename R>
+			static R get_field(state& s, int) {
+				s.error("attempt to set referenced field");
+				return R();
 			}
 		};
 
@@ -295,16 +304,50 @@ namespace lua {
 			using field_t = R (T::*);
 			static int get(lua_State* L) {
 				state s(L);
-				auto obj = get_self_object<const T>(s,1);
+				auto obj = meta_holder_base_t::get_ptr<T>(s,1);
+				if (!obj.first) {
+					s.error("invalid self object %s",meta::info<T>::get()->name);
+				}
 				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
-				policy_t::push_value(s,obj->*field);
+				if (obj.second) {
+					policy_t::template push_field<const R>(s,obj.first->*field);
+				} else {
+					policy_t::template push_field<R>(s,obj.first->*field);
+				}
 				return 1;
 			}
 			static int set(lua_State* L) {
 				state s(L);
 				auto obj = get_self_object<T>(s,1);
 				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
-				obj->*field = stack<R>::get(s,2);
+				obj->*field = policy_t::template get_field<R>(s,2);
+				return 0;
+			}
+		};
+
+
+		template <typename R,class T, size_t size, typename P>
+		struct field_helper<R[size],T,P> {
+			using policy_t = P;
+			using field_t = R (T::*)[size];
+			static int get(lua_State* L) {
+				state s(L);
+				auto obj = meta_holder_base_t::get_ptr<T>(s,1);
+				if (!obj.first) {
+					s.error("invalid self object %s",meta::info<T>::get()->name);
+				}
+				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				if (obj.second) {
+					push_array_ref<policy_t,const R>(s,obj.first->*field,size,1);
+				} else {
+					push_array_ref<policy_t,R>(s,obj.first->*field,size,1);
+				}
+				ref_value(s,-1,1);
+				return 1;
+			}
+			static int set(lua_State* L) {
+				state s(L);
+				s.error("attempt to set array field");
 				return 0;
 			}
 		};
@@ -386,6 +429,19 @@ namespace lua {
 		template <class R,class T>
 		static void field(state& s,const char* name,R (T::*field)) {
 			using hpr = field_helper<R,T>;
+			using field_t = typename hpr::field_t;
+			field_t* field_data = static_cast<field_t*>(s.newuserdata(sizeof(field_t)));
+			*field_data = field;
+			s.pushvalue(-1);
+			s.pushcclosure(hpr::get,1);
+			metatable_set_getter(s,name,-3);
+			s.pushcclosure(hpr::set,1);
+			metatable_set_setter(s,name,-2);
+		}
+
+		template <class R,class T,typename P>
+		static void field(state& s,const char* name,R (T::*field),P p) {
+			using hpr = field_helper<R,T,P>;
 			using field_t = typename hpr::field_t;
 			field_t* field_data = static_cast<field_t*>(s.newuserdata(sizeof(field_t)));
 			*field_data = field;

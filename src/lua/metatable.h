@@ -18,26 +18,13 @@ namespace lua {
         virtual const meta::info_t* info() const = 0;
         virtual void* get_raw_ptr() const = 0;
         virtual bool is_const() const = 0;
+
         template <typename T>
-        T* get_ptr(bool& is_const_invalid) {
+        std::pair<T*,bool> get_ptr() {
             if (meta::is_convertible(info(), meta::info<T>::get())) {
-                if (!std::is_const<T>::value && is_const()) {
-                    is_const_invalid = true;
-                    return nullptr;
-                }
-                return static_cast<T*>(get_raw_ptr());
+                return { static_cast<T*>(get_raw_ptr()), is_const() };
             }
-            return nullptr;
-        }
-        template <typename T>
-        T* get_ptr() {
-            if (meta::is_convertible(info(), meta::info<T>::get())) {
-                if (!std::is_const<T>::value && is_const()) {
-                    return nullptr;
-                }
-                return static_cast<T*>(get_raw_ptr());
-            }
-            return nullptr;
+            return { nullptr, is_const() };
         }
         static meta_holder_base_t* get(state& s,int idx) {
             void* data = s.touserdata(idx);
@@ -60,9 +47,7 @@ namespace lua {
             return ret;
         }
         template <typename T>
-        static T* get_ptr(state& l,int idx);
-        template <typename T>
-        static T* get_ptr(state& l,int idx,bool& is_const_invalid);
+        static std::pair<T*,bool> get_ptr(state& l,int idx);
     };
 
     template <typename T>
@@ -144,17 +129,10 @@ namespace lua {
 	};
 
     template <typename T>
-    T* meta_holder_base_t::get_ptr(state& l,int idx) {
+    std::pair<T*,bool> meta_holder_base_t::get_ptr(state& l,int idx) {
         auto holder = meta_holder_base_t::get(l,idx);
-        if (!holder) return nullptr;
+        if (!holder) return { nullptr, false };
         return holder->get_ptr<T>();
-    }
-
-    template <typename T>
-    T* meta_holder_base_t::get_ptr(state& l,int idx,bool& is_const_invalid ) {
-        auto holder = meta_holder_base_t::get(l,idx);
-        if (!holder) return nullptr;
-        return holder->get_ptr<T>(is_const_invalid);
     }
 
 	void register_meta_object_metatable(state& s);
