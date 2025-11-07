@@ -64,11 +64,13 @@ namespace lua {
 				s.error("attempt to set referenced field");
 				return R();
 			}
+			template <size_t ArgIdx>
+			using arg_policy = default_policy::template arg_policy<ArgIdx>;
 		};
 		using return_self_ref_policy = return_ref_policy<1>;
 
 		template <int idx = 1>
-		struct return_arg_policy {
+		struct return_arg_policy : default_policy {
 			template <typename R>
 			static void push_result(state& s,R&&) {
 				s.pushvalue(idx);

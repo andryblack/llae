@@ -27,6 +27,7 @@ namespace tests {
         uint8_t data_field[10];
         void method1();
         test_bind_fields* get_self() { return this; }
+        test_bind_fields* get_self2(int) { return this; }
         const test_bind_fields* get_const() const { return this; }
         static void bind(lua::state& l);
     };
