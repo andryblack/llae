@@ -182,6 +182,19 @@ namespace lua {
             return obj.first;
 		}
 	};
+	template <class T>
+	struct stack<T&> {
+		static T& get(state& s,int idx) {
+			auto obj = meta_holder_base_t::get_ptr<T>(s,idx);
+			if (!obj.first) {
+				s.error("invalid reference %s",meta::info<T>::get()->name);
+			}
+			if (!std::is_const<T>::value && obj.second) {
+				s.error("invalid pointer %s is const",meta::info<T>::get()->name);
+			}
+            return *obj.first;
+		}
+	};
 
     template <class T>
     struct stack<T,typename std::enable_if< std::is_enum<T>::value>::type> {
