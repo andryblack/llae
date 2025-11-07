@@ -36,6 +36,7 @@ namespace tests {
         lua::bind::function(l,"get_self",&test_bind_fields::get_self,lua::bind::return_ref_policy<1>{});
         lua::bind::function(l,"get_self2",&test_bind_fields::get_self2,lua::bind::return_ref_policy<1>{});
         lua::bind::function(l,"get_count",&test_bind_fields::get_count);
+        lua::bind::function(l,"func1",&test_bind_fields::func1);
     }
     void test_bind_fields::method1() {
         field3 = field3 + " method1";

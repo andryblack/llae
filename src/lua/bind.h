@@ -210,8 +210,9 @@ namespace lua {
 		struct helper<P,void,T,Args...> {
 			using policy_t = P;
 			using func_t = void (T::*)(Args ... args);
-			template <size_t... Is>
-			static void apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
+			using cfunc_t = void (T::*)(Args ... args) const;
+			template <typename O,typename F,size_t... Is>
+			static void apply(state&l,O* obj,F func,const std::index_sequence<Is...>) {
 				(obj->*func)(policy_t::template arg_policy<Is>::template type<Args>::get(l,2+Is)...);
 			}
             template <size_t... Is>
@@ -227,6 +228,13 @@ namespace lua {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
 				auto obj = get_self_object<T>(l,1);
+				apply(l,obj,*f,std::index_sequence_for<Args...>());
+				return 0;
+			}
+			static int cfunction(lua_State* L) {
+				auto f = static_cast<cfunc_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				auto obj = get_self_object<const T>(l,1);
 				apply(l,obj,*f,std::index_sequence_for<Args...>());
 				return 0;
 			}
