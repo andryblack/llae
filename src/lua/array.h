@@ -13,6 +13,7 @@ namespace lua {
         virtual ~array_ref_holder_base_t() override {
             assert(marker == type_marker);
         }
+        virtual bool check_marker() const override { return marker == type_marker; }
         virtual void* get_raw_ptr() const override { return ptr; }
         static array_ref_holder_base_t* get(state& s,int idx) {
             return static_cast<array_ref_holder_base_t*>(meta_holder_base_t::get(s,idx,type_marker,sizeof(array_ref_holder_base_t)));

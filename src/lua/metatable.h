@@ -15,6 +15,7 @@ namespace lua {
         explicit meta_holder_base_t(uint32_t marker) : marker(marker) {}
         
         virtual ~meta_holder_base_t() {}
+        virtual bool check_marker() const = 0;
         virtual const meta::info_t* info() const = 0;
         virtual void* get_raw_ptr() const = 0;
         virtual bool is_const() const = 0;
@@ -32,7 +33,11 @@ namespace lua {
             if (s.rawlen(idx)<sizeof(meta_holder_base_t)) {
                 return nullptr;
             }
-            return static_cast<meta_holder_base_t*>(data);
+            auto ret = static_cast<meta_holder_base_t*>(data);
+            if (!ret->check_marker()) {
+                return nullptr;
+            }
+            return ret;
         }
         static meta_holder_base_t* get(state& s,int idx,uint32_t type_marker,size_t size) {
             void* data = s.touserdata(idx);
@@ -58,6 +63,7 @@ namespace lua {
         virtual ~raw_holder_t() override {
             assert(marker == type_marker);
         }
+        virtual bool check_marker() const override { return marker == type_marker; }
         virtual bool is_const() const override { return std::is_const<T>::value; }
         explicit raw_holder_t(T&& val) : meta_holder_base_t(type_marker), raw(std::move(val)) {}
         template <typename ... Args>
@@ -78,6 +84,7 @@ namespace lua {
         virtual ~ptr_holder_t() override {
             assert(marker == type_marker);
         }
+        virtual bool check_marker() const override { return marker == type_marker; }
         explicit ptr_holder_t(T* val) : meta_holder_base_t(type_marker), ptr(val) {}
         const meta::info_t* info() const override { return ::meta::info<T>::get(); }
         virtual void* get_raw_ptr() const override { return const_cast<typename std::remove_const<T>::type*>(ptr); }
@@ -94,6 +101,7 @@ namespace lua {
         virtual ~object_holder_base_t() override {
             assert(marker == type_marker);
         }
+        virtual bool check_marker() const override { return marker == type_marker; }
         static object_holder_base_t* get(state& s,int idx) {
             auto ret = static_cast<object_holder_base_t*>(meta_holder_base_t::get(s,idx,type_marker,sizeof(object_holder_base_t)));
             return ret;
