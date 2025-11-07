@@ -32,9 +32,14 @@ namespace lua {
 				stack<R>::push(s,result);
 			}
 			template <typename R>
-			static R get_field(state& s, int idx) {
-				return stack<R>::get(s,idx);
+			static void set_field(state& s, R& result, int idx) {
+				result = stack<R>::get(s,idx);
 			}
+			template <size_t ArgIdx>
+			struct arg_policy {
+				template <typename Arg>
+				using type = stack<Arg>;
+			};
 		};
 
 		template <int idx = 1>
@@ -55,11 +60,12 @@ namespace lua {
 				ref_value(s,-1,idx);
 			}
 			template <typename R>
-			static R get_field(state& s, int) {
+			static void set_field(state& s, R& result, int) {
 				s.error("attempt to set referenced field");
 				return R();
 			}
 		};
+		using return_self_ref_policy = return_ref_policy<1>;
 
 		template <int idx = 1>
 		struct return_arg_policy {
@@ -68,20 +74,49 @@ namespace lua {
 				s.pushvalue(idx);
 			}
 		};
-		using return_self_policy = return_ref_policy<1>;
+		using return_self_policy = return_arg_policy<1>;
+
+		template <bool zero_terminate = true>
+		struct string_policy {
+			template <size_t size>
+			static void push_field(state& s,const char(&str)[size]) {
+				auto zero_pos = std::find(str,str+size,0);
+				if (zero_pos != str+size) {
+					s.pushlstring(str,zero_pos-str);
+				} else {
+					s.pushlstring(str,size);
+				}
+			}
+			template <typename T,size_t size>
+			static void set_field(state& s,T(&str)[size],int value_idx) {
+				size_t len = 0;
+				if (auto ptr = s.checklstring(value_idx,len)) {
+					if (len > size) {
+						s.argerror(value_idx,"string too long");
+					}
+					std::memcpy(str,ptr,len);
+					if (len < size) {
+						std::memset(str + len,0,size - len);
+					}
+				}
+			}
+		};
+		template <>
+		struct string_policy<false> : string_policy<true> {
+			template <typename T,size_t size>
+			static void push_field(state& s,const T(&str)[size]) {
+				s.pushlstring(reinterpret_cast<const char*>(str),size);
+			}
+		};
 
 		template <typename P,typename R,typename T,typename ... Args>
 		struct helper {
 			using policy_t = P;
 			using func_t = R (T::*)(Args ... args);
 			using cfunc_t = R (T::*)(Args ... args) const;
-			template <size_t... Is>
-			static R apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
-				return (obj->*func)(stack<Args>::get(l,2+Is)...);
-			}
-			template <size_t... Is>
-			static R apply(state&l,const T* obj,cfunc_t func,const std::index_sequence<Is...>) {
-				return (obj->*func)(stack<Args>::get(l,2+Is)...);
+			template <typename O,typename F,size_t... Is>
+			static R apply(state&l,O* obj,F func,const std::index_sequence<Is...>) {
+				return (obj->*func)(policy_t::template arg_policy<Is>::template type<Args>::get(l,2+Is)...);
 			}
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -148,7 +183,7 @@ namespace lua {
 			using func_t = void (T::*)(state&,Args ... args);
 			template <size_t... Is>
 			static void apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
-				(obj->*func)(l,stack<Args>::get(l,2+Is)...);
+				(obj->*func)(l,policy_t::template arg_policy<Is>::template type<Args>::get(l,2+Is)...);
 			}
             template <size_t... Is>
             static T* apply_ctr(state&l,const std::index_sequence<Is...>) {
@@ -175,7 +210,7 @@ namespace lua {
 			using func_t = void (T::*)(Args ... args);
 			template <size_t... Is>
 			static void apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
-				(obj->*func)(stack<Args>::get(l,2+Is)...);
+				(obj->*func)(policy_t::template arg_policy<Is>::template type<Args>::get(l,2+Is)...);
 			}
             template <size_t... Is>
             static T* apply_ctr(state&l,const std::index_sequence<Is...>) {
@@ -210,12 +245,8 @@ namespace lua {
 		struct helper<default_policy,multiret,T,state&,Args...> {
 			typedef multiret (T::*func_t)(state&,Args ... args);
 			typedef multiret (T::*cfunc_t)(state&,Args ... args)const;
-			template <size_t... Is>
-			static multiret apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
-				return (obj->*func)(l,stack<Args>::get(l,2+Is)...);
-			}
-			template <size_t... Is>
-			static multiret apply(state&l,const T* obj,cfunc_t func,const std::index_sequence<Is...>) {
+			template <typename O,typename F,size_t... Is>
+			static multiret apply(state&l,O* obj,F func,const std::index_sequence<Is...>) {
 				return (obj->*func)(l,stack<Args>::get(l,2+Is)...);
 			}
 			static int function(lua_State* L) {
@@ -240,7 +271,7 @@ namespace lua {
 			typedef R (T::*func_t)(state&,Args ... args);
 			template <size_t... Is>
 			static R apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
-				return (obj->*func)(l,stack<Args>::get(l,2+Is)...);
+				return (obj->*func)(l,policy_t::template arg_policy<Is>::template type<Args>::get(l,2+Is)...);
 			}
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -272,7 +303,7 @@ namespace lua {
 			typedef R (*func_t)(state&,Args ... args);
 			template <size_t... Is>
 			static R apply(state&l,func_t func,const std::index_sequence<Is...>) {
-				return (*func)(l,stack<Args>::get(l,1+Is)...);
+				return (*func)(l,policy_t::template arg_policy<Is>::template type<Args>::get(l,1+Is)...);
 			}
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -288,7 +319,7 @@ namespace lua {
             typedef R (*func_t)(Args ... args);
             template <size_t... Is>
             static R apply(state&l,func_t func,const std::index_sequence<Is...>) {
-                return (*func)(stack<Args>::get(l,1+Is)...);
+                return (*func)(policy_t::template arg_policy<Is>::template type<Args>::get(l,1+Is)...);
             }
             static int function(lua_State* L) {
                 auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -320,7 +351,7 @@ namespace lua {
 				state s(L);
 				auto obj = get_self_object<T>(s,1);
 				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
-				obj->*field = policy_t::template get_field<R>(s,2);
+				policy_t::set_field(s,obj->*field,2);
 				return 0;
 			}
 		};
@@ -348,6 +379,29 @@ namespace lua {
 			static int set(lua_State* L) {
 				state s(L);
 				s.error("attempt to set array field");
+				return 0;
+			}
+		};
+
+		template <typename R,class T, size_t size, bool zero_terminate>
+		struct field_helper<R[size],T,string_policy<zero_terminate>> {
+			using policy_t = string_policy<zero_terminate>;
+			using field_t = R (T::*)[size];
+			static int get(lua_State* L) {
+				state s(L);
+				auto obj = meta_holder_base_t::get_ptr<T>(s,1);
+				if (!obj.first) {
+					s.error("invalid self object %s",meta::info<T>::get()->name);
+				}
+				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				policy_t::push_field(s,obj.first->*field);
+				return 1;
+			}
+			static int set(lua_State* L) {
+				state s(L);
+				auto obj = get_self_object<T>(s,1);
+				auto field = *static_cast<field_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				policy_t::set_field(s,obj->*field,2);
 				return 0;
 			}
 		};

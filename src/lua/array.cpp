@@ -61,7 +61,7 @@ namespace lua {
     static int array_ref__tostring(lua_State* L) {
         state s(L);
         if (auto hdr = array_ref_holder_base_t::get(s,1)) {
-            s.pushfstring("array_ref: %s",hdr->info()->name);
+            s.pushfstring("array_ref<%s>",hdr->info()->name);
         } else {
             s.pushstring("unknown");
         }

@@ -44,7 +44,7 @@ namespace lua {
             policy_t::template push_field<T>(s,get_element_ref(idx));
         }
         virtual void set_element(state& s,size_t idx,int value_idx) override {
-            get_element_ref(idx) = policy_t::template get_field<T>(s,value_idx);
+            policy_t::set_field(s,get_element_ref(idx),value_idx);
         }
     };
 

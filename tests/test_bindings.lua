@@ -250,3 +250,21 @@ function TestBindings:test_array_iterator()
 
     --local a,b = next(b.array1)
 end
+
+function TestBindings:test_string_field()
+    local b = bind_tests.test_bind_fields.new()
+    b.string_field = "hello"
+    lu.assertEquals(b.string_field, "hello")
+    b.string_field = "hello worl"
+    lu.assertEquals(b.string_field, "hello worl")
+    lu.assertErrorMsgContains(
+        "string too long",
+        function() 
+            b.string_field = "hello world hello world"
+        end
+    )
+    local d = b.data_field
+    lu.assertEquals(#d, 10)
+    b.data_field = "hello\0worl"
+    lu.assertEquals(b.data_field, "hello\0worl")
+end

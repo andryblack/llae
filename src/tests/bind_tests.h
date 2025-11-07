@@ -23,6 +23,8 @@ namespace tests {
         test_bind_struct field4;
         int array1[5];
         test_bind_struct array2[5];
+        char string_field[10];
+        uint8_t data_field[10];
         void method1();
         test_bind_fields* get_self() { return this; }
         const test_bind_fields* get_const() const { return this; }
