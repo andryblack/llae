@@ -4,6 +4,7 @@
 #include "metatable.h"
 #include "array.h"
 #include <utility>
+#include <algorithm>
 
 namespace lua {
 
