@@ -7,7 +7,7 @@
 <% end %>
 <% end %>
 
-
+<% macos_version = project:get_global_config('macos_version') or '10.15' %>
 solution '<%= project:name() %>'
 
 	configurations { 'debug', 'release' }
@@ -18,11 +18,11 @@ solution '<%= project:name() %>'
 	objdir 'objects' 
 	
 	filter{'system:macosx','gmake'}
-		buildoptions { "-mmacosx-version-min=10.14" }
-   		linkoptions  { "-mmacosx-version-min=10.14" }
+		buildoptions { "-mmacosx-version-min=<%= macos_version %>" }
+   		linkoptions  { "-mmacosx-version-min=<%= macos_version %>" }
    	filter{}
    	xcodebuildsettings{
-   		MACOSX_DEPLOYMENT_TARGET='10.14'
+   		MACOSX_DEPLOYMENT_TARGET='<%= macos_version %>'
    	}
 	filter{ 'configurations:debug'}
 		symbols "On"

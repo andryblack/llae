@@ -55,6 +55,14 @@ function Project.env:cmodule( data )
 	table.insert(self.cmodules,data)
 end
 
+function Project.env:global_config( name, value )
+	if not self.global_config then
+		self.global_config = {[name] = value}
+	else
+		self.global_config[name] = value
+	end
+end
+
 function Project.env:config( module, name, value )
 	if not self.module_config then
 		self.module_config = {}
@@ -359,6 +367,10 @@ function Project:get_cmodules(  )
 	return utils.list_concat(self._cmodules,self._project_cmodules)
 end
 
+function Project:get_global_config( config_name )
+	return (self._env.global_config or {})[config_name]
+end
+
 function Project:get_config_value( module_name, config_name )
 	local module = self:get_module(module_name)
 	if not module then
@@ -493,6 +505,7 @@ function Project.load( root_dir , cmdargs )
 	env.cmdargs = cmdargs
 	env.target = get_target( cmdargs )
 	env.host = llae.get_host_platform()
+	env.config = {}
 	env.__write_env = write_env
 	env.__load_env = load_env
 	local res,err = loadfile(path.join(root_dir,'llae-project.lua'),'bt',load_env)
