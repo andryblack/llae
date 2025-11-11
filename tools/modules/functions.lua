@@ -81,10 +81,15 @@ function m:download_git(url,config)
 	fs.unlink(logfilename)
 	local logfile = assert(fs.open_write(logfilename))
 
-	if fs.isdir(dst) and fs.isdir(path.join(dst,'.git')) and not config.tag then
+	if fs.isdir(dst) and fs.isdir(path.join(dst,'.git')) then
 		exec_git({'-C',dst,'reset','--hard'},logfile)
 		exec_git({'-C',dst,'fetch','origin',tag},logfile)
-		exec_git({'-C',dst,'reset','--hard','origin/' .. tag},logfile)
+			
+		if config.tag then
+			exec_git({'-C',dst,'reset','--hard','origin/tags/' .. tag},logfile)
+		else
+			exec_git({'-C',dst,'reset','--hard','origin/' .. tag},logfile)
+		end
 		return
 	end
 	fs.rmdir_r(dst)
