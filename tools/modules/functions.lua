@@ -83,11 +83,13 @@ function m:download_git(url,config)
 
 	if fs.isdir(dst) and fs.isdir(path.join(dst,'.git')) then
 		exec_git({'-C',dst,'reset','--hard'},logfile)
-		exec_git({'-C',dst,'fetch','origin',tag},logfile)
+		
 			
 		if config.tag then
-			exec_git({'-C',dst,'reset','--hard','origin/tags/' .. tag},logfile)
+			exec_git({'-C',dst,'fetch','origin','tags/' .. config.tag},logfile)
+			exec_git({'-C',dst,'reset','--hard',config.tag},logfile)
 		else
+			exec_git({'-C',dst,'fetch','origin',tag},logfile)
 			exec_git({'-C',dst,'reset','--hard','origin/' .. tag},logfile)
 		end
 		return
