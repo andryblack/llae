@@ -90,7 +90,7 @@ int luaopen_llae(lua_State* L) {
 
     lua::bind::object<llae::buffer_base>::register_metatable(l,&llae::buffer_base::lbind);
 	lua::bind::object<llae::buffer>::register_metatable(l,&llae::buffer::lbind);
-
+    lua::bind::object<llae::writable_buffer>::register_metatable(l,&llae::writable_buffer::lbind);
     lua::bind::object<llae::log_handler>::register_metatable(l,&log_handler_bind);
     
     l.createtable();
@@ -103,6 +103,8 @@ int luaopen_llae(lua_State* L) {
     
     lua::bind::object<llae::buffer>::get_metatable(l);
 	l.setfield(-2,"buffer");
+    lua::bind::object<llae::writable_buffer>::get_metatable(l);
+	l.setfield(-2,"writable_buffer");
 	
     l.createtable();
     l.createtable();

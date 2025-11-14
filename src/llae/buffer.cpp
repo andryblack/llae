@@ -13,6 +13,7 @@
 
 META_OBJECT_INFO(llae::buffer_base,meta::object)
 META_OBJECT_INFO(llae::buffer,llae::buffer_base)
+META_OBJECT_INFO(llae::writable_buffer,llae::buffer)
 
 namespace llae {
 
@@ -439,6 +440,44 @@ namespace llae {
         lua::bind::function(l,"alloc",&buffer::lalloc);
         lua::bind::function(l,"get_allocated",&buffer::allocator_t::get_allocated);
         lua::bind::function(l,"self_reverse", &buffer::self_reverse);
+    }
+
+    lua::multiret writable_buffer::lnew(lua::state& l) {
+        size_t len = 0;
+        auto base = l.checklstring(1,len);
+        auto res = writable_buffer::alloc(len);
+        memcpy(res->get_base(),base,len);
+        lua::push(l,std::move(res));
+        return {1};
+    }
+
+    lua::multiret writable_buffer::lalloc(lua::state& l) {
+        size_t len = l.checkinteger(1);
+        auto res = writable_buffer::alloc(len);
+        lua::push(l,std::move(res));
+        return {1};
+    }
+
+    lua::multiret writable_buffer::lwrite(lua::state& l) {
+        auto offset = l.checkinteger(2);
+        if (offset < 1) {
+            l.argerror(2, "offset out of range");
+        }
+        offset--;
+        auto data = buffer_view::get(l, 3, true);
+        if ((offset + data.get_len()) > get_len()) {
+            l.argerror(3, "data out of range");
+        }
+        ::memcpy(static_cast<char*>(get_base()) + offset, data.get_base(), data.get_len());
+        l.pushboolean(true);
+        return {1};
+    }
+
+    void writable_buffer::lbind(lua::state& l) {
+        lua::bind::function(l,"new",&writable_buffer::lnew);
+        lua::bind::function(l,"alloc",&writable_buffer::lalloc);
+        lua::bind::function(l,"write",&writable_buffer::lwrite);
+        lua::bind::function(l,"__tostring",&buffer_base::ltostring);
     }
 
 }

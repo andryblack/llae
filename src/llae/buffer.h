@@ -113,6 +113,33 @@ namespace llae {
     private:
         const size_t m_capacity;
     };
+
+    class writable_buffer;
+    using writable_buffer_ptr = common::intrusive_ptr<writable_buffer>;
+
+    class writable_buffer : public buffer {
+        META_OBJECT
+        LLAE_NAMED_ALLOC(buffer_base)
+    public:
+        explicit writable_buffer(const buffer_alloc_tag& tag) : buffer(tag) {}
+        static writable_buffer_ptr alloc(size_t size) {
+            return alloc_obj<writable_buffer>(size);
+        }
+        static writable_buffer_ptr hold(const void* data,size_t size) {
+            auto res = alloc(size);
+            std::memcpy(res->get_base(),data,size);
+            return res;
+        }
+        static writable_buffer_ptr hold(buffer_view view) {
+            auto res = alloc(view.get_len());
+            std::memcpy(res->get_base(),view.get_base(),view.get_len());
+            return res;
+        }
+        lua::multiret lwrite(lua::state& l);
+        static lua::multiret lnew(lua::state& l);
+        static lua::multiret lalloc(lua::state& l);
+        static void lbind(lua::state& l);
+    };
 }
 
 #include "lua/stack.h"
