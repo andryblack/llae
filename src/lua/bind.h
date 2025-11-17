@@ -63,7 +63,6 @@ namespace lua {
 			template <typename R>
 			static void set_field(state& s, R& result, int) {
 				s.error("attempt to set referenced field");
-				return R();
 			}
 			template <size_t ArgIdx>
 			using arg_policy = default_policy::template arg_policy<ArgIdx>;
