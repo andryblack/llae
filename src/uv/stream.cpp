@@ -57,10 +57,12 @@ namespace uv {
 			l.pop(1);// thread
 			int args;
 			if (status < 0) {
+                toth.checkstack(2);
 				toth.pushnil();
 				uv::push_error(toth,status);
 				args = 2;
 			} else {
+                toth.checkstack(1);
 				toth.pushboolean(true);
 				args = 1;
 			}
