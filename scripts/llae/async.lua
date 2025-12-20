@@ -22,9 +22,24 @@ function _M.resume( th )
 	end
 end
 
+---@class llae.async.thread
+---@field new fun(thread):llae.async.thread
+local thread = class(nil,'llae.async.thread')
+
+function thread:_init(th)
+	self._th = th
+end
+
+function thread:join()
+	while coroutine.status(self._th) ~= 'dead' do
+		uv.pause(100)
+	end
+end
+
 --- Creates and starts a new coroutine to run the given function.
 ---@param fn function The function to run in a new coroutine
 ---@param handle_error boolean? If true, wraps the function in error handling code
+---@return llae.async.thread
 function _M.run( fn , handle_error )
 	local th = coroutine.create( handle_error and function() 
 		---@type boolean,string?
@@ -34,6 +49,7 @@ function _M.run( fn , handle_error )
 		end
 	end or fn )
 	_M.resume(th)
+	return thread.new(th)
 end
 
 ---@class llae.lock
@@ -46,7 +62,7 @@ function lock:_init()
 end
 
 --- Internal method that resumes the next waiting coroutine.
-function lock:report_unlock()
+function lock:_report_unlock()
 	local u = table.remove(self._wait,1)
 	if u then
 		_M.resume(u)
@@ -54,7 +70,7 @@ function lock:report_unlock()
 end
 
 --- Waits for the lock to be released. This is used internally by the lock method.
-function lock:wait_unlock()
+function lock:_wait_unlock()
 	local c = coroutine.running()
 	table.insert(self._wait,c)
 	coroutine.yield()
@@ -62,16 +78,28 @@ end
 
 --- Acquires the lock. If the lock is already held, waits until it's released.
 function lock:lock()
-	while self._locked do
-		self:wait_unlock()
+	local c = coroutine.running()
+	if self._locked then
+		if self._locked == c then
+			error('lock called by a coroutine that already holds the lock')
+		end
+		self:_wait_unlock()
+		self._locked = c
+		uv.pause(0) -- give unlocked coroutine a chance to run
+	else
+		self._locked = c
 	end
-	self._locked = true
 end
+
 
 --- Releases the lock and wakes up one waiting coroutine if any.
 function lock:unlock()
-	self._locked = false
-	self:report_unlock()
+	local c = coroutine.running()
+	if self._locked ~= c then
+		error('unlock called by a coroutine that does not hold the lock')
+	end
+	self._locked = nil
+	self:_report_unlock()
 end
 
 _M.lock = lock
