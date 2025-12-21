@@ -65,7 +65,8 @@ end
 function lock:_report_unlock()
 	local u = table.remove(self._wait,1)
 	if u then
-		_M.resume(u)
+		self._locked = u
+		uv.resume_delayed(u)
 	end
 end
 
@@ -84,8 +85,6 @@ function lock:lock()
 			error('lock called by a coroutine that already holds the lock')
 		end
 		self:_wait_unlock()
-		self._locked = c
-		uv.pause(0) -- give unlocked coroutine a chance to run
 	else
 		self._locked = c
 	end

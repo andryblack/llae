@@ -25,6 +25,9 @@ uv.cwd = function() end
 uv.chdir = function(dir) end
 ---@param pause integer
 uv.pause = function(pause) end
+---@param thread thread
+---@param delay integer?
+uv.resume_delayed = function(thread, delay) end
 ---@return number
 ---@return integer
 uv.gettimeofday = function() end

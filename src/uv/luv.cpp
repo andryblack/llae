@@ -440,6 +440,7 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"cwd",&lua_uv_cwd);
 	lua::bind::function(l,"chdir",&lua_uv_chdir);
 	lua::bind::function(l,"pause",&uv::timer_pause::pause);
+	lua::bind::function(l,"resume_delayed",&uv::timer_pause::resume_delayed);
 	lua::bind::function(l,"gettimeofday",&lua_uv_gettimeofday);
 	lua::bind::function(l,"interface_addresses",&lua_uv_interface_addresses);
 	lua::bind::function(l,"set_process_title",&lua_uv_set_process_title);

@@ -108,6 +108,25 @@ namespace uv {
 		return {0};
 	}
 
+	lua::multiret timer_pause::resume_delayed(lua::state& l) {
+		l.checktype(1, lua::value_type::thread);
+		{
+			lua_Integer delay = l.optinteger(2,0);
+			lua::ref cont;
+			l.pushvalue(1);
+			cont.set(l);
+			common::intrusive_ptr<timer_pause> req{new timer_pause(l)};
+			req->m_cont = std::move(cont);
+			auto r = req->timer::start(delay,0);
+			if (r < 0) {
+				req->m_cont.reset(l);
+				l.pushnil();
+				uv::push_error(l,r);
+				return {2};
+			} 
+		}
+		return {0};
+	}
 
 	void timer_lcb::on_cb() {
 		auto& l = llae::app::get(get_handle()->loop).lua();

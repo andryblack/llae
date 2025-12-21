@@ -47,6 +47,7 @@ namespace uv {
 	public:
 		explicit timer_pause(lua::state& l);
 		static lua::multiret pause(lua::state& l);
+		static lua::multiret resume_delayed(lua::state& l);
 	};
 
 	class timer_lcb : public timer {
