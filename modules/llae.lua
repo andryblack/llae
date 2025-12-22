@@ -23,6 +23,8 @@ function install(tosystem)
 				all_files['modules/' .. fn] = dir .. '/modules/' .. fn
 			end
 			install_files(all_files)
+		else
+			install_metas(dir .. '/lua-meta')
 		end
 	else
 		log.info('skip install')

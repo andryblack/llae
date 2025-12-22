@@ -432,6 +432,23 @@ function m:install_scripts( dir )
 	end
 end
 
+function m:install_metas( dir )
+	local ssrc = _local(self,dir)
+	local files,err = fs.scanfiles_r(ssrc)
+	if not files then
+		error(err .. '\n' .. ssrc )
+	end
+	for _,f in ipairs(files) do
+		self._project:check_meta(f,self)
+		local src = path.join(ssrc,f)
+		local dst =  path.join(self.root,'build','lua-meta',f)
+		fs.mkdir_r(path.dirname(dst))
+		log.debug('install',src,'->',dst)
+		fs.unlink(dst)
+		assert(fs.copyfile(src,dst))
+	end
+end
+
 function m:install_scripts_dir( dir )
 	local ssrc = _local(self,dir)
 	local basename = path.basename(dir)

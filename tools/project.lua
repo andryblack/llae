@@ -148,6 +148,7 @@ function Project:_init( env  )
 	self._env = env
 	self._env.project = self
 	self._scripts = {}
+	self._metas = {}
 	self._modules_locations = {}
 	self._modules = {}
 	self._modules_list = {}
@@ -327,6 +328,15 @@ function Project:check_script( file , m )
 		error('script rewrite: ' .. file)
 	end
 	self._scripts[file] = m
+end
+
+function Project:check_meta( file , m )
+	if self._metas[file] then
+		log.error('required meta',file,'from module',m.name)
+		log.error('already installed by module',self._metas[file].name)
+		error('meta rewrite: ' .. file)
+	end
+	self._metas[file] = m
 end
 
 local function mod_next(t,i)
