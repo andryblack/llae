@@ -1,8 +1,8 @@
 #pragma once
 
 #include "archive/common.h"
-#include <lz4.h>
-#include <lz4frame.h>
+#include "llae-private/lz4.h"
+#include "llae-private/lz4frame.h"
 
 namespace archive{ 
 

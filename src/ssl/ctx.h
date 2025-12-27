@@ -5,7 +5,7 @@
 #include "lua/state.h"
 #include "common/intrusive_ptr.h"
 #include "crypto/random.h"
-#include <mbedtls/ssl.h>
+#include "llae-private/mbedtls/ssl.h"
 
 
 namespace ssl {

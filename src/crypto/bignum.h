@@ -1,7 +1,7 @@
 #ifndef __LLAE_CRYPTO_BIGNUM_H_INCLUDED__
 #define __LLAE_CRYPTO_BIGNUM_H_INCLUDED__
 
-#include <mbedtls/bignum.h>
+#include "llae-private/mbedtls/bignum.h"
 #include "meta/object.h"
 #include "lua/state.h"
 #include "common/intrusive_ptr.h"

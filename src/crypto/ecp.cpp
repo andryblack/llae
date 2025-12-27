@@ -5,7 +5,7 @@
 #include "llae/buffer.h"
 #include "lua/stack.h"
 
-#include <mbedtls/ecdsa.h>
+#include "llae-private/mbedtls/ecdsa.h"
 
 META_OBJECT_INFO(crypto::ecp,meta::object)
 META_OBJECT_INFO(crypto::ecp_point,meta::object)

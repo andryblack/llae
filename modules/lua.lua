@@ -16,15 +16,15 @@ function install()
 	unpack_tgz(archive)
 	
 	move_files{
-		['build/include/lua.h'] = 		dir..'/src/lua.h',
-		['build/include/lauxlib.h'] = 	dir..'/src/lauxlib.h',
-		['build/include/lualib.h'] = 	dir..'/src/lualib.h',
+		['build/include/llae-private/lua.h'] = 		dir..'/src/lua.h',
+		['build/include/llae-private/lauxlib.h'] = 	dir..'/src/lauxlib.h',
+		['build/include/llae-private/lualib.h'] = 	dir..'/src/lualib.h',
 	}
 	
 	log.info('apicheck:',project:get_config_value('lua','apicheck'))
 	preprocess{
 		src = dir .. '/src/luaconf.h',
-		dst = 'build/include/luaconf.h',
+		dst = 'build/include/llae-private/luaconf.h',
 		remove_src = true,
 		replace_line = {
 			['/* #define LUA_USE_C89 */'] = project:get_config_value('lua','apicheck') and [[
@@ -53,13 +53,13 @@ build_lib = {
 	},
 	project = [[
 		includedirs{
-			'include'
+			'include/llae-private',
 		}
 		files {
-			'include/lua.h',
-			'include/lauxlib.h',
-			'include/lualib.h',
-			'include/luaconf.h',
+			'include/llae-private/lua.h',
+			'include/llae-private/lauxlib.h',
+			'include/llae-private/lualib.h',
+			'include/llae-private/luaconf.h',
 			<% for _,f in ipairs(lib.components) do %>
 				<%= format_file(module.dir,'src',f .. '.c') %>,
 				<%= format_file(module.dir,'src',f .. '.h') %>,<% end %>

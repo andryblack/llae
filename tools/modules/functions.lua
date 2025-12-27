@@ -396,7 +396,7 @@ function m:move_files( files )
 	for to,from in pairs(files) do
 		local src = _local(self,from)
 		local dst = path.join(self.root,to)
-		fs.mkdir(path.dirname(dst))
+		fs.mkdir_r(path.dirname(dst))
 		log.debug('install',src,'->',dst)
 		fs.unlink(dst)
 		assert(fs.rename(src,dst))

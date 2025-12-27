@@ -1,7 +1,7 @@
 #ifndef __LLAE_CRYPTO_MD_H_INCLUDED__
 #define __LLAE_CRYPTO_MD_H_INCLUDED__
 
-#include <mbedtls/md.h>
+#include "llae-private/mbedtls/md.h"
 #include "meta/object.h"
 #include "common/intrusive_ptr.h"
 #include "lua/state.h"

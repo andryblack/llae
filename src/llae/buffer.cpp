@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <vector>
 
-#include <mbedtls/base64.h>
+#include "llae-private/mbedtls/base64.h"
 #include "crypto/crypto.h"
 
 

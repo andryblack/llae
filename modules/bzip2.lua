@@ -14,7 +14,7 @@ function install()
 	unpack_tgz(archive)
 	
 	move_files{
-		['build/include/bzlib.h'] = 		dir..'/bzlib.h',
+		['build/include/llae-private/bzlib.h'] = 		dir..'/bzlib.h',
 	}
 end
 
@@ -29,13 +29,11 @@ build_lib = {
 	project = [[
 		includedirs{
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
+			'include/llae-private',
 			'include',
 		}
 		defines{
 			'BZ_NO_STDIO'
-		}
-		externalincludedirs {
-			'include',
 		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>

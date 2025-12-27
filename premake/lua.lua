@@ -20,12 +20,13 @@ local libs = {
 function _M.lib( root )
 	_M.root = path.join(root,'build','extlibs','lua-'.._M.version)
 	os.mkdir(path.join(root,'build','include'))
+	os.mkdir(path.join(root,'build','include','llae-private'))
 	for _,f in ipairs{'lua.h','lauxlib.h','lualib.h'} do
 		utils.install_header(path.join(_M.root,'src',f),f)
 	end
 	utils.preprocess(
 		path.join(_M.root,'src','luaconf.h'),
-		path.join(root,'build','include','luaconf.h'),
+		path.join(root,'build','include','llae-private','luaconf.h'),
 		{replace={
 			['LUA_API'] = '',
 			['LUAI_FUNC'] = ''

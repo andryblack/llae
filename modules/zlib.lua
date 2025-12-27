@@ -10,8 +10,8 @@ function install()
 	unpack_tgz(archive)
 	
 	move_files{
-		['build/include/zlib.h'] = 		dir..'/zlib.h',
-		['build/include/zconf.h'] = 	dir..'/zconf.h',
+		['build/include/llae-private/zlib.h'] = 		dir..'/zlib.h',
+		['build/include/llae-private/zconf.h'] = 	dir..'/zconf.h',
 	}
 end
 
@@ -24,7 +24,7 @@ build_lib = {
 	},
 	project = [[
 		includedirs{
-			'include'
+			'include/llae-private'
 		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>

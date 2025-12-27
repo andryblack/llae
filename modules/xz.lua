@@ -15,21 +15,21 @@ function install()
 	unpack_tgz(archive)
 	
 	move_files{
-		['build/include/lzma.h'] = 			dir..'/src/liblzma/api/lzma.h',
-		['build/include/lzma/version.h'] = 	dir..'/src/liblzma/api/lzma/version.h',
-		['build/include/lzma/base.h'] = 	dir..'/src/liblzma/api/lzma/base.h',
-		['build/include/lzma/vli.h'] = 		dir..'/src/liblzma/api/lzma/vli.h',
-		['build/include/lzma/check.h'] = 	dir..'/src/liblzma/api/lzma/check.h',
-		['build/include/lzma/filter.h'] = 	dir..'/src/liblzma/api/lzma/filter.h',
-		['build/include/lzma/bcj.h'] = 		dir..'/src/liblzma/api/lzma/bcj.h',
-		['build/include/lzma/delta.h'] = 	dir..'/src/liblzma/api/lzma/delta.h',
-		['build/include/lzma/lzma12.h'] = 	dir..'/src/liblzma/api/lzma/lzma12.h',
-		['build/include/lzma/container.h'] = 	dir..'/src/liblzma/api/lzma/container.h',
-		['build/include/lzma/stream_flags.h'] = 	dir..'/src/liblzma/api/lzma/stream_flags.h',
-		['build/include/lzma/block.h'] = 	dir..'/src/liblzma/api/lzma/block.h',
-		['build/include/lzma/index.h'] = 	dir..'/src/liblzma/api/lzma/index.h',
-		['build/include/lzma/index_hash.h'] = 	dir..'/src/liblzma/api/lzma/index_hash.h',
-		['build/include/lzma/hardware.h'] = 	dir..'/src/liblzma/api/lzma/hardware.h',
+		['build/include/llae-private/lzma.h'] = 			dir..'/src/liblzma/api/lzma.h',
+		['build/include/llae-private/lzma/version.h'] = 	dir..'/src/liblzma/api/lzma/version.h',
+		['build/include/llae-private/lzma/base.h'] = 	dir..'/src/liblzma/api/lzma/base.h',
+		['build/include/llae-private/lzma/vli.h'] = 		dir..'/src/liblzma/api/lzma/vli.h',
+		['build/include/llae-private/lzma/check.h'] = 	dir..'/src/liblzma/api/lzma/check.h',
+		['build/include/llae-private/lzma/filter.h'] = 	dir..'/src/liblzma/api/lzma/filter.h',
+		['build/include/llae-private/lzma/bcj.h'] = 		dir..'/src/liblzma/api/lzma/bcj.h',
+		['build/include/llae-private/lzma/delta.h'] = 	dir..'/src/liblzma/api/lzma/delta.h',
+		['build/include/llae-private/lzma/lzma12.h'] = 	dir..'/src/liblzma/api/lzma/lzma12.h',
+		['build/include/llae-private/lzma/container.h'] = 	dir..'/src/liblzma/api/lzma/container.h',
+		['build/include/llae-private/lzma/stream_flags.h'] = 	dir..'/src/liblzma/api/lzma/stream_flags.h',
+		['build/include/llae-private/lzma/block.h'] = 	dir..'/src/liblzma/api/lzma/block.h',
+		['build/include/llae-private/lzma/index.h'] = 	dir..'/src/liblzma/api/lzma/index.h',
+		['build/include/llae-private/lzma/index_hash.h'] = 	dir..'/src/liblzma/api/lzma/index_hash.h',
+		['build/include/llae-private/lzma/hardware.h'] = 	dir..'/src/liblzma/api/lzma/hardware.h',
 	}
 
 	move_files{
@@ -106,7 +106,7 @@ build_lib = {
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
 			<% for _,f in ipairs(lib.components) do %>
 				<%= format_file(module.dir,'src','liblzma',f) %>,<% end %>
-			'include',
+			'include/llae-private',
 		}
 		defines{
 			'HAVE_STDINT_H=1',

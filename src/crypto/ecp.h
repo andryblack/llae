@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mbedtls/ecp.h>
+#include "llae-private/mbedtls/ecp.h"
 #include "meta/object.h"
 #include "common/intrusive_ptr.h"
 #include "lua/state.h"

@@ -15,9 +15,9 @@ function install()
 	unpack_tgz(archive)
 	
 	install_files{
-		['build/include/zdict.h'] = 		dir..'/lib/zdict.h',
-		['build/include/zstd.h'] = 		dir..'/lib/zstd.h',
-		['build/include/zstd_errors.h'] = 		dir..'/lib/zstd_errors.h',
+		['build/include/llae-private/zdict.h'] = 		dir..'/lib/zdict.h',
+		['build/include/llae-private/zstd.h'] = 		dir..'/lib/zstd.h',
+		['build/include/llae-private/zstd_errors.h'] = 		dir..'/lib/zstd_errors.h',
 	}
 
 end
@@ -57,10 +57,8 @@ build_lib = {
 		}
 		includedirs{
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
+			'include/llae-private',
 			'include',
-		}
-		externalincludedirs {
-			'include'
 		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>

@@ -11,18 +11,18 @@ function install()
 	unpack_tgz(archive)
 	
 	install_files {
-		['build/include/uv.h'] = dir .. '/include/uv.h', 
-		['build/include/uv/aix.h'] = dir .. '/include/uv/aix.h',
-		['build/include/uv/bsd.h'] = dir .. '/include/uv/bsd.h',
-		['build/include/uv/darwin.h'] = dir .. '/include/uv/darwin.h',
-		['build/include/uv/errno.h'] = dir .. '/include/uv/errno.h', 
-		['build/include/uv/linux.h'] = dir .. '/include/uv/linux.h', 
-		['build/include/uv/posix.h'] = dir .. '/include/uv/posix.h', 
-		['build/include/uv/threadpool.h'] = dir .. '/include/uv/threadpool.h', 
-		['build/include/uv/tree.h'] = dir .. '/include/uv/tree.h', 
-		['build/include/uv/unix.h'] = dir .. '/include/uv/unix.h', 
-		['build/include/uv/version.h'] = dir .. '/include/uv/version.h', 
-		['build/include/uv/win.h'] = dir .. '/include/uv/win.h', 
+		['build/include/llae-private/uv.h'] = dir .. '/include/uv.h', 
+		['build/include/llae-private/uv/aix.h'] = dir .. '/include/uv/aix.h',
+		['build/include/llae-private/uv/bsd.h'] = dir .. '/include/uv/bsd.h',
+		['build/include/llae-private/uv/darwin.h'] = dir .. '/include/uv/darwin.h',
+		['build/include/llae-private/uv/errno.h'] = dir .. '/include/uv/errno.h', 
+		['build/include/llae-private/uv/linux.h'] = dir .. '/include/uv/linux.h', 
+		['build/include/llae-private/uv/posix.h'] = dir .. '/include/uv/posix.h', 
+		['build/include/llae-private/uv/threadpool.h'] = dir .. '/include/uv/threadpool.h', 
+		['build/include/llae-private/uv/tree.h'] = dir .. '/include/uv/tree.h', 
+		['build/include/llae-private/uv/unix.h'] = dir .. '/include/uv/unix.h', 
+		['build/include/llae-private/uv/version.h'] = dir .. '/include/uv/version.h', 
+		['build/include/llae-private/uv/win.h'] = dir .. '/include/uv/win.h', 
 	}
 end
 
@@ -49,7 +49,7 @@ build_lib = {
 					<%= format_file(module.dir,'src',f) %>,<% end %>
 			}
 	includedirs{
-		'include',
+		'include/llae-private',
 		<%= format_file(module.dir,'src') %>
 	}
 	filter "system:linux or macosx"

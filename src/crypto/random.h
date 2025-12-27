@@ -1,7 +1,7 @@
 #pragma once
 
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/entropy.h>
+#include "llae-private/mbedtls/ctr_drbg.h"
+#include "llae-private/mbedtls/entropy.h"
 #include "meta/object.h"
 #include "lua/state.h"
 #include "common/intrusive_ptr.h"

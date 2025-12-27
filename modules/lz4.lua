@@ -14,9 +14,9 @@ function install()
 	unpack_tgz(archive)
 	
 	move_files{
-		['build/include/lz4.h'] = 		dir..'/lib/lz4.h',
-		['build/include/lz4frame.h'] = 	dir..'/lib/lz4frame.h',
-		['build/include/lz4hc.h'] = 	dir..'/lib/lz4hc.h',
+		['build/include/llae-private/lz4.h'] = 		dir..'/lib/lz4.h',
+		['build/include/llae-private/lz4frame.h'] = 	dir..'/lib/lz4frame.h',
+		['build/include/llae-private/lz4hc.h'] = 	dir..'/lib/lz4hc.h',
 	}
 
 	move_files{
@@ -35,13 +35,11 @@ build_lib = {
 	project = [[
 		includedirs{
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
+			'include/llae-private',
 			'include',
 		}
 		defines{
 			'LZ4LIB_VISIBILITY=',
-		}
-		externalincludedirs {
-			'include',
 		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>

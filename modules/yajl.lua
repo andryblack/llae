@@ -12,10 +12,10 @@ function install()
 	download(url,archive,hash)
 	unpack_tgz(archive)
 	install_files{ 
-		['build/include/yajl/yajl_common.h'] = 		dir..'/src/api/yajl_common.h',
-		['build/include/yajl/yajl_gen.h'] = 		dir..'/src/api/yajl_gen.h',
-		['build/include/yajl/yajl_parse.h'] = 		dir..'/src/api/yajl_parse.h',
-		['build/include/yajl/yajl_tree.h'] = 		dir..'/src/api/yajl_tree.h',
+		['build/include/llae-private/yajl/yajl_common.h'] = 		dir..'/src/api/yajl_common.h',
+		['build/include/llae-private/yajl/yajl_gen.h'] = 		dir..'/src/api/yajl_gen.h',
+		['build/include/llae-private/yajl/yajl_parse.h'] = 		dir..'/src/api/yajl_parse.h',
+		['build/include/llae-private/yajl/yajl_tree.h'] = 		dir..'/src/api/yajl_tree.h',
 	}
 	-- https://github.com/lloyd/yajl/pull/232/commits/ae1fa8f58491901f071339ced9896ca3ecad0703
 	preprocess{
@@ -47,8 +47,8 @@ build_lib = {
 		'yajl','yajl_gen','yajl_tree',
 	},
 	project = [[
-		externalincludedirs{
-			'include'
+		includedirs{
+			'include/llae-private'
 		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>

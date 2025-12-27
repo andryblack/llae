@@ -1,7 +1,7 @@
 #pragma once
 
 #include "archive/common.h"
-#include <lzma.h>
+#include "llae-private/lzma.h"
 
 namespace archive{ 
 

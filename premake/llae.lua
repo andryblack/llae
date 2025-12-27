@@ -104,8 +104,9 @@ function _M.solution(  )
    	linkoptions  { "-mmacosx-version-min=10.14" }
    	filter{}
 
-	externalincludedirs{
-		path.join(_M.root,'build','include')
+	includedirs{
+		path.join(_M.root,'build','include'),
+		path.join(_M.root,'build','include','llae-private')
 	}	
 end
 

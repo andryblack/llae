@@ -5,7 +5,7 @@
 
 #include <vector>
 
-#include <zlib.h>
+#include "llae-private/zlib.h"
 
 namespace archive { namespace impl {
 

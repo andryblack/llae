@@ -103,8 +103,9 @@ solution '<%= project:name() %>'
 		filter{}
 
 
-		externalincludedirs {
-			'include'
+		includedirs {
+			'include',
+			'include/llae-private'
 		}
 
 		libdirs {

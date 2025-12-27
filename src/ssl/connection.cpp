@@ -5,7 +5,7 @@
 #include "lua/bind.h"
 #include "crypto/crypto.h"
 #include <iostream>
-#include <mbedtls/debug.h>
+#include "llae-private/mbedtls/debug.h"
 
 
 META_OBJECT_INFO(ssl::connection,meta::object)

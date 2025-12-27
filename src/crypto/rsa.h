@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mbedtls/rsa.h>
+#include "llae-private/mbedtls/rsa.h"
 #include "meta/object.h"
 #include "lua/state.h"
 

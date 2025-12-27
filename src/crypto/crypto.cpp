@@ -8,9 +8,9 @@
 #include "rsa.h"
 #include "random.h"
 #include "lua/bind.h"
-#include <mbedtls/error.h>
-#include <mbedtls/cipher.h>
-#include <zlib.h>
+#include "llae-private/mbedtls/error.h"
+#include "llae-private/mbedtls/cipher.h"
+#include "llae-private/zlib.h"
 
 #include "uv/work.h"
 #include "llae/buffer.h"

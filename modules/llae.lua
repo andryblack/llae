@@ -184,10 +184,9 @@ build_lib = {
 			'<%= path.join(module.inplace_dir,'src',f,'**.h') %>',
 			'<%= path.join(module.inplace_dir,'src',f,'**.cpp') %>',<% end %>
 		}
-		externalincludedirs {
-			'include',
-		}
 		includedirs{
+			'include',
+			'include/llae-private',
 			'<%= path.join(module.inplace_dir,'src') %>',
 		}
 	]] or [[
@@ -196,10 +195,9 @@ build_lib = {
 			<%= format_file(module.dir,'src',f,'**.h') %>,
 			<%= format_file(module.dir,'src',f,'**.cpp') %>,<% end %>
 		}
-		externalincludedirs {
-			'include',
-		}
 		includedirs{
+			'include',
+			'include/llae-private',
 			<%= format_file(module.dir,'src') %>
 		}
 	]]
@@ -211,7 +209,7 @@ project_main = [[
 		<%= format_file(module.dir,'src/main.cpp') %>
 	}
 	<% end %>
-	externalincludedirs {
+	includedirs {
 		<%= format_file(module.dir,'src') %>
 	}
 	filter "system:windows"

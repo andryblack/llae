@@ -1,7 +1,7 @@
 #pragma once
 
 #include "archive/common.h"
-#include <zstd.h>
+#include "llae-private/zstd.h"
 
 namespace archive{ 
 

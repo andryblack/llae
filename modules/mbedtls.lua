@@ -55,10 +55,10 @@ function install()
 
 	local includes = {}
 	for fn in foreach_file(dir .. '/include/mbedtls') do
-		includes['build/include/mbedtls/' .. fn] = dir .. '/include/mbedtls/' .. fn
+		includes['build/include/llae-private/mbedtls/' .. fn] = dir .. '/include/mbedtls/' .. fn
 	end
 	for fn in foreach_file(dir .. '/include/psa') do
-		includes['build/include/psa/' .. fn] = dir .. '/include/psa/' .. fn
+		includes['build/include/llae-private/psa/' .. fn] = dir .. '/include/psa/' .. fn
 	end
 	install_files(includes)
 -- 
@@ -70,7 +70,7 @@ function install()
 
 	preprocess{
 		src =  dir .. '/include/mbedtls/mbedtls_config.h',
-		dst = 'build/include/mbedtls/mbedtls_config.h',
+		dst = 'build/include/llae-private/mbedtls/mbedtls_config.h',
 		uncomment = uncomment,
 		comment = comment,
 		replace_line = replace_line
@@ -85,7 +85,7 @@ project_config = {
 build_lib = {
 	project = [[
 		includedirs{
-			'include',
+			'include/llae-private',
 			<%= format_file(module.dir,'library') %>
 		}
 		externalincludedirs {

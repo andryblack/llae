@@ -3,8 +3,8 @@
 #include "lua/bind.h"
 #include "crypto/crypto.h"
 #include "llae/buffer.h"
-#include <mbedtls/debug.h>
-#include <mbedtls/error.h>
+#include "llae-private/mbedtls/debug.h"
+#include "llae-private/mbedtls/error.h"
 #include <iostream>
 #include <cstring>
 

@@ -2,7 +2,7 @@
 #define __LLAE_SSL_CONNECTION_H_INCLUDED__
 
 #include "meta/object.h"
-#include <mbedtls/ssl.h>
+#include "llae-private/mbedtls/ssl.h"
 #include "uv/stream.h"
 #include "ctx.h"
 #include <deque>

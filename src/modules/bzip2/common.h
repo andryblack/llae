@@ -2,7 +2,7 @@
 #define __LLAE_ARCHIVE_BZIP2_COMMON_H_INCLUDED__
 
 #include "archive/common.h"
-#include <bzlib.h>
+#include "llae-private/bzlib.h"
 
 namespace archive{ namespace impl {
 

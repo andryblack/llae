@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mbedtls/pk.h>
+#include "llae-private/mbedtls/pk.h"
 #include "meta/object.h"
 #include "lua/state.h"
 #include "lua/ref.h"

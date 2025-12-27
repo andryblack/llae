@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mbedtls/cipher.h>
+#include "llae-private/mbedtls/cipher.h"
 
 #include "meta/object.h"
 #include "common/intrusive_ptr.h"

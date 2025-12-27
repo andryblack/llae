@@ -3,11 +3,7 @@
 #include <memory>
 #include <string>
 
-extern "C" {
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
-}
+#include "headers.h"
 
 namespace lua {
 

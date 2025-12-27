@@ -3,7 +3,7 @@
 #include "lua/bind.h"
 #include "llae/buffer.h"
 #include <memory>
-#include <mbedtls/error.h>
+#include "llae-private/mbedtls/error.h"
 
 META_OBJECT_INFO(crypto::bignum,meta::object)
 

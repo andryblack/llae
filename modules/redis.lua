@@ -16,10 +16,10 @@ build_lib = {
 	project = [[
 		includedirs{
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
-		}
-		externalincludedirs {
+			'include/llae-private',
 			'include',
 		}
+		
 		files {
 			<%= format_mod_file(project:get_module('llae'),'src','modules','db','redis.cpp') %>,
 		}
