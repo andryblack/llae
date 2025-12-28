@@ -2,6 +2,7 @@
 
 #include <lua/state.h>
 #include <string>
+#include <cstdint>
 
 namespace tests {
 
