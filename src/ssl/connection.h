@@ -105,13 +105,13 @@ namespace ssl {
         void on_shutdown(int status);
         
         virtual bool on_read(uv::readable_stream* stream,ssize_t nread, llae::buffer_ptr& buffer) override final;
+        virtual void on_stop_read(uv::readable_stream* s) override final;
         const char* m_active_op = nullptr;
         void begin_op(const char* op);
         void end_op(const char* op);
         common::intrusive_ptr<connection> m_active_op_lock;
         
-        static bool m_verbose;
-	public:
+   public:
 		explicit connection( ctx_ptr&& ctx, uv::stream_ptr&& stream );
 		~connection();
 		static void lbind(lua::state& l);
@@ -122,7 +122,6 @@ namespace ssl {
         lua::multiret read(lua::state& l);
         lua::multiret close(lua::state& l);
         lua::multiret shutdown(lua::state& l);
-        static void set_verbose(bool v) { m_verbose = v; }
         void add_read_buffer(llae::buffer_ptr&& b) { readable_stream::add_read_buffer(std::move(b)); }
         int start_read( const uv::stream_read_consumer_ptr& consumer ) override;
         void stop_read() override;

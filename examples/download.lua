@@ -52,8 +52,6 @@ end
 
 async.run(function()
     http.get_ssl_ctx().set_debug_threshold(99)
-    local ssl = require 'ssl'
-    ssl.connection.set_verbose(true)
     local h 
     if args[2] then
         h = crypto.md5()
