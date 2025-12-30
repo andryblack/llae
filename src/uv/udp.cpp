@@ -3,7 +3,7 @@
 #include "luv.h"
 #include "lua/bind.h"
 #include "lua/stack.h"
-#include <iostream>
+#include "llae/logger.h"
 
 META_OBJECT_INFO(uv::udp,uv::handle)
 
@@ -370,7 +370,7 @@ namespace uv {
             }
             return res;
         } else {
-            LLAE_DIAG(std::cout << "recv without consumer" << std::endl;)
+            LOG_ERROR("recv without consumer" );
             stop_recv();
         }
         return true;
@@ -507,8 +507,14 @@ namespace uv {
         lua::bind::function(l,"getsockname",&udp::getsockname);
 
         lua::bind::value(l, "IPV6ONLY", UV_UDP_IPV6ONLY);
-        lua::bind::value(l, "REUSEADDR", UV_UDP_REUSEADDR);
         lua::bind::value(l, "PARTIAL", UV_UDP_PARTIAL);
+        lua::bind::value(l, "REUSEADDR", UV_UDP_REUSEADDR);
+        lua::bind::value(l, "MMSG_CHUNK", UV_UDP_MMSG_CHUNK);
+        lua::bind::value(l, "MMSG_FREE", UV_UDP_MMSG_FREE);
+        lua::bind::value(l, "LINUX_RECVERR", UV_UDP_LINUX_RECVERR);
+        lua::bind::value(l, "REUSEPORT", UV_UDP_REUSEPORT);
+        lua::bind::value(l, "RECVMMSG", UV_UDP_RECVMMSG);
+
         lua::bind::value(l, "LEAVE_GROUP", UV_LEAVE_GROUP);
         lua::bind::value(l, "JOIN_GROUP", UV_JOIN_GROUP);
     }
