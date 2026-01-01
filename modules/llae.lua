@@ -202,7 +202,7 @@ build_lib = {
 			'include',
 			'include/llae-private',
 			<%= format_file(module.dir,'src') %>
-		},
+		}
 		externalincludedirs {
 			'include/llae-private',
 		}
