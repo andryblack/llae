@@ -88,8 +88,9 @@ build_lib = {
 			'include/llae-private',
 			<%= format_file(module.dir,'library') %>
 		}
+		
 		externalincludedirs {
-			'include',
+			'include/llae-private',
 			<%= format_file(module.dir,'library') %>
 		}
 		files {
