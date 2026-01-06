@@ -121,10 +121,10 @@ end
 --- Sets the event and wakes up all waiting coroutines.
 function event:set()
 	self._set = true
-	while self._set do
+	while true do
 		local u = table.remove(self._wait,1)
 		if u then
-			_M.resume(u)
+			uv.resume_delayed(u)
 		else
 			return
 		end
@@ -133,12 +133,11 @@ end
 
 --- Waits for the event to be set. If the event is already set, returns immediately.
 function event:wait()
-	if self._set then
-		return
+	while not self._set do
+		local c = coroutine.running()
+		table.insert(self._wait,c)
+		coroutine.yield()
 	end
-	local c = coroutine.running()
-	table.insert(self._wait,c)
-	coroutine.yield()
 end
 
 _M.event = event
