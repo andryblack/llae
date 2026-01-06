@@ -2,6 +2,7 @@
 #include "luv.h"
 #include "common/intrusive_ptr.h"
 #include "lua/bind.h"
+#include "lua/types.h"
 #include "tcp_server.h"
 #include "stream.h"
 #include "tcp_connection.h"
@@ -144,6 +145,8 @@ static int lua_uv_interface_addresses(lua_State* L) {
 	char buf[64];
 	for (int i=0;i<count;++i) {
 		l.createtable(0,4);
+		l.pushinteger(i);
+		l.setfield(-2,"index");
 		l.pushstring(addresses[i].name);
 		l.setfield(-2,"name");
 		l.pushboolean(addresses[i].is_internal);
@@ -439,6 +442,18 @@ static lua::multiret lua_uv_ip6_name(lua::state& l) {
 	return {1};
 }
 
+static lua::multiret lua_uv_if_indextoname(lua::state& l) {
+	int index = l.checkinteger(1);
+	char ifname[UV_IF_NAMESIZE];
+	size_t size = sizeof(ifname);
+	auto r = uv_if_indextoname(index, ifname, &size);
+	if (r < 0) {
+		return uv::return_status_error(l,r);
+	}
+	l.pushstring(ifname);
+	return {1};
+}
+
 int luaopen_uv(lua_State* L) {
 	lua::state l(L);
 
@@ -513,6 +528,7 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"ip6_addr", &lua_uv_ip6_addr);
 	lua::bind::function(l,"ip4_name", &lua_uv_ip4_name);
 	lua::bind::function(l,"ip6_name", &lua_uv_ip6_name);
+	lua::bind::function(l,"if_indextoname", &lua_uv_if_indextoname);
 	
 	l.pushinteger(AF_INET);
     l.setfield(-2,"AF_INET");
