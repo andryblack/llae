@@ -61,6 +61,27 @@ uv.sleep = function(ms) end
 uv.random = function(size) end
 ---@param active boolean?
 uv.print_handles = function(active) end
+
+--- convert string ip address to ip binary address
+---@param host string
+---@return string?
+---@return string?
+uv.ip4_addr = function(host) end
+--- convert string ip address to ip binary address
+---@param host string
+---@return string?
+---@return string?
+uv.ip6_addr = function(host) end
+--- convert ip binary address to string ip address
+---@param addr string
+---@return string?
+---@return string?
+uv.ip4_name = function(addr) end
+--- convert ip binary address to string ip address
+---@param addr string
+---@return string?
+---@return string?
+uv.ip6_name = function(addr) end
 ---@type number
 uv.AF_INET = 0
 ---@type number

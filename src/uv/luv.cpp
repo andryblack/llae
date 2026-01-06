@@ -385,6 +385,60 @@ int lua_uv_clock_gettime(lua_State* L) {
 	return 2;
 }
 
+static lua::multiret lua_uv_ip4_addr(lua::state& l) {
+	const char* host = l.checkstring(1);
+	struct sockaddr_in addr;
+	auto r = uv_ip4_addr(host, 0, &addr);
+	if (r < 0) {
+		return uv::return_status_error(l,r);
+	}
+	l.pushlstring(reinterpret_cast<const char*>(&addr.sin_addr),4);
+	return {1};
+}
+
+static lua::multiret lua_uv_ip6_addr(lua::state& l) {
+	const char* host = l.checkstring(1);
+	struct sockaddr_in6 addr;
+	auto r = uv_ip6_addr(host, 0, &addr);
+	if (r < 0) {
+		return uv::return_status_error(l,r);
+	}
+	l.pushlstring(reinterpret_cast<const char*>(&addr.sin6_addr),16);
+	return {1};
+}
+
+static lua::multiret lua_uv_ip4_name(lua::state& l) {
+	struct sockaddr_in addr;
+	addr.sin_family = AF_INET;
+	addr.sin_port = 0;
+	size_t len = 0;
+	auto raw  = l.checklstring(1,len);
+	memcpy(&addr.sin_addr,raw,len);
+	char name[INET_ADDRSTRLEN];
+	auto r = uv_ip4_name(&addr, name, sizeof(name));
+	if (r < 0) {
+		return uv::return_status_error(l,r);
+	}
+	l.pushstring(name);
+	return {1};
+}
+
+static lua::multiret lua_uv_ip6_name(lua::state& l) {
+	struct sockaddr_in6 addr;
+	addr.sin6_family = AF_INET6;
+	addr.sin6_port = 0;
+	size_t len = 0;
+	auto raw  = l.checklstring(1,len);
+	memcpy(&addr.sin6_addr,raw,len);
+	char name[INET6_ADDRSTRLEN];
+	auto r = uv_ip6_name(&addr, name, sizeof(name));
+	if (r < 0) {
+		return uv::return_status_error(l,r);
+	}
+	l.pushstring(name);
+	return {1};
+}
+
 int luaopen_uv(lua_State* L) {
 	lua::state l(L);
 
@@ -455,6 +509,11 @@ int luaopen_uv(lua_State* L) {
 	lua::bind::function(l,"available_parallelism", &uv_available_parallelism);
 	lua::bind::function(l,"cpu_info", &lua_uv_cpu_info);
 
+	lua::bind::function(l,"ip4_addr", &lua_uv_ip4_addr);
+	lua::bind::function(l,"ip6_addr", &lua_uv_ip6_addr);
+	lua::bind::function(l,"ip4_name", &lua_uv_ip4_name);
+	lua::bind::function(l,"ip6_name", &lua_uv_ip6_name);
+	
 	l.pushinteger(AF_INET);
     l.setfield(-2,"AF_INET");
     l.pushinteger(AF_INET6);
