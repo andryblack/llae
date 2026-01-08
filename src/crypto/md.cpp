@@ -222,12 +222,21 @@ namespace crypto {
 		lua::bind::function(l,"finish",&md::finish);
 	}
 
+	const mbedtls_md_info_t* md::get_info(lua::state& l, int idx) {
+		if (l.get_type(idx) == lua::value_type::string) {
+			return mbedtls_md_info_from_string(l.tostring(idx));
+		}
+		if (l.get_type(idx) == lua::value_type::number) {
+			return mbedtls_md_info_from_type(static_cast<mbedtls_md_type_t>(l.tointeger(idx)));
+		}
+		return nullptr;
+	}
+
 	lua::multiret md::lnew(lua::state& l) {
-		const char* alg = l.checkstring(1);
-		auto info = mbedtls_md_info_from_string(alg);
+		auto info = get_info(l,1);
 		if (!info) {
 			l.pushnil();
-			l.pushfstring("unknown md algorithm '%s'",alg);
+			l.pushfstring("unknown md algorithm");
 			return {2};
 		}
 		lua::push(l,md_ptr(new md(info)));

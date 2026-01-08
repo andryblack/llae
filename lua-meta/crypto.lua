@@ -374,4 +374,15 @@ crypto.rsa_base = rsa_base
 crypto.entropy = entropy
 crypto.random = random
 
+--- HKDF (HMAC-based Key Derivation Function) for key derivation.
+---@param md string|integer The message digest algorithm to use
+---@param salt llae.buffer_base|string? The salt value
+---@param info llae.buffer_base|string? The info value
+---@param key llae.buffer_base|string? The key value
+---@param osize integer The output size
+---@return llae.buffer? The HKDF result on success
+---@return string? Error message if HKDF fails
+function crypto.hkdf(md, salt, info, key, osize) end
+
+
 return crypto

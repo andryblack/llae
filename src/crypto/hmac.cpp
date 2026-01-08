@@ -9,6 +9,7 @@
 #include "lua/stack.h"
 #include "uv/luv.h"
 #include "llae/write_buffers.h"
+#include "md.h"
 
 META_OBJECT_INFO(crypto::hmac,meta::object)
 
@@ -325,11 +326,10 @@ namespace crypto {
 	}
 
 	lua::multiret hmac::lnew(lua::state& l) {
-		const char* alg = l.checkstring(1);
-		auto info = mbedtls_md_info_from_string(alg);
+		auto info = md::get_info(l,1);
 		if (!info) {
 			l.pushnil();
-			l.pushfstring("unknown hmac algorithm '%s'",alg);
+			l.pushfstring("unknown hmac algorithm");
 			return {2};
 		}
 		lua::push(l,hmac_ptr(new hmac(info)));
