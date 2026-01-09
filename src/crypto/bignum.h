@@ -32,6 +32,8 @@ namespace crypto {
         lua::multiret div(lua::state& l);
         bignum_ptr add(lua::state& l);
         bignum_ptr sub(lua::state& l);
+        bignum_ptr mod(lua::state& l);
+        bignum_ptr exp_mod(lua::state& l);
         lua::multiret write(lua::state& l);
         lua::multiret read(lua::state& l);
 
@@ -41,6 +43,7 @@ namespace crypto {
         lua::multiret tostring(lua::state& l);
         
         static lua::multiret lnew(lua::state& l);
+        static lua::multiret lrandom(lua::state& l);
         static void lbind(lua::state& l);
     };
 

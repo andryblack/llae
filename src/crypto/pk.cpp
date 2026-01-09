@@ -114,7 +114,7 @@ namespace crypto {
 		auto random = lua::stack<random_ptr>::get(l,3);
 		if (!random) {
 			random = random_ptr(new crypto::random());
-			random->randomize();
+			random->seed(entropy_ptr{},llae::buffer_view{});
 		}
 		{
 			common::intrusive_ptr<encrypt_async> req{new encrypt_async(pk_ptr(this),std::move(src),std::move(random))};

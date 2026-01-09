@@ -339,10 +339,15 @@ function entropy.new() end
 local random = {}
 
 --- Creates a new random number generator.
----@param entropy crypto.entropy? Optional entropy source
 ---@return crypto.random? The random number generator on success
 ---@return string? Error message if creation fails
-function random.new(entropy) end
+function random.new() end
+
+---@param entropy crypto.entropy? Optional entropy source
+---@param pers string? Optional persistent string
+---@return boolean? True on success
+---@return string? Error message if randomization fails
+function random:seed(entropy,pers) end
 
 --- Updates the random number generator with additional entropy.
 ---@param data string|llae.buffer_base Additional entropy data

@@ -37,6 +37,7 @@ namespace crypto {
 		lua::multiret finish(lua::state& l);
 		
 		static const mbedtls_md_info_t* get_info(lua::state& l, int idx);
+		static lua::multiret get_length(lua::state& l);
 		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& l);
 	};

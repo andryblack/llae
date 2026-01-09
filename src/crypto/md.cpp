@@ -220,6 +220,7 @@ namespace crypto {
 		lua::bind::function(l,"new",&md::lnew);
 		lua::bind::function(l,"update",&md::update);
 		lua::bind::function(l,"finish",&md::finish);
+		lua::bind::function(l,"get_length",&md::get_length);
 	}
 
 	const mbedtls_md_info_t* md::get_info(lua::state& l, int idx) {
@@ -230,6 +231,17 @@ namespace crypto {
 			return mbedtls_md_info_from_type(static_cast<mbedtls_md_type_t>(l.tointeger(idx)));
 		}
 		return nullptr;
+	}
+
+	lua::multiret md::get_length(lua::state& l) {
+		auto info = get_info(l,1);
+		if (!info) {
+			l.pushnil();
+			l.pushfstring("unknown md algorithm");
+			return {2};
+		}
+		l.pushinteger(mbedtls_md_get_size(info));
+		return {1};
 	}
 
 	lua::multiret md::lnew(lua::state& l) {

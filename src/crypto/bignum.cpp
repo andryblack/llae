@@ -4,6 +4,7 @@
 #include "llae/buffer.h"
 #include <memory>
 #include "llae-private/mbedtls/error.h"
+#include "crypto/random.h"
 
 META_OBJECT_INFO(crypto::bignum,meta::object)
 
@@ -136,6 +137,35 @@ namespace crypto {
         return res;
     }
 
+    bignum_ptr bignum::mod(lua::state& l) {
+        bignum_ptr res(new bignum());
+        if (l.gettop()<2) {
+            l.argerror(2, "need value");
+        }
+        if (l.isnumber(2)) {
+            mbedtls_mpi_uint result = 0;
+            check_error(l,mbedtls_mpi_mod_int(&result, &m_mpi, l.tointeger(2)));
+            res->set(result);
+        } else {
+            auto ptr = lua::stack<const bignum*>::get(l, 2);
+            if (!ptr) l.argerror(2, "need number");
+            check_error(l,mbedtls_mpi_mod_mpi(&res->m_mpi, &m_mpi, &ptr->m_mpi));
+        }
+        return res;
+    }
+
+    bignum_ptr bignum::exp_mod(lua::state& l) {
+        bignum_ptr res(new bignum());
+        auto E = lua::stack<const bignum*>::get(l, 3);
+        if (!E) l.argerror(3, "need E value");
+        auto N = lua::stack<const bignum*>::get(l, 4);
+        if (!N) l.argerror(4, "need N value");
+        auto supp = lua::stack<bignum*>::get(l, 5);
+        // X = A^E mod N
+        check_error(l,mbedtls_mpi_exp_mod(res->get(),&m_mpi,E->get(),N->get(),supp ? supp->get() : nullptr));
+        return res;
+    }
+
     lua::multiret bignum::tostring(lua::state& l) {
         auto radix = static_cast<int>(l.optinteger(2, 16));
         char dummy;
@@ -200,6 +230,7 @@ namespace crypto {
 
     void bignum::lbind(lua::state& l) {
         lua::bind::function(l,"new",&bignum::lnew);
+        lua::bind::function(l,"random",&bignum::lrandom);
         lua::bind::function(l,"__add",&bignum::add);
         lua::bind::function(l,"__mul",&bignum::mul);
         lua::bind::function(l,"__sub",&bignum::sub);
@@ -211,6 +242,9 @@ namespace crypto {
         lua::bind::function(l,"add",&bignum::add);
         lua::bind::function(l,"mul",&bignum::mul);
         lua::bind::function(l,"sub",&bignum::sub);
+        lua::bind::function(l,"mod",&bignum::mod);
+        lua::bind::function(l,"exp_mod",&bignum::exp_mod);
+        
         lua::bind::function(l,"self_add",&bignum::self_add);
         lua::bind::function(l,"self_mul",&bignum::self_mul);
         lua::bind::function(l,"self_sub",&bignum::self_sub);
@@ -232,6 +266,15 @@ namespace crypto {
                 else ptr->set(*optr);
             }
         }
+        lua::push(l,std::move(ptr));
+        return {1};
+    }
+
+    lua::multiret bignum::lrandom(lua::state& l) {
+        bignum_ptr ptr(new bignum());
+        auto r = lua::stack<lua::check<crypto::random_ptr>>::get(l,1);
+        auto len = l.checkinteger(2);
+        check_error(l,mbedtls_mpi_fill_random(&ptr->m_mpi,len,random::read_func,r.get()));
         lua::push(l,std::move(ptr));
         return {1};
     }

@@ -56,17 +56,7 @@ namespace ssl {
    	}
 
 	lua::multiret ctx::init(lua::state& l) {
-		auto ret = m_random->randomize();
-		
-		if (ret != 0) {
-			l.pushnil();
-			push_error(l,"mbedtls_ctr_drbg_seed failed, code:%d, %s",ret);
-			return {2};
-		}
-
-
-		l.pushboolean(true);
-		return {1};
+		return m_random->lseed(l);
 	}
 
 	lua::multiret ctx::load_cert(lua::state& l) {
