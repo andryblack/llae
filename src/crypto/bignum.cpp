@@ -156,11 +156,11 @@ namespace crypto {
 
     bignum_ptr bignum::exp_mod(lua::state& l) {
         bignum_ptr res(new bignum());
-        auto E = lua::stack<const bignum*>::get(l, 3);
+        auto E = lua::stack<const bignum*>::get(l, 2);
         if (!E) l.argerror(3, "need E value");
-        auto N = lua::stack<const bignum*>::get(l, 4);
+        auto N = lua::stack<const bignum*>::get(l, 3);
         if (!N) l.argerror(4, "need N value");
-        auto supp = lua::stack<bignum*>::get(l, 5);
+        auto supp = lua::stack<bignum*>::get(l, 4);
         // X = A^E mod N
         check_error(l,mbedtls_mpi_exp_mod(res->get(),&m_mpi,E->get(),N->get(),supp ? supp->get() : nullptr));
         return res;
