@@ -1,6 +1,8 @@
 #pragma once
 
+#include "crypto/random.h"
 #include "llae-private/mbedtls/ecp.h"
+#include "lua/types.h"
 #include "meta/object.h"
 #include "common/intrusive_ptr.h"
 #include "lua/state.h"
@@ -51,8 +53,9 @@ namespace crypto {
 		ecp();
 		int load_group(mbedtls_ecp_group_id grp_id);
         static int rng_func(void *, unsigned char *, size_t);
-        void rng_gen(unsigned char * buffer, size_t size);
+        int rng_gen(unsigned char * buffer, size_t size);
         llae::buffer_ptr m_random_data;
+		random_ptr m_random;
 	public:
 		~ecp();
 
@@ -66,6 +69,9 @@ namespace crypto {
         lua::multiret gen_privkey(lua::state& l);
         lua::multiret gen_pubkey(lua::state& l);
         lua::multiret set_random_data(lua::state& l);
+		void set_random(const random_ptr& r) { m_random = r; }
+		lua::multiret ecdh_gen_public(lua::state& l);
+		lua::multiret ecdh_compute_shared(lua::state& l);
         
 		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& l);

@@ -42,6 +42,7 @@ namespace crypto {
 
 		static int read_func(void *p_rng,
                             unsigned char *output, size_t output_len);
+		int read(unsigned char *output, size_t output_len);
 
 		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& s);

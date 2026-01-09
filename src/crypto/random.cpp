@@ -57,7 +57,11 @@ namespace crypto {
 	int random::read_func(void *p_rng,
                             unsigned char *output, size_t output_len) {
 		auto self = static_cast<random*>(p_rng);
-		return mbedtls_ctr_drbg_random(&self->m_ctr_drbg,output,output_len);
+		return self->read(output,output_len);
+	}
+
+	int random::read(unsigned char *output, size_t output_len) {
+		return mbedtls_ctr_drbg_random(&m_ctr_drbg,output,output_len);
 	}
 
 	lua::multiret random::update(lua::state& l) {

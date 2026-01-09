@@ -286,6 +286,21 @@ function ecp:gen_pubkey(privkey) end
 ---@return string? Error message if setting fails
 function ecp:set_random_data(data) end
 
+---@param r crypto.random?
+function ecp:set_random(r) end
+
+---Generates an ECDH keypair on an elliptic curve.
+---@return crypto.bignum? private key
+---@return crypto.ecp_point | string public key or error string
+function ecp:ecdh_gen_public() end
+
+---Computes the shared secret.
+---@param Q crypto.ecp_point public key
+---@param d crypto.bignum Our secret exponent (private key).
+---@return crypto.bignum? shared secret
+---@return string?
+function ecp:ecdh_compute_shared(Q,d) end
+
 ---@class crypto.pk
 ---Public Key operations for RSA and other public key cryptography.
 local pk = {}

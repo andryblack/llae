@@ -4,8 +4,11 @@
 #include "lua/bind.h"
 #include "llae/buffer.h"
 #include "lua/stack.h"
+#include "random.h"
 
 #include "llae-private/mbedtls/ecdsa.h"
+#include "llae-private/mbedtls/ecdh.h"
+
 
 META_OBJECT_INFO(crypto::ecp,meta::object)
 META_OBJECT_INFO(crypto::ecp_point,meta::object)
@@ -196,10 +199,9 @@ namespace crypto {
     }
 
     int ecp::rng_func(void *ctx, unsigned char * buf, size_t len) {
-        static_cast<ecp*>(ctx)->rng_gen(buf,len);
-        return 0;
+        return static_cast<ecp*>(ctx)->rng_gen(buf,len);
     }
-    void ecp::rng_gen(unsigned char * buffer, size_t size) {
+    int ecp::rng_gen(unsigned char * buffer, size_t size) {
         if (m_random_data && size) {
             size_t len = std::min(size,m_random_data->get_len());
             memcpy(buffer,static_cast<const char*>(m_random_data->get_base())+m_random_data->get_len()-len,len);
@@ -210,9 +212,14 @@ namespace crypto {
                 m_random_data.reset();
             }
         }
-        for (size_t i=0;i<size;++i) {
-            buffer[i] = rand();
+        if (size) {
+            if (!m_random) {
+                m_random.reset(new random());
+                m_random->seed(entropy_ptr(),{});
+            }
+            return m_random->read(buffer,size);
         }
+        return 0;
     }
 
     lua::multiret ecp::set_random_data(lua::state& l) {
@@ -268,6 +275,35 @@ namespace crypto {
         return {2};
     }
 
+
+    lua::multiret ecp::ecdh_gen_public(lua::state& l) {
+        bignum_ptr p{new bignum()};
+        ecp_point_ptr Q{new ecp_point()};
+        int res = mbedtls_ecdh_gen_public(&m_group,p->get(),Q->get(),&ecp::rng_func,this);
+        if (res == 0) {
+            lua::push(l, std::move(p));
+            lua::push(l, std::move(Q));
+            return {2};
+        }
+        l.pushnil();
+        push_error(l,"ecdh_gen_public failed, code:%d, %s",res);
+        return {2};
+    }
+
+    lua::multiret ecp::ecdh_compute_shared(lua::state& l) {
+        bignum_ptr z{new bignum()};
+        auto Q = lua::stack<lua::check<ecp_point_ptr>>::get(l,2);
+        auto d = lua::stack<lua::check<bignum_ptr>>::get(l,3);
+        int res = mbedtls_ecdh_compute_shared(&m_group, z->get(), Q->get(), d->get(), &ecp::rng_func,this);
+        if (res == 0) {
+            lua::push(l, std::move(z));
+            return {1};
+        }
+        l.pushnil();
+        push_error(l,"ecdh_compute_shared failed, code:%d, %s",res);
+        return {2};
+    }
+
 	void ecp::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&ecp::lnew);
 		lua::bind::function(l,"check_pubkey",&ecp::check_pubkey);
@@ -280,6 +316,9 @@ namespace crypto {
         lua::bind::function(l,"gen_pubkey",&ecp::gen_pubkey);
         lua::bind::function(l,"gen_keypair",&ecp::gen_keypair);
         lua::bind::function(l,"set_random_data",&ecp::set_random_data);
+        lua::bind::function(l,"set_random",&ecp::set_random);
+        lua::bind::function(l,"ecdh_gen_public",&ecp::ecdh_gen_public);
+        lua::bind::function(l,"ecdh_compute_shared",&ecp::ecdh_compute_shared);
 	}
 
 	lua::multiret ecp::lnew(lua::state& l) {
