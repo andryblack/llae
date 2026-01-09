@@ -25,6 +25,7 @@ namespace lua {
 		errmem = LUA_ERRMEM,
 		errgcmm = LUA_ERRGCMM,
 		errerr = LUA_ERRERR,
+		panic = LUA_ERRERR + 100
 	};
 
 	struct multiret {

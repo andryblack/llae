@@ -31,7 +31,7 @@ namespace llae {
         }
     };
 
-    static int at_panic(lua_State* L) {
+    int app::at_panic(lua_State* L) {
         log::write(log::level::error,"PANIC: ");
         lua::state l(L);
         lua::value err(l,-1);
@@ -40,7 +40,7 @@ namespace llae {
         } else {
             log::write(log::level::error,"unknown");
         }
-        app::get(L).stop(1);
+        app::get(l).process_error(lua::status::panic);
         return 0;
     }
 
@@ -49,7 +49,7 @@ namespace llae {
         *static_cast<app**>(lua_getextraspace(m_lua.native())) = this;
         uv_loop_set_data(m_loop.native(),this);
         m_lua.open_libs();
-        lua_atpanic(lua().native(),&at_panic);
+        lua_atpanic(lua().native(),&app::at_panic);
         lua::register_meta_object_metatable(lua());
         if (need_signal) {
             m_stop_sig.reset( new uv::signal(loop()) );
@@ -135,6 +135,15 @@ namespace llae {
         loop().stop();
     }
 
+    void app::process_error(lua::status e) {
+        log::flush();
+        if (m_error_handler) {
+            m_error_handler->handle_error(*this,e);
+        } else {
+            stop(1);
+        }
+    }
+
     void app::show_error(lua::state& l,lua::status e, bool pop) {
         auto& self(get(l));
         show_lua_error(l,e);
@@ -142,11 +151,7 @@ namespace llae {
         luaL_traceback(ms.native(),l.native(),NULL,1);
         log::write(log::level::error,lua::value(ms,-1).tostring());
         ms.pop(1);
-        if (self.m_error_handler) {
-            self.m_error_handler->handle_error(self,l,e);
-        } else {
-            self.stop(1);
-        }
+        self.process_error(e);
     }
 
     void app::lua_resume(lua::state& l) {
@@ -159,16 +164,7 @@ namespace llae {
         }
         auto s = t.resume(l,n-1);
         if (s!=lua::status::yield && s!=lua::status::ok) {
-            auto& self(get(l));
-            show_lua_error(t,s);
-            luaL_traceback(l.native(),t.native(),NULL,1);
-            log::write(log::level::error,lua::value(l,-1).tostring());
-            l.pop(1);
-            if (self.m_error_handler) {
-                self.m_error_handler->handle_error(self,t,s);
-            } else {
-                self.stop(1);
-            }
+            show_error(t,s);
         }
     }
     

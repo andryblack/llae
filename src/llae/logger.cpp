@@ -58,6 +58,11 @@ namespace llae {
             }
             return true;
         }
+        virtual void flush() override {
+            if (m_file) {
+                m_file->fsync(m_loop);
+            }
+        }
     };
     class time_file_log_handler : public file_log_handler {
         char m_time_buf[32];
@@ -95,6 +100,12 @@ namespace llae {
             } else {
                 ++it;
             }
+        }
+    }
+
+    void log::flush() {
+        for (auto& handler : m_handlers) {
+            handler->flush();
         }
     }
 

@@ -82,6 +82,11 @@ static void log_handler_bind(lua::state& l) {
     lua::bind::function(l,"close",llae::log::close);
 }
 
+static void set_error_handler(lua::state& l) {
+    auto handler = lua::stack<llae::error_handler_ptr>::get(l,1);
+    llae::app::get(l).set_error_handler(handler);
+}
+
 int luaopen_llae(lua_State* L) {
 
    
@@ -100,7 +105,8 @@ int luaopen_llae(lua_State* L) {
     lua::bind::function(l, "release_object", llae::lua_release_object );
     lua::bind::function(l, "resume", llae::lua_resume );
     lua::bind::function(l, "get_host_platform", llae::lua_get_host_platform );
-    
+    lua::bind::function(l, "set_error_handler", set_error_handler );
+
     lua::bind::object<llae::buffer>::get_metatable(l);
 	l.setfield(-2,"buffer");
     lua::bind::object<llae::writable_buffer>::get_metatable(l);

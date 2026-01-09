@@ -30,6 +30,7 @@ namespace llae {
         static void add_stdout_handler();
         static void remove_stdout_handler();
         static void close();
+        static void flush();
         static log_handler_ptr add_file_handler(const uv::file_ptr& file, bool with_time = false);
 	};
 
@@ -38,6 +39,7 @@ namespace llae {
 	public:
 		virtual void write(log::level level, std::string_view message) = 0;
         virtual bool close() { return false; }
+        virtual void flush() { }
 	};
 
     struct log_builder {

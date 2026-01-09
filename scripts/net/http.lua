@@ -15,7 +15,7 @@ function http.get_ssl_ctx()
 		local ssl = require 'ssl'
 		local fs = require 'llae.fs'
 		http._ssl_ctx = ssl.ctx.new()
-		assert(http._ssl_ctx:init())
+		assert(http._ssl_ctx:init(nil,'llae-ssl-seed'))
 		if ssl.ctx.default_cafile then
 			log.debug('load cert from',ssl.ctx.default_cafile)
 			local cert = assert(fs.load_file(ssl.ctx.default_cafile))

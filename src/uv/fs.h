@@ -48,6 +48,7 @@ namespace uv {
         size_t tell() const { return m_offset; }
 		fs_req_ptr write(loop& l,const llae::buffer_view& data);
 		fs_req_ptr close(loop& l);
+		fs_req_ptr fsync(loop& l);
 	};
 	typedef common::intrusive_ptr<file> file_ptr;
 

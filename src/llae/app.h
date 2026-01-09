@@ -7,16 +7,11 @@
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
 #include "lua/ref.h"
+#include "error_handler.h"
 #include <vector>
 
 namespace llae {
 
-	class app;
-	class error_handler : public common::ref_counter_base {
-	public:
-		virtual void handle_error(app& a,lua::state& l,lua::status e) = 0;
-	};
-	using error_handler_ptr = common::intrusive_ptr<error_handler>;
 	
 	class app {
 		lua::main_state m_lua;
@@ -29,11 +24,13 @@ namespace llae {
 		};
 		class lua_at_exit_handler;
 		std::vector<common::intrusive_ptr<at_exit_handler>> m_at_exit;
-		common::intrusive_ptr<error_handler> m_error_handler;
+		error_handler_ptr m_error_handler;
+		static int at_panic(lua_State* L);
 	protected:
 		void end_run(int res);
 		void close();
 		void process_at_exit(int res);
+		void process_error(lua::status e);
 	public:
 		explicit app(uv_loop_t* l,bool need_signal=true);
 		~app();
@@ -46,6 +43,8 @@ namespace llae {
 
 		int run();
 		void stop(int code);
+
+		void set_error_handler(const error_handler_ptr& handler) { m_error_handler = handler; }
 
 		static void show_error(lua::state& l,lua::status e,bool pop=false);
 		static void lua_resume(lua::state& l);

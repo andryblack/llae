@@ -571,6 +571,21 @@ namespace uv {
 		return req;
 	}
 
+	class file_fsync_req : public fs_none {
+	public:
+		file_fsync_req() {}
+	};
+	fs_req_ptr file::fsync(loop& l) {
+       auto req = common::make_intrusive<file_fsync_req>();
+		auto res = uv_fs_fsync(l.native(),
+			req->get(),m_file,&fs_req::fs_cb);
+		if (res < 0) {
+			return {};
+		}
+        req->add_ref();
+		return req;
+	}
+
 	lua::multiret file::lwrite(lua::state& l) {
 		if (!l.isyieldable()) {
 			l.pushnil();
