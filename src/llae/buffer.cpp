@@ -2,6 +2,7 @@
 
 #include "lua/bind.h"
 #include "lua/stack.h"
+#include <cstdint>
 #include <new>
 #include <cstddef>
 #include <cstdlib>
@@ -194,6 +195,27 @@ namespace llae {
         return {0};
     }
 
+    lua::multiret buffer_base::lxor(lua::state& l) {
+        auto a = buffer_view::get(l,1,true);
+        auto b = buffer_view::get(l,2,true);
+        size_t len = std::max(a.get_len(),b.get_len());
+        size_t common = std::min(a.get_len(),b.get_len());
+        auto res = buffer::alloc(len);
+        auto dst = static_cast<uint8_t*>(res->get_base());
+        auto a_ptr = static_cast<const uint8_t*>(a.get_base());
+        auto b_ptr = static_cast<const uint8_t*>(b.get_base());
+        for (size_t i=0;i<common;++i) {
+            *dst++ = *a_ptr++ ^ *b_ptr++;
+        }
+        if (a.get_len() > b.get_len()) {
+            ::memcpy(dst,a_ptr,len-common);
+        } else if (b.get_len() > a.get_len()) {
+            ::memcpy(dst,b_ptr,len-common);
+        }
+        lua::push(l,std::move(res));
+        return {1};
+    }
+
     static inline uchar decode_hex(lua::state& l,uchar ch) {
         if (ch>=uchar('0')&&ch<=uchar('9')) {
             return ch-uchar('0');
@@ -334,6 +356,7 @@ namespace llae {
         lua::bind::function(l,"find",&buffer_base::lfind);
         lua::bind::function(l,"byte",&buffer_base::lbyte);
         lua::bind::function(l,"reverse", &buffer_base::reverse);
+        lua::bind::function(l,"xor",&buffer_base::lxor);
         lua::bind::function(l,"hex_decode",&buffer_base::hex_decode);
         lua::bind::function(l,"hex_encode",&buffer_base::hex_encode);
         lua::bind::function(l,"base64_encode",&buffer_base::base64_encode);

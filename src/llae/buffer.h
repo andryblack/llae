@@ -52,6 +52,7 @@ namespace llae {
         static buffer_base_ptr get(lua::state& l,int idx,bool check=false);
         static lua::multiret lconcat(lua::state& l);
 
+        static lua::multiret lxor(lua::state& l);
         static lua::multiret hex_decode(lua::state& l);
         static lua::multiret hex_encode(lua::state& l);
         static lua::multiret base64_decode(lua::state& l);

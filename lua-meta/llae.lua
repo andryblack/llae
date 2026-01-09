@@ -57,6 +57,10 @@ function buffer_base.base64_decode(data) end
 ---@param data string|llae.buffer_base
 ---@return llae.buffer
 function buffer_base.base64_encode(data) end
+---@param a string|llae.buffer_base
+---@param b string|llae.buffer_base
+---@return llae.buffer
+function buffer_base.xor(a,b) end
 
 ---@class llae.buffer : llae.buffer_base
 local buffer = {}
