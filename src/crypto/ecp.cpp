@@ -135,7 +135,7 @@ namespace crypto {
         auto r = mbedtls_ecp_gen_privkey(&m_group, d->get(), rng_func, this);
         if (r == 0) {
             lua::push(l, std::move(d));
-            return {2};
+            return {1};
         }
         l.pushnil();
         push_error(l,"gen_privkey failed, code:%d, %s",r);
@@ -151,7 +151,7 @@ namespace crypto {
         auto r = mbedtls_ecp_mul( &m_group, Q->get(), d->get(), &m_group.G, &ecp::rng_func, this);
         if (r == 0) {
             lua::push(l, std::move(Q));
-            return {2};
+            return {1};
         }
         l.pushnil();
         push_error(l,"gen_pubkey failed, code:%d, %s",r);
