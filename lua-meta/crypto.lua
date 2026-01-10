@@ -106,10 +106,53 @@ function cipher:reset() end
 ---@return string? Error message if processing fails
 function cipher:update(data) end
 
+--- Processes additional data through the cipher (encrypt/decrypt).
+---@param data string|llae.buffer_base The data to process
+---@return boolean? The processed data on success
+---@return string? Error message if processing fails
+function cipher:update_ad(data) end
+
 --- Finalizes the cipher operation and returns any remaining data.
 ---@return llae.buffer? The final processed data on success
 ---@return string? Error message if finalization fails
 function cipher:finish() end
+
+--- Writes a tag from the cipher.
+---@param len integer The length of the tag
+---@return llae.buffer? The written tag on success
+---@return string? Error message if writing fails
+function cipher:write_tag(len) end
+
+--- Checks a tag for the cipher.
+---@param tag string|llae.buffer_base The tag to check
+---@return boolean? True if the tag is valid
+---@return string? Error message if checking fails
+function cipher:check_tag(tag) end
+
+--- Processes data through the cipher (encrypt/decrypt).
+---@param iv string|llae.buffer_base? The initialization vector
+---@param buffer string|llae.buffer_base The data to process
+---@return llae.buffer? The processed data on success
+---@return string? Error message if processing fails
+function cipher:crypt(iv, buffer) end
+
+--- Authenticates and encrypts data through the cipher.
+---@param iv string|llae.buffer_base? The initialization vector
+---@param ad string|llae.buffer_base? The additional data
+---@param buffer string|llae.buffer_base The data to process
+---@param tag_len integer? The length of the tag
+---@return llae.buffer? The processed data on success
+---@return string? Error message if processing fails
+function cipher:auth_encrypt(iv, ad, buffer, tag_len) end
+
+--- Authenticates and decrypts data through the cipher.
+---@param iv string|llae.buffer_base? The initialization vector
+---@param ad string|llae.buffer_base? The additional data
+---@param buffer string|llae.buffer_base The data to process
+---@param tag_len integer? The length of the tag
+---@return llae.buffer? The processed data on success
+---@return string? Error message if processing fails
+function cipher:auth_decrypt(iv, ad, buffer, tag_len) end
 
 ---Big number arithmetic operations for cryptographic computations.
 ---@class crypto.bignum
