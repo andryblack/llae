@@ -73,6 +73,7 @@ namespace crypto {
 		lua::multiret ecdh_gen_public(lua::state& l);
 		lua::multiret ecdh_compute_shared(lua::state& l);
         
+		lua::multiret scalar_mul(lua::state& l);
 		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& l);
 	};

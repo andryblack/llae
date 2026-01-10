@@ -25,6 +25,11 @@ namespace crypto {
         void set(mbedtls_mpi_sint val);
         void set(const bignum& val);
 
+        bool is0() const;
+        bool get_bit(size_t bit) const;
+        void set_bit(size_t bit, bool value);
+        void lset_bit(lua::state& l);
+
         void self_add(lua::state& l);
         void self_mul(lua::state& l);
         void self_sub(lua::state& l);
@@ -34,11 +39,16 @@ namespace crypto {
         bignum_ptr sub(lua::state& l);
         bignum_ptr mod(lua::state& l);
         bignum_ptr exp_mod(lua::state& l);
+        void self_lshift(lua::state& l);
+        void self_rshift(lua::state& l);
         lua::multiret write(lua::state& l);
+        lua::multiret write_le(lua::state& l);
         lua::multiret read(lua::state& l);
+        lua::multiret read_le(lua::state& l);
 
         lua::multiret less(lua::state& l);
         lua::multiret lequal(lua::state& l);
+        lua::multiret equal(lua::state& l);
         
         lua::multiret tostring(lua::state& l);
         

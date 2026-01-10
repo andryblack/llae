@@ -304,6 +304,23 @@ namespace crypto {
         return {2};
     }
 
+
+    lua::multiret ecp::scalar_mul(lua::state& l) {
+        auto P = lua::stack<ecp_point_ptr>::get(l,2);
+        if (!P) {
+            l.argerror(2, "need point");
+        }
+        auto d = lua::stack<lua::check<bignum_ptr>>::get(l,3);
+        ecp_point_ptr R(new ecp_point());
+        int res = mbedtls_ecp_mul(&m_group, R->get(), d->get(), P->get(), &ecp::rng_func,this);
+        if (res == 0) {
+            lua::push(l, std::move(R));
+            return {1};
+        }
+        l.pushnil();
+        push_error(l,"scalar_mul failed, code:%d, %s",res);
+        return {2};
+    }
 	void ecp::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&ecp::lnew);
 		lua::bind::function(l,"check_pubkey",&ecp::check_pubkey);
@@ -319,6 +336,7 @@ namespace crypto {
         lua::bind::function(l,"set_random",&ecp::set_random);
         lua::bind::function(l,"ecdh_gen_public",&ecp::ecdh_gen_public);
         lua::bind::function(l,"ecdh_compute_shared",&ecp::ecdh_compute_shared);
+        lua::bind::function(l,"scalar_mul",&ecp::scalar_mul);
 	}
 
 	lua::multiret ecp::lnew(lua::state& l) {
