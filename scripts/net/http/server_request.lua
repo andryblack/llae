@@ -66,14 +66,33 @@ end
 function request:on_closed(  )
 	-- body
 end
+
+function request:on_finished(  )
+	-- body
+end
+
+function request:finish(  )
+	if not self._finished then
+		self._finished = true
+		self:on_finished()
+	end
+end
+
+function request:is_closed(  )
+	return self._closed
+end
+
+function request:is_finished(  )
+	return self._finished
+end
+
 function request:read(  )
-	if self._closed then
+	if self._closed or self._finished then
 		return nil
 	end
 	if self._decoder:is_end() then
 		--log.debug('stream end')
-		self:on_closed()
-		self._closed = true
+		self:finish()
 		return nil
 	end
 
@@ -84,8 +103,7 @@ function request:read(  )
 	if not ch then
 		--log.debug('request end')
 		self._error = e
-		self:on_closed()
-		self._closed = true
+		self:close()
 	end
 	return ch
 end
@@ -93,7 +111,7 @@ end
 function request:read_body( )
 	if not self._body then
 		local d = {}
-		while not self._closed do
+		while not self._closed and not self._finished do
 			--log.debug('read body')
 			local ch = self:read()
 			if not ch then
@@ -109,7 +127,11 @@ function request:read_body( )
 end
 
 function request:close(  )
-	self._closed = true
+	if not self._closed then
+		self:finish()
+		self._closed = true
+		self:on_closed()
+	end
 end
 
 return request

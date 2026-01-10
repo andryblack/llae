@@ -22,13 +22,13 @@ function parser:load( client )
 				return true
 			end
 			log.error('http: unexpected method end')
-			return false
+			return true
 		end
 	end
 	while not self:parse_header(client) do 
 		if not self:read(client) then
 			log.error('http: unexpected header end')
-			return false
+			return true
 		end
 	end
 	local _length = tonumber(self:get_header('Content-Length') or 0)
@@ -50,7 +50,7 @@ function parser:load( client )
 	end
 	while req:read() do
 	end
-	return req._closed
+	return req:is_closed()
 end
 
 function parser:parse_method( client )
