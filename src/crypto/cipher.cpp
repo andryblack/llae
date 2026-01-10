@@ -549,6 +549,8 @@ namespace crypto {
 		lua::bind::function(l,"write_tag",&cipher::write_tag);
 		lua::bind::function(l,"check_tag",&cipher::check_tag);
 		lua::bind::function(l,"crypt",&cipher::crypt);
+		lua::bind::function(l,"auth_encrypt",&cipher::auth_encrypt);
+		lua::bind::function(l,"auth_decrypt",&cipher::auth_decrypt);
 	}
 
 	lua::multiret cipher::lnew(lua::state& l) {
