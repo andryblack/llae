@@ -277,9 +277,10 @@ generate_src = {{
 	for _,v in ipairs(force_embedded) do
 		if not installed_scripts[v] then
 			log.debug('embed',v)
+			local fn = v:gsub('%.','/') .. '.lua'
 			table.insert(scripts,{
 				name = v,
-				content = fs.load_file(path.join(project.get_path(location,dir),'scripts',v..'.lua'))
+				content = fs.load_file(path.join(project.get_path(location,dir),'scripts',fn))
 			})
 		end
 	end
