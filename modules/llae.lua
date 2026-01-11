@@ -273,26 +273,15 @@ generate_src = {{
 			content = content,	
 		})
 	end
-	if not installed_scripts['llae.fs'] then
-		log.debug('embed','llae.fs')
-		table.insert(scripts,{
-			name = 'llae.fs',
-			content = fs.load_file(path.join(project.get_path(location,dir),'scripts','llae/fs.lua'))
-		})
-	end
-	if not installed_scripts['llae.path'] then
-		log.debug('embed','llae.path')
-		table.insert(scripts,{
-			name = 'llae.path',
-			content = fs.load_file(path.join(project.get_path(location,dir),'scripts','llae/path.lua'))
-		})
-	end
-	if not installed_scripts['llae.utils'] then
-		log.debug('embed','llae.utils')
-		table.insert(scripts,{
-			name = 'llae.utils',
-			content = fs.load_file(path.join(project.get_path(location,dir),'scripts','llae/utils.lua'))
-		})
+	local force_embedded = {'llae.fs','llae.path','llae.utils','llae.log'}
+	for _,v in ipairs(force_embedded) do
+		if not installed_scripts[v] then
+			log.debug('embed',v)
+			table.insert(scripts,{
+				name = v,
+				content = fs.load_file(path.join(project.get_path(location,dir),'scripts',v..'.lua'))
+			})
+		end
 	end
 
 	]]

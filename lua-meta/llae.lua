@@ -86,4 +86,29 @@ function buffer:self_reverse() end
 
 llae.buffer = buffer
 
+---@class llae.native.log_handler
+local log_handler = {}
+
+---@class llae.native.log
+local log = {}
+log.level = {
+	debug = 0,
+    info = 1,
+    warning = 2,
+    error = 3,
+    fatal = 4,
+}
+---@param level integer
+---@param message string
+function log:write(level, message) end
+---@return llae.native.log_handler
+function log:add_stdout_handler() end
+function log:remove_stdout_handler() end
+---@param file uv.file
+---@param with_time boolean
+---@return llae.native.log_handler
+function log:add_file_handler(file, with_time) end
+
+llae.log = log
+
 return llae

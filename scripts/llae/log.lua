@@ -75,51 +75,61 @@ function _M.warning( ... )
 	print(prefix_warning,...)
 end
 
-local class = require 'llae.class'
----@class llae.log.progress
----Progress bar for visualizing task completion.
----@field new fun(width:integer?) : llae.log.progress
-local progress = class(nil,'llae.log.progress')
+local progress = nil
 
-function progress:_init( width )
-	self._width = width or 70
-	self._fill = 0
-end
-
---- Shows the initial progress bar.
-function progress:show(  )
-	print(_white..'[  0%]'.._blue..'['..string.rep(' ',self._width)..']'.._reset)
-end
-
---- Updates the progress bar with count and total, or advances by one step.
----@param count integer? Current count (if provided with total)
----@param total integer? Total count (if provided with count)
-function progress:update( count, total )
-	local fill = 0
-	if count and total and total > 0 and  (count<=total) then
-		fill =  math.ceil(count*self._width/total)
-	else
-		fill = self._fill + 1
-		if fill > self._width then
-			fill = 0
-		end
+local function get_progress_class()
+	if progress then
+		return progress
 	end
-	print(_prev_line.._clear_line..
-		_white..'['..string.format('%3d%%',math.ceil(fill*100/self._width))..']'..
-		_blue..'['..string.rep('=',fill)..
-		string.rep(' ',(self._width-fill))..']'.._reset)
-	self._fill = fill
-end
+	local class = require 'llae.class'
+	---@class llae.log.progress
+	---Progress bar for visualizing task completion.
+	---@field new fun(width:integer?) : llae.log.progress
+	progress = class(nil,'llae.log.progress')
 
---- Removes the progress bar from display.
-function progress:close(  )
-	print(_prev_line.._clear_line)
+	function progress:_init( width )
+		self._width = width or 70
+		self._fill = 0
+	end
+
+	--- Shows the initial progress bar.
+	function progress:show(  )
+		print(_white..'[  0%]'.._blue..'['..string.rep(' ',self._width)..']'.._reset)
+	end
+
+	--- Updates the progress bar with count and total, or advances by one step.
+	---@param count integer? Current count (if provided with total)
+	---@param total integer? Total count (if provided with count)
+	function progress:update( count, total )
+		local fill = 0
+		if count and total and total > 0 and  (count<=total) then
+			fill =  math.ceil(count*self._width/total)
+		else
+			fill = self._fill + 1
+			if fill > self._width then
+				fill = 0
+			end
+		end
+		print(_prev_line.._clear_line..
+			_white..'['..string.format('%3d%%',math.ceil(fill*100/self._width))..']'..
+			_blue..'['..string.rep('=',fill)..
+			string.rep(' ',(self._width-fill))..']'.._reset)
+		self._fill = fill
+	end
+
+	--- Removes the progress bar from display.
+	function progress:close(  )
+		print(_prev_line.._clear_line)
+	end
+
+	return progress
 end
 
 --- Creates and displays a new progress bar.
 ---@param width integer? Width of the progress bar in characters (default: 70)
 ---@return llae.log.progress A progress bar object with update and close methods
 function _M.progress( width )
+	local progress = get_progress_class()
 	local p = progress.new(width)
 	p:show()
 	return p
