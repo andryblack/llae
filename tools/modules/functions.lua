@@ -7,6 +7,7 @@ local untar = require 'archive.tar'
 local unzip = require 'archive.zip'
 local http = require 'net.http'
 local os = require 'llae.os'
+local netutils = require 'net.utils'
 
 local uv = require 'uv'
 
@@ -99,99 +100,22 @@ function m:download_git(url,config)
 	logfile:close()
 end
 
-local function download_file_impl(url,dst,h)
-	local uri = (require 'net.url').parse(url)
-	fs.unlink(dst)
-	if uri.scheme == 'ftp' then
-		local ftp = (require 'net.ftp').new()
-		assert(ftp:connect(uri.host,uri.port))
-		local loaded = 0
-		local p = log.progress()
 
-		ftp:getfile(uri.path,dst,function(ch,total)
-			loaded = loaded + #ch
-			if h and #ch>0 then
-				assert(h:update(ch))
-			end
-			p:update(loaded,total)
-		end)
-	else
-	
-		local req = http.createRequest{
-			method = 'GET',
-			url = url,
-			headers = {
-				['Accept'] = '*/*',
-				['Accept-Encoding'] = 'identity',
-				['User-Agent'] = 'Wget/1.24.5',
-				['Connection'] = 'close'
-			}
-		}
-
-		local resp = assert(req:exec())
-		local code = resp:get_code()
-		if code ~= 200 then
-			resp:close()
-			error(code .. ':' .. resp:get_message())
-		end
-		local f = assert(fs.open(dst,fs.O_WRONLY|fs.O_CREAT))
-		local loaded = 0
-		local total = tonumber(resp:get_header('Content-Length'))
-		--log.debug('total:',total)
-		local p = log.progress()
-		while true do
-			local ch,err = resp:read()
-			if not ch then
-				if err then
-					error(err)
-				end
-				p:close()
-				break
-			end
-			if #ch > 0 then
-				if h then
-					assert(h:update(ch))
-				end
-				f:write(ch)
-			end
-			loaded = loaded + #ch
-			p:update(loaded,total)
-		end
-		f:close()
-	end
-end
 
 
 function m:download(url,file,hash)
 	log.info('download',self.name,url)
 	local dst = path.join(self._project:get_dl_dir(),file)
-	if hash and fs.isfile(dst) then
-		local h = crypto.md5()
-		local data = fs.load_file(dst)
-		if #data > 0 then
-			assert(h:update(data))
-		end
-		local fhash = tostring(assert(h:finish()):hex_encode())
-		if fhash == hash then
-			log.info('skip, already downloaded')
-			return
-		else
-			log.info('hash different, redownload',fhash,hash)
-		end
-	else
-		log.debug('dnt found downloaded',dst,hash)
+	local res,err = netutils.download_file(url,dst,{
+		hash=hash,
+		hash_type='MD5',
+		log=log,
+		progress_func=log.progress
+	})
+	if not res then
+		error(err)
 	end
-	fs.unlink(dst)
-
-	local h = hash and crypto.md5()
-	download_file_impl(url,dst,h)
-	if h then
-		fhash = tostring(assert(h:finish()):hex_encode())
-		if fhash ~= hash then
-			log.error('invalid file hash',fhash,hash)
-			error('invalid file hash')
-		end
-	end
+	return res
 end
 
 local function _local(self,fn)
@@ -205,7 +129,13 @@ function m:download_file(url,file)
 	local dst = _local(self,file)
 	fs.mkdir_r(path.dirname(dst))
 	log.debug('download file',url,file)
-	download_file_impl(url,dst)
+	local res,err = netutils.download_file(url,dst,{
+		log=log,progress=log.progress()
+	})
+	if not res then
+		error(err)
+	end
+	return res
 end
 
 function m:unpack_tgz( file , todir , strip)
