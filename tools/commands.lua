@@ -21,5 +21,6 @@ register('init_project')
 register('run')
 register('http_server')
 register('upgrade')
+register('download')
 
 return commands

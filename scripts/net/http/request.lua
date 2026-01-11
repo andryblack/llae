@@ -127,7 +127,9 @@ function request:exec(  )
 	
 	--log.debug('connected')
 
-	self:set_header('Content-Length',tostring(#self._body))
+	if self._body and self._body ~= '' then
+		self:set_header('Content-Length',tostring(#self._body))
+	end
 	if not self:get_header('Connection') then
 		self:set_header('Connection', 'close')
 	end

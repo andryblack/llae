@@ -7,7 +7,7 @@ local log = require 'llae.log'
 ---@param h crypto.md?
 ---@param p llae.log.progress?
 ---@return boolean,string?
-local function download_file_impl(url,dst,h,p)
+local function download_file_impl(url,dst,headers,h,p)
 	local uri = (require 'net.url').parse(url)
 	fs.unlink(dst)
 	if uri.scheme == 'ftp' then
@@ -33,12 +33,7 @@ local function download_file_impl(url,dst,h,p)
 		local req = http.createRequest{
 			method = 'GET',
 			url = url,
-			headers = {
-				['Accept'] = '*/*',
-				['Accept-Encoding'] = 'identity',
-				['User-Agent'] = 'Wget/1.24.5',
-				['Connection'] = 'close'
-			}
+			headers = headers
 		}
 
 		local resp = assert(req:exec())
@@ -80,9 +75,16 @@ local function download_file_impl(url,dst,h,p)
 	end
 end
 
+---@class net.utils.download_file_options
+---@field hash string?
+---@field hash_type string?
+---@field log llae.log?
+---@field progress_func fun():llae.log.progress?
+---@field headers table<string,string>?
+
 ---@param url string
 ---@param dst string
----@param options {hash:string?,hash_type:string?,log:llae.log?,progress_func:fun():llae.log.progress?}?
+---@param options net.utils.download_file_options?
 ---@return boolean,string?
 function utils.download_file(url,dst,options)
     local h = nil
@@ -113,7 +115,18 @@ function utils.download_file(url,dst,options)
     if options and options.progress_func then
         p = options.progress_func()
     end
-    local ok,err = download_file_impl(url,dst,h,p)
+    local headers = {
+        ['Accept'] = '*/*',
+        ['Accept-Encoding'] = 'identity;q=1, gzip;q=0.1',
+        ['User-Agent'] = 'Wget/1.24.5',
+        ['Connection'] = 'close'
+    }
+    if options and options.headers then
+        for name,value in pairs(options.headers) do
+            headers[name] = value
+        end
+    end
+    local ok,err = download_file_impl(url,dst,headers,h,p)
     if h then
         local fhash = tostring(assert(h:finish()):hex_encode())
         ---@diagnostic disable-next-line: need-check-nil

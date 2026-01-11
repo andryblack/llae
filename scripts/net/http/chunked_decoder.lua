@@ -32,6 +32,11 @@ function decoder:read( )
 				return nil,'invlid chunk size "' .. line .. '"'
 			end
 			self._data = tail
+			if self._len == 0 then
+				-- terminate chunk
+				self._finished = true
+				return nil
+			end
 			--log.debug('begin chunk:',self._len,line,#tail)
 			break
 		else
@@ -84,6 +89,7 @@ function decoder:finish()
 		self._upstream:finish()
 		self._upstream = nil
 	end
+	self._finished = true
 end
 
 return decoder
