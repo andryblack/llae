@@ -113,17 +113,7 @@ int luaopen_llae(lua_State* L) {
 	l.setfield(-2,"writable_buffer");
 	
     l.createtable();
-    l.createtable();
-    lua::bind::value(l,"debug",llae::log::level::debug);
-    lua::bind::value(l,"info",llae::log::level::info);
-    lua::bind::value(l,"warning",llae::log::level::warning);
-    lua::bind::value(l,"error",llae::log::level::error);
-    lua::bind::value(l,"fatal",llae::log::level::fatal);
-    l.setfield(-2,"level");
-    lua::bind::function(l,"write",llae::log::write);
-    lua::bind::function(l,"add_stdout_handler",llae::log::add_stdout_handler);
-    lua::bind::function(l,"remove_stdout_handler",llae::log::remove_stdout_handler);
-    lua::bind::function(l,"add_file_handler",llae::log::add_file_handler);
+    llae::log::lbind(l);
     l.setfield(-2,"log");
 
     return 1;

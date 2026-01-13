@@ -98,16 +98,26 @@ log.level = {
     error = 3,
     fatal = 4,
 }
+log.print_level = {
+    debug = {},
+    info = {},
+    warning = {},
+    error = {},
+    fatal = {},
+}
 ---@param level integer
 ---@param message string
-function log:write(level, message) end
+function log.write(level, message) end
 ---@return llae.native.log_handler
-function log:add_stdout_handler() end
-function log:remove_stdout_handler() end
+function log.add_stdout_handler() end
+function log.remove_stdout_handler() end
 ---@param file uv.file
 ---@param with_time boolean
 ---@return llae.native.log_handler
-function log:add_file_handler(file, with_time) end
+function log.add_file_handler(file, with_time) end
+---@param level integer
+---@param prefix string
+function log.set_console_prefix(level, prefix) end
 
 llae.log = log
 

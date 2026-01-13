@@ -1,16 +1,22 @@
 #include "app.h"
+#include "lua/state.h"
+#include "lua/types.h"
 #include "lua/value.h"
 #include "meta/object.h"
 #include "lua/metatable.h"
 #include "uv/handle.h"
 #include "logger.h"
+#include <cstdint>
 #include <psa/crypto.h>
+#include "lua/bind.h"
 
 namespace llae {
 
     static void show_lua_error(lua::state& l,lua::status e) {
         log::write(log::level::error,lua::get_error_message(l,e));
     }
+
+    
 
     class app::lua_at_exit_handler : public at_exit_handler {
         lua::ref m_ref;
@@ -50,6 +56,7 @@ namespace llae {
         uv_loop_set_data(m_loop.native(),this);
         m_lua.open_libs();
         lua_atpanic(lua().native(),&app::at_panic);
+
         lua::register_meta_object_metatable(lua());
         if (need_signal) {
             m_stop_sig.reset( new uv::signal(loop()) );

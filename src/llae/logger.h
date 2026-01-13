@@ -10,6 +10,9 @@ namespace uv {
     class file;
     using file_ptr = common::intrusive_ptr<file>;
 }
+namespace lua {
+    class state;
+}
 
 namespace llae {
 
@@ -18,6 +21,7 @@ namespace llae {
 
     struct log {
         enum class level {
+            raw,
             debug,
             info,
             warning,
@@ -31,7 +35,11 @@ namespace llae {
         static void remove_stdout_handler();
         static void close();
         static void flush();
+        static const char* level_to_string(level leve,bool console);
+        static void set_console_prefix(level leve,const char* prefix);
         static log_handler_ptr add_file_handler(const uv::file_ptr& file, bool with_time = false);
+
+        static void lbind(lua::state& l);
 	};
 
 	class log_handler : public meta::object {

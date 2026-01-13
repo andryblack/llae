@@ -44,35 +44,79 @@ function _M.set_verbose( v )
 	_M._verbose = v
 end
 
-local prefix_info = _green .. '[I]' .. _reset
-local prefix_debuf = _blue .. '[D]' .. _reset
-local prefix_error = _red .. '[E]' .. _reset
-local prefix_warning = _yellow .. '[W]' .. _reset
+local llae = require 'llae'
+
+local function set_prefixes()
+	if llae.log.set_console_prefix then
+		llae.log.set_console_prefix(llae.log.level.debug,_blue .. '[D]' .. _reset)
+		llae.log.set_console_prefix(llae.log.level.info,_green .. '[I]' .. _reset)
+		llae.log.set_console_prefix(llae.log.level.warning,_yellow .. '[W]' .. _reset)
+		llae.log.set_console_prefix(llae.log.level.error,_red .. '[E]' .. _reset)
+		llae.log.set_console_prefix(llae.log.level.fatal,_red .. '[F]' .. _reset)
+	end
+end
+
+set_prefixes()
+if llae.log.print then
+	print = llae.log.print
+end
+if not llae.log.print_level then
+	llae.log.print_level = {
+		debug = '[D]',
+		info = '[I]',
+		warning = '[W]',
+		error = '[E]',
+		fatal = '[F]'
+	}
+end
+
+function _M.decolorize()
+	_red = ''
+	_white = ''
+	_green = ''
+	_blue = ''
+	_yellow = ''
+	_reset = ''
+	_bold = ''
+	_italic = ''
+	_M.bold = ''
+	_M.italic = ''
+	_M.reset = ''
+	for _,v in ipairs(colors) do
+		_M.fg[v] = ''
+		_M.bg[v] = ''
+		_M.fg['bright_'..v] = ''
+		_M.bg['bright_'..v] = ''
+	end
+
+	set_prefixes()
+end
+
 
 --- Prints an info message with green [I] prefix.
 ---@param ... any Values to print
 function _M.info( ... )
-	print(prefix_info,...)
+	print(llae.log.print_level.info,...)
 end
 
 --- Prints a debug message with blue [D] prefix. Only prints if verbose mode is enabled.
 ---@param ... any Values to print
 function _M.debug( ... )
 	if _M._verbose then
-		print(prefix_debuf,...)
+		print(llae.log.print_level.debug,...)
 	end
 end
 
 --- Prints an error message with red [E] prefix.
 ---@param ... any Values to print
 function _M.error( ... )
-	print(prefix_error,...)
+	print(llae.log.print_level.error,...)
 end
 
 --- Prints a warning message with yellow [W] prefix.
 ---@param ... any Values to print
 function _M.warning( ... )
-	print(prefix_warning,...)
+	print(llae.log.print_level.warning,...)
 end
 
 local progress = nil
@@ -139,30 +183,6 @@ end
 _M.restart_line = _prev_line.._clear_line
 
 
-function _M.decolorize()
-	_red = ''
-	_white = ''
-	_green = ''
-	_blue = ''
-	_yellow = ''
-	_reset = ''
-	_bold = ''
-	_italic = ''
-	_M.bold = ''
-	_M.italic = ''
-	_M.reset = ''
-	prefix_debuf = ''
-	prefix_info = ''
-	prefix_error = ''
-	prefix_warning = ''
-	for _,v in ipairs(colors) do
-		_M.fg[v] = ''
-		_M.bg[v] = ''
-		_M.fg['bright_'..v] = ''
-		_M.bg['bright_'..v] = ''
-	end
-end
-
 _M._log_file_handler = nil
 
 function _M.redirect(filename,with_time)
@@ -179,36 +199,6 @@ function _M.redirect(filename,with_time)
 		error('failed to open file: ' .. filename)
 	end
 
-	function _M.debug( ... )
-		local s = {}
-		for _,v in ipairs{...} do
-			table.insert(s,tostring(v))
-		end
-		llae.log.write(llae.log.level.debug,table.concat(s,' '))
-	end
-
-	function _M.info( ... )
-		local s = {}
-		for _,v in ipairs{...} do
-			table.insert(s,tostring(v))
-		end
-		llae.log.write(llae.log.level.info,table.concat(s,' '))
-	end
-	
-	function _M.warning( ... )
-		local s = {}
-		for _,v in ipairs{...} do
-			table.insert(s,tostring(v))
-		end
-		llae.log.write(llae.log.level.warning,table.concat(s,' '))
-	end
-	function _M.error( ... )
-		local s = {}
-		for _,v in ipairs{...} do
-			table.insert(s,tostring(v))
-		end
-		llae.log.write(llae.log.level.error,table.concat(s,' '))
-	end
 	_M._log_file_handler = llae.log.add_file_handler(file,with_time)
 end
 
