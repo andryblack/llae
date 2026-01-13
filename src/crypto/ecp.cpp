@@ -214,8 +214,8 @@ namespace crypto {
         }
         if (size) {
             if (!m_random) {
-                m_random.reset(new random());
-                m_random->seed(entropy_ptr(),{});
+                m_random.reset(new random(entropy_ptr{}));
+                m_random->seed({});
             }
             return m_random->read(buffer,size);
         }

@@ -1,4 +1,5 @@
 #include "ctx.h"
+#include "crypto/random.h"
 #include "lua/stack.h"
 #include "lua/bind.h"
 #include "crypto/crypto.h"
@@ -30,7 +31,7 @@ namespace ssl {
 
 	ctx::ctx( crypto::random_ptr&& r) : m_random(std::move(r)) {
         if (!m_random) {
-            m_random.reset(new crypto::random());
+            m_random.reset(new crypto::random( crypto::entropy_ptr{} ));
         }
 		
 		mbedtls_x509_crt_init( &m_cacert );
@@ -42,8 +43,12 @@ namespace ssl {
 		
 	}
 
+	int ctx::rng_read(void* data,unsigned char* dst,size_t len) {
+		return static_cast<ctx*>(data)->m_random->read(dst,len);
+	}
+
 	int ctx::configure(mbedtls_ssl_config* conf) {
-        mbedtls_ssl_conf_rng( conf, &crypto::random::read_func, m_random.get() );
+        mbedtls_ssl_conf_rng( conf, &ctx::rng_read, this );
 		mbedtls_ssl_conf_ca_chain( conf, &m_cacert, NULL );
 		mbedtls_ssl_conf_authmode( conf, MBEDTLS_SSL_VERIFY_REQUIRED );
 		

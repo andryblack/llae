@@ -15,6 +15,7 @@ namespace ssl {
 	private:
 	    crypto::random_ptr m_random;
 		mbedtls_x509_crt m_cacert;
+		static int rng_read(void* data,unsigned char* dst,size_t len);
 	public:
 		explicit ctx( crypto::random_ptr&& random );
 		~ctx();

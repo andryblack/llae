@@ -16,11 +16,10 @@ local ctx = {}
 function ctx.new(random) end
 
 --- Initializes the SSL context with random number generation.
----@param entropy crypto.entropy? Optional entropy source
 ---@param pers string? Optional persistent string
 ---@return boolean? True on success
 ---@return string? Error message if initialization fails
-function ctx:init(entropy, pers) end
+function ctx:init(pers) end
 
 --- Loads a certificate from buffer data (PEM or DER format).
 ---@param cert_data llae.buffer_base The certificate data

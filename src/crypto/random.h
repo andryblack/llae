@@ -19,6 +19,8 @@ namespace crypto {
 
 		mbedtls_entropy_context* get() { return &m_entropy; }
 
+		int read(unsigned char* dst, size_t len);
+
 		lua::multiret update_manual(lua::state& l);
 		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& s);
@@ -29,15 +31,18 @@ namespace crypto {
 		META_OBJECT
 	private:
 		mbedtls_ctr_drbg_context m_ctr_drbg;
+		entropy_ptr m_enthropy;
+
+		static int entropy_func(void *, unsigned char *, size_t);
 	public:
-		explicit random();
+		explicit random(entropy_ptr&& e);
 		~random();
         
         mbedtls_ctr_drbg_context* get() { return &m_ctr_drbg; }
 
 		lua::multiret update(lua::state& l);
 
-		int seed(const entropy_ptr& e, const llae::buffer_view& pers);
+		int seed(const llae::buffer_view& pers);
 		lua::multiret lseed(lua::state& l);
 
 		static int read_func(void *p_rng,

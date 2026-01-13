@@ -207,7 +207,6 @@ GET / HTTP/1.1
 Host: example.com
 Accept-Encoding: deflate, gzip
 X-Test: test
-Content-Length: 0
 Connection: close
 
 ]])
