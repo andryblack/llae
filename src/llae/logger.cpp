@@ -37,20 +37,21 @@ namespace llae {
         return &lua_log_levels_map[(p-begin)/sizeof(lua_log_level_data)];
     }
 
-    static void lua_print(lua::state& l) {
+    template <int ioffset,typename Write>
+    static void lua_print_impl(lua::state& l,Write w) {
         auto n = l.gettop();
-        if (n < 1) {
+        if (n < ioffset ) {
             return;
         }
         static std::vector<char> message_buf;
         message_buf.clear();
         auto level = log::level::raw;
-        int i = 1;
-        if (l.get_type(1) == lua::value_type::lightuserdata) {
-            auto d = is_lua_log_level(l.touserdata(1));
+        int i = ioffset;
+        if (l.get_type(i) == lua::value_type::lightuserdata) {
+            auto d = is_lua_log_level(l.touserdata(i));
             if (d) {
                 level = d->level;
-                i = 2;
+                ++i;
             }
         } 
         for (;i<=n;++i) {
@@ -67,7 +68,24 @@ namespace llae {
                 message_buf.emplace_back('\t');
             }
         }
-        log::write(level, {message_buf.data(),message_buf.size()});
+        w(level, {message_buf.data(),message_buf.size()});
+    }
+
+    void log_handler::print(lua::state& l) {
+        lua_print_impl<2>(l,[this](log::level l,std::string_view s){
+            write(l,s);
+        });
+    }
+
+    void log_handler::lbind(lua::state& l) {
+        lua::bind::function(l,"print",&log_handler::print);
+        lua::bind::function(l,"write",&log_handler::write);
+        lua::bind::function(l,"close",&log_handler::close);
+        lua::bind::function(l,"flush",&log_handler::close);
+    }
+
+    static void lua_print(lua::state& l) { 
+        lua_print_impl<1>(l,&log::write);
     }
 
     static void lua_set_console_prefix(lua::state& l) {
@@ -170,7 +188,9 @@ namespace llae {
     };
 
     void log::add_handler(log_handler_ptr handler) {
-        m_handlers.push_back(handler);
+        if (handler) {
+            m_handlers.push_back(handler);
+        }
     }
 
     void log::remove_handler(log_handler_ptr handler) {
@@ -238,11 +258,14 @@ namespace llae {
         level_bind(l,"error",level::error);
         level_bind(l,"fatal",level::fatal);
         l.setfield(-2,"print_level");
+        lua::bind::function(l,"close",&log::close);
         lua::bind::function(l,"write",&log::write);
         lua::bind::function(l,"add_stdout_handler",&log::add_stdout_handler);
         lua::bind::function(l,"remove_stdout_handler",&log::remove_stdout_handler);
         lua::bind::function(l,"add_file_handler",&log::add_file_handler);
         lua::bind::function(l,"print",&llae::lua_print);
         lua::bind::function(l,"set_console_prefix",lua_set_console_prefix);
+        lua::bind::function(l,"add_handler",&log::add_handler);
+        lua::bind::function(l,"remove_handler",&log::remove_handler);
     }
 }

@@ -78,10 +78,6 @@ namespace llae {
     }
 }
 
-static void log_handler_bind(lua::state& l) {
-    lua::bind::function(l,"close",llae::log::close);
-}
-
 static void set_error_handler(lua::state& l) {
     auto handler = lua::stack<llae::error_handler_ptr>::get(l,1);
     llae::app::get(l).set_error_handler(handler);
@@ -96,7 +92,7 @@ int luaopen_llae(lua_State* L) {
     lua::bind::object<llae::buffer_base>::register_metatable(l,&llae::buffer_base::lbind);
 	lua::bind::object<llae::buffer>::register_metatable(l,&llae::buffer::lbind);
     lua::bind::object<llae::writable_buffer>::register_metatable(l,&llae::writable_buffer::lbind);
-    lua::bind::object<llae::log_handler>::register_metatable(l,&log_handler_bind);
+    lua::bind::object<llae::log_handler>::register_metatable(l,&llae::log_handler::lbind);
     
     l.createtable();
     lua::bind::function(l, "stop", llae::lua_stop );

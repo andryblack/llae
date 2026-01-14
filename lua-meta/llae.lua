@@ -88,6 +88,7 @@ llae.buffer = buffer
 
 ---@class llae.native.log_handler
 local log_handler = {}
+function log_handler:print(...) end
 
 ---@class llae.native.log
 local log = {}
@@ -105,6 +106,7 @@ log.print_level = {
     error = {},
     fatal = {},
 }
+function log.print(...) end
 ---@param level integer
 ---@param message string
 function log.write(level, message) end
@@ -118,6 +120,10 @@ function log.add_file_handler(file, with_time) end
 ---@param level integer
 ---@param prefix string
 function log.set_console_prefix(level, prefix) end
+---@param handler llae.native.log_handler
+function log.add_handler(handler) end
+---@param handler llae.native.log_handler
+function log.remove_handler(handler) end
 
 llae.log = log
 

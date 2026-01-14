@@ -45,9 +45,11 @@ namespace llae {
 	class log_handler : public meta::object {
 		META_OBJECT
 	public:
+        void print(lua::state& l);
 		virtual void write(log::level level, std::string_view message) = 0;
         virtual bool close() { return false; }
         virtual void flush() { }
+        static void lbind(lua::state& l);
 	};
 
     struct log_builder {
