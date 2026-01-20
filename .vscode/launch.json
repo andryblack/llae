@@ -6,15 +6,11 @@
     "configurations": [
         {
             "name": "(lldb) Launch",
-            "type": "cppdbg",
+            "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/bin/llae",
             "args": ["--dev","run","tests/run_all.lua"],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "lldb"
         }
     ]
 }
