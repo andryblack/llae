@@ -106,9 +106,18 @@ end
 function m:download(url,file,hash)
 	log.info('download',self.name,url)
 	local dst = path.join(self._project:get_dl_dir(),file)
+	local htype = 'MD5'
+	local hval = hash
+	if hash then
+		local sep = string.find(hash,':',1,true)
+		if sep then
+			htype = string.upper(hash:sub(1,sep-1))
+			hval = hash:sub(sep+1)
+		end
+	end
 	local res,err = netutils.download_file(url,dst,{
-		hash=hash,
-		hash_type='MD5',
+		hash=hval,
+		hash_type=htype,
 		log=log,
 		progress_func=log.progress
 	})
