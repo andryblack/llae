@@ -1,11 +1,11 @@
 
 name = 'premake-ecc'
-revision = 'b3726d5'
-version = 'master'
-url = 'https://github.com/MattBystrin/premake-ecc/archive/refs/heads/'..version..'.tar.gz'
-dir =  name .. '-' .. version 
+revision = '47e3ee063728a834cf98cd73e7281057c099d1cb'
+version = 'tmp/externalincludedirs'
+url = 'https://github.com/andryblack/premake-ecc/archive/refs/heads/'..version..'.tar.gz'
+dir =  name .. '-' .. string.gsub(version,'/','_') 
 archive = dir ..  '.tar.gz'
-hash = 'c74f63ece0cbcbb37ab0ec498ae2a29f'
+hash = '49c51bca5d743c8eefb2aa3090097a2c'
 
 function install()
 	download(url,archive,hash)
