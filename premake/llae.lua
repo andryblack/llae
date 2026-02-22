@@ -138,10 +138,8 @@ function _M.lib(  )
 end
 
 function _M.compile(  )
-	externalincludedirs {
-		path.join(_M.root, 'build','include'),
-	}
 	includedirs{
+		path.join(_M.root, 'build','include'),
 		path.join(_M.root, 'src') 
 	}
 end

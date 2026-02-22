@@ -50,9 +50,6 @@ build_lib = {
 		includedirs{
 			'include/llae-private'
 		}
-		externalincludedirs {
-			'include/llae-private',
-		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>
 				<%= format_file(module.dir,'src',f .. '.c') %>,

@@ -107,6 +107,7 @@ build_lib = {
 			<% for _,f in ipairs(lib.components) do %>
 				<%= format_file(module.dir,'src','liblzma',f) %>,<% end %>
 			'include/llae-private',
+			'include',
 		}
 		defines{
 			'HAVE_STDINT_H=1',
@@ -115,9 +116,6 @@ build_lib = {
 			'LZMA_API_STATIC=1',
 			'HAVE_DECODER_LZMA1=1',
 			'HAVE_DECODER_LZMA2=1',
-		}
-		externalincludedirs {
-			'include',
 		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>

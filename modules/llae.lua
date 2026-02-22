@@ -189,9 +189,6 @@ build_lib = {
 			'include/llae-private',
 			'<%= path.join(module.inplace_dir,'src') %>',
 		}
-		externalincludedirs {
-			'include/llae-private',
-		}
 	]] or [[
 		files {
 			<% for _,f in ipairs(lib.components) do %>
@@ -202,9 +199,6 @@ build_lib = {
 			'include',
 			'include/llae-private',
 			<%= format_file(module.dir,'src') %>
-		}
-		externalincludedirs {
-			'include/llae-private',
 		}
 	]]
 }
