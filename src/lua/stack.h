@@ -51,6 +51,11 @@ namespace lua {
 		static void push(state& s,unsigned char v) { s.pushinteger(v); }
 	};
 	template <>
+	struct stack<signed char> {
+		static signed char get(state& s,int idx) { return s.tointeger(idx); }
+		static void push(state& s,signed char v) { s.pushinteger(v); }
+	};
+	template <>
 	struct stack<short> {
 		static short get(state& s,int idx) { return s.tointeger(idx); }
 		static void push(state& s,short v) { s.pushinteger(v); }
