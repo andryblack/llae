@@ -125,7 +125,8 @@ namespace uv {
 				return {2};
 			} 
 		}
-		return {0};
+		l.pushboolean(true);
+		return {1};
 	}
 
 	void timer_lcb::on_cb() {

@@ -61,22 +61,6 @@ function lock:_init()
 	self._wait = {}
 end
 
---- Internal method that resumes the next waiting coroutine.
-function lock:_report_unlock()
-	local u = table.remove(self._wait,1)
-	if u then
-		self._locked = u
-		uv.resume_delayed(u)
-	end
-end
-
---- Waits for the lock to be released. This is used internally by the lock method.
-function lock:_wait_unlock()
-	local c = coroutine.running()
-	table.insert(self._wait,c)
-	coroutine.yield()
-end
-
 --- Acquires the lock. If the lock is already held, waits until it's released.
 function lock:lock()
 	local c = coroutine.running()
@@ -84,7 +68,8 @@ function lock:lock()
 		if self._locked == c then
 			error('lock called by a coroutine that already holds the lock')
 		end
-		self:_wait_unlock()
+		table.insert(self._wait,c)
+		coroutine.yield()
 	else
 		self._locked = c
 	end
@@ -98,7 +83,14 @@ function lock:unlock()
 		error('unlock called by a coroutine that does not hold the lock')
 	end
 	self._locked = nil
-	self:_report_unlock()
+	local u = table.remove(self._wait,1)
+	if u then
+		self._locked = u
+		local res,err = uv.resume_delayed(u)
+		if not res then
+			error('failed locak delayed resume:' .. tostring(err) )
+		end
+	end
 end
 
 _M.lock = lock
@@ -124,7 +116,10 @@ function event:set()
 	while true do
 		local u = table.remove(self._wait,1)
 		if u then
-			uv.resume_delayed(u)
+			local res,err = uv.resume_delayed(u)
+			if not res then
+				error('failed event delayed resume:' .. tostring(err) )
+			end
 		else
 			return
 		end
