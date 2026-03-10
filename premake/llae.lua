@@ -91,7 +91,7 @@ end
 function _M.solution(  )
 	configurations { 'debug', 'release' }
 	language 'c++'
-	cppdialect "C++17"
+	cppdialect "C++20"
 	filter{ 'configurations:release'}
 		optimize 'Speed'
 		symbols 'Off'
