@@ -7,11 +7,31 @@
 namespace autobind_tests {
 
     /// @luabind
+    enum class test_module_enum {
+        a,
+        b,
+        c,
+    };
+
+    /// @luabind(prefix=test_module_enum2_)
+    enum test_module_enum2 {
+        test_module_enum2_a,
+        test_module_enum2_b,
+        test_module_enum2_c,
+    };
+
+    /// @luabind
     struct test_bind_struct {
         /// @luabind
         int x = 0;
         /// @luabind
         int y = 0;
+
+        /// @luabind
+        enum class state {
+            off,
+            on,
+        };
     };
 
     /// @luabind
@@ -56,4 +76,7 @@ namespace autobind_tests {
     class zooo {};
     /// @luabind
     class azoo : public zooo {};
+
+    /// @luabind
+    static void test_function1(int) {}
 }

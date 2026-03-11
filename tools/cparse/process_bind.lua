@@ -204,6 +204,10 @@ function bind_class:add_enum(enum)
     table.insert(self._enums, enum)
 end
 
+function bind_class:get_enums()
+    return self._enums
+end
+
 function bind_class:get_bind_name()
     local prefix = self:get_prefix() or ''
     prefix = prefix:gsub('::','_')
@@ -225,6 +229,28 @@ function bind_field:_init(name,prefix,bind)
     bind_field.baseclass._init(self, name, prefix, bind)
 end
 
+local bind_enum = class(module_element, 'bind_enum')
+function bind_enum:_init(name, prefix, bind, values, is_scoped)
+    bind_enum.baseclass._init(self, name, prefix, bind)
+    self._values = values or {}
+    self._is_scoped = is_scoped
+end
+
+function bind_enum:get_values()
+    return self._values
+end
+
+function bind_enum:is_scoped()
+    return self._is_scoped
+end
+
+function bind_enum:get_lua_value_name(val_name)
+    local prefix = self:get_bind('prefix')
+    if prefix and val_name:sub(1, #prefix) == prefix then
+        return val_name:sub(#prefix + 1)
+    end
+    return val_name
+end
 
 local processor = class(nil, 'processor')
 
@@ -236,8 +262,7 @@ function traverser:_init(processor)
     self._bind_stack = {}
     self._result = {
         classes = {},
-        functions = {},
-        enums = {},
+        modules = {},
     }
 end
 
@@ -257,6 +282,7 @@ function traverser:traverse_class(node)
         local class = bind_class.new(node.name, self:get_full_name(), bind)
         local module = self._processor:get_module(current_bind and current_bind:get_module_name() or class:get_module_name())
         module:add_class(class)
+        self._result.modules[module:get_name()] = module
         table.insert(self._result.classes, class)
         table.insert(self._bind_stack, class)
         class:set_bases(node.bases or {})
@@ -279,7 +305,7 @@ function traverser:traverse_func(node)
             local func = bind_func.new(node.name, self:get_full_name(), bind)
             local module = self._processor:get_module(func:get_module_name())
             module:add_function(func)
-            table.insert(self._result.functions, func)
+            self._result.modules[module:get_name()] = module
         end
     end
     traverser.baseclass.traverse_func(self, node)
@@ -298,6 +324,23 @@ function traverser:traverse_field(node)
         end
     end
     traverser.baseclass.traverse_field(self, node)
+end
+
+function traverser:traverse_enum(node)
+    if node.forward then return end
+    local tags = tags.parse(node.doc or '')
+    local bind = tags:collect('luabind')
+    if bind then
+        local current_bind = self:_get_current_bind()
+        local enum = bind_enum.new(node.name, self:get_full_name(), bind, node.values, node.is_scoped)
+        if current_bind then
+            current_bind:add_enum(enum)
+        else
+            local module = self._processor:get_module(enum:get_module_name())
+            module:add_enum(enum)
+            self._result.modules[module:get_name()] = module
+        end
+    end
 end
 
 function processor:_init()

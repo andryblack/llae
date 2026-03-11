@@ -437,7 +437,7 @@ function Project:generate_bindings( )
 
 	local function generate_binding(filename)
 		local result = processor:process_file(filename)
-		if not next(result.classes) and not next(result.functions) and not next(result.enums) then
+		if not next(result.classes) and not next(result.modules) then
 			return
 		end
 		local ext = path.extension(filename)
@@ -451,16 +451,7 @@ function Project:generate_bindings( )
 		log.info('generate binding',filename)
 
 		local header = path.getrelative(path.getabsolute(filename),path.getabsolute(path.dirname(dst_filename)))
-		for _,v in ipairs(result.classes) do
-			local m = v:get_module()
-			m:add_header(header)
-		end
-		for _,v in ipairs(result.functions) do
-			local m = v:get_module()
-			m:add_header(header)
-		end
-		for _,v in ipairs(result.enums) do
-			local m = v:get_module()
+		for n,m in pairs(result.modules) do
 			m:add_header(header)
 		end
 
