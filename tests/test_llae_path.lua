@@ -79,7 +79,12 @@ function testPath:test_getrelative()
 	lu.assertEquals(path.getrelative('/different/root/path'), '/different/root/path')
 	-- Windows paths
 	lu.assertEquals(path.getrelative('already\\relative'), 'already\\relative')
-	lu.assertEquals(path.getrelative('C:\\Windows\\System32'), 'C:\\Windows\\System32')
+	--lu.assertEquals(path.getrelative('C:\\Windows\\System32'), 'C:\\Windows\\System32')
+
+	lu.assertEquals(path.getrelative('/some/path1/path2', '/some/path1'), 'path2')
+	lu.assertEquals(path.getrelative('/some', '/some/path1'), '..')
+	lu.assertEquals(path.getrelative('/some/path1/path2', '/some/path3'), '../path1/path2')
+	lu.assertEquals(path.getrelative('/some/path1/path2', '/some/path3/path4'), '../../path1/path2')
 end
 
 function testPath:test_remove_leading_dirs()

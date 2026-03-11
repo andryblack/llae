@@ -39,6 +39,16 @@ local function findlast(s, pattern, plain)
 	end
 end
 
+---@param p string
+---@return string[]
+function path.split(p)
+	local parts = {}
+	for part in p:gmatch('[^/\\]+') do
+		table.insert(parts, part)
+	end
+	return parts
+end
+
 ---@param ... string
 ---@return string
 function path.join( ... )
@@ -90,18 +100,46 @@ end
 ---@param to string?
 ---@return string
 function path.getrelative( fn, to )
-	if string.sub(fn,1,1) ~= '/' then
+	if not path.isabsolute(fn) then
 		return fn
 	end
 	if not to then
 		local fs = require 'llae.fs'
 		to = fs.pwd()
 	end
-	local prepfn = string.sub(fn,1,#to)
-	if prepfn == to then
-		return string.sub(fn,#to+2) -- '/'
+	fn = fn:gsub('[/\\]+$', '')
+	to = to:gsub('[/\\]+$', '')
+
+	local fn_parts = path.split(fn)
+	local to_parts = path.split(to)
+
+	local common = 0
+	local min_len = math.min(#fn_parts, #to_parts)
+	for i = 1, min_len do
+		if fn_parts[i] == to_parts[i] then
+			common = i
+		else
+			break
+		end
 	end
-	return fn
+
+	-- no shared ancestor — return original absolute path
+	if common == 0 then
+		return fn
+	end
+
+	local result = {}
+	for _ = common + 1, #to_parts do
+		table.insert(result, '..')
+	end
+	for i = common + 1, #fn_parts do
+		table.insert(result, fn_parts[i])
+	end
+
+	if #result == 0 then
+		return '.'
+	end
+	return table.concat(result, '/')
 end
 
 ---@param fn string
