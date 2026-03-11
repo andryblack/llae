@@ -97,14 +97,54 @@ function bind_module:get_bind_name()
     return self._name:gsub('%.','_'):lower()
 end
 
-local module_element = class(nil, 'module_element')
-function module_element:_init(name)
+local bind_base = class(nil, 'bind_base')
+function bind_base:_init(name,prefix,bind)
     self._name = name
-    self._module = nil
+    self._prefix = prefix
+    self._bind = bind
 end
 
-function module_element:get_name()
+function bind_base:get_bind(name)
+    if self._bind then
+        return self._bind[name]
+    end
+    return nil
+end
+
+function bind_base:get_lua_name()
+    if self._bind then
+        return self._bind.name or self._name
+    end
     return self._name
+end
+
+function bind_base:get_policy()
+    return self:get_bind('policy')
+end
+
+function bind_base:get_name()
+    return self._name
+end
+
+function bind_base:get_module_name()
+    local module = self._bind.module
+    if module then
+        return module
+    end
+    if self._prefix == '' then
+        error('not found module for object: ' .. self:get_name())
+    end
+    return self._prefix:gsub('::','.'):lower()
+end
+
+function bind_base:get_prefix()
+    return self._prefix or ''
+end
+
+local module_element = class(bind_base, 'module_element')
+function module_element:_init(name,prefix,bind)
+    bind_base._init(self, name, prefix, bind)
+    self._module = nil
 end
 
 function module_element:set_module(module)
@@ -117,9 +157,7 @@ end
 
 local bind_class = class(module_element, 'bind_class')
 function bind_class:_init(name,prefix,bind)
-    bind_class.baseclass._init(self, name)
-    self._prefix = prefix
-    self._bind = bind
+    bind_class.baseclass._init(self, name, prefix, bind)
     self._methods = {}
     self._fields = {}
     self._enums = {}
@@ -134,24 +172,6 @@ function bind_class:get_bases()
     return self._bases
 end
 
-function bind_class:get_lua_name()
-    return self._bind.name or self._name
-end
-
-function bind_class:get_module_name()
-    local module = self._bind.module
-    if module then
-        return module
-    end
-    if self._prefix == '' then
-        error('not found module for class: ' .. self:get_name())
-    end
-    return self._prefix:gsub('::','.'):lower()
-end
-
-function bind_class:get_prefix()
-    return self._prefix
-end
 
 function bind_class:add_method(method)
     if method:get_name() == self:get_name() then
@@ -192,62 +212,19 @@ end
 
 local bind_func = class(module_element, 'bind_func')
 function bind_func:_init(name,prefix,bind)
-    bind_func.baseclass._init(self, name)
-    self._prefix = prefix
-    self._bind = bind
+    bind_func.baseclass._init(self, name, prefix, bind)
 end
 
-function bind_func:get_bind(name)
-    return self._bind[name]
-end
-
-function bind_func:get_name()
-    return self._name
-end
-
-function bind_func:get_prefix()
-    return self._prefix
-end
-
-function bind_func:get_lua_name()
-    return self._bind.name or self._name
-end
-
-function bind_func:get_policy()
-    return self._bind.policy
-end
-
-local bind_method = class(bind_func, 'bind_method')
+local bind_method = class(bind_base, 'bind_method')
 function bind_method:_init(name,prefix,bind)
     bind_method.baseclass._init(self, name, prefix, bind)
 end
 
-local bind_field = class(nil, 'bind_field')
+local bind_field = class(bind_base, 'bind_field')
 function bind_field:_init(name,prefix,bind)
-   self._name = name
-   self._prefix = prefix
-   self._bind = bind
+    bind_field.baseclass._init(self, name, prefix, bind)
 end
 
-function bind_field:get_bind(name)
-    return self._bind[name]
-end
-
-function bind_field:get_name()
-    return self._name
-end
-
-function bind_field:get_prefix()
-    return self._prefix
-end
-
-function bind_field:get_lua_name()
-    return self._bind.name or self._name
-end
-
-function bind_field:get_policy()
-    return self._bind.policy
-end
 
 local processor = class(nil, 'processor')
 
@@ -300,7 +277,7 @@ function traverser:traverse_func(node)
             current_bind:add_method(method)
         else
             local func = bind_func.new(node.name, self:get_full_name(), bind)
-            local module = self._processor:get_module(current_bind:get_module_name())
+            local module = self._processor:get_module(func:get_module_name())
             module:add_function(func)
             table.insert(self._result.functions, func)
         end
@@ -367,6 +344,7 @@ function processor:process_content(data)
 end
 
 function processor:process_file(filename)
+    self:begin_header(filename)
     local data = tostring(fs.load_file(filename))
     return self:process_content(data)
 end
