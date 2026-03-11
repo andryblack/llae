@@ -362,7 +362,6 @@ end
 
 ---@param node ast_class_forward
 function traverser:traverse_class_forward(node)
-  self:_traverse_children(node)
 end
 
 ast.traverser = traverser
