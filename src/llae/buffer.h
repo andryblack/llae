@@ -150,6 +150,10 @@ namespace lua {
         static llae::buffer_view get(lua::state& l,int idx) {
             return llae::buffer_view::get(l,idx,false);
         }
+        static int push(lua::state& l,const llae::buffer_view& v) {
+            l.pushlstring(static_cast<const char*>(v.get_base()),v.get_len());
+            return 1;
+        }
     };
     template<>
     struct stack<const llae::buffer_view&> : stack<llae::buffer_view> {};
