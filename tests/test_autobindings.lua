@@ -73,6 +73,48 @@ function TestAutoBindings:test_return_ref()
         collectgarbage()
         lu.assertEquals(bind_tests.test_bind_fields.get_count(), 0)
     end
+
+    do 
+        collectgarbage()
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 0)
+        local b = bind_tests.test_bind_fields.new()
+        b.field4.x = 100500
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 1)
+        local f = b:get_const_field4()
+        lu.assertEquals(f.x, 100500)
+        lu.assertErrorMsgContains(
+            "invalid self object autobind_tests::test_bind_struct is const",
+            function() 
+                f.x = 300
+            end
+        )
+        collectgarbage()
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 1)
+        b = nil
+        collectgarbage()
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 1)
+        f = nil
+        collectgarbage()
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 0)
+    end
+
+    do 
+        collectgarbage()
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 0)
+        local b = bind_tests.test_bind_fields.new()
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 1)
+        local f = b:get_field4()
+        f.x = 100500
+        lu.assertEquals(b.field4.x, 100500)
+        collectgarbage()
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 1)
+        b = nil
+        collectgarbage()
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 1)
+        f = nil
+        collectgarbage()
+        lu.assertEquals(bind_tests.test_bind_fields.get_count(), 0)
+    end
 end
 
 function TestAutoBindings:test_array_ref()

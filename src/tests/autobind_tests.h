@@ -70,6 +70,10 @@ namespace autobind_tests {
         const test_bind_fields* get_const() const { return this; }
         /// @luabind
         void func1(int) const {}
+        /// @luabind(policy=return_ref_policy<1>{})
+        const test_bind_struct& get_const_field4() const { return field4; }
+        /// @luabind(policy=return_ref_policy<1>{})
+        test_bind_struct& get_field4() { return field4; }
     };
 
     /// @luabind

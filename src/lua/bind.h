@@ -58,6 +58,12 @@ namespace lua {
 				return 1;
 			}
 			template <typename R>
+			static int push_result(state& s,R& result) {
+				push_ptr(s,&result);
+				ref_value(s,-1,idx);
+				return 1;
+			}
+			template <typename R>
 			static int push_field(state& s, R& result) {
 				push_ptr(s,&result);
 				ref_value(s,-1,idx);
