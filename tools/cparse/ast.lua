@@ -75,6 +75,9 @@ function ast_class:_init(name, struct_kind, bases, children, var_name)
   self.var_name    = var_name
 end
 
+---@class ast_class_forward : ast_node
+---@field name string
+---@field struct_kind string
 local ast_class_forward = class(ast_base, 'ast_class_forward')
 ast_class_forward.kind = 'class_forward'
 
@@ -288,6 +291,8 @@ function traverser:traverse(node)
     self:traverse_access(node)
   elseif node.is_a[ast_extern_block] then
     self:traverse_extern_block(node)
+  elseif node.is_a[ast_class_forward] then
+    self:traverse_class_forward(node)
   else
     error('traverser: unknown node type: ' .. node.kind)
   end
@@ -353,6 +358,11 @@ end
 ---@param node ast_func
 function traverser:traverse_func(node)
   
+end
+
+---@param node ast_class_forward
+function traverser:traverse_class_forward(node)
+  self:_traverse_children(node)
 end
 
 ast.traverser = traverser
