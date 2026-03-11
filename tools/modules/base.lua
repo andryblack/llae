@@ -163,6 +163,10 @@ function base:get_dependencies()
 	return self._env.dependencies 
 end
 
+function base:get_bind_headers()
+	return self._env.bind_headers or {}
+end
+
 function base:loadfile(filename,project)
 	self:create_env( project )
 	assert(loadfile(filename,'bt',self._env))()

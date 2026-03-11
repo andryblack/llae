@@ -214,14 +214,14 @@ function parser:_parse_class_struct()
 
   -- forward declaration
   if self._lex:accept("punct", ";") then
-    local n = ast["class"].new(name, struct_kind, nil, nil, nil, true)
+    local n = ast.class_forward.new(name, struct_kind)
     n.doc = doc
     return n
   end
 
   local children = {}
   if self._lex:accept("punct", "{") then
-    children = self:_parse_decl_list()
+    children = self:_parse_decl_list(name)
     self._lex:accept("punct", "}")
   end
 
@@ -559,7 +559,7 @@ end
 
 -- Parse everything from the current position that constitutes a field or function decl.
 -- extra_specs: list of specifier strings already consumed (e.g. {"extern"})
-function parser:_parse_type_and_name_decl(extra_specs)
+function parser:_parse_type_and_name_decl(extra_specs,class_name)
   local doc = self:_take_doc()
 
   -- Collect leading specifier keywords
@@ -729,6 +729,11 @@ function parser:_parse_type_and_name_decl(extra_specs)
     if self._lex:peek():is_punct("{") then self:_skip_braces(false) end
     self._lex:accept("punct", ";")
 
+    -- if class_name and name and class_name == name then
+    --   local n = ast.constructor.new(class_name, type_str, params, qualifiers)
+    --   n.doc = doc
+    --   return n
+    -- end
     local n = ast.func.new(name or "?", type_str, params, qualifiers)
     n.doc = doc
     return n
@@ -759,7 +764,7 @@ end
 
 -- ── Declaration dispatcher ───────────────────────────────────────────────────
 
-function parser:_parse_decl()
+function parser:_parse_decl(class_name)
   local tok = self._lex:peek()
 
   -- template<...> prefix
@@ -853,14 +858,14 @@ function parser:_parse_decl()
   end
 
   -- general declaration
-  local n = self:_parse_type_and_name_decl({})
+  local n = self:_parse_type_and_name_decl({},class_name)
   if n then n.template_params = template_params; n.attributes = attributes end
   return n
 end
 
 -- ── Declaration list ─────────────────────────────────────────────────────────
 
-function parser:_parse_decl_list()
+function parser:_parse_decl_list(class_name)
   local decls = {}
   while true do
     local tok = self._lex:peek()
@@ -872,7 +877,7 @@ function parser:_parse_decl_list()
       self._doc = self._doc and (self._doc .. "\n" .. v) or v
     else
       local stale = self._lex:peek()
-      local result = self:_parse_decl()
+      local result = self:_parse_decl(class_name)
       if result then
         table.insert(decls, result)
       elseif self._lex:peek() == stale then

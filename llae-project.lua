@@ -39,6 +39,7 @@ if cmdargs and cmdargs.development then
 ]]
 	}
 	print("development mode")
+	bind_headers('src/tests')
 end
 
 generate_src{

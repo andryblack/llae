@@ -59,7 +59,6 @@ end
 ---@field bases table
 ---@field children table
 ---@field var_name string|nil
----@field forward boolean|nil
 local ast_class = class(ast_base, 'ast_class')
 ast_class.kind = 'class'
 
@@ -68,16 +67,23 @@ ast_class.kind = 'class'
 ---@param bases table|nil
 ---@param children table|nil
 ---@param var_name string|nil
----@param forward boolean|nil
-function ast_class:_init(name, struct_kind, bases, children, var_name, forward)
+function ast_class:_init(name, struct_kind, bases, children, var_name)
   self.name        = name
   self.struct_kind = struct_kind
   self.bases       = bases     or {}
   self.children    = children  or {}
   self.var_name    = var_name
-  self.forward     = forward
 end
 
+local ast_class_forward = class(ast_base, 'ast_class_forward')
+ast_class_forward.kind = 'class_forward'
+
+---@param name string
+---@param struct_kind string
+function ast_class_forward:_init(name, struct_kind)
+  self.name        = name
+  self.struct_kind = struct_kind
+end
 -- ── Enum ──────────────────────────────────────────────────────────────────────
 
 ---@class ast_enum : ast_node
@@ -221,6 +227,7 @@ ast.base            = ast_base
 ast.file            = ast_file
 ast.namespace       = ast_namespace
 ast["class"]        = ast_class
+ast.class_forward = ast_class_forward
 ast.enum            = ast_enum
 ast.typedef         = ast_typedef
 ast.using           = ast_using
@@ -257,6 +264,8 @@ function traverser:get_full_name()
 end
 
 function traverser:traverse(node)
+  assert(node)
+  assert(node.is_a)
   if node.is_a[ast_file] then
     self:traverse_file(node)
   elseif node.is_a[ast_namespace] then
@@ -345,5 +354,7 @@ end
 function traverser:traverse_func(node)
   
 end
+
+ast.traverser = traverser
 
 return ast

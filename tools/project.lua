@@ -122,6 +122,20 @@ function Project.env:print(...)
 	log.info('[project]',...)
 end
 
+function Project.env:bind_header( filename )
+	if not self.bind_headers then
+		self.bind_headers = {}
+	end
+	table.insert(self.bind_headers, { filename = filename })
+end
+
+function Project.env:bind_headers( headers )
+	if not self.bind_headers then
+		self.bind_headers = {  }
+	end
+	table.insert(self.bind_headers, { dir = headers })
+end
+
 local function get_target(cmdargs)
 	return  (cmdargs and cmdargs['target-platform']) or os.getenv('LLAE_TARGET_PLATFORM') or llae.get_host_platform()
 end
@@ -415,9 +429,111 @@ function Project:write_premake(  )
 	f:close()
 end
 
+function Project:generate_bindings( )
+	local process_bind = require 'cparse.process_bind'
+	local processor = process_bind.new()
+	processor:define('LLAE_BINDING_GENERATION')
+	processor:define('META_OBJECT')
+
+	local function generate_binding(filename)
+		local result = processor:process_file(filename)
+		if not next(result.classes) and not next(result.functions) and not next(result.enums) then
+			return
+		end
+		local ext = path.extension(filename)
+		local dst_filename = path.join(self:get_root(),'build','src','gen_' .. filename:gsub('/','_'):sub(1,-#ext-1) .. 'cpp')
+		
+		local template_source_filename = tool.get_llae_path('data','binding-template.cpp')
+
+		fs.mkdir_r(path.dirname(dst_filename))
+		fs.unlink(dst_filename)
+
+		log.info('generate binding',filename)
+
+		local header = path.getrelative(path.getabsolute(filename),path.getabsolute(path.dirname(dst_filename)))
+		for _,v in ipairs(result.classes) do
+			local m = v:get_module()
+			m:add_header(header)
+		end
+		for _,v in ipairs(result.functions) do
+			local m = v:get_module()
+			m:add_header(header)
+		end
+		for _,v in ipairs(result.enums) do
+			local m = v:get_module()
+			m:add_header(header)
+		end
+
+		local f = assert(fs.open(dst_filename,fs.O_WRONLY|fs.O_CREAT))
+		f:write(template.render_file(template_source_filename,{
+			escape = tostring,
+			project=self,
+			template = template,
+			path = path,
+			fs = fs,
+			log = log,
+			utils = utils,
+			header = header,
+			bindings = result,
+		}))
+		f:close()
+	end
+
+	local all_bind_headers = {}
+	for _,conf in ipairs(self._env.bind_headers or {}) do
+		table.insert(all_bind_headers,conf)
+	end
+	for _,m in ipairs(self._modules_list) do
+		for _,conf in ipairs(m:get_bind_headers()) do
+			table.insert(all_bind_headers,conf)
+		end
+	end
+
+	for _,conf in ipairs(all_bind_headers) do
+		if conf.filename then
+			generate_binding(conf.filename)
+		elseif conf.dir then
+			for _,filename in ipairs(fs.scanfiles_r(path.join(self:get_root(),conf.dir))) do
+				local ext = path.extension(filename)
+				if ext == 'h' or ext == 'hpp' then
+					generate_binding(path.join(conf.dir,filename))
+				end
+			end
+		end
+	end
+	for name,module in pairs(processor:get_modules()) do
+		local dst_filename = path.join(self:get_root(),'build','src','gen_module_' .. name .. '.cpp')
+		local template_source_filename = tool.get_llae_path('data','binding-module-template.cpp')
+
+		fs.mkdir_r(path.dirname(dst_filename))
+		fs.unlink(dst_filename)
+
+		log.info('generate module binding',name)
+
+		local f = assert(fs.open(dst_filename,fs.O_WRONLY|fs.O_CREAT))
+		f:write(template.render_file(template_source_filename,{
+			escape = tostring,
+			project=self,
+			template = template,
+			path = path,
+			fs = fs,
+			log = log,
+			utils = utils,
+			headers = {},
+			module = module,
+		}))
+		f:close()
+		add_cmodules(self._project_cmodules,{module:get_name()})
+	end
+end
+
 function Project:write_generated( )
 	self:load_modules()
 	self:write_premake()
+
+	self:generate_bindings()
+
+	
 	
 	for _,conf in ipairs(self._env.generate_src or {}) do
 		local template_f

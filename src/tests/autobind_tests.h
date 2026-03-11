@@ -1,0 +1,59 @@
+#pragma once
+
+#include <lua/state.h>
+#include <string>
+#include <cstdint>
+
+namespace autobind_tests {
+
+    /// @luabind
+    struct test_bind_struct {
+        /// @luabind
+        int x = 0;
+        /// @luabind
+        int y = 0;
+    };
+
+    /// @luabind
+    struct test_bind_fields {
+        static size_t count;
+        /// @luabind(raw=true)
+        test_bind_fields();
+        ~test_bind_fields();
+        /// @luabind
+        static size_t get_count();
+        /// @luabind
+        int field1;
+        /// @luabind
+        float field2;
+        /// @luabind(readonly=true)
+        int const_field = 5;
+        /// @luabind
+        std::string field3;
+        /// @luabind(policy=return_ref_policy<1>{})
+        test_bind_struct field4;
+        /// @luabind
+        int array1[5];
+        /// @luabind(policy=return_ref_policy<1>{})
+        test_bind_struct array2[5];
+        /// @luabind(policy=string_policy{})
+        char string_field[10];
+        /// @luabind(policy=string_policy<false>{})
+        uint8_t data_field[10];
+        /// @luabind
+        void method1();
+        /// @luabind(policy=return_ref_policy<1>{})
+        test_bind_fields* get_self() { return this; }
+        /// @luabind(policy=return_ref_policy<1>{})
+        test_bind_fields* get_self2(int) { return this; }
+        /// @luabind(policy=return_ref_policy<1>{})
+        const test_bind_fields* get_const() const { return this; }
+        /// @luabind
+        void func1(int) const {}
+    };
+
+    /// @luabind
+    class zooo {};
+    /// @luabind
+    class azoo : public zooo {};
+}

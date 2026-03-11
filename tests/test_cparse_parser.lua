@@ -96,9 +96,8 @@ end
 
 function TestParserClass:test_forward_decl()
   local n = first("class Foo;")
-  lu.assertEquals(n.kind, "class")
+  lu.assertEquals(n.kind, "class_forward")
   lu.assertEquals(n.name, "Foo")
-  lu.assertTrue(n.forward)
 end
 
 function TestParserClass:test_single_inheritance()
@@ -133,6 +132,29 @@ function TestParserClass:test_class_with_method()
   lu.assertEquals(n.children[1].kind, "function")
   lu.assertEquals(n.children[1].name, "foo")
 end
+
+function TestParserClass:test_class_with_constructor()
+  local n = first("class C { C(); };")
+  lu.assertEquals(n.children[1].kind, "function")
+  lu.assertEquals(n.children[1].name, "C")
+end
+
+function TestParserClass:test_class_with_constructor2()
+  local n = first[[
+/// @luabind
+    struct test_bind_fields {
+        static size_t count;
+        /// @luabind(raw=true)
+        test_bind_fields();
+        ~test_bind_fields();
+    };
+]]
+  lu.assertEquals(n.children[2].kind, "function")
+  lu.assertEquals(n.children[2].name, "test_bind_fields")
+  lu.assertStrContains(n.children[2].doc, "luabind")
+end
+
+
 
 function TestParserClass:test_access_specifier_node()
   local n = first("class C { public: int x; };")
@@ -520,7 +542,10 @@ private:
   lu.assertEquals(n.name, "MyClass")
   lu.assertEquals(#n.bases, 1)
   -- just check it parsed without error
-  lu.assertTrue(#n.children > 0)
+  lu.assertTrue(#n.children > 1)
+  lu.assertEquals(n.children[1].kind, "access")
+  lu.assertEquals(n.children[2].kind, "function")
+  lu.assertEquals(n.children[2].name, "MyClass")
 end
 
 function TestParserComplex:test_namespace_with_class()
