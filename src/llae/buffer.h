@@ -47,6 +47,8 @@ namespace llae {
         lua::multiret lbyte(lua::state& l) const;
         lua::multiret ltostring(lua::state& l) const;
         lua::multiret leq(lua::state& l) const;
+
+        const void* find(const char* str) const;
         
         static void lbind(lua::state& l);
         static buffer_base_ptr get(lua::state& l,int idx,bool check=false);

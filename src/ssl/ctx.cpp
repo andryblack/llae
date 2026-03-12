@@ -65,7 +65,7 @@ namespace ssl {
 	}
 
 	lua::multiret ctx::load_cert(lua::state& l) {
-		auto data = lua::stack<llae::buffer_ptr>::get(l,2);
+		auto data = lua::stack<llae::buffer_base_ptr>::get(l,2);
 		if (!data) {
 			l.pushnil();
 			l.pushstring("need buffer with cert");
@@ -73,9 +73,11 @@ namespace ssl {
 		}
 
         if (data->find("-----BEGIN ")) {
-        	data = data->realloc(data->get_len()+1);
-        	static_cast<unsigned char*>(data->get_base())[data->get_len()]=0;
-        	data->set_len(data->get_len()+1);
+			auto new_data = llae::buffer::alloc(data->get_len()+1);
+			std::memcpy(new_data->get_base(),data->get_base(),data->get_len());
+        	static_cast<unsigned char*>(new_data->get_base())[data->get_len()]=0;
+        	new_data->set_len(data->get_len()+1);
+			data = new_data;
         }
 		
 

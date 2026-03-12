@@ -350,6 +350,23 @@ namespace llae {
         return buffer_base_ptr{};
     }
 
+    const void* buffer_base::find(const char* str) const {
+        auto start = static_cast<const char*>(get_base());
+        auto len = ::strlen(str);
+        if (len == 0) return get_base();
+        while (true) {
+            size_t flen = ((static_cast<const char*>(get_base()) + get_len()) - start)-len + 1;
+            const char* pos = static_cast<const char*>(::memchr(start,*str,flen));
+            if (!pos) {
+                return nullptr;
+            }
+            if (len==1 || (::memcmp(pos,str,len)==0)) {
+                return pos; 
+            }
+            start = pos + 1;
+        }
+    }
+
     void buffer_base::lbind(lua::state& l) {
         lua::bind::function(l,"__len",&buffer_base::get_len);
         lua::bind::function(l,"__concat",&buffer_base::lconcat);
