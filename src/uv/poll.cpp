@@ -23,15 +23,18 @@ namespace uv {
                 m_cont.push(l);
                 auto toth = l.tothread(-1);
                 l.pop(1);// thread
-                 if (status < 0) {
+                int args;
+				if (status < 0) {
                     toth.pushnil();
                     uv::push_error(toth,status);
+                    args = 2;
                 } else { 
                     toth.pushinteger(events);
+                    args = 1;
                 }
                 lua::ref ref(std::move(m_cont));
                 p->stop_poll();
-                auto s = toth.resume(l,2);
+                auto s = toth.resume(l,args);
                 if (s != lua::status::ok && s != lua::status::yield) {
                     llae::app::show_error(toth,s);
                 }
