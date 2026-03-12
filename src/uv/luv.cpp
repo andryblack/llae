@@ -33,7 +33,7 @@ namespace uv {
 	std::string status_error::to_string() const {
 		const char* err = uv_strerror_r(get_code(), uv_error_buf, sizeof(uv_error_buf));
         if (!err) err = "unknown";
-		return std::format("[uv]:{}",err);
+		return std::string("[uv]:") + err;
 	}
 	
     void error(lua::state& l,int e) {
