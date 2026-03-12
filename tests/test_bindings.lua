@@ -150,7 +150,7 @@ function TestBindings:test_field_ref_const()
         end
     )
     lu.assertErrorMsgContains(
-        "attempt to set referenced field",
+        "invalid reference: need tests::test_bind_struct, got table",
         function() 
             b.field4 = {}
         end
@@ -192,11 +192,14 @@ function TestBindings:test_field_ref_array_const()
         end
     )
     lu.assertErrorMsgContains(
-        "attempt to set referenced field",
+        "invalid reference: need tests::test_bind_struct, got table",
         function() 
             b.array2[1] = {}
         end
     )
+    b.field4.x = 100500
+    b.array2[1] = b.field4
+    lu.assertEquals(b.array2[1].x, 100500)
     lu.assertErrorMsgContains(
         "attempt to set array field",
         function() 

@@ -53,25 +53,25 @@ namespace lua {
 			}
 			template <typename R>
 			static int push_result(state& s,R* result) {
-				push_ptr(s,result);
-				ref_value(s,-1,idx);
+				if (push_ptr(s,result))
+					ref_value(s,-1,idx);
 				return 1;
 			}
 			template <typename R>
 			static int push_result(state& s,R& result) {
-				push_ptr(s,&result);
-				ref_value(s,-1,idx);
+				if (push_ptr(s,&result))
+					ref_value(s,-1,idx);
 				return 1;
 			}
 			template <typename R>
 			static int push_field(state& s, R& result) {
-				push_ptr(s,&result);
-				ref_value(s,-1,idx);
+				if (push_ptr(s,&result))
+					ref_value(s,-1,idx);
 				return 1;
 			}
 			template <typename R>
-			static void set_field(state& s, R& result, int) {
-				s.error("attempt to set referenced field");
+			static void set_field(state& s, R& result, int value_idx) {
+				result = stack<const R&>::get(s,value_idx);
 			}
 			template <size_t ArgIdx>
 			using arg_policy = default_policy::template arg_policy<ArgIdx>;

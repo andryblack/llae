@@ -199,7 +199,7 @@ namespace lua {
 		static T& get(state& s,int idx) {
 			auto obj = meta_holder_base_t::get_ptr<T>(s,idx);
 			if (!obj.first) {
-				s.error("invalid reference %s",meta::info<T>::get()->name);
+				s.error("invalid reference: need %s, got %s",meta::info<T>::get()->name,s.get_typename(idx));
 			}
 			if (!std::is_const<T>::value && obj.second) {
 				s.error("invalid pointer %s is const",meta::info<T>::get()->name);
@@ -282,6 +282,15 @@ namespace lua {
         }
     };
 
+	template <class T>
+	struct stack<const std::optional<T>&> : stack<std::optional<T>> {
+		static std::optional<T> get(state& s,int idx) {
+			if (s.isnoneornil(idx)) {
+				return {};
+			}
+			return stack<const T&>::get(s,idx);
+		}
+	};
 	
     template <class T>
     static int push(state& s,const T& val) {

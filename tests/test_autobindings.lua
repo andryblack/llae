@@ -117,6 +117,17 @@ function TestAutoBindings:test_return_ref()
     end
 end
 
+function TestAutoBindings:test_optional_ref()
+    local b = bind_tests.test_bind_fields.new()
+    lu.assertIsNil(b.optional_field5)
+    b.optional_field5 = b.field4
+    lu.assertNotIsNil(b.optional_field5)
+    b.optional_field5.x = 100500
+    lu.assertEquals(b.optional_field5.x, 100500)
+    local f = b:get_const_optional_field5()
+    lu.assertEquals(f.x, 100500)
+end
+
 function TestAutoBindings:test_array_ref()
     local b = bind_tests.test_bind_fields.new()
     b.array1[1] = 1
@@ -191,8 +202,9 @@ function TestAutoBindings:test_field_ref_const()
             f.x = 2
         end
     )
+    b.field4 = f
     lu.assertErrorMsgContains(
-        "attempt to set referenced field",
+        "invalid reference: need autobind_tests::test_bind_struct, got table",
         function() 
             b.field4 = {}
         end
@@ -234,9 +246,9 @@ function TestAutoBindings:test_field_ref_array_const()
         end
     )
     lu.assertErrorMsgContains(
-        "attempt to set referenced field",
+        "invalid reference: need autobind_tests::test_bind_struct, got nil",
         function() 
-            b.array2[1] = {}
+            b.array2[1] = nil
         end
     )
     lu.assertErrorMsgContains(

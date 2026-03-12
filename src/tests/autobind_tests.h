@@ -3,6 +3,7 @@
 #include <lua/state.h>
 #include <string>
 #include <cstdint>
+#include <optional>
 
 namespace autobind_tests {
 
@@ -74,6 +75,10 @@ namespace autobind_tests {
         const test_bind_struct& get_const_field4() const { return field4; }
         /// @luabind(policy=return_ref_policy<1>{})
         test_bind_struct& get_field4() { return field4; }
+        /// @luabind(policy=return_ref_policy<1>{})
+        std::optional<test_bind_struct> optional_field5;
+        /// @luabind(policy=return_ref_policy<1>{})
+        const std::optional<test_bind_struct>& get_const_optional_field5() const { return optional_field5; }
     };
 
     /// @luabind

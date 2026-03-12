@@ -6,6 +6,7 @@
 #include <new>
 #include <utility>
 #include <type_traits>
+#include <optional>
 
 namespace lua {
 
@@ -197,12 +198,45 @@ namespace lua {
     }
 
     template <class T>
-    static void push_ptr( state& s,T* v ) {
+    static bool push_ptr( state& s,T* v ) {
+        if (!v) {
+            s.pushnil();
+            return false;
+        }
         using holder_t = ptr_holder_t<T>;
         void* data = s.newuserdata(sizeof(holder_t));
         const meta::info_t* info = meta::info<T>::get();
         new (data) holder_t{ v };
         set_metatable(s,info);
+        return true;
+    }
+
+    template <class T>
+    static bool push_ptr( state& s,std::optional<T>* v ) {
+        if (!v || !v->has_value()) {
+            s.pushnil();
+            return false;
+        }
+        using holder_t = ptr_holder_t<T>;
+        void* data = s.newuserdata(sizeof(holder_t));
+        const meta::info_t* info = meta::info<T>::get();
+        new (data) holder_t{ &v->value() };
+        set_metatable(s,info);
+        return true;
+    }
+
+    template <class T>
+    static bool push_ptr( state& s,std::optional<T> const* v ) {
+        if (!v || !v->has_value()) {
+            s.pushnil();
+            return false;
+        }
+        using holder_t = ptr_holder_t<const T>;
+        void* data = s.newuserdata(sizeof(holder_t));
+        const meta::info_t* info = meta::info<T>::get();
+        new (data) holder_t{ &v->value() };
+        set_metatable(s,info);
+        return true;
     }
 
 }
