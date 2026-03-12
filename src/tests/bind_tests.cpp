@@ -25,9 +25,9 @@ namespace tests {
         lua::bind::field(l,"field1",&test_bind_fields::field1);
         lua::bind::field(l,"field2",&test_bind_fields::field2);
         lua::bind::field(l,"field3",&test_bind_fields::field3);
-        lua::bind::field(l,"field4",&test_bind_fields::field4,lua::bind::return_ref_policy<1>{});
+        lua::bind::field(l,"field4",&test_bind_fields::field4,lua::bind::field_ref_policy{});
         lua::bind::field(l,"array1",&test_bind_fields::array1);
-        lua::bind::field(l,"array2",&test_bind_fields::array2,lua::bind::return_ref_policy<1>{});
+        lua::bind::field(l,"array2",&test_bind_fields::array2,lua::bind::field_ref_policy{});
         lua::bind::field_ro(l,"const_field",&test_bind_fields::const_field);
         lua::bind::field(l,"string_field",&test_bind_fields::string_field,lua::bind::string_policy{});
         lua::bind::field(l,"data_field",&test_bind_fields::data_field,lua::bind::string_policy<false>{});

@@ -3,6 +3,7 @@
 #include "stack.h"
 #include "metatable.h"
 #include "array.h"
+#include "policy.h"
 #include <utility>
 #include <algorithm>
 
@@ -22,106 +23,7 @@ namespace lua {
 			return obj.first;
 		}
 
-		struct default_policy {
-			static constexpr bool allow_set_field = true;
-			template <typename R>
-			static int push_result(state& s,R&& result) {
-				return stack<R>::push(s,std::forward<R>(result));
-			}
-			template <typename R>
-			static int push_field(state& s,const R& result) {
-				return stack<R>::push(s,result);
-			}
-			template <typename R>
-			static void set_field(state& s, R& result, int idx) {
-				result = stack<R>::get(s,idx);
-			}
-			template <size_t ArgIdx>
-			struct arg_policy {
-				template <typename Arg>
-				using type = stack<Arg>;
-			};
-		};
-
-		template <int idx = 1>
-		struct return_ref_policy {
-			template <typename R>
-			static int push_result(state& s,R&& result) {
-				auto r = default_policy::push_result(s,std::forward<R>(result));
-				ref_value(s,-r,idx);
-				return r;
-			}
-			template <typename R>
-			static int push_result(state& s,R* result) {
-				if (push_ptr(s,result))
-					ref_value(s,-1,idx);
-				return 1;
-			}
-			template <typename R>
-			static int push_result(state& s,R& result) {
-				if (push_ptr(s,&result))
-					ref_value(s,-1,idx);
-				return 1;
-			}
-			template <typename R>
-			static int push_field(state& s, R& result) {
-				if (push_ptr(s,&result))
-					ref_value(s,-1,idx);
-				return 1;
-			}
-			template <typename R>
-			static void set_field(state& s, R& result, int value_idx) {
-				result = stack<const R&>::get(s,value_idx);
-			}
-			template <size_t ArgIdx>
-			using arg_policy = default_policy::template arg_policy<ArgIdx>;
-		};
-		using return_self_ref_policy = return_ref_policy<1>;
-
-		template <int idx = 1>
-		struct return_arg_policy : default_policy {
-			template <typename R>
-			static int push_result(state& s,R&&) {
-				s.pushvalue(idx);
-				return 1;
-			}
-		};
-		using return_self_policy = return_arg_policy<1>;
-
-		template <bool zero_terminate = true>
-		struct string_policy {
-			template <size_t size>
-			static int push_field(state& s,const char(&str)[size]) {
-				auto zero_pos = std::find(str,str+size,0);
-				if (zero_pos != str+size) {
-					s.pushlstring(str,zero_pos-str);
-				} else {
-					s.pushlstring(str,size);
-				}
-				return 1;
-			}
-			template <typename T,size_t size>
-			static void set_field(state& s,T(&str)[size],int value_idx) {
-				size_t len = 0;
-				if (auto ptr = s.checklstring(value_idx,len)) {
-					if (len > size) {
-						s.argerror(value_idx,"string too long");
-					}
-					std::memcpy(str,ptr,len);
-					if (len < size) {
-						std::memset(str + len,0,size - len);
-					}
-				}
-			}
-		};
-		template <>
-		struct string_policy<false> : string_policy<true> {
-			template <typename T,size_t size>
-			static int push_field(state& s,const T(&str)[size]) {
-				s.pushlstring(reinterpret_cast<const char*>(str),size);
-				return 1;
-			}
-		};
+		
 
 		template <typename P,typename R,typename T,typename ... Args>
 		struct helper {
@@ -262,7 +164,7 @@ namespace lua {
 		};
 
 		template <class T,typename ... Args>
-		struct helper<default_policy,multiret,T,state&,Args...> {
+		struct helper<default_func_policy,multiret,T,state&,Args...> {
 			typedef multiret (T::*func_t)(state&,Args ... args);
 			typedef multiret (T::*cfunc_t)(state&,Args ... args)const;
 			template <typename O,typename F,size_t... Is>
@@ -302,7 +204,7 @@ namespace lua {
 		};
 
 		template <typename ... Args>
-		struct helper<default_policy,multiret,void,state&,Args...> {
+		struct helper<default_func_policy,multiret,void,state&,Args...> {
 			typedef multiret (*func_t)(state&,Args ... args);
 			template <size_t... Is>
 			static multiret apply(state&l,func_t func,const std::index_sequence<Is...>) {
@@ -347,7 +249,7 @@ namespace lua {
             }
         };
 
-		template <class R,class T,typename P = default_policy>
+		template <class R,class T,typename P = default_field_policy>
 		struct field_helper {
 			using policy_t = P;
 			using field_t = R (T::*);
@@ -438,7 +340,7 @@ namespace lua {
 
 		template <class R,class T,typename ... Args>
 		static void function(state& s,const char* name,R (T::*func)(Args ... args)) {
-			using hpr = helper<default_policy,R,T,Args...>;
+			using hpr = helper<default_func_policy,R,T,Args...>;
 			using func_t = typename hpr::func_t; 
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
 			*func_data = func;
@@ -448,6 +350,7 @@ namespace lua {
 
 		template <class P,class R,class T,typename ... Args>
 		static void function(state& s,const char* name,R (T::*func)(Args ... args),P) {
+			static_assert(P::type == policy_type::func, "policy must be a function policy");
 			using hpr = helper<P,R,T,Args...>;
 			using func_t = typename hpr::func_t; 
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
@@ -458,7 +361,7 @@ namespace lua {
 
 		template <class R,class T,typename ... Args>
 		static void function(state& s,const char* name,R (T::*func)(Args ... args) const) {
-			using hpr = helper<default_policy,R,T,Args...>;
+			using hpr = helper<default_func_policy,R,T,Args...>;
 			using func_t = typename hpr::cfunc_t; 
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
 			*func_data = func;
@@ -468,6 +371,7 @@ namespace lua {
 
 		template <class P,class R,class T,typename ... Args>
 		static void function(state& s,const char* name,R (T::*func)(Args ... args) const,P) {
+			static_assert(P::type == policy_type::func, "policy must be a function policy");
 			using hpr = helper<P,R,T,Args...>;
 			using func_t = typename hpr::cfunc_t; 
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
@@ -478,7 +382,7 @@ namespace lua {
 
 		template <class R,typename ... Args>
 		static void function(state& s,const char* name,R (*func)(Args ... args)) {
-			using hpr = helper<default_policy,R,void,Args...>;
+			using hpr = helper<default_func_policy,R,void,Args...>;
 			using func_t = typename hpr::func_t;
 			func_t* func_data = static_cast<func_t*>(s.newuserdata(sizeof(func_t)));
 			*func_data = func;
@@ -511,6 +415,7 @@ namespace lua {
 
 		template <class R,class T,typename P>
 		static void field(state& s,const char* name,R (T::*field),P p) {
+			static_assert(P::type == policy_type::field, "policy must be a field policy");
 			using hpr = field_helper<R,T,P>;
 			using field_t = typename hpr::field_t;
 			field_t* field_data = static_cast<field_t*>(s.newuserdata(sizeof(field_t)));
@@ -524,14 +429,14 @@ namespace lua {
     
         template <class T,typename ... Args>
         static void constructor(state& s) {
-            typedef helper<default_policy,void,T,Args...> hpr;
+            typedef helper<default_func_policy,void,T,Args...> hpr;
             s.pushcclosure(hpr::ctr,0);
             metatable_set_method(s,"new",-2);
         }
 		
 		template <class T,typename ... Args>
         static void raw_constructor(state& s) {
-            typedef helper<default_policy,void,T,Args...> hpr;
+            typedef helper<default_func_policy,void,T,Args...> hpr;
             s.pushcclosure(hpr::raw_ctr,0);
 			metatable_set_method(s,"new",-2);
         }
