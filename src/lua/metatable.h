@@ -67,6 +67,7 @@ namespace lua {
         virtual bool check_marker() const override { return marker == type_marker; }
         virtual bool is_const() const override { return std::is_const<T>::value; }
         explicit raw_holder_t(T&& val) : meta_holder_base_t(type_marker), raw(std::move(val)) {}
+        explicit raw_holder_t(const T& val) : meta_holder_base_t(type_marker), raw(val) {}
         template <typename ... Args>
         explicit raw_holder_t(inplace,Args&&... args) : meta_holder_base_t(type_marker), raw(std::forward<Args>(args)...) {}
         const meta::info_t* info() const override { return ::meta::info<T>::get(); }
@@ -176,6 +177,14 @@ namespace lua {
         void* data = s.newuserdata(sizeof(holder_t));
         const meta::info_t* info = meta::info<T>::get();
         new (data) holder_t{ std::move(v) };
+        set_metatable(s,info);
+    }
+    template <class T>
+    static void push_raw( state& s,const T& v ) {
+        using holder_t = raw_holder_t<T>;
+        void* data = s.newuserdata(sizeof(holder_t));
+        const meta::info_t* info = meta::info<T>::get();
+        new (data) holder_t{ v };
         set_metatable(s,info);
     }
     template <class T,class... Arg>

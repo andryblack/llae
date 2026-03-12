@@ -14,18 +14,14 @@
 namespace lua {
 
 	template <class T, class enable = void>
-	struct stack {};
+	struct stack {
+		using disabled = std::true_type;
+	};
 
     template <class T>
     struct check {
         using type = T;
     };
-
-    template <class T>
-    struct raw {
-        using MT = T;
-    };
-
 
 	template <>
 	struct stack<value> {
@@ -218,42 +214,19 @@ namespace lua {
         }
     };
 
-//    template <class T>
-//    struct stack<T&&,typename std::enable_if< std::is_copy_constructible<T>::value>::type> {
-//        static void push(state& s,T&& v) {
-//            push_raw(s,std::forward<T>(v));
-//        }
-//    };
+	// template <class T>
+	// struct stack<T&&,typename std::enable_if< std::is_copy_constructible<T>::value>::type> {
+	// 	static void push(state& s,T&& v) {
+	// 		push_raw(s,std::forward<T>(v));
+	// 	}
+	// };
+
+	
 
 	template <class T>
 	struct stack<const common::intrusive_ptr<T>& > : stack<common::intrusive_ptr<T> >{};
 	template <class T>
     struct stack<common::intrusive_ptr<T>&& > : stack<common::intrusive_ptr<T> >{};
-
-
-    template <class MT>
-    struct stack<raw<MT>> {
-    	using T = typename MT::object;
-    	static T* get(state& s,int idx) {
-    		auto res = s.testudata(idx,MT::name);
-    		return static_cast<T*>(res);
-        }
-        static int push(state& s,const T& v) {
-            auto ptr = s.newuserdata(sizeof(T));
-            memcpy(ptr,&v,sizeof(T));
-            s.setmetatable(MT::name);
-            return 1;
-        }
-    };
-
-    template <class MT>
-    struct stack<check<raw<MT>>> : stack<raw<MT>> {
-    	using T = typename MT::object;
-    	static T* get(state& s,int idx) {
-    		auto res = s.checkudata(idx,MT::name);
-    		return static_cast<T*>(res);
-        }
-    };
 
     template <class T>
     struct stack<std::optional<T>> {
@@ -291,10 +264,32 @@ namespace lua {
 			return stack<const T&>::get(s,idx);
 		}
 	};
+
+
+	template <typename T, typename = void>
+	struct is_stack_disabled : std::false_type {};
+
+	template <typename T>
+	struct is_stack_disabled<T, std::void_t<typename stack<T>::disabled>> : std::true_type {};
+
+	template <typename T>
+	struct raw_pushable {
+		using type = std::remove_reference_t<T>;
+		static constexpr bool is_move_constructible = std::is_move_constructible_v<type>;
+		static constexpr bool is_copy_constructible = std::is_copy_constructible_v<type>;
+		static constexpr bool is_constructible = is_move_constructible || is_copy_constructible;
+		static constexpr bool value = is_stack_disabled<type>::value && is_constructible;
+	};
 	
     template <class T>
     static int push(state& s,const T& val) {
-        return stack<T>::push(s,val);
+		if constexpr (raw_pushable<T>::value) {
+			static_assert(std::is_copy_constructible_v<T>, "T must be copy constructible");
+			push_raw(s,val);
+			return 1;
+		} else {
+        	return stack<T>::push(s,val);
+		}
     }
     template <class T>
     static int push(state& s,T& val) {
@@ -302,6 +297,12 @@ namespace lua {
     }
     template <class T>
     static int push(state& s, T&& val) {
-        return stack<T>::push(s,std::forward<T>(val));
+		if constexpr (raw_pushable<T>::value) {
+			static_assert(std::is_move_constructible_v<T>, "T must be move constructible");
+			push_raw(s,std::forward<T>(val));
+			return 1;
+		} else {
+			return stack<T>::push(s,std::forward<T>(val));
+		}
     }
 }

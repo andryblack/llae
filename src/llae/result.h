@@ -24,7 +24,7 @@ namespace llae {
 
 		int push(lua::state& s) const {
 			if (common::optional_storage<Result>::has_value(m_result)) {
-				return lua::stack<Result>::push(s,common::optional_storage<Result>::get(m_result));
+				return lua::push(s,common::optional_storage<Result>::get(m_result));
 			} else if (m_error) {
 				s.pushnil();
 				return lua::stack<error_ptr>::push(s,m_error) + 1;

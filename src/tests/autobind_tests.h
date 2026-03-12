@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 #include <optional>
+#include "llae/result.h"
 
 namespace autobind_tests {
 
@@ -79,6 +80,13 @@ namespace autobind_tests {
         std::optional<test_bind_struct> optional_field5;
         /// @luabind(policy=return_ref_policy<1>{})
         const std::optional<test_bind_struct>& get_const_optional_field5() const { return optional_field5; }
+        /// @luabind
+        llae::result<test_bind_struct> test_result() { 
+            if (!optional_field5.has_value()) {
+                return llae::string_error::create("failed");
+            }
+            return llae::result<test_bind_struct>(optional_field5.value());
+        }
     };
 
     /// @luabind
