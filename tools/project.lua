@@ -435,39 +435,20 @@ function Project:generate_bindings( )
 	processor:define('LLAE_BINDING_GENERATION')
 	processor:define('META_OBJECT')
 
+	local dst_dir = path.join(self:get_root(),'build','src')
+
 	local function generate_binding(filename)
 		local result = processor:process_file(filename)
 		if not next(result.classes) and not next(result.modules) then
 			return
 		end
-		local ext = path.extension(filename)
-		local dst_filename = path.join(self:get_root(),'build','src','gen_' .. filename:gsub('/','_'):sub(1,-#ext-1) .. 'cpp')
 		
-		local template_source_filename = tool.get_llae_path('data','binding-template.cpp')
-
-		fs.mkdir_r(path.dirname(dst_filename))
-		fs.unlink(dst_filename)
-
 		log.info('generate binding',filename)
 
-		local header = path.getrelative(path.getabsolute(filename),path.getabsolute(path.dirname(dst_filename)))
+		local header = path.getrelative(path.getabsolute(filename),path.getabsolute(dst_dir))
 		for n,m in pairs(result.modules) do
 			m:add_header(header)
 		end
-
-		local f = assert(fs.open(dst_filename,fs.O_WRONLY|fs.O_CREAT))
-		f:write(template.render_file(template_source_filename,{
-			escape = tostring,
-			project=self,
-			template = template,
-			path = path,
-			fs = fs,
-			log = log,
-			utils = utils,
-			header = header,
-			bindings = result,
-		}))
-		f:close()
 	end
 
 	local all_bind_headers = {}
