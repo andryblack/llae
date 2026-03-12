@@ -1,7 +1,7 @@
 #include "error.h"
 #include "lua/state.h"
 #include "lua/bind.h"
-#include <format>
+#include <cstdio>
 
 META_OBJECT_INFO(llae::error,meta::object)
 META_OBJECT_INFO(llae::string_error,llae::error)
@@ -12,7 +12,7 @@ namespace llae {
 	const std::string error::default_category = "llae";
 
 	std::string error::to_string() const {
-		return std::format("[{}]",get_category());
+		return std::string("[") + get_category() + "]";
 	}
 
 	std::string string_error::to_string() const {
@@ -20,7 +20,9 @@ namespace llae {
 	}
 
 	std::string code_error::to_string() const {
-		return std::format("[{}]:{}",get_category(),get_code());
+		char buf[128];
+		::snprintf(buf,sizeof(buf),"[%s]:%d",get_category().c_str(),get_code());
+		return std::string(buf);
 	}
 
 
