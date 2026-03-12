@@ -1,7 +1,7 @@
+#include "lua/metatable.h"
 #include "posix/fd.h"
 #include "lua/state.h"
 #include "lua/stack.h"
-#include "lua/raw_bind.h"
 #include "lua/bind.h"
 #include "posix/lposix.h"
 
@@ -13,18 +13,15 @@
 # include <IOKit/serial/ioss.h>
 #endif
 
-struct termios_mt  {
-	static constexpr const char* name = "struct termios";
+static void bind_termios(lua::state& l) {
 	using object = struct termios;
-	static constexpr const auto fields = std::make_tuple(
-		lua::field("c_iflag",&termios::c_iflag),
-		lua::field("c_oflag",&termios::c_oflag),
-		lua::field("c_cflag",&termios::c_cflag),
-		lua::field("c_lflag",&termios::c_lflag),
-		lua::field("c_cc",&termios::c_cc)
-	);
-};
-using termios_stack = lua::stack<lua::check<lua::raw<termios_mt>>>;
+	lua::bind::field(l,"c_iflag",&termios::c_iflag);
+	lua::bind::field(l,"c_oflag",&termios::c_oflag);
+	lua::bind::field(l,"c_cflag",&termios::c_cflag);
+	lua::bind::field(l,"c_lflag",&termios::c_lflag);
+	lua::bind::field(l,"c_cc",&termios::c_cc);
+}
+META_INFO(struct termios,void)
 
 static int lua_posix_tcsetattr(lua_State* L) {
 	lua::state l(L);
@@ -33,8 +30,8 @@ static int lua_posix_tcsetattr(lua_State* L) {
 		l.argerror(1,"posix::fd");
 	}
 	int optional_actions = static_cast<int>(l.checkinteger(2));
-	struct termios* tios = termios_stack::get(l,3);
-	int r = tcsetattr(fd->get(),optional_actions,tios);
+	struct termios& tios = lua::stack<struct termios&>::get(l,3);
+	int r = tcsetattr(fd->get(),optional_actions,&tios);
 	if (r < 0) {
 		l.pushnil();
 		posix::push_error_errno(l);
@@ -57,14 +54,14 @@ static int lua_posix_tcgetattr(lua_State* L) {
 		posix::push_error_errno(l);
 		return 2;
 	}
-	termios_stack::push(l,tios);
+	lua::push_raw(l, std::move(tios));
 	return 1;
 }
 
 static int lua_posix_cfsetispeed(lua_State* L) {
 	lua::state l(L);
-	auto ios = termios_stack::get(l,1);
-	int r = cfsetispeed(ios,l.checkinteger(2));
+	struct termios& tios = lua::stack<struct termios&>::get(l,1);
+	int r = cfsetispeed(&tios,l.checkinteger(2));
 	if (r < 0) {
 		l.pushnil();
 		posix::push_error_errno(l);
@@ -76,8 +73,8 @@ static int lua_posix_cfsetispeed(lua_State* L) {
 
 static int lua_posix_cfsetospeed(lua_State* L) {
 	lua::state l(L);
-	auto ios = termios_stack::get(l,1);
-	int r = cfsetospeed(ios,l.checkinteger(2));
+	struct termios& tios = lua::stack<struct termios&>::get(l,1);
+	int r = cfsetospeed(&tios,l.checkinteger(2));
 	if (r < 0) {
 		l.pushnil();
 		posix::push_error_errno(l);
@@ -107,7 +104,7 @@ static int lua_posix_set_baudrate(lua_State* L) {
 
 int luaopen_posix_termios(lua_State* L) {
 	lua::state l(L);
-	lua::register_raw_metatable<termios_mt>(l);
+	lua::bind::object<struct termios>::register_metatable(l,&bind_termios);
 	
 	l.createtable();
 

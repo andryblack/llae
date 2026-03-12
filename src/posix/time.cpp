@@ -1,7 +1,6 @@
 #include "posix/fd.h"
 #include "lua/state.h"
 #include "lua/stack.h"
-#include "lua/raw_bind.h"
 #include "lua/bind.h"
 #include "posix/lposix.h"
 
