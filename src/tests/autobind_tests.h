@@ -83,6 +83,10 @@ namespace autobind_tests {
         /// @luabind(policy=return_ref_policy<1>{})
         const std::optional<test_bind_struct>& get_const_optional_field5() const { return optional_field5; }
         /// @luabind
+        void set_optional_field5(const std::optional<test_bind_struct>& v) { optional_field5 = v; }
+        /// @luabind
+        void set_optional_field5_val(std::optional<test_bind_struct> v) { optional_field5 = v; }
+        /// @luabind
         llae::result<test_bind_struct> test_result() { 
             if (!optional_field5.has_value()) {
                 return llae::string_error::create("failed");

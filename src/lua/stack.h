@@ -235,7 +235,7 @@ namespace lua {
     		if (s.isnoneornil(idx)) {
     			return {};
     		}
-    		return up::get(s,idx);
+    		return stack<const T&>::get(s,idx);
     	}
     	static int push(state& s,const std::optional<T>& v) {
             if (!v) {
