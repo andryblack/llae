@@ -34,6 +34,8 @@ namespace autobind_tests {
             off,
             on,
         };
+        /// @luabind
+        state s;
     };
 
     /// @luabind

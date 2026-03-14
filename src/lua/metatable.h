@@ -60,6 +60,11 @@ namespace lua {
     struct raw_holder_t : meta_holder_base_t {
         struct inplace {};
         static constexpr uint32_t type_marker = 0xb1c14011;
+        static_assert(!std::is_enum_v<T>, "hold enum");
+        static_assert(!std::is_fundamental_v<T>, "hold fundamental type");
+        static_assert(!std::is_pointer_v<T>, "hold pointer");
+        static_assert(!std::is_reference_v<T>, "hold reference");
+        static_assert(!std::is_array_v<T>, "hold array");
         mutable T raw;
         virtual ~raw_holder_t() override {
             assert(marker == type_marker);

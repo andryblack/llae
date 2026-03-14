@@ -205,7 +205,7 @@ namespace lua {
 	};
 
     template <class T>
-    struct stack<T,typename std::enable_if< std::is_enum<T>::value>::type> {
+    struct stack<T,std::enable_if_t<!std::is_const_v<T> && std::is_enum_v<T>>> {
         static T get(state& s,int idx) {
             return static_cast<T>(stack<int>::get(s,idx));
         }
