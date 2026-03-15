@@ -72,7 +72,7 @@ function bootstrap( config )
 	env.LUA_PATH='?.lua'
 	assert(exec{
 		bin = 'premake5',
-		args = {'--file=build/premake5.lua','gmake2'},
+		args = {'--file=build/premake5.lua','gmake'},
 		name = 'bootstrap2_premake',
 		env = env,
 		cwd = cwd,
