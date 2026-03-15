@@ -15,7 +15,13 @@ local tags = class(nil, 'tags')
 ---@param list tags_entry[]
 function tags:_init(list)
   self._list = list or {}
+  self._clean = {}
 end
+
+function tags:get_clean()
+  return next(self._clean) and self._clean or nil
+end
+
 
 ---Returns all entries with the given tag name.
 ---@param name string
@@ -121,16 +127,27 @@ local function parse_args(s)
 end
 
 -- Scans plain text for @tagname and @tagname(...) annotations.
--- Any character that is not part of a tag acts as a separator.
-local function parse_text(text)
-  local list = {}
+-- Non-tag text is accumulated; after parsing, self._clean holds
+-- trimmed non-empty lines with all tag annotations removed.
+function tags:_parse(text)
+  local list = self._list
   local i = 1
   local n = #text
+  local segment_start = 1
+  local clean_parts = {}
+
+  local function flush_clean(upto)
+    if upto > segment_start then
+      table.insert(clean_parts, text:sub(segment_start, upto - 1))
+    end
+  end
+
   while i <= n do
     if text:sub(i, i) == '@' then
       -- read tag name: must start with letter or underscore
       local j = i + 1
       if j <= n and text:sub(j, j):match('[%a_]') then
+        flush_clean(i)
         local name_start = j
         j = j + 1
         while j <= n and text:sub(j, j):match('[%w_]') do
@@ -146,8 +163,18 @@ local function parse_text(text)
             j = close + 1
           end
         end
-        table.insert(list, { tag = name, value = value })
-        i = j
+        -- capture inline trailing text as comment: stop at next @tag or newline
+        local k = j
+        while k <= n and text:sub(k, k) ~= '\n' do
+          if text:sub(k, k) == '@' and k + 1 <= n and text:sub(k + 1, k + 1):match('[%a_]') then
+            break
+          end
+          k = k + 1
+        end
+        local comment = trim(text:sub(j, k - 1))
+        table.insert(list, { tag = name, value = value, comment = comment ~= '' and comment or nil })
+        segment_start = k
+        i = k
       else
         i = i + 1
       end
@@ -155,6 +182,26 @@ local function parse_text(text)
       i = i + 1
     end
   end
+  flush_clean(n + 1)
+
+  -- split accumulated clean text into trimmed non-empty lines,
+  -- stripping leading comment markers: /**, ///, lone *
+  local clean_text = table.concat(clean_parts)
+  for line in (clean_text .. '\n'):gmatch('([^\n]*)\n') do
+    local t = trim(line)
+    -- skip closing comment marker */
+    if t == '*/' then goto continue end
+    -- strip opening comment markers: /**, ///, lone *
+    t = t:match('^/%*%*%s*(.*)$') or t:match('^///%s*(.*)$') or t:match('^%*/?%s*(.-)%s*$') or t
+    -- strip trailing closing marker */
+    t = t:match('^(.-)%s*%*/$') or t
+    t = trim(t)
+    if t ~= '' then
+      table.insert(self._clean, t)
+    end
+    ::continue::
+  end
+
   return list
 end
 
@@ -164,8 +211,9 @@ end
 ---@param text string
 ---@return tags
 function tags.parse(text)
-  local list = parse_text(text or '')
-  return tags.new(list)
+  local tags = tags.new()
+  tags:_parse(text)
+  return tags
 end
 
 

@@ -506,6 +506,24 @@ function Project:generate_bindings( )
 		}))
 		f:close()
 		add_cmodules(self._project_cmodules,{module:get_name()})
+
+		local meta_filename = path.join(self:get_root(),'build','lua-meta', name .. '.lua')
+		local template_source_filename = tool.get_llae_path('data','binding-meta-template.lua')
+		fs.mkdir_r(path.dirname(meta_filename))
+		fs.unlink(meta_filename)
+		local f = assert(fs.open(meta_filename,fs.O_WRONLY|fs.O_CREAT))
+		f:write(template.render_file(template_source_filename,{
+			escape = tostring,
+			project=self,
+			template = template,
+			path = path,
+			fs = fs,
+			log = log,
+			utils = utils,
+			headers = {},
+			module = module,
+		}))
+		f:close()
 	end
 end
 

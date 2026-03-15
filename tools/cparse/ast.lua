@@ -24,9 +24,17 @@ function ast_base:__tostring()
   return string.format("[%s '%s']", self.kind, name)
 end
 
+function ast_base:dump(callback,indent)
+  callback((indent or '') .. self:__tostring())
+  if self.doc then
+    callback((indent or '') .. '\t' .. self.doc)
+  end
+end
+
 -- ── File ──────────────────────────────────────────────────────────────────────
 
 ---@class ast_file : ast_node
+---@field baseclass ast_node
 ---@field children table
 local ast_file = class(ast_base, 'ast_file')
 ast_file.kind = 'file'
@@ -36,11 +44,18 @@ function ast_file:_init(children)
   self.children = children or {}
 end
 
+function ast_file:dump(callback,indent)
+  ast_file.baseclass.dump(self,callback,indent)
+  for _,child in ipairs(self.children) do
+    child:dump(callback,(indent or '') .. '\t')
+  end
+end
 -- ── Namespace ─────────────────────────────────────────────────────────────────
 
 ---@class ast_namespace : ast_node
 ---@field name string
 ---@field children table
+---@field baseclass ast_node
 local ast_namespace = class(ast_base, 'ast_namespace')
 ast_namespace.kind = 'namespace'
 
@@ -51,6 +66,13 @@ function ast_namespace:_init(name, children)
   self.children = children or {}
 end
 
+function ast_namespace:dump(callback,indent)
+  ast_namespace.baseclass.dump(self,callback,indent)
+  for _,child in ipairs(self.children) do
+    child:dump(callback,(indent or '') .. '\t')
+  end
+end
+
 -- ── Class / struct / union ────────────────────────────────────────────────────
 
 ---@class ast_class : ast_node
@@ -59,6 +81,7 @@ end
 ---@field bases table
 ---@field children table
 ---@field var_name string|nil
+---@field baseclass ast_node
 local ast_class = class(ast_base, 'ast_class')
 ast_class.kind = 'class'
 
@@ -73,6 +96,13 @@ function ast_class:_init(name, struct_kind, bases, children, var_name)
   self.bases       = bases     or {}
   self.children    = children  or {}
   self.var_name    = var_name
+end
+
+function ast_class:dump(callback,indent)
+  ast_class.baseclass.dump(self,callback,indent)
+  for _,child in ipairs(self.children) do
+    child:dump(callback,(indent or '') .. '\t')
+  end
 end
 
 ---@class ast_class_forward : ast_node

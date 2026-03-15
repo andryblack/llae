@@ -6,6 +6,20 @@ local parser = require 'cparse.parser'
 local ast = require 'cparse.ast'
 local tags = require 'cparse.tags'
 
+local resolve_collector = class(nil, 'resolve_collector')
+function resolve_collector:_init()
+    self._replace = {}
+end
+
+function resolve_collector:add_using(node)
+    self._replace[node.name] = node.type
+    self._replace['const ' .. node.name .. ' &'] = node.type
+    --log.info('add using: ', node.name, node.type)
+end
+
+function resolve_collector:resolve(type_str)
+    return self._replace[type_str]
+end
 
 local bind_module = class(nil, 'bind_module')
 
@@ -16,10 +30,15 @@ function bind_module:_init(name)
     self._enums = {}
     self._headers = {}
     self._values = {}
+    self._resolve = resolve_collector.new()
 end
 
 function bind_module:add_header(header)
     table.insert(self._headers, header)
+end
+
+function bind_module:add_using(node)
+    self._resolve:add_using(node)
 end
 
 function bind_module:get_headers()
@@ -107,11 +126,86 @@ function bind_module:get_bind_name()
     return self._name:gsub('%.','_'):lower()
 end
 
+local lua_type_map = {
+    ['int'] = 'integer',
+    ['size_t'] = 'integer',
+    ['float'] = 'number',
+    ['double'] = 'number',
+    ['bool'] = 'boolean',
+    ['std :: string'] = 'string',
+    ['void'] = 'none',
+    ['llae :: buffer_base_ptr'] = {'string|llae.buffer_base?','llae.buffer_base?'},
+    ['llae :: buffer_base_ptr &'] = {'string|llae.buffer_base?','llae.buffer_base?'},
+    ['llae :: buffer_base_ptr &&'] = {'string|llae.buffer_base?','llae.buffer_base?'},
+    ['llae :: buffer_view'] = {'string|llae.buffer_base','string'},
+    ['const llae :: buffer_view &'] = {'string|llae.buffer_base','string'},
+}
+
+local function resolve_lua_type(type_str,recursive,is_return)
+    local inner = string.match(type_str, 'std :: optional <%s*(.-)%s*>')
+    if inner then
+        return recursive(inner,is_return) .. '?'
+    end
+    inner = string.match(type_str, 'common :: intrusive_ptr <%s*(.-)%s*>')
+    if inner then
+        return recursive(inner,is_return) .. '?'
+    end
+    return recursive(type_str,is_return)
+end
+
+function bind_module:resolve_lua_type_inner(type_str,is_return)
+    local res = lua_type_map[type_str]
+    if res then
+        if is_return then
+            return res[2]
+        else
+            return res[1]
+        end
+    end
+    return type_str
+end
+
+function bind_module:resolve_lua_type(type_str,is_return)
+    local resolved = self._resolve:resolve(type_str)
+    if resolved then
+        --log.info('resolve lua type: ', type_str, ' -> ', resolved)
+        type_str = resolved
+    end
+    return resolve_lua_type(type_str,function(inner,is_return)
+        return self:resolve_lua_type_inner(inner,is_return)
+    end,is_return)
+end
+
 local bind_base = class(nil, 'bind_base')
-function bind_base:_init(name,prefix,bind)
-    self._name = name
+function bind_base:_init(node,prefix,bind)
+    self._node = node
+    self._name = node.name or error('need name for bind object')
     self._prefix = prefix
     self._bind = bind
+end
+
+function bind_base:set_tags(tags)
+    self._tags = tags
+end
+
+function bind_base:get_tags()
+    return self._tags
+end
+
+function bind_base:get_lua_comments()
+    local clean = self._tags:get_clean()
+    if clean then
+        local res = {}
+        for _, v in ipairs(clean) do
+            table.insert(res, '--- ' .. v)
+        end
+        return table.concat(res, '\n')
+    end
+    return '--- ' .. self:get_lua_name()
+end
+
+function bind_base:get_ast_node()
+    return self._node
 end
 
 function bind_base:get_bind(name)
@@ -152,8 +246,8 @@ function bind_base:get_prefix()
 end
 
 local module_element = class(bind_base, 'module_element')
-function module_element:_init(name,prefix,bind)
-    bind_base._init(self, name, prefix, bind)
+function module_element:_init(node,prefix,bind)
+    bind_base._init(self, node, prefix, bind)
     self._module = nil
 end
 
@@ -166,12 +260,13 @@ function module_element:get_module()
 end
 
 local bind_class = class(module_element, 'bind_class')
-function bind_class:_init(name,prefix,bind)
-    bind_class.baseclass._init(self, name, prefix, bind)
+function bind_class:_init(node,prefix,bind)
+    bind_class.baseclass._init(self, node, prefix, bind)
     self._methods = {}
     self._fields = {}
     self._enums = {}
     self._bases = {}
+    self._resolve = resolve_collector.new()
 end
 
 function bind_class:set_bases(bases)
@@ -180,6 +275,10 @@ end
 
 function bind_class:get_bases()
     return self._bases
+end
+
+function bind_class:add_using(node)
+    self._resolve:add_using(node)
 end
 
 
@@ -224,24 +323,225 @@ function bind_class:get_bind_name()
     return prefix .. '_' .. self:get_name():lower()
 end
 
+function bind_class:resolve_lua_type_inner(type_str,is_return)
+    local resolved = self._resolve:resolve(type_str)
+    if resolved then
+        type_str = resolved
+    end
+    
+    for _,enum in ipairs(self:get_enums()) do
+        if enum:get_name() == type_str then
+            return self._module:get_name() .. '.' .. self:get_lua_name() .. '.' .. enum:get_lua_name()
+        end
+    end
+    return self._module:resolve_lua_type(type_str,is_return)
+end
+
+function bind_class:resolve_lua_type(type_str,is_return)
+    local resolved = self._resolve:resolve(type_str)
+    if resolved then
+        type_str = resolved
+    end
+    return resolve_lua_type(type_str,function(inner,is_return)
+        return self:resolve_lua_type_inner(inner,is_return)
+    end,is_return)
+end
+
 local bind_func = class(module_element, 'bind_func')
-function bind_func:_init(name,prefix,bind)
-    bind_func.baseclass._init(self, name, prefix, bind)
+function bind_func:_init(node,prefix,bind)
+    bind_func.baseclass._init(self, node, prefix, bind)
+end
+
+local param_lua_skip_types = {
+    ['llae :: app &'] = true,
+    ['lua :: state &'] = true,
+}
+local function skip_param_for_lua(param)
+    if param_lua_skip_types[param.type] then
+        return true
+    end
+    return false
+end
+
+local function get_lua_parameters(params,func)
+    local res = {}
+    local tags = func:get_tags():get('lparam')
+    if tags and next(tags) then
+        for _, tag in ipairs(tags) do
+            table.insert(res, tag.value[1])
+        end
+        return res
+    end
+    for _, param in ipairs(params) do
+        if not skip_param_for_lua(param) then
+            table.insert(res, param.name)
+        end
+    end
+    return res
+end
+
+local function get_lua_args(params,func)
+    local res = {}
+    local tags = func:get_tags():get('lparam')
+    if tags and next(tags) then
+        for _, tag in ipairs(tags) do
+            table.insert(res, {
+                name = tag.value[1],
+                type = tag.value[2],
+                descr = tag.comment or ''
+            })
+        end
+        return res
+    end
+    for _, param in ipairs(params) do
+        if not skip_param_for_lua(param) then
+            table.insert(res, {
+                name = param.name,
+                type = func:resolve_lua_type(param.type,false),
+                descr = ''
+            })
+        end
+    end
+    return res
+end
+
+local function get_lua_results(return_type,async,func)
+    local res = {}
+    if not return_type then
+        return {}
+    end
+    if return_type == 'void' then
+        return {}
+    end
+    local tags = func:get_tags():get('lreturn')
+    if tags and next(tags) then
+        for _, tag in ipairs(tags) do
+            table.insert(res, {
+                type = tag.value[2],
+                name = tag.value[1],
+            })
+        end
+        return res
+    end
+    if return_type == 'lua :: multiret' then
+        return {
+            {
+                type = 'any',
+                name = 'result',
+            }
+        }
+    end
+    local res = {}
+    -- llae::result_promise_ptr<void>
+    -- llae::result<>
+    local inner = string.match(return_type, 'llae :: result <%s*(.-)%s*>')
+    if inner then
+        if inner == 'void' then
+            inner = 'boolean'
+        else
+            inner = func:resolve_lua_type(inner,true)
+            if inner:sub(-1) == '?' then
+                inner = inner:sub(1,-2)
+            end
+        end
+        return {
+            {
+                type = inner .. '?',
+                name = 'result',
+            },
+            {
+                type = 'string?',
+                name = 'error',
+            }
+        }
+    end
+    inner = string.match(return_type, 'llae :: result_promise_ptr <%s*(.-)%s*>')
+    if inner then
+        if inner == 'void' then
+            inner = 'boolean'
+        else
+            inner = func:resolve_lua_type(inner,true)
+            if inner:sub(-1) == '?' then
+                inner = inner:sub(1,-2)
+            end
+        end
+        if not async then
+            return {
+                {
+                    type = inner .. '?',
+                    name = 'result',
+                },
+                {
+                    type = 'string?',
+                    name = 'error',
+                }
+            }
+        end
+        return {{
+            type = 'llae.promise<' .. inner .. '>',
+            name = 'promise',
+        }}
+    end
+    return res
+end
+
+function bind_func:get_lua_parameters()
+    return get_lua_parameters(self._node.params or {},self)
+end
+function bind_func:get_lua_args()
+    return get_lua_args(self._node.params or {},self)
+end
+function bind_func:get_lua_results(async)
+    return get_lua_results(self._node.return_type,async,self)
+end
+
+function bind_func:resolve_lua_type(type_str,is_return)
+    return self._module:resolve_lua_type(type_str,is_return)
 end
 
 local bind_method = class(bind_base, 'bind_method')
-function bind_method:_init(name,prefix,bind)
-    bind_method.baseclass._init(self, name, prefix, bind)
+function bind_method:_init(node,prefix,bind)
+    bind_method.baseclass._init(self, node, prefix, bind)
+end
+
+function bind_method:get_lua_parameters()
+    return get_lua_parameters(self._node.params or {},self)
+end
+
+function bind_method:get_lua_results(async)
+    return get_lua_results(self._node.return_type,async,self)
+end
+
+function bind_method:get_lua_args()
+    return get_lua_args(self._node.params or {},self)
+end
+
+function bind_method:resolve_lua_type(type_str,is_return)
+    return self._class:resolve_lua_type(type_str,is_return)
+end
+
+function bind_method:is_static()
+    if self:get_bind('method') then
+        return false
+    end
+    return self._node.qualifiers.static
+end
+
+function bind_method:set_class(cls)
+    self._class = cls
 end
 
 local bind_field = class(bind_base, 'bind_field')
-function bind_field:_init(name,prefix,bind)
-    bind_field.baseclass._init(self, name, prefix, bind)
+function bind_field:_init(node,prefix,bind)
+    bind_field.baseclass._init(self, node, prefix, bind)
+end
+function bind_field:get_type()
+    return self._node.type
 end
 
 local bind_enum = class(module_element, 'bind_enum')
-function bind_enum:_init(name, prefix, bind, values, is_scoped)
-    bind_enum.baseclass._init(self, name, prefix, bind)
+function bind_enum:_init(node, prefix, bind, values, is_scoped)
+    bind_enum.baseclass._init(self, node, prefix, bind)
     self._values = values or {}
     self._is_scoped = is_scoped
 end
@@ -263,8 +563,11 @@ function bind_enum:get_lua_value_name(val_name)
 end
 
 local bind_value = class(module_element, 'bind_value')
-function bind_value:_init(name,prefix,bind)
-    bind_value.baseclass._init(self, name, prefix, bind)
+function bind_value:_init(node,prefix,bind)
+    bind_value.baseclass._init(self, node, prefix, bind)
+end
+function bind_value:get_type()
+    return self._node.type
 end
 
 local processor = class(nil, 'processor')
@@ -294,18 +597,44 @@ function traverser:traverse_class(node)
     local bind = tags:collect('luabind')
     if bind then
         local current_bind = self:_get_current_bind()
-        local class = bind_class.new(node.name, self:get_full_name(), bind)
+        local class = bind_class.new(node, self:get_full_name(), bind)
         local module = self._processor:get_module(current_bind and current_bind:get_module_name() or class:get_module_name())
         module:add_class(class)
         self._result.modules[module:get_name()] = module
         table.insert(self._result.classes, class)
         table.insert(self._bind_stack, class)
         class:set_bases(node.bases or {})
+        class:set_tags(tags)
     end
     traverser.baseclass.traverse_class(self, node)
     if bind then
         table.remove(self._bind_stack)
     end
+end
+
+function traverser:get_module_name()
+    local current_bind = self:_get_current_bind()
+    if current_bind then
+        return current_bind:get_module_name()
+    end
+    local prefix = self:get_full_name()
+    prefix = prefix:gsub('::','.'):lower()
+    return prefix
+end
+
+function traverser:traverse_using(node)
+    local tags = tags.parse(node.doc or '')
+    local bind = tags:collect('luabind')
+    if bind then
+        local current_bind = self:_get_current_bind()
+        local module = self._processor:get_module(current_bind or self:get_module_name())
+        if current_bind then
+            current_bind:add_using(node)
+        else
+            module:add_using(node)
+        end
+    end
+    traverser.baseclass.traverse_using(self, node)
 end
 
 function traverser:traverse_func(node)
@@ -314,13 +643,16 @@ function traverser:traverse_func(node)
     if bind then
         local current_bind = self:_get_current_bind()
         if current_bind then
-            local method = bind_method.new(node.name, self:get_full_name(), bind)
+            local method = bind_method.new(node, self:get_full_name(), bind)
             current_bind:add_method(method)
+            method:set_tags(tags)
+            method:set_class(current_bind)
         else
-            local func = bind_func.new(node.name, self:get_full_name(), bind)
+            local func = bind_func.new(node, self:get_full_name(), bind)
             local module = self._processor:get_module(func:get_module_name())
             module:add_function(func)
             self._result.modules[module:get_name()] = module
+            func:set_tags(tags)
         end
     end
     traverser.baseclass.traverse_func(self, node)
@@ -332,13 +664,15 @@ function traverser:traverse_field(node)
     if bind then
         local current_bind = self:_get_current_bind()
         if current_bind then
-            local field = bind_field.new(node.name, self:get_full_name(), bind)
+            local field = bind_field.new(node, self:get_full_name(), bind)
             current_bind:add_field(field)
+            field:set_tags(tags)
         else
-            local value = bind_value.new(node.name, self:get_full_name(), bind)
+            local value = bind_value.new(node, self:get_full_name(), bind)
             local module = self._processor:get_module(value:get_module_name())
             module:add_value(value)
             self._result.modules[module:get_name()] = module
+            value:set_tags(tags)
         end
     end
     traverser.baseclass.traverse_field(self, node)
@@ -350,7 +684,7 @@ function traverser:traverse_enum(node)
     local bind = tags:collect('luabind')
     if bind then
         local current_bind = self:_get_current_bind()
-        local enum = bind_enum.new(node.name, self:get_full_name(), bind, node.values, node.is_scoped)
+        local enum = bind_enum.new(node, self:get_full_name(), bind, node.values, node.is_scoped)
         if current_bind then
             current_bind:add_enum(enum)
         else
@@ -358,6 +692,7 @@ function traverser:traverse_enum(node)
             module:add_enum(enum)
             self._result.modules[module:get_name()] = module
         end
+        enum:set_tags(tags)
     end
 end
 
@@ -398,10 +733,10 @@ function processor:process_content(data)
         pp:define(token, value)
     end
     local data_pp = pp:process(data)
-    local p = parser.parse(data_pp)
+    local ast = parser.parse(data_pp)
     local traverser = traverser.new(self)
-    traverser:traverse(p)
-    return traverser:get_result()
+    traverser:traverse(ast)
+    return traverser:get_result(),ast
 end
 
 function processor:process_file(filename)

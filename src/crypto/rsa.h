@@ -6,6 +6,9 @@
 
 namespace crypto {
 
+	/**
+	* RSA-specific operations for public key cryptography.
+	*/
 	/// @luabind
 	class rsa_base : public meta::object {
 		META_OBJECT
@@ -15,6 +18,10 @@ namespace crypto {
 	public:
 		~rsa_base();
 
+		/// Sets the padding mode for RSA operations.
+		/// @lparam(padding,integer) Padding mode (RSA_PKCS_V15 or RSA_PKCS_V21)
+		/// @lreturn(result,boolean?)
+		/// @lreturn(error,string?)
 		/// @luabind
 		lua::multiret set_padding(lua::state& l);
 	};

@@ -222,3 +222,86 @@ function TestTagsCollect:test_collect_positional()
   lu.assertEquals(v[2], 'b')
 end
 
+-- ============================================================
+TestTagsComment = {}
+-- ============================================================
+
+function TestTagsComment:test_bare_tag_with_comment()
+  local t = tags.parse('@bind Some text here')
+  local entry = t:first('bind')
+  lu.assertNotNil(entry)
+  lu.assertEquals(entry.comment, 'Some text here')
+end
+
+function TestTagsComment:test_tag_with_args_and_comment()
+  local t = tags.parse('@lparam(name,string) The parameter description')
+  local entry = t:first('lparam')
+  lu.assertNotNil(entry)
+  lu.assertEquals(entry.value[1], 'name')
+  lu.assertEquals(entry.value[2], 'string')
+  lu.assertEquals(entry.comment, 'The parameter description')
+end
+
+function TestTagsComment:test_tag_no_comment()
+  local t = tags.parse('@bind')
+  local entry = t:first('bind')
+  lu.assertNotNil(entry)
+  lu.assertNil(entry.comment)
+end
+
+function TestTagsComment:test_tag_with_args_no_comment()
+  local t = tags.parse('@bind(name=foo)')
+  local entry = t:first('bind')
+  lu.assertNotNil(entry)
+  lu.assertNil(entry.comment)
+end
+
+function TestTagsComment:test_comment_trimmed()
+  local t = tags.parse('@bind   trimmed   ')
+  local entry = t:first('bind')
+  lu.assertEquals(entry.comment, 'trimmed')
+end
+
+function TestTagsComment:test_comment_trimmed_after_args()
+  local t = tags.parse('@bind(x)   trimmed   ')
+  local entry = t:first('bind')
+  lu.assertEquals(entry.comment, 'trimmed')
+end
+
+function TestTagsComment:test_multiline_each_tag_gets_own_comment()
+  local t = tags.parse('@lparam(a,integer) First param\n@lparam(b,string) Second param')
+  local entries = t:get('lparam')
+  lu.assertEquals(#entries, 2)
+  lu.assertEquals(entries[1].value[1], 'a')
+  lu.assertEquals(entries[1].comment, 'First param')
+  lu.assertEquals(entries[2].value[1], 'b')
+  lu.assertEquals(entries[2].comment, 'Second param')
+end
+
+function TestTagsComment:test_clean_lines_not_affected()
+  local t = tags.parse('Clean description\n@bind Some comment')
+  lu.assertEquals(t:first('bind').comment, 'Some comment')
+  local clean = t:get_clean()
+  lu.assertNotNil(clean)
+  lu.assertEquals(clean[1], 'Clean description')
+end
+
+function TestTagsComment:test_comment_with_doc_comment_prefix()
+  -- typical C++ doc comment block
+  local text = '/// @lparam(data,string|llae.buffer_base) The data to process'
+  local t = tags.parse(text)
+  local entry = t:first('lparam')
+  lu.assertNotNil(entry)
+  lu.assertEquals(entry.value[1], 'data')
+  lu.assertEquals(entry.comment, 'The data to process')
+end
+
+function TestTagsComment:test_multiline_doc_comment_clean_preserved()
+  local text = '/// Brief description\n/// @lparam(x,integer) The x value'
+  local t = tags.parse(text)
+  lu.assertEquals(t:first('lparam').comment, 'The x value')
+  local clean = t:get_clean()
+  lu.assertNotNil(clean)
+  lu.assertEquals(clean[1], 'Brief description')
+end
+

@@ -50,9 +50,16 @@ namespace crypto {
 		return llae::result<void>{};
 	}
 
+	/// Calculates CRC32 checksum of the input data.
 	/// @luabind(name=crc32,async=true)
 	llae::result_promise_ptr<uint32_t> async_crc32(llae::app& a, uint32_t start, llae::buffer_base_ptr data);
 
+	/// HKDF (HMAC-based Key Derivation Function) for key derivation.
+	/// @lparam(md,string|integer) The message digest algorithm to use
+	/// @lparam(salt,llae.buffer_base|string?) The salt value
+	/// @lparam(info,llae.buffer_base|string?) The info value
+	/// @lparam(key,llae.buffer_base|string?) The key value
+	/// @lparam(osize,integer) The output size
 	/// @luabind(name=hkdf,async=true)
 	llae::result_promise_ptr<llae::buffer_base_ptr> lua_lhkdf(lua::state& l);
 

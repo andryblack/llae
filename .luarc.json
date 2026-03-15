@@ -9,7 +9,7 @@
         ]
     },
     "workspace": {
-        "library": ["lua-meta","build/scripts"],
+        "library": ["lua-meta","build/lua-meta","build/scripts"],
         "ignoreDir": [
             "/data/",
             "/build/",
