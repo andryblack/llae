@@ -28,6 +28,7 @@ end
 
 if cmdargs and cmdargs.development then
 	cmodule 'bind_tests'
+	cmodule 'coro_tests'
 	cmodule 'result_tests'
 	cmodule 'inplace_function_tests'
 	premake {

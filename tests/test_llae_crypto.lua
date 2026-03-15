@@ -41,6 +41,17 @@ function testCrypto:test_sha256()
 	test_md_s('abcdefghijklmnopqrstuvwxyz','71c480df93d6ae2f1efad1447c66c9525e316218cf51fc8d9ed832f2daf18b73',crypto.sha256sum)
 end
 
+function testCrypto:test_md_concurent()
+	local md = assert(crypto.md.new('MD5'))
+	local a = md:async_update('test')
+	lu.assertNotIsNil(a)
+	do
+		local r,e = md:update('test1')
+		lu.assertIsNil(r)
+		lu.assertEquals(tostring(e),'[llae]:failed start update, update is active')
+	end
+end
+
 function testCrypto:test_crc32()
 	-- Test CRC32 checksum calculation
 	-- CRC32 values verified with Python's zlib.crc32

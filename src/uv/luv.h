@@ -6,6 +6,7 @@
 #include "lua/state.h"
 #include "decl.h"
 #include "llae/result.h"
+#include "llae/promise.h"
 #include <string>
 #include <vector>
 #include "llae/buffer.h"
@@ -66,6 +67,18 @@ namespace uv {
     		return llae::result<>();
     	}
     }
+
+	template <typename R>
+	class promise : public llae::promise<llae::result<R>> {
+	public:
+		using this_type = promise<R>;
+		using this_ptr = common::intrusive_ptr<this_type>;
+		using result_type = llae::result<R>;
+	protected:
+		void resolve_status(llae::app& a,int status) {
+			this->set_result(a,result_type(common::make_intrusive<status_error>(status)));
+		}
+	};
 }
 
 #endif /*__LLAE_UV_LUV_H_INCLUDED__*/

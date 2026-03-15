@@ -147,4 +147,17 @@ function log.remove_handler(handler) end
 
 llae.log = log
 
+---@class llae.error
+local error = {}
+
+---@generic T
+---@class llae.promise<T>
+local promise = {}
+
+---@return T? promise result
+---@return llae.error? promise error
+function promise:await() end
+
+llae.promise = promise
+
 return llae

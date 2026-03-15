@@ -437,15 +437,16 @@ function Project:generate_bindings( )
 
 	local dst_dir = path.join(self:get_root(),'build','src')
 
-	local function generate_binding(filename)
-		local result = processor:process_file(filename)
+	local function generate_binding(filename,root)
+		local source_filename = path.join(root,filename)
+		local result = processor:process_file(source_filename)
 		if not next(result.classes) and not next(result.modules) then
 			return
 		end
 		
 		log.info('generate binding',filename)
 
-		local header = path.getrelative(path.getabsolute(filename),path.getabsolute(dst_dir))
+		local header = path.getrelative(path.getabsolute(source_filename),path.getabsolute(dst_dir))
 		for n,m in pairs(result.modules) do
 			m:add_header(header)
 		end
@@ -453,22 +454,31 @@ function Project:generate_bindings( )
 
 	local all_bind_headers = {}
 	for _,conf in ipairs(self._env.bind_headers or {}) do
+		conf.root = self:get_root()
 		table.insert(all_bind_headers,conf)
 	end
 	for _,m in ipairs(self._modules_list) do
 		for _,conf in ipairs(m:get_bind_headers()) do
+			conf.root = m:get_location() or self:get_root()
 			table.insert(all_bind_headers,conf)
 		end
 	end
 
 	for _,conf in ipairs(all_bind_headers) do
+		assert(conf.root,'root is required')
 		if conf.filename then
-			generate_binding(conf.filename)
+			generate_binding(conf.filename,conf.root)
 		elseif conf.dir then
-			for _,filename in ipairs(fs.scanfiles_r(path.join(self:get_root(),conf.dir))) do
-				local ext = path.extension(filename)
-				if ext == 'h' or ext == 'hpp' then
-					generate_binding(path.join(conf.dir,filename))
+			log.info('process bind headers dir',conf.dir)
+			local dir = path.join(conf.root,conf.dir)
+			if not fs.isdir(dir) then
+				log.error('bind header dir not found',dir)
+			else
+				for _,filename in ipairs(fs.scanfiles_r(dir)) do
+					local ext = path.extension(filename)
+					if ext == 'h' or ext == 'hpp' then
+						generate_binding(path.join(conf.dir,filename),conf.root)
+					end
 				end
 			end
 		end

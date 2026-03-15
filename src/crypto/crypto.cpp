@@ -1,9 +1,12 @@
 #include "crypto.h"
+#include "llae/promise.h"
+#include "llae/work.h"
 #include "md.h"
 #include "hmac.h"
 #include "bignum.h"
 #include "ecp.h"
 #include "cipher.h"
+#include "meta/object.h"
 #include "pk.h"
 #include "rsa.h"
 #include "random.h"
@@ -13,10 +16,13 @@
 #include "llae-private/mbedtls/hkdf.h"
 #include "llae-private/zlib.h"
 
-#include "uv/work.h"
 #include "llae/buffer.h"
-#include "uv/luv.h"
 #include "llae/app.h"
+#include "llae/async_bind.h"
+#include <cstdint>
+#include <format>
+
+META_OBJECT_INFO(crypto::status_error, llae::error)
 
 namespace crypto {
 
@@ -26,159 +32,77 @@ namespace crypto {
 		l.pushfstring(fmt,error,buffer);
 	}
 
-	class crc32_async : public uv::work {
-	protected:
-		uint32_t m_value;
-		llae::buffer_base_ptr m_data;
-		lua::ref m_cont;
-	public:
-		explicit crc32_async(uint32_t start,llae::buffer_base_ptr&& data,lua::ref&& cont) : m_value(start),m_data(std::move(data)),m_cont(std::move(cont)) {}
-		virtual void on_work() {
-			m_value = static_cast<uint32_t>(crc32(m_value,static_cast<const Bytef *>(m_data->get_base()),
-                            static_cast<uInt>(m_data->get_len())));
-		}
-		virtual void on_after_work(int status) {
-            if (llae::app::closed(get_loop())) {
-                m_data.reset();
-                m_cont.release();
-            } else {
-                uv::loop loop(get_loop());
-                llae::app::get(loop).resume(m_cont,m_value);
-			}
-		}
-		void reset(lua::state& l) {
-			m_cont.reset(l);
-		}
-	};
+	const std::string status_error::category = "crypto";
+	std::string status_error::to_string() const {
+		char buffer[128] = {0};
+		mbedtls_strerror(get_code(),buffer,sizeof(buffer));
+		return std::format("[crypto]:{}",buffer);
+	}
 
-	static lua::multiret lcrc32(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("crc32 is async");
-			return {2};
+	static uint32_t sync_crc32(uint32_t start,const llae::buffer_base_ptr& data) {
+		return static_cast<uint32_t>(crc32(start,static_cast<const Bytef *>(data->get_base()),
+			static_cast<uInt>(data->get_len())));
+	}
+
+	static llae::result_promise_ptr<uint32_t> async_crc32(llae::app& a,uint32_t start,llae::buffer_base_ptr data) {
+		if (!data) {
+			return llae::make_result_promise_string_error<uint32_t>("need data");
 		}
-		{
-			uint32_t start = static_cast<uint32_t>(l.checkinteger(1));
-			auto data = llae::buffer_base::get(l,2);
-
-			l.pushthread();
-			lua::ref cont;
-			cont.set(l);
-
-			common::intrusive_ptr<crc32_async> req{new crc32_async(start,std::move(data),std::move(cont))};
-
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				req->reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
+		using work_t = llae::function_work<uint32_t>;
+		return work_t::start(a, [start,ldata=std::move(data)](){
+			return llae::result<uint32_t>(sync_crc32(start,ldata));
+		});
 	}
 
 
-	class mbedtls_async : public uv::lua_cont_work {
-	protected:
-		int m_status = 0;
-		virtual int push_result(lua::state& toth) {
-			toth.pushboolean(true);
-			return 1;
-		}
-	public:
-		explicit mbedtls_async() {}
-		virtual int resume_args(lua::state& toth,int uvstatus) override {
-			int nres = 0;
-			if (uvstatus<0) {
-				toth.pushnil();
-				uv::push_error(toth,uvstatus);
-				return 2;
-			} else if (m_status!=0) {
-				toth.pushnil();
-				push_error(toth,"update failed, code:%d, %s",m_status);
-				return 2;
-			} else {
-				return push_result(toth);
-			}
-		}
-	};
 
-	class hkdf_async : public mbedtls_async {
-	protected:
-		const mbedtls_md_info_t* m_md_info;
-		llae::buffer_base_ptr m_salt;
-		llae::buffer_base_ptr m_info;
-		llae::buffer_base_ptr m_key;
-		llae::buffer_ptr m_result;
-	public:
-		explicit hkdf_async(const mbedtls_md_info_t* md_info, llae::buffer_base_ptr&& salt,llae::buffer_base_ptr&& info,llae::buffer_base_ptr&& key, size_t osize) : 
-			m_md_info(md_info),
-			m_salt(std::move(salt)),
-			m_info(std::move(info)),
-			m_key(std::move(key)) {
-			m_result = llae::buffer::alloc(osize);
+	static llae::result<llae::buffer_base_ptr> sync_hkdf(const mbedtls_md_info_t* md_info, const llae::buffer_base_ptr& bsalt,const llae::buffer_base_ptr& binfo,const llae::buffer_base_ptr& bkey, size_t osize) {
+		auto result = llae::buffer::alloc(osize);
+		const unsigned char *salt = nullptr;
+		size_t salt_len = 0;
+		if (bsalt) {
+			salt = reinterpret_cast<const unsigned char*>(bsalt->get_base());
+			salt_len = bsalt->get_len();
 		}
-		virtual void on_work() override {
-			const unsigned char *salt = nullptr;
-			size_t salt_len = 0;
-			if (m_salt) {
-				salt = reinterpret_cast<const unsigned char*>(m_salt->get_base());
-				salt_len = m_salt->get_len();
-			}
-			const unsigned char *info = nullptr;
-			size_t info_len = 0;
-			if (m_info) {
-				info = reinterpret_cast<const unsigned char*>(m_info->get_base());
-				info_len = m_info->get_len();
-			}
-			const unsigned char *key = nullptr;
-			size_t key_len = 0;
-			if (m_key) {
-				key = reinterpret_cast<const unsigned char*>(m_key->get_base());
-				key_len = m_key->get_len();
-			}	
-			m_status = mbedtls_hkdf(m_md_info,
-				salt,salt_len,
-				key,key_len,
-				info,info_len,
-				reinterpret_cast<unsigned char*>(m_result->get_base()),m_result->get_len());
+		const unsigned char *info = nullptr;
+		size_t info_len = 0;
+		if (binfo) {
+			info = reinterpret_cast<const unsigned char*>(binfo->get_base());
+			info_len = binfo->get_len();
 		}
-		virtual int push_result(lua::state& toth) override {
-			lua::push(toth,std::move(m_result));
-			return 1;
-		}
-	};
+		const unsigned char *key = nullptr;
+		size_t key_len = 0;
+		if (bkey) {
+			key = reinterpret_cast<const unsigned char*>(bkey->get_base());
+			key_len = bkey->get_len();
+		}	
+		auto status = mbedtls_hkdf(md_info,
+			salt,salt_len,
+			key,key_len,
+			info,info_len,
+			reinterpret_cast<unsigned char*>(result->get_base()),result->get_len());
 
-	static lua::multiret lua_lhkdf(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("hkdf is async");
-			return {2};
+		if (status == 0) {
+			llae::buffer_base_ptr r = std::move(result);
+			return llae::result<llae::buffer_base_ptr>(std::move(r));
 		}
-		{
-			auto md_info = md::get_info(l,1);
-			if (!md_info) {
-				l.pushnil();
-				l.pushstring("unknown md algorithm");
-				return {2};
-			}
-			auto salt = llae::buffer_base::get(l,2);
-			auto info = llae::buffer_base::get(l,3);
-			auto key = llae::buffer_base::get(l,4);
-			auto osize = l.checkinteger(5);
-			common::intrusive_ptr<hkdf_async> req{new hkdf_async(md_info,std::move(salt),std::move(info),std::move(key),osize)};
-			int r = req->queue_work_thread(l);
-			if (r < 0) {
-				req->reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			}
+		return status_error::create(status);
+	}
+
+
+	static llae::result_promise_ptr<llae::buffer_base_ptr> lua_lhkdf(lua::state& l) {
+		auto md_info = md::get_info(l,1);
+		if (!md_info) {
+			return llae::make_result_promise_string_error<llae::buffer_base_ptr>("unknown md algorithm");
 		}
-		l.yield(0);
-		return {0};
+		auto salt = llae::buffer_base::get(l,2);
+		auto info = llae::buffer_base::get(l,3);
+		auto key = llae::buffer_base::get(l,4);
+		auto osize = l.checkinteger(5);
+		using work_t = llae::function_work<llae::buffer_base_ptr,llae::default_function_work_hold<llae::buffer_base_ptr,6>>;
+		return work_t::start(llae::app::get(l), [md_info,lsalt = std::move(salt),linfo=std::move(info),lkey=std::move(key),osize]{
+			return sync_hkdf(md_info, lsalt, linfo, lkey, osize);
+		});
 	}
 }
 
@@ -196,7 +120,7 @@ int luaopen_crypto(lua_State* L) {
     lua::bind::object<crypto::entropy>::register_metatable(l,&crypto::entropy::lbind);
     lua::bind::object<crypto::random>::register_metatable(l,&crypto::random::lbind);
 	l.createtable();
-	lua::bind::function(l,"crc32",&crypto::lcrc32);
+	llae::async_function(l,"crc32",&crypto::async_crc32);
 	lua::bind::object<crypto::md>::get_metatable(l);
 	l.setfield(-2,"md");
 	lua::bind::object<crypto::hmac>::get_metatable(l);
@@ -215,7 +139,7 @@ int luaopen_crypto(lua_State* L) {
     l.setfield(-2,"entropy");
     lua::bind::object<crypto::random>::get_metatable(l);
     l.setfield(-2,"random");
-	lua::bind::function(l,"hkdf",&crypto::lua_lhkdf);
+	llae::async_function(l,"hkdf",&crypto::lua_lhkdf);
 
 #define BIND_M(M) l.pushinteger(MBEDTLS_ ## M);l.setfield(-2,#M);
     BIND_M(ECP_PF_COMPRESSED)

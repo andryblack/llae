@@ -9,8 +9,8 @@
             "type": "lldb-dap",
             "request": "launch",
             "program": "${workspaceFolder}/bin/llae",
-            "args": ["--dev","run","tests/run_all.lua"],
-            "cwd": "${workspaceFolder}",
+            "args": ["--dev","run","tests/run_all.lua","--verbose"],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

@@ -7,11 +7,7 @@
 #include "meta/object.h"
 #include "common/intrusive_ptr.h"
 #include "lua/state.h"
-#include "lua/ref.h"
 
-namespace uv {
-	class loop;
-}
 
 namespace llae {
 	class buffer;

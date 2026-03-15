@@ -12,6 +12,11 @@
 #include <cstdint>
 #include <psa/crypto.h>
 #include "lua/bind.h"
+#include "uv/luv.h"
+#include "uv/work.h"
+#include "work.h"
+#include "promise.h"
+#include "write_buffers.h"
 
 namespace llae {
 
@@ -53,7 +58,7 @@ namespace llae {
         return 0;
     }
 
-    app::app(uv_loop_t* l,bool need_signal) : m_loop(l) {
+    app::app(uv_loop_t* native_loop,bool need_signal) : m_loop(native_loop) {
         psa_crypto_init();
         *static_cast<app**>(lua_getextraspace(m_lua.native())) = this;
         uv_loop_set_data(m_loop.native(),this);
@@ -61,6 +66,18 @@ namespace llae {
         lua_atpanic(lua().native(),&app::at_panic);
 
         lua::register_meta_object_metatable(lua());
+
+        lua::state& l{lua()};
+
+        lua::bind::object<llae::error>::register_metatable(l);
+        lua::bind::object<llae::string_error>::register_metatable(l);
+        lua::bind::object<llae::buffer_base>::register_metatable(l,&llae::buffer_base::lbind);
+        lua::bind::object<llae::buffer>::register_metatable(l,&llae::buffer::lbind);
+        lua::bind::object<llae::writable_buffer>::register_metatable(l,&llae::writable_buffer::lbind);
+        lua::bind::object<llae::log_handler>::register_metatable(l,&llae::log_handler::lbind);
+        lua::bind::object<llae::promise_base>::register_metatable(l,&llae::promise_base::lbind);
+    
+        
         if (need_signal) {
             m_stop_sig.reset( new uv::signal(loop()) );
             m_stop_sig->start_oneshot(SIGINT,[this](int signum) {
@@ -178,7 +195,9 @@ namespace llae {
         }
     }
     
+    
 
+   
    
 }
 

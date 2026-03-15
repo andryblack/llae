@@ -26,13 +26,21 @@ function md.new(algorithm) end
 --- Updates the digest with additional data.
 ---@param data string|llae.buffer_base The data to add to the digest
 ---@return boolean? True on success
----@return string? Error message if update fails
+---@return llae.error? Error message if update fails
 function md:update(data) end
+--- Updates the digest with additional data.
+---@param data string|llae.buffer_base The data to add to the digest
+---@param ... string|llae.buffer_base
+---@return llae.promise<true> action promise
+function md:async_update(data,...) end
 
 --- Finalizes the digest and returns the hash result.
 ---@return llae.buffer? The hash result on success
----@return string? Error message if finalization fails
+---@return llae.error? Error message if finalization fails
 function md:finish() end
+--- Finalizes the digest and returns the hash result.
+---@return llae.promise<llae.buffer_base> promise
+function md:async_finish() end
 
 ---HMAC (Hash-based Message Authentication Code) functionality for message authentication.
 ---@class crypto.hmac

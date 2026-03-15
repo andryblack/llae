@@ -1,11 +1,12 @@
 #include "pk.h"
 #include "crypto.h"
+#include "llae/buffer.h"
+#include "llae/work.h"
 #include "rsa.h"
 #include "random.h"
 #include "lua/bind.h"
 #include "llae/app.h"
-#include "uv/work.h"
-#include "uv/luv.h"
+#include "llae/async_bind.h"
 
 META_OBJECT_INFO(crypto::pk,meta::object)
 
@@ -13,42 +14,6 @@ META_OBJECT_INFO(crypto::pk,meta::object)
 namespace crypto {
 
 	using pk_ptr = common::intrusive_ptr<pk>;
-
-
-	class pk::async : public uv::work {
-	protected:
-		pk_ptr m_pk;
-		llae::buffer_base_ptr m_src;
-		llae::buffer_ptr m_result;
-		random_ptr m_random;
-		int m_status = 0;
-	public:
-		explicit async(pk_ptr&& m,llae::buffer_base_ptr&& src,random_ptr&& r) : m_pk(std::move(m)), m_src(std::move(src)),m_random(std::move(r)) {}
-		virtual void on_after_work(int status) override {
-            if (llae::app::closed(get_loop())) {
-                m_pk->release();
-            } else {
-                uv::loop loop(get_loop());
-                lua::state& l(llae::app::get(loop).lua());
-                m_pk->on_completed(l,status,m_status,std::move(m_result));
-            }
-		}
-	};
-
-	class pk::encrypt_async : public pk::async {
-	public:
-		explicit encrypt_async(pk_ptr&& m,llae::buffer_base_ptr&& src,random_ptr&& r) : pk::async(std::move(m),std::move(src),std::move(r)) {}
-		virtual void on_work() override {
-			m_result = llae::buffer::alloc(MBEDTLS_MPI_MAX_SIZE);
-			size_t osize = 0;
-			m_status = mbedtls_pk_encrypt(&m_pk->m_ctx,
-				static_cast<const unsigned char*>(m_src->get_base()),
-				m_src->get_len(),
-                static_cast<unsigned char*>(m_result->get_base()), &osize, m_result->get_len(),
-                &random::read_func, m_random.get());
-			m_result->set_len(osize);
-		}
-	};
 
 	class pk_rsa : public rsa_base {
 		pk_ptr m_pk;
@@ -95,72 +60,36 @@ namespace crypto {
 		return {2};
 	}
 
-	lua::multiret pk::encrypt(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("pk::encrypt is async");
-			return {2};
+	llae::result<llae::buffer_base_ptr> pk::sync_encrypt(const llae::buffer_base_ptr& buffer,const random_ptr& random) {
+		if (!buffer) {
+			return llae::string_error::create("need data");
 		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("pk::encrypt operation in progress");
-			return {2};
+		if (!random) {
+			return llae::string_error::create("need random");
 		}
-		auto src = llae::buffer_base::get(l,2,true);
-		if (!src) {
-			l.argerror(2,"buffer expected");
-			return {0};
+		auto result = llae::buffer::alloc(MBEDTLS_MPI_MAX_SIZE);
+		size_t osize = 0;
+		auto status = mbedtls_pk_encrypt(&m_ctx,
+			static_cast<const unsigned char*>(buffer->get_base()),
+			buffer->get_len(),
+			static_cast<unsigned char*>(result->get_base()), &osize, result->get_len(),
+			&random::read_func, random.get());
+		if (status != 0) {
+			return status_error::create(status);
 		}
-		auto random = lua::stack<random_ptr>::get(l,3);
+		result->set_len(osize);
+		llae::buffer_base_ptr r = std::move(result);
+		return llae::result<llae::buffer_base_ptr>(std::move(r));
+	}
+	llae::result_promise_ptr<llae::buffer_base_ptr> pk::async_encrypt(llae::app& a,llae::buffer_base_ptr buffer,random_ptr random) {
 		if (!random) {
 			random = random_ptr(new crypto::random(entropy_ptr{}));
 			random->seed(llae::buffer_view{});
 		}
-		{
-			common::intrusive_ptr<encrypt_async> req{new encrypt_async(pk_ptr(this),std::move(src),std::move(random))};
-			
-			l.pushthread();
-			m_cont.set(l);
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	void pk::on_completed(lua::state& l,int uvstatus,int mbedlsstatus,llae::buffer_base_ptr&& data) {
-		if (!m_cont.valid())
-			return;
-		
-		m_cont.push(l);
-		m_cont.reset(l);
-		auto toth = l.tothread(-1);
-		toth.checkstack(3);
-        
-        int nres = 0;
-        if (uvstatus<0) {
-            toth.pushnil();
-            uv::push_error(toth,uvstatus);
-            nres = 2;
-        } else if (mbedlsstatus!=0) {
-            toth.pushnil();
-            push_error(toth,"operation failed, code:%d, %s",mbedlsstatus);
-            nres = 2;
-        } else {
-            lua::push(toth,std::move(data));
-            nres = 1;
-        }
-		auto s = toth.resume(l,nres);
-		if (s != lua::status::ok && s != lua::status::yield) {
-			llae::app::show_error(toth,s);
-		}
-		l.pop(1);// thread
+		using work_t = llae::function_work<llae::buffer_base_ptr>;
+		return work_t::start(a, [self = pk_ptr(this),lbuffer = std::move(buffer),lrandom = std::move(random)](){
+			return self->sync_encrypt(lbuffer, lrandom);
+		});
 	}
 
 	void pk::lbind(lua::state& l) {
@@ -168,7 +97,7 @@ namespace crypto {
 		lua::bind::function(l,"parse_public_key",&pk::parse_public_key);
 		lua::bind::function(l,"get_name",&pk::get_name);
 		lua::bind::function(l,"get_rsa",&pk::get_rsa);
-		lua::bind::function(l,"encrypt",&pk::encrypt);
+		llae::async_function(l,"encrypt", &pk::async_encrypt);
 	}
 
 	lua::multiret pk::lnew(lua::state& l) {

@@ -2,6 +2,7 @@
 #define __LLAE_UV_REQ_H_INCLUDED__
 
 #include "common/ref_counter.h"
+#include "common/intrusive_ptr.h"
 #include "decl.h"
 #include "llae/diag.h"
 

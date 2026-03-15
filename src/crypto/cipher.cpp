@@ -1,189 +1,20 @@
 #include "cipher.h"
+#include "common/intrusive_ptr.h"
 #include "llae/buffer.h"
 #include "llae/app.h"
-#include "uv/work.h"
-#include "uv/luv.h"
+#include "llae/promise.h"
+#include "llae/result.h"
+#include "llae/sequental.h"
+#include "llae/work.h"
 #include "lua/bind.h"
 #include "crypto.h"
 #include "llae/write_buffers.h"
+#include "llae/async_bind.h"
 
 META_OBJECT_INFO(crypto::cipher,meta::object)
 
 namespace crypto {
 
-	class cipher::async : public uv::work {
-	protected:
-		cipher_ptr m_cipher;
-		llae::buffer_ptr m_data;
-		int m_status = 0;
-	public:
-		explicit async(cipher_ptr&& m) : m_cipher(std::move(m)) {}
-		virtual void on_after_work(int status) override {
-            if (llae::app::closed(get_loop())) {
-                m_cipher->release();
-            } else {
-                uv::loop loop(get_loop());
-                lua::state& l(llae::app::get(loop).lua());
-                m_cipher->on_completed(l,status,m_status,std::move(m_data));
-            }
-			m_cipher.reset();
-		}
-	};
-
-	class cipher::buffers_async : public cipher::async {
-	protected:
-		llae::write_buffers m_buffers;
-	public:
-		explicit buffers_async(cipher_ptr&& m, llae::write_buffers&& buffers) : cipher::async (std::move(m)),m_buffers(std::move(buffers)) {}
-		void reset(lua::state& l) {
-            m_buffers.reset(l);
-		}
-		virtual void on_after_work(int status) override {
-			if (llae::app::closed(get_loop())) {
-                m_cipher->release();
-				m_buffers.release();
-            } else {
-                uv::loop loop(get_loop());
-                lua::state& l(llae::app::get(loop).lua());
-                m_cipher->on_completed(l,status,m_status,std::move(m_data));
-				m_buffers.reset(l);
-            }
-			m_cipher.reset();
-
-		}
-	};
-
-	class cipher::update_async : public cipher::buffers_async {
-	private:
-	protected:
-	public:
-		explicit update_async(cipher_ptr&& m,llae::write_buffers&& buffers) : cipher::buffers_async(std::move(m),std::move(buffers)) {}
-		virtual void on_work() override {
-			size_t blocksize = mbedtls_cipher_get_block_size(&m_cipher->m_ctx);
-			llae::buffer_ptr enc_buffer;
-			for (auto& b:m_buffers.get_buffers()) {
-				size_t osize = b.get_len() + blocksize;
-				if (!enc_buffer || enc_buffer->get_capacity() < osize) {
-					enc_buffer = llae::buffer::alloc(osize);
-				}
-				m_status = mbedtls_cipher_update( &m_cipher->m_ctx,
-					reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len(),
-					static_cast<unsigned char*>(enc_buffer->get_base()),&osize );
-				if (m_status != 0)
-					break;
-				enc_buffer->set_len(osize);
-				if (!m_data) {
-					m_data = std::move(enc_buffer);
-				} else {
-					if (m_data->get_capacity() < (m_data->get_len() + enc_buffer->get_len())) {
-						m_data = m_data->realloc(m_data->get_len() + enc_buffer->get_len());
-					}
-					::memcpy(static_cast<unsigned char*>(m_data->get_base())+m_data->get_len(),enc_buffer->get_base(),enc_buffer->get_len());
-					m_data->set_len(m_data->get_len() + enc_buffer->get_len());
-				}
-			}
-		}
-	};
-
-	
-	class cipher::update_ad_async : public cipher::async {
-	private:
-		llae::buffer_base_ptr m_buffer;
-	public:
-		explicit update_ad_async(cipher_ptr&& m,llae::buffer_base_ptr&& buffer) : cipher::async(std::move(m)),m_buffer(std::move(buffer)) {}
-		virtual void on_work() override {
-			m_status = mbedtls_cipher_update_ad(&m_cipher->m_ctx,
-				reinterpret_cast<const unsigned char*>(m_buffer->get_base()), m_buffer->get_len());
-		}
-	};
-
-
-	class cipher::finish_async : public cipher::async {
-	public:
-		explicit finish_async(cipher_ptr&& m) : cipher::async(std::move(m)) {}
-		virtual void on_work() override {
-			size_t size = mbedtls_cipher_get_block_size(&m_cipher->m_ctx);
-			m_data = llae::buffer::alloc(size);
-			size_t osize = 0;
-			m_status = mbedtls_cipher_finish(&m_cipher->m_ctx,
-				static_cast<unsigned char*>(m_data->get_base()),&osize);
-			if (m_status == 0) {
-				m_data->set_len(osize);
-			}
-		}
-	};
-
-	class cipher::crypt_async : public cipher::async {
-	private:
-		llae::buffer_base_ptr m_iv;
-		llae::buffer_base_ptr m_buffer;
-	public:
-		explicit crypt_async(cipher_ptr&& m,llae::buffer_base_ptr&& iv,llae::buffer_base_ptr&& buffer) : cipher::async(std::move(m)),m_iv(std::move(iv)),m_buffer(std::move(buffer)) {}
-		virtual void on_work() override {
-			size_t len = m_buffer->get_len() + mbedtls_cipher_get_block_size(&m_cipher->m_ctx);
-			m_data = llae::buffer::alloc(len);
-			m_status = mbedtls_cipher_crypt(&m_cipher->m_ctx,
-				m_iv ? reinterpret_cast<const unsigned char*>(m_iv->get_base()) : nullptr,
-				m_iv ? m_iv->get_len() : 0,
-				reinterpret_cast<const unsigned char*>(m_buffer->get_base()), m_buffer->get_len(),
-				static_cast<unsigned char*>(m_data->get_base()),&len);
-			if (m_status == 0) {
-				m_data->set_len(len);
-			}
-		}
-	};
-
-	class cipher::auth_encrypt_async : public cipher::async {
-	private:
-		llae::buffer_base_ptr m_iv;
-		llae::buffer_base_ptr m_ad;
-		llae::buffer_base_ptr m_buffer;
-		size_t m_tag_len;
-	public:
-		explicit auth_encrypt_async(cipher_ptr&& m,llae::buffer_base_ptr&& iv,llae::buffer_base_ptr&& ad,llae::buffer_base_ptr&& buffer,size_t tag_len) : cipher::async(std::move(m)),m_iv(std::move(iv)),m_ad(std::move(ad)),m_buffer(std::move(buffer)),m_tag_len(tag_len) {}
-		virtual void on_work() override {
-			size_t len = m_buffer->get_len() + mbedtls_cipher_get_block_size(&m_cipher->m_ctx) + m_tag_len;
-			m_data = llae::buffer::alloc(len);
-			m_status = mbedtls_cipher_auth_encrypt_ext(&m_cipher->m_ctx,
-				m_iv ? reinterpret_cast<const unsigned char*>(m_iv->get_base()) : nullptr,
-				m_iv ? m_iv->get_len() : 0,
-				m_ad ? reinterpret_cast<const unsigned char*>(m_ad->get_base()) : nullptr,
-				m_ad ? m_ad->get_len() : 0,
-				static_cast<const unsigned char*>(m_buffer->get_base()), m_buffer->get_len(),
-				static_cast<unsigned char*>(m_data->get_base()), len,
-				&len, m_tag_len);
-			if (m_status == 0) {
-				m_data->set_len(len);
-			}
-		}
-	};
-
-	class cipher::auth_decrypt_async : public cipher::async {
-	private:
-		llae::buffer_base_ptr m_iv;
-		llae::buffer_base_ptr m_ad;
-		llae::buffer_base_ptr m_buffer;
-		size_t m_tag_len;
-	public:
-		explicit auth_decrypt_async(cipher_ptr&& m,llae::buffer_base_ptr&& iv,llae::buffer_base_ptr&& ad,llae::buffer_base_ptr&& buffer,size_t tag_len) : cipher::async(std::move(m)),m_iv(std::move(iv)),m_ad(std::move(ad)),m_buffer(std::move(buffer)),m_tag_len(tag_len) {}
-		virtual void on_work() override {
-			size_t len = m_buffer->get_len() + mbedtls_cipher_get_block_size(&m_cipher->m_ctx) + m_tag_len;
-			m_data = llae::buffer::alloc(len);
-			m_status = mbedtls_cipher_auth_decrypt_ext(&m_cipher->m_ctx,
-				m_iv ? reinterpret_cast<const unsigned char*>(m_iv->get_base()) : nullptr,
-				m_iv ? m_iv->get_len() : 0,
-				m_ad ? reinterpret_cast<const unsigned char*>(m_ad->get_base()) : nullptr,
-				m_ad ? m_ad->get_len() : 0,
-				static_cast<const unsigned char*>(m_buffer->get_base()), m_buffer->get_len(),
-				static_cast<unsigned char*>(m_data->get_base()), len,
-				&len, m_tag_len);
-			if (m_status == 0) {
-				m_data->set_len(len);
-			}
-		}
-	};
-
-	
 
 	cipher::cipher(const mbedtls_cipher_info_t* info)  {
 		mbedtls_cipher_init(&m_ctx);
@@ -194,306 +25,258 @@ namespace crypto {
 		mbedtls_cipher_free(&m_ctx);
 	}
 
-	lua::multiret cipher::set_iv(lua::state& l) {
-		auto iv = llae::buffer_view::get(l,2,true);
+	llae::result<void> cipher::set_iv(const llae::buffer_view& iv) {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("set_iv")) {
+			return llae::result<void>(std::move(e));
+		}
 		auto ret = mbedtls_cipher_set_iv(&m_ctx,
 			static_cast<const unsigned char*>(iv.get_base()),iv.get_len());
-		if (ret != 0) {
-            l.pushnil();
-	        push_error(l,"set_iv failed, code:%d, %s",ret);
-	        return {2};
-        }
-        l.pushboolean(true);
-        return {1};
+		return make_result(ret);
 	}
-	lua::multiret cipher::set_key(lua::state& l) {
-		auto key = llae::buffer_view::get(l,2,true);
-		mbedtls_operation_t op = mbedtls_operation_t(l.optinteger(3,MBEDTLS_DECRYPT));
+	llae::result<void> cipher::set_key(const llae::buffer_view& key,mbedtls_operation_t op) {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("set_key")) {
+			return llae::result<void>(std::move(e));
+		}
 		auto ret = mbedtls_cipher_setkey(&m_ctx,
 			static_cast<const unsigned char*>(key.get_base()),
                                          static_cast<int>(key.get_len()*8),op);
-		if (ret != 0) {
-            l.pushnil();
-	        push_error(l,"set_key failed, code:%d, %s",ret);
-	        return {2};
-        }
-        l.pushboolean(true);
-        return {1};
+		return make_result(ret);
 	}
-	lua::multiret cipher::set_padding(lua::state& l) {
-		mbedtls_cipher_padding_t padding = static_cast<mbedtls_cipher_padding_t>(l.checkinteger(2));
+	llae::result<void> cipher::set_padding(mbedtls_cipher_padding_t padding) {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("set_padding")) {
+			return llae::result<void>(std::move(e));
+		}
 		auto ret = mbedtls_cipher_set_padding_mode(&m_ctx,padding);
-		if (ret != 0) {
-            l.pushnil();
-	        push_error(l,"set_padding failed, code:%d, %s",ret);
-	        return {2};
-        }
-        l.pushboolean(true);
-        return {1};
+		return make_result(ret);
 	}
 
-	lua::multiret cipher::reset(lua::state& l) {
+	llae::result<void> cipher::reset(lua::state& l) {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("reset")) {
+			return llae::result<void>(std::move(e));
+		}
 		auto ret = mbedtls_cipher_reset(&m_ctx);
-		if (ret != 0) {
-            l.pushnil();
-	        push_error(l,"reset failed, code:%d, %s",ret);
-	        return {2};
-        }
-        l.pushboolean(true);
-        return {1};
+		return make_result(ret);
 	}
 
-	lua::multiret cipher::update(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("cipher::update is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("cipher::update operation in progress");
-			return {2};
-		}
-		{
-            llae::write_buffers buffers;
-            l.pushvalue(2);
-            if (!buffers.put(l)) {
-                buffers.reset(l);
-                l.pushnil();
-                l.pushstring("cipher::update invalid data");
-                return {2};
-            }
-            if (buffers.empty()) {
-                l.pushlstring("", 0);
-                return {1};
-            }
-
-			common::intrusive_ptr<update_async> req{new update_async(cipher_ptr(this),std::move(buffers))};
-						
-			l.pushthread();
-			m_cont.set(l);
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-                req->reset(l);
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	lua::multiret cipher::update_ad(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("cipher::update_ad is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("cipher::update_ad operation in progress");
-			return {2};
-		}
-		{
-            auto buffer = llae::buffer_base::get(l,2);
-			if (!buffer) {
-				l.pushnil();
-				l.pushstring("cipher::update_ad invalid data");
-				return {2};
+	llae::result<llae::buffer_base_ptr> cipher::update_impl(const llae::write_buffers& buffers) {
+		size_t blocksize = mbedtls_cipher_get_block_size(&m_ctx);
+		llae::buffer_ptr data;
+		llae::buffer_ptr enc_buffer;
+		int status = 0;
+		for (auto& b:buffers.get_buffers()) {
+			size_t osize = b.get_len() + blocksize;
+			if (!enc_buffer || enc_buffer->get_capacity() < osize) {
+				enc_buffer = llae::buffer::alloc(osize);
 			}
-
-			common::intrusive_ptr<update_ad_async> req{new update_ad_async(cipher_ptr(this),std::move(buffer))};
-						
-			l.pushthread();
-			m_cont.set(l);
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	lua::multiret cipher::finish(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("cipher::finish is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("cipher::finish operation in progress");
-			return {2};
-		}
-		{
-			l.pushthread();
-			m_cont.set(l);
-			common::intrusive_ptr<finish_async> req{new finish_async(cipher_ptr(this))};
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	lua::multiret cipher::crypt(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("cipher::crypt is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("cipher::crypt operation in progress");
-			return {2};
-		}
-		{
-			auto iv = llae::buffer_base::get(l,2);
-            auto buffer = llae::buffer_base::get(l,3);
-			if (!buffer) {
-				l.pushnil();
-				l.pushstring("cipher::crypt invalid data");
-				return {2};
-			}
-
-			l.pushthread();
-			m_cont.set(l);
-			common::intrusive_ptr<crypt_async> req{new crypt_async(cipher_ptr(this),std::move(iv),std::move(buffer))};
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			}
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	lua::multiret cipher::auth_encrypt(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("cipher::auth_encrypt is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("cipher::auth_encrypt operation in progress");
-			return {2};
-		}
-		{
-			auto iv = llae::buffer_base::get(l,2);
-			auto ad = llae::buffer_base::get(l,3);
-            auto buffer = llae::buffer_base::get(l,4);
-			if (!buffer) {
-				l.pushnil();
-				l.pushstring("cipher::auth_encrypt invalid data");
-				return {2};
-			}
-			auto tag_len = l.optinteger(5,0);
-
-			l.pushthread();
-			m_cont.set(l);
-			common::intrusive_ptr<auth_encrypt_async> req{new auth_encrypt_async(cipher_ptr(this),std::move(iv),std::move(ad),std::move(buffer),tag_len)};
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			}
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	lua::multiret cipher::auth_decrypt(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("cipher::auth_decrypt is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("cipher::auth_decrypt operation in progress");
-			return {2};
-		}
-		{
-			auto iv = llae::buffer_base::get(l,2);
-			auto ad = llae::buffer_base::get(l,3);
-            auto buffer = llae::buffer_base::get(l,4);
-			if (!buffer) {
-				l.pushnil();
-				l.pushstring("cipher::auth_decrypt invalid data");
-				return {2};
-			}
-			auto tag_len = l.optinteger(5,0);
-
-			l.pushthread();
-			m_cont.set(l);
-			common::intrusive_ptr<auth_decrypt_async> req{new auth_decrypt_async(cipher_ptr(this),std::move(iv),std::move(ad),std::move(buffer),tag_len)};
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			}
-		}
-		l.yield(0);
-		return {0};
-	}
-
-
-	void cipher::on_completed(lua::state& l,int uvstatus,int mbedlsstatus,llae::buffer_ptr&& data) {
-		if (!m_cont.valid())
-			return;
-		
-		m_cont.push(l);
-		m_cont.reset(l);
-		auto toth = l.tothread(-1);
-		toth.checkstack(3);
-        
-        int nres = 0;
-        if (uvstatus<0) {
-            toth.pushnil();
-            uv::push_error(toth,uvstatus);
-            nres = 2;
-        } else if (mbedlsstatus!=0) {
-            toth.pushnil();
-            push_error(toth,"operation failed, code:%d, %s",mbedlsstatus);
-            nres = 2;
-        } else {
-			if (data) {
-				lua::push(toth,std::move(data));
+			status = mbedtls_cipher_update( &m_ctx,
+				reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len(),
+				static_cast<unsigned char*>(enc_buffer->get_base()),&osize );
+			if (status != 0)
+				break;
+			enc_buffer->set_len(osize);
+			if (!data) {
+				data = std::move(enc_buffer);
 			} else {
-				toth.pushboolean(true);
+				if (data->get_capacity() < (data->get_len() + enc_buffer->get_len())) {
+					data = data->realloc(data->get_len() + enc_buffer->get_len());
+				}
+				::memcpy(static_cast<unsigned char*>(data->get_base())+data->get_len(),enc_buffer->get_base(),enc_buffer->get_len());
+				data->set_len(data->get_len() + enc_buffer->get_len());
 			}
-            nres = 1;
-        }
-		auto s = toth.resume(l,nres);
-		if (s != lua::status::ok && s != lua::status::yield) {
-			llae::app::show_error(toth,s);
 		}
-		l.pop(1);// thread
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		llae::buffer_base_ptr r = std::move(data);
+		return llae::result<llae::buffer_base_ptr>(std::move(r));
 	}
+	llae::result<llae::buffer_base_ptr> cipher::sync_update(const llae::write_buffers& buffers) {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("update")) {
+			return llae::result<llae::buffer_base_ptr>(std::move(e));
+		}
+		return update_impl(buffers);
+	}
+
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::lasync_update(lua::state& l) {
+		
+		llae::write_buffers buffers;
+		if (!buffers.putm(l, 2)) {
+			return llae::make_result_promise_string_error<llae::buffer_base_ptr>("invalid data");
+		}
+		using work_t = llae::sequental_method_write_buffers_work<llae::buffer_base_ptr,cipher>;
+		return work_t::start(llae::app::get(l), std::move(buffers), this,&cipher::m_seq,"update", static_cast<llae::result<llae::buffer_base_ptr>(cipher::*)(const llae::write_buffers&)>(&cipher::update_impl));
+	}
+
+	llae::result<void> cipher::update_ad_impl(const llae::buffer_base_ptr& data) {
+		auto status = mbedtls_cipher_update_ad(&m_ctx,
+			reinterpret_cast<const unsigned char*>(data->get_base()), data->get_len());
+		return make_result(status);
+	}
+	llae::result<void> cipher::sync_update_ad(const llae::buffer_base_ptr& data) {
+		if (!data) {
+			return llae::string_error::create("need data");
+		}
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("update_ad")) {
+			return llae::result<void>(std::move(e));
+		}
+		return update_ad_impl(data);
+	}
+
+	llae::result_promise_ptr<void> cipher::async_update_ad(llae::app& a,llae::buffer_base_ptr&& data) {
+		if (!data) {
+			return llae::make_result_promise_string_error<void>("need data");
+		}
+		using work_t = llae::sequental_method_work<void,cipher>;
+		return work_t::start(a, this, &cipher::m_seq, "update_ad", [d = std::move(data)](cipher& self){
+			return self.update_ad_impl(d);
+		});
+	}
+
+	llae::result<llae::buffer_base_ptr> cipher::finish_impl() {
+		size_t size = mbedtls_cipher_get_block_size(&m_ctx);
+		auto data = llae::buffer::alloc(size);
+		size_t osize = 0;
+		auto status = mbedtls_cipher_finish(&m_ctx,
+			static_cast<unsigned char*>(data->get_base()),&osize);
+		if (status == 0) {
+			data->set_len(osize);
+			llae::buffer_base_ptr r = std::move(data);
+			return llae::result<llae::buffer_base_ptr>(std::move(r));
+		}
+		return status_error::create(status);
+	}
+	llae::result<llae::buffer_base_ptr> cipher::sync_finish() {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("finish")) {
+			return llae::result<llae::buffer_base_ptr>(std::move(e));
+		}
+		return finish_impl();
+	}
+
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_finish(llae::app& a) {
+		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher>;
+		return work_t::start(a, this, &cipher::m_seq, "finish", [](cipher& self){
+			return self.finish_impl();
+		});
+	}
+
+	llae::result<llae::buffer_base_ptr> cipher::crypt_impl(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& buffer) {
+		size_t len = buffer->get_len() + mbedtls_cipher_get_block_size(&m_ctx);
+		auto data = llae::buffer::alloc(len);
+		auto status = mbedtls_cipher_crypt(&m_ctx,
+			iv ? reinterpret_cast<const unsigned char*>(iv->get_base()) : nullptr,
+			iv ? iv->get_len() : 0,
+			reinterpret_cast<const unsigned char*>(buffer->get_base()), buffer->get_len(),
+			static_cast<unsigned char*>(data->get_base()),&len);
+		if (status == 0) {
+			data->set_len(len);
+			llae::buffer_base_ptr r = std::move(data);
+			return llae::result<llae::buffer_base_ptr>(std::move(r));
+		}
+		return status_error::create(status);
+	}
+	llae::result<llae::buffer_base_ptr> cipher::sync_crypt(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& buffer) {
+		if (!buffer) {
+			return llae::string_error::create("need data");
+		}
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("crypt")) {
+			return std::move(e);
+		}
+		return crypt_impl(iv, buffer);
+	}
+
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_crypt(llae::app& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr buffer) {
+		if (!buffer) {
+			return llae::make_result_promise_string_error<llae::buffer_base_ptr> ("need data");
+		}
+		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher>;
+		return work_t::start(a, this, &cipher::m_seq, "crypt", [liv = std::move(iv),lbuffer = std::move(buffer)](cipher& self){
+			return self.crypt_impl(liv,lbuffer);
+		});
+	}
+
+	llae::result<llae::buffer_base_ptr> cipher::auth_encrypt_impl(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& ad, const llae::buffer_base_ptr& buffer, size_t tag_len) {
+		size_t len = buffer->get_len() + mbedtls_cipher_get_block_size(&m_ctx) + tag_len;
+		auto data = llae::buffer::alloc(len);
+		auto status = mbedtls_cipher_auth_encrypt_ext(&m_ctx,
+			iv ? reinterpret_cast<const unsigned char*>(iv->get_base()) : nullptr,
+			iv ? iv->get_len() : 0,
+			ad ? reinterpret_cast<const unsigned char*>(ad->get_base()) : nullptr,
+			ad ? ad->get_len() : 0,
+			static_cast<const unsigned char*>(buffer->get_base()), buffer->get_len(),
+			static_cast<unsigned char*>(data->get_base()), len,
+			&len, tag_len);
+		if (status == 0) {
+			data->set_len(len);
+			llae::buffer_base_ptr r = std::move(data);
+			return llae::result<llae::buffer_base_ptr>(std::move(r));
+		}
+		return status_error::create(status);
+	}
+	llae::result<llae::buffer_base_ptr> cipher::sync_auth_encrypt(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& ad, const llae::buffer_base_ptr& buffer, size_t tag_len) {
+		if (!buffer) {
+			return llae::string_error::create("need data");
+		}
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("auth_encrypt")) {
+			return std::move(e);
+		}
+		return auth_encrypt_impl(iv, ad, buffer, tag_len);
+	}
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_auth_encrypt(llae::app& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len) {
+		if (!buffer) {
+			return llae::make_result_promise_string_error<llae::buffer_base_ptr> ("need data");
+		}
+		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher,6>;
+		return work_t::start(a, this, &cipher::m_seq, "auth_encrypt", [liv = std::move(iv),lad = std::move(ad), lbuffer = std::move(buffer), tag_len](cipher& self){
+			return self.auth_encrypt_impl(liv,lad,lbuffer,tag_len);
+		});
+	}
+	llae::result<llae::buffer_base_ptr> cipher::auth_decrypt_impl(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& ad, const llae::buffer_base_ptr& buffer, size_t tag_len) {
+		size_t len = buffer->get_len() + mbedtls_cipher_get_block_size(&m_ctx) + tag_len;
+		auto data = llae::buffer::alloc(len);
+		auto status = mbedtls_cipher_auth_decrypt_ext(&m_ctx,
+			iv ? reinterpret_cast<const unsigned char*>(iv->get_base()) : nullptr,
+			iv ? iv->get_len() : 0,
+			ad ? reinterpret_cast<const unsigned char*>(ad->get_base()) : nullptr,
+			ad ? ad->get_len() : 0,
+			static_cast<const unsigned char*>(buffer->get_base()), buffer->get_len(),
+			static_cast<unsigned char*>(data->get_base()), len,
+			&len, tag_len);
+		if (status == 0) {
+			data->set_len(len);
+			llae::buffer_base_ptr r = std::move(data);
+			return llae::result<llae::buffer_base_ptr>(std::move(r));
+		}
+		return status_error::create(status);
+	}
+	llae::result<llae::buffer_base_ptr> cipher::sync_auth_decrypt(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& ad, const llae::buffer_base_ptr& buffer, size_t tag_len) {
+		if (!buffer) {
+			return llae::string_error::create("need data");
+		}
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("auth_decrypt")) {
+			return std::move(e);
+		}
+		return auth_decrypt_impl(iv, ad, buffer, tag_len);
+	}
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_auth_decrypt(llae::app& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len) {
+		if (!buffer) {
+			return llae::make_result_promise_string_error<llae::buffer_base_ptr> ("need data");
+		}
+		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher,6>;
+		return work_t::start(a, this, &cipher::m_seq, "auth_decrypt", [liv = std::move(iv),lad = std::move(ad), lbuffer = std::move(buffer), tag_len](cipher& self){
+			return self.auth_decrypt_impl(liv,lad,lbuffer,tag_len);
+		});
+	}
+		
 
 	int cipher::get_block_size() const {
 		return mbedtls_cipher_get_block_size(&m_ctx);
@@ -501,30 +284,28 @@ namespace crypto {
 	int cipher::get_iv_size() const {
 		return mbedtls_cipher_get_iv_size(&m_ctx);
 	}
-	lua::multiret cipher::write_tag(lua::state& l) {
-		auto tag_len = l.checkinteger(2);
+	llae::result<llae::buffer_base_ptr> cipher::write_tag(size_t tag_len) {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("write_tag")) {
+			return std::move(e);
+		}
 		auto data = llae::buffer::alloc(tag_len);
 		auto ret = mbedtls_cipher_write_tag(&m_ctx,
 			reinterpret_cast<unsigned char*>(data->get_base()), tag_len);
 		if (ret != 0) {
-			l.pushnil();
-			push_error(l,"write_tag failed, code:%d, %s",ret);
-			return {2};
+			return status_error::create(ret);
 		}
-		lua::push(l,std::move(data));
-		return {1};
+		llae::buffer_base_ptr b = std::move(data);
+		return llae::result<llae::buffer_base_ptr>(std::move(b));
 	}
-	lua::multiret cipher::check_tag(lua::state& l) {
-		auto tag = llae::buffer_view::get(l,2, true);
-		auto ret = mbedtls_cipher_check_tag(&m_ctx,
-			reinterpret_cast<const unsigned char*>(tag.get_base()), tag.get_len());
-		if (ret != 0) {
-			l.pushnil();
-			push_error(l,"write_tag failed, code:%d, %s",ret);
-			return {2};
+	llae::result<void> cipher::check_tag(const llae::buffer_view& data) {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("write_tag")) {
+			return llae::result<void>(std::move(e));
 		}
-		l.pushboolean(true);
-		return {1};
+		auto ret = mbedtls_cipher_check_tag(&m_ctx,
+			reinterpret_cast<const unsigned char*>(data.get_base()), data.get_len());
+		return make_result(ret);
 	}
 
 	void cipher::lbind(lua::state& l) {
@@ -535,14 +316,16 @@ namespace crypto {
 		lua::bind::function(l,"set_key",&cipher::set_key);
 		lua::bind::function(l,"set_padding",&cipher::set_padding);
 		lua::bind::function(l,"reset",&cipher::reset);
-		lua::bind::function(l,"update",&cipher::update);
-		lua::bind::function(l,"update_ad",&cipher::update_ad);
-		lua::bind::function(l,"finish",&cipher::finish);
+		
+		llae::async_function(l, "update", &cipher::lasync_update);
+		llae::async_function(l, "update_ad", &cipher::async_update_ad);
+		llae::async_function(l, "finish", &cipher::async_finish);
+		llae::async_function(l, "crypt", &cipher::async_crypt);
+		llae::async_function(l, "auth_encrypt", &cipher::async_auth_encrypt);
+		llae::async_function(l, "auth_decrypt", &cipher::async_auth_decrypt);
+
 		lua::bind::function(l,"write_tag",&cipher::write_tag);
 		lua::bind::function(l,"check_tag",&cipher::check_tag);
-		lua::bind::function(l,"crypt",&cipher::crypt);
-		lua::bind::function(l,"auth_encrypt",&cipher::auth_encrypt);
-		lua::bind::function(l,"auth_decrypt",&cipher::auth_decrypt);
 	}
 
 	lua::multiret cipher::lnew(lua::state& l) {

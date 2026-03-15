@@ -2,10 +2,16 @@
 #define __LLAE_CRYPTO_MD_H_INCLUDED__
 
 #include "llae-private/mbedtls/md.h"
+#include "llae/buffer.h"
+#include "llae/error.h"
+#include "llae/write_buffers.h"
 #include "meta/object.h"
 #include "common/intrusive_ptr.h"
 #include "lua/state.h"
 #include "lua/ref.h"
+#include "llae/promise.h"
+#include "llae/result.h"
+#include "llae/sequental.h"
 
 namespace uv {
 	class loop;
@@ -17,27 +23,42 @@ namespace llae {
 
 namespace crypto {
 
+	/// @luabind
 	class md : public meta::object {
 		META_OBJECT
 	private:
 		const mbedtls_md_info_t* m_info;
 		mbedtls_md_context_t m_ctx;
+		bool m_stated = false;
+		llae::sequental m_seq;
 		md(const mbedtls_md_info_t* info);
-		class async;
-		class finish_async;
-		class update_async;
-		void on_update_completed(lua::state& l,int uvstatus,int mbedlsstatus);
-		void on_finish_completed(uv::loop& l,int uvstatus,int mbedlsstatus,llae::buffer_ptr&& digest);
-		lua::ref m_cont;
-		bool m_started = false;
-        void release() { m_cont.release(); }
+
+		friend common::intrusive_maker;
+		llae::error_ptr try_start();
+		llae::result<void> update_impl(const llae::write_buffers& data);
+		llae::result<void> update_impl(const llae::buffer_base_ptr& data);
+		llae::result<llae::buffer_base_ptr> finish_impl();
 	public:
 		~md();
-		lua::multiret update(lua::state& l);
-		lua::multiret finish(lua::state& l);
+
+		static common::intrusive_ptr<md> create(mbedtls_md_type_t type);
+		static common::intrusive_ptr<md> create(const char* type);
+
+		/// @luabind(name=update,async=true)
+		llae::result_promise_ptr<void> lasync_update(lua::state& l);
+		
+		llae::result<void> sync_update(const llae::buffer_base_ptr& data);
+		llae::result<void> sync_update(const llae::write_buffers& data);
+		llae::result<llae::buffer_base_ptr> sync_finish();
+
+		llae::result_promise_ptr<void> async_update(llae::app& a,llae::buffer_base_ptr&& data);
+		/// @luabind(name=finish,async=true)
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_finish(llae::app& a);
 		
 		static const mbedtls_md_info_t* get_info(lua::state& l, int idx);
+		/// @luabind
 		static lua::multiret get_length(lua::state& l);
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& l);
 	};

@@ -72,13 +72,17 @@ function base:update_env_location()
 end
 
 function base:on_root_set()
-	self._location = path.join(self._root,'build','modules', self:get_name())
+	if self._env.replace_location then
+		self._location = path.join(self._root,utils.replace_env(self._env.replace_location))
+	else
+		self._location = path.join(self._root,'build','modules', self:get_name())
+	end
 end
 
 function base:set_root(root)
-	self._root = path.getabsolute(root or self._root or utils.replace_env(fs.pwd()))
+	self._root = path.getabsolute(utils.replace_env(root or self._root or fs.pwd()))
 	self:on_root_set()
-	self:update_env_location()	
+	self:update_env_location()
 end
 
 function base:set_project(project)

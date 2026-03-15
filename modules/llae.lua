@@ -5,11 +5,11 @@ dir = 'llae-src'
 
 local inplace = project:get_cmdargs().inplace
 if inplace and tostring(inplace) == 'true' then
- 	dir = '../../..'
- 	inplace_dir = '..'
+ 	dir = '.'
+	replace_location = '.'
 elseif inplace then
-	dir = inplace
-	inplace_dir = inplace
+	dir = '.'
+	replace_location = inplace
 end 
 
 function install(tosystem)
@@ -171,6 +171,12 @@ dependencies = {
 	'pugixml',
 }
 
+bind_headers = {
+	{
+		dir = 'src/crypto',
+	}
+}
+
 solution = [[
 ]]
 
@@ -178,18 +184,7 @@ build_lib = {
 	components = {
 		'archive','common','crypto','llae','meta','parsers','posix','ssl','uv','lua','net'
 	},
-	project = inplace and [[
-		files {
-			<% for _,f in ipairs(lib.components) do %>
-			'<%= path.join(module.inplace_dir,'src',f,'**.h') %>',
-			'<%= path.join(module.inplace_dir,'src',f,'**.cpp') %>',<% end %>
-		}
-		includedirs{
-			'include',
-			'include/llae-private',
-			'<%= path.join(module.inplace_dir,'src') %>',
-		}
-	]] or [[
+	project = [[
 		files {
 			<% for _,f in ipairs(lib.components) do %>
 			<%= format_file(module.dir,'src',f,'**.h') %>,
@@ -200,7 +195,7 @@ build_lib = {
 			'include/llae-private',
 			<%= format_file(module.dir,'src') %>
 		}
-	]]
+	]] 
 }
 
 project_main = [[

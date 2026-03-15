@@ -1,14 +1,15 @@
 #include "hmac.h"
-#include <memory>
 #include "crypto.h"
-#include "uv/work.h"
+#include "llae/promise.h"
+#include "llae/sequental.h"
+#include "llae/work.h"
 #include "llae/buffer.h"
 #include "llae/app.h"
 #include "common/intrusive_ptr.h"
 #include "lua/bind.h"
 #include "lua/stack.h"
-#include "uv/luv.h"
 #include "llae/write_buffers.h"
+#include "llae/async_bind.h"
 #include "md.h"
 
 META_OBJECT_INFO(crypto::hmac,meta::object)
@@ -25,304 +26,102 @@ namespace crypto {
 		mbedtls_md_free(&m_ctx);
 	}
 
-	using hmac_ptr = common::intrusive_ptr<hmac>;
-	class hmac::async : public uv::work {
-	protected:
-		hmac_ptr m_hmac;
-		int m_status = 0;
-	public:
-		explicit async(hmac_ptr&& m) : m_hmac(std::move(m)) {}
-	};
-
-	class hmac::update_async : public hmac::async {
-	private:
-		llae::write_buffers m_buffers;
-	public:
-		explicit update_async(hmac_ptr&& m,llae::write_buffers&& buffers) : hmac::async(std::move(m)), m_buffers(std::move(buffers)) {}
-		virtual void on_work() {
-			for (auto& b:m_buffers.get_buffers()) {
-				m_status = mbedtls_md_hmac_update(&m_hmac->m_ctx, 
-					reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len() );
-				if (m_status != 0)
-					break;
-			}
-		}
-        void reset(lua::state& l) {
-            m_buffers.reset(l);
-        }
-		virtual void on_after_work(int status) {
-            if (llae::app::closed(get_loop())) {
-                m_buffers.release();
-                m_hmac->release();
-            } else {
-                uv::loop loop(get_loop());
-                lua::state& l(llae::app::get(loop).lua());
-                m_buffers.reset(l);
-                m_hmac->on_update_completed(l,status,m_status);
-            }
-		}
-	};
-
-	class hmac::start_async : public hmac::async {
-	private:
-		llae::buffer_base_ptr m_key;
-	public:
-		explicit start_async(hmac_ptr&& m,llae::buffer_base_ptr&& key) : hmac::async(std::move(m)),m_key(std::move(key)) {}
-		virtual void on_work() {
-			m_status = mbedtls_md_hmac_starts(&m_hmac->m_ctx,
-				reinterpret_cast<const unsigned char*>(m_key->get_base()),m_key->get_len());
-			m_key.reset();
-		}
-		
-		virtual void on_after_work(int status) {
-            if (!llae::app::closed(get_loop())) {
-                uv::loop loop(get_loop());
-                lua::state& l(llae::app::get(loop).lua());
-                m_hmac->on_start_completed(l,status,m_status);
-            }
-		}
-	};
-
-	class hmac::finish_async : public hmac::async {
-	private:
-		llae::buffer_ptr m_digest;
-	public:
-		explicit finish_async(hmac_ptr&& m) : hmac::async(std::move(m)) {}
-		virtual void on_work() {
-			size_t size = mbedtls_md_get_size(m_hmac->m_info);
-			m_digest = llae::buffer::alloc(size);
-			m_status = mbedtls_md_hmac_finish(&m_hmac->m_ctx,static_cast<unsigned char*>(m_digest->get_base()));
-		}
-		virtual void on_after_work(int status) {
-			uv::loop loop(get_loop());
-			m_hmac->on_finish_completed(loop,status,m_status,std::move(m_digest));
-		}
-	};
-
-
-	lua::multiret hmac::start(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("hmac::start is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("hmac::start operation in progress");
-			return {2};
-		}
-		{
-			auto key = llae::buffer_base::get(l,2);
-			if (!key) {
-				l.pushnil();
-				l.pushstring("hmac::start need key");
-				return {2};
-			}
-			common::intrusive_ptr<start_async> req{new start_async(hmac_ptr(this),std::move(key))};
-			
-			l.pushthread();
-			m_cont.set(l);
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
+	llae::result<void> hmac::start_impl(const llae::buffer_view& key) {
+		auto status = mbedtls_md_hmac_starts(&m_ctx,
+			reinterpret_cast<const unsigned char*>(key.get_base()),key.get_len());
+		return make_result(status);
 	}
 
-	lua::multiret hmac::reset(lua::state& l) {
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("hmac::reset operation in progress");
-			return {2};
+	llae::result<void> hmac::sync_start(const llae::buffer_base_ptr& key) {
+		if (!key) {
+			return llae::string_error::create("need key");
 		}
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("start")) {
+			return std::move(e);
+		}
+		return start_impl(*key);
+	}
+	llae::result_promise_ptr<void> hmac::async_start(llae::app& a,llae::buffer_base_ptr key) {
+		if (!key) {
+			return llae::make_result_promise_string_error<void>("need key");
+		}
+		using work_t = llae::sequental_method_work<void, hmac>;
+		return work_t::start(a,this,&hmac::m_seq,"start", [lkey = std::move(key)](hmac& self) {
+			return self.start_impl(*lkey);
+		});
+	}
+
+	llae::result<void> hmac::update_impl(const llae::write_buffers& buffers) {
+		int status = 0;
+		for (auto& b:buffers.get_buffers()) {
+			status = mbedtls_md_hmac_update(&m_ctx, 
+				reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len() );
+			if (status != 0)
+				break;
+		}
+		return make_result(status);
+	}
+
+	llae::result<void> hmac::sync_update(const llae::write_buffers& buffers) {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("update")) {
+			return std::move(e);
+		}
+		return update_impl(buffers);
+	}
+	llae::result_promise_ptr<void> hmac::lasync_update(lua::state& l) {
+		llae::write_buffers buffers;
+		if (!buffers.putm(l, 2)) {
+			buffers.reset(l);
+			return llae::make_result_promise_string_error<void>("invalid data");
+		}
+		using work_t = llae::sequental_method_write_buffers_work<void,hmac>;
+		return work_t::start(llae::app::get(l), std::move(buffers), this,&hmac::m_seq,"update", static_cast<llae::result<void>(hmac::*)(const llae::write_buffers&)>(&hmac::update_impl));
+	}
+
+	llae::result<llae::buffer_base_ptr> hmac::finish_impl() {
+		size_t size = mbedtls_md_get_size(m_info);
+		auto digest = llae::buffer::alloc(size);
+		auto status = mbedtls_md_hmac_finish(&m_ctx,static_cast<unsigned char*>(digest->get_base()));
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		llae::buffer_base_ptr r = std::move(digest);
+		return llae::result<llae::buffer_base_ptr>(std::move(r));
+	}
+
+	llae::result<llae::buffer_base_ptr> hmac::sync_finish() {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("finish")) {
+			return llae::result<llae::buffer_base_ptr>(std::move(e));
+		}
+		return finish_impl();
+	}
+	llae::result_promise_ptr<llae::buffer_base_ptr> hmac::async_finish(llae::app& a) {
+		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,hmac>;
+		return work_t::start(a,this,&hmac::m_seq,"finish",[](hmac& self){
+			return self.finish_impl();
+		});
+	}
+
+
+	llae::result<void> hmac::reset() {
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("finish")) {
+			return std::move(e);
+		}
+		auto status = mbedtls_md_hmac_reset(&m_ctx);
+		return make_result(status);
+	}
+
 	
-		auto mbedlsstatus = mbedtls_md_hmac_reset(&m_ctx);
-
-		int nres = 1;
-		if (mbedlsstatus!=0) {
-            l.pushnil();
-            push_error(l,"reset failed, code:%d, %s",mbedlsstatus);
-            nres = 2;
-        } else {
-        	l.pushboolean(true);
-            nres = 1;
-        }
-        return {nres};
-	}
-
-	lua::multiret hmac::update(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("hmac::update is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("hmac::update operation in progress");
-			return {2};
-		}
-		
-		{
-            llae::write_buffers buffers;
-            l.pushvalue(2);
-            if (!buffers.put(l)) {
-                buffers.reset(l);
-                l.pushnil();
-                l.pushstring("md::update invalid data");
-                return {2};
-            }
-            if (buffers.empty()) {
-                l.pushboolean(true);
-                return {1};
-            }
-            
-			common::intrusive_ptr<update_async> req{new update_async(hmac_ptr(this),std::move(buffers))};
-			
-			l.pushthread();
-			m_cont.set(l);
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-                req->reset(l);
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	lua::multiret hmac::finish(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("hmac::finish is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("hmac::finish operation in progress");
-			return {2};
-		}
-		{
-			l.pushthread();
-			m_cont.set(l);
-			common::intrusive_ptr<finish_async> req{new finish_async(hmac_ptr(this))};
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	void hmac::on_start_completed(lua::state& l,int uvstatus,int mbedlsstatus) {
-		if (!m_cont.valid())
-			return;
-		
-		m_cont.push(l);
-		m_cont.reset(l);
-		auto toth = l.tothread(-1);
-		toth.checkstack(3);
-        
-        int nres = 0;
-        if (uvstatus<0) {
-            toth.pushnil();
-            uv::push_error(toth,uvstatus);
-            nres = 2;
-        } else if (mbedlsstatus!=0) {
-            toth.pushnil();
-            push_error(toth,"update failed, code:%d, %s",mbedlsstatus);
-            nres = 2;
-        } else {
-            toth.pushboolean(true);
-            nres = 1;
-        }
-        
-		auto s = toth.resume(l,nres);
-		if (s != lua::status::ok && s != lua::status::yield) {
-			llae::app::show_error(toth,s);
-		}
-		l.pop(1);// thread
-	}
-
-	void hmac::on_update_completed(lua::state& l,int uvstatus,int mbedlsstatus) {
-		if (!m_cont.valid())
-			return;
-		
-		m_cont.push(l);
-		m_cont.reset(l);
-		auto toth = l.tothread(-1);
-		toth.checkstack(3);
-        
-        int nres = 0;
-        if (uvstatus<0) {
-            toth.pushnil();
-            uv::push_error(toth,uvstatus);
-            nres = 2;
-        } else if (mbedlsstatus!=0) {
-            toth.pushnil();
-            push_error(toth,"update failed, code:%d, %s",mbedlsstatus);
-            nres = 2;
-        } else {
-            toth.pushboolean(true);
-            nres = 1;
-        }
-        
-		auto s = toth.resume(l,nres);
-		if (s != lua::status::ok && s != lua::status::yield) {
-			llae::app::show_error(toth,s);
-		}
-		l.pop(1);// thread
-	}
-	void hmac::on_finish_completed(uv::loop& loop,int uvstatus,int mbedlsstatus,llae::buffer_ptr&& digest) {
-		if (!m_cont.valid())
-			return;
-		lua::state& l(llae::app::get(loop).lua());
-		
-		m_cont.push(l);
-		m_cont.reset(l);
-		auto toth = l.tothread(-1);
-		toth.checkstack(3);
-        
-        int nres = 0;
-        if (uvstatus<0) {
-            toth.pushnil();
-            uv::push_error(toth,uvstatus);
-            nres = 2;
-        } else if (mbedlsstatus!=0) {
-            toth.pushnil();
-            push_error(toth,"update failed, code:%d, %s",mbedlsstatus);
-            nres = 2;
-        } else {
-            lua::push(toth,std::move(digest));
-            nres = 1;
-        }
-		auto s = toth.resume(l,nres);
-		if (s != lua::status::ok && s != lua::status::yield) {
-			llae::app::show_error(toth,s);
-		}
-		l.pop(1);// thread
-	}
-
 	void hmac::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&hmac::lnew);
-		lua::bind::function(l,"start",&hmac::start);
+		llae::async_function(l,"start",&hmac::async_start);
 		lua::bind::function(l,"reset",&hmac::reset);
-		lua::bind::function(l,"update",&hmac::update);
-		lua::bind::function(l,"finish",&hmac::finish);
+		llae::async_function(l,"update",&hmac::lasync_update);
+		llae::async_function(l,"finish",&hmac::async_finish);
 	}
 
 	lua::multiret hmac::lnew(lua::state& l) {
@@ -332,7 +131,7 @@ namespace crypto {
 			l.pushfstring("unknown hmac algorithm");
 			return {2};
 		}
-		lua::push(l,hmac_ptr(new hmac(info)));
+		lua::push(l,common::intrusive_ptr<hmac>(new hmac(info)));
 		return {1};
 	}
 }

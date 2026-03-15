@@ -13,6 +13,8 @@
 
 namespace llae {
 
+	class work_base;
+	using work_base_ptr = common::intrusive_ptr<work_base>;
 	
 	class app {
 		lua::main_state m_lua;

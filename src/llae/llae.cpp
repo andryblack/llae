@@ -1,10 +1,12 @@
 #include "app.h"
 #include "buffer.h"
+#include "llae/promise.h"
 #include "lua/bind.h"
 #include "logger.h"
 #include "uv/fs.h"
 #include "error.h"
 #include "result.h"
+#include "promise.h"
 
 #if defined(__APPLE__)
 /* lets us know what version of Mac OS X we're compiling on */
@@ -92,11 +94,8 @@ int luaopen_llae(lua_State* L) {
 
     lua::state l(L);
 
-    lua::bind::object<llae::buffer_base>::register_metatable(l,&llae::buffer_base::lbind);
-	lua::bind::object<llae::buffer>::register_metatable(l,&llae::buffer::lbind);
-    lua::bind::object<llae::writable_buffer>::register_metatable(l,&llae::writable_buffer::lbind);
-    lua::bind::object<llae::log_handler>::register_metatable(l,&llae::log_handler::lbind);
     
+
     l.createtable();
     lua::bind::function(l, "stop", llae::lua_stop );
     lua::bind::function(l, "at_exit", llae::lua_at_exit );

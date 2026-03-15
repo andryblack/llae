@@ -4,6 +4,8 @@ local path = {}
 ---@return string
 function path.normalize(p)
 	local res = p:gsub("[/\\]+", "/")
+	res = res:gsub("^%./", "")
+	res = res:gsub("/%./", "/")
 	return res
 end
 
@@ -43,7 +45,7 @@ end
 ---@return string[]
 function path.split(p)
 	local parts = {}
-	for part in p:gmatch('[^/\\]+') do
+	for part in path.normalize(p):gmatch('[^/\\]+') do
 		table.insert(parts, part)
 	end
 	return parts
@@ -68,10 +70,11 @@ end
 
 ---@param path string
 ---@return string
-function path.dirname( path )
-	local i = findlast(path,"[/\\]")
-	local r = i and string.sub(path,1,i-1) or ''
-	if path:sub(1,1) == '/' then
+function path.dirname( p )
+	p = path.normalize(p)
+	local i = findlast(p,"[/\\]")
+	local r = i and string.sub(p,1,i-1) or ''
+	if p:sub(1,1) == '/' then
 		if r == '' then
 			r = '/'
 		end

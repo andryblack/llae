@@ -2,18 +2,14 @@
 #define __LLAE_CRYPTO_HMAC_H_INCLUDED__
 
 #include "llae-private/mbedtls/md.h"
+#include "llae/buffer.h"
+#include "llae/result.h"
+#include "llae/write_buffers.h"
 #include "meta/object.h"
-#include "common/intrusive_ptr.h"
 #include "lua/state.h"
-#include "lua/ref.h"
+#include "llae/promise.h"
+#include "llae/sequental.h"
 
-namespace uv {
-	class loop;
-}
-namespace llae {
-	class buffer;
-	using buffer_ptr = common::intrusive_ptr<buffer>;
-}
 
 namespace crypto {
 
@@ -22,22 +18,23 @@ namespace crypto {
 	private:
 		const mbedtls_md_info_t* m_info;
 		mbedtls_md_context_t m_ctx;
+		llae::sequental m_seq;
 		hmac(const mbedtls_md_info_t* info);
-		class async;
-		class start_async;
-		class finish_async;
-		class update_async;
-		void on_start_completed(lua::state& l,int uvstatus,int mbedlsstatus);
-		void on_update_completed(lua::state& l,int uvstatus,int mbedlsstatus);
-		void on_finish_completed(uv::loop& l,int uvstatus,int mbedlsstatus,llae::buffer_ptr&& digest);
-		lua::ref m_cont;
-		void release() { m_cont.release(); }
+		llae::result<void> start_impl(const llae::buffer_view& key);
+		llae::result<void> update_impl(const llae::write_buffers& buffers);
+		llae::result<llae::buffer_base_ptr> finish_impl();
 	public:
 		~hmac();
-		lua::multiret reset(lua::state& l);
-		lua::multiret start(lua::state& l);
-		lua::multiret update(lua::state& l);
-		lua::multiret finish(lua::state& l);
+
+		llae::result<void> reset();
+		llae::result<void> sync_start(const llae::buffer_base_ptr& key);
+		llae::result_promise_ptr<void> async_start(llae::app& a,llae::buffer_base_ptr key);
+
+		llae::result<void> sync_update(const llae::write_buffers& buffers);
+		llae::result_promise_ptr<void> lasync_update(lua::state& l);
+
+		llae::result<llae::buffer_base_ptr> sync_finish();
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_finish(llae::app& a);
 		
 		static lua::multiret lnew(lua::state& l);
 		static void lbind(lua::state& l);

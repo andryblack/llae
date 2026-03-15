@@ -1,14 +1,19 @@
 #include "md.h"
 #include <memory>
+#include "common/intrusive_ptr.h"
 #include "crypto.h"
-#include "uv/work.h"
+#include "llae/error.h"
+#include "llae/promise.h"
+#include "llae/result.h"
+#include "llae/sequental.h"
+#include "lua/state.h"
 #include "llae/buffer.h"
 #include "llae/app.h"
-#include "common/intrusive_ptr.h"
 #include "lua/bind.h"
 #include "lua/stack.h"
-#include "uv/luv.h"
 #include "llae/write_buffers.h"
+#include "llae/work.h"
+#include "llae/async_bind.h"
 
 META_OBJECT_INFO(crypto::md,meta::object)
 
@@ -20,207 +25,32 @@ namespace crypto {
 		mbedtls_md_setup(&m_ctx,m_info,0);
 	}
 
+	common::intrusive_ptr<md> md::create(mbedtls_md_type_t type) {
+		auto info = mbedtls_md_info_from_type(type);
+		if (!info) {
+			return {};
+		}
+		return common::make_intrusive<md>(info);
+	}
+	
+	common::intrusive_ptr<md> md::create(const char* type) {
+		auto info = mbedtls_md_info_from_string(type);
+		if (!info) {
+			return {};
+		}
+		return common::make_intrusive<md>(info);
+	}
+
 	md::~md() {
 		mbedtls_md_free(&m_ctx);
 	}
-
-	using md_ptr = common::intrusive_ptr<md>;
-	class md::async : public uv::work {
-	protected:
-		md_ptr m_md;
-		int m_status = 0;
-	public:
-		explicit async(md_ptr&& m) : m_md(std::move(m)) {}
-	};
-
-	class md::update_async : public md::async {
-	private:
-		llae::write_buffers m_buffers;
-	public:
-		explicit update_async(md_ptr&& m,llae::write_buffers&& buffers) : md::async(std::move(m)),m_buffers(std::move(buffers)) {}
-		virtual void on_work() {
-			for (auto& b:m_buffers.get_buffers()) {
-				m_status = mbedtls_md_update(&m_md->m_ctx, 
-					reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len() );
-				if (m_status != 0)
-					break;
-			}
-		}
-		bool put(lua::state& l) {
-			return m_buffers.put(l);
-		}
-		virtual void on_after_work(int status) {
-            if (llae::app::closed(get_loop())) {
-                m_buffers.release();
-                m_md->release();
-            } else {
-                uv::loop loop(get_loop());
-                lua::state& l(llae::app::get(loop).lua());
-                m_buffers.reset(l);
-                m_md->on_update_completed(l,status,m_status);
-            }
-		}
-	};
-
-	class md::finish_async : public md::async {
-	private:
-		llae::buffer_ptr m_digest;
-	public:
-		explicit finish_async(md_ptr&& m) : md::async(std::move(m)) {}
-		virtual void on_work() {
-			size_t size = mbedtls_md_get_size(m_md->m_info);
-			m_digest = llae::buffer::alloc(size);
-			m_status = mbedtls_md_finish(&m_md->m_ctx,static_cast<unsigned char*>(m_digest->get_base()));
-		}
-		virtual void on_after_work(int status) {
-			uv::loop loop(get_loop());
-			m_md->on_finish_completed(loop,status,m_status,std::move(m_digest));
-		}
-	};
-
-	lua::multiret md::update(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("md::update is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("md::update operation in progress");
-			return {2};
-		}
-		if (!m_started) {
-			int r = mbedtls_md_starts(&m_ctx);
-			if (r!=0) {
-				l.pushnil();
-				push_error(l,"mbedtls_md_starts failed, code:%d, %s",r);
-				return {2};
-			}
-			m_started = true;
-		}
-		{
-			llae::write_buffers buffers;
-			l.pushvalue(2);
-			if (!buffers.put(l)) {
-				buffers.reset(l);
-				l.pushnil();
-				l.pushstring("md::update invalid data");
-				return {2};
-			}
-			if (buffers.empty()) {
-				l.pushboolean(true);
-				return {1};
-			}
-			common::intrusive_ptr<update_async> req{new update_async(md_ptr(this),std::move(buffers))};
-			
-			l.pushthread();
-			m_cont.set(l);
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	lua::multiret md::finish(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("md::finish is async");
-			return {2};
-		}
-		if (m_cont.valid()) {
-			l.pushnil();
-			l.pushstring("md::finish operation in progress");
-			return {2};
-		}
-		{
-			l.pushthread();
-			m_cont.set(l);
-			common::intrusive_ptr<finish_async> req{new finish_async(md_ptr(this))};
-			
-			int r = req->queue_work(llae::app::get(l).loop());
-			if (r < 0) {
-				m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	void md::on_update_completed(lua::state& l,int uvstatus,int mbedlsstatus) {
-		if (!m_cont.valid())
-			return;
-		
-		m_cont.push(l);
-		m_cont.reset(l);
-		auto toth = l.tothread(-1);
-		toth.checkstack(3);
-        
-        int nres = 0;
-        if (uvstatus<0) {
-            toth.pushnil();
-            uv::push_error(toth,uvstatus);
-            nres = 2;
-        } else if (mbedlsstatus!=0) {
-            toth.pushnil();
-            push_error(toth,"update failed, code:%d, %s",mbedlsstatus);
-            nres = 2;
-        } else {
-            toth.pushboolean(true);
-            nres = 1;
-        }
-        
-		auto s = toth.resume(l,nres);
-		if (s != lua::status::ok && s != lua::status::yield) {
-			llae::app::show_error(toth,s);
-		}
-		l.pop(1);// thread
-	}
-	void md::on_finish_completed(uv::loop& loop,int uvstatus,int mbedlsstatus,llae::buffer_ptr&& digest) {
-		if (!m_cont.valid())
-			return;
-		lua::state& l(llae::app::get(loop).lua());
-		
-		m_cont.push(l);
-		m_cont.reset(l);
-		m_started = false;
-		auto toth = l.tothread(-1);
-		toth.checkstack(3);
-        
-        int nres = 0;
-        if (uvstatus<0) {
-            toth.pushnil();
-            uv::push_error(toth,uvstatus);
-            nres = 2;
-        } else if (mbedlsstatus!=0) {
-            toth.pushnil();
-            push_error(toth,"finish failed, code:%d, %s",mbedlsstatus);
-            nres = 2;
-        } else {
-            lua::push(toth,std::move(digest));
-            nres = 1;
-        }
-		auto s = toth.resume(l,nres);
-		if (s != lua::status::ok && s != lua::status::yield) {
-			llae::app::show_error(toth,s);
-		}
-		l.pop(1);// thread
-	}
+	
 
 	void md::lbind(lua::state& l) {
 		lua::bind::function(l,"new",&md::lnew);
-		lua::bind::function(l,"update",&md::update);
-		lua::bind::function(l,"finish",&md::finish);
 		lua::bind::function(l,"get_length",&md::get_length);
+		llae::async_function(l,"update",&md::lasync_update);
+		llae::async_function(l,"finish",&md::async_finish);
 	}
 
 	const mbedtls_md_info_t* md::get_info(lua::state& l, int idx) {
@@ -244,6 +74,120 @@ namespace crypto {
 		return {1};
 	}
 
+	llae::result<void> md::update_impl(const llae::buffer_base_ptr& data) {
+		if (!data) {
+			return llae::string_error::create("need data");
+		}
+		if (data->get_len() == 0) {
+			return llae::result<void>{};
+		}
+		auto r = mbedtls_md_update(&m_ctx, 
+			reinterpret_cast<const unsigned char*>(data->get_base()), data->get_len() );
+		return make_result(r);
+	}
+	llae::result<void> md::sync_update(const llae::buffer_base_ptr& data) {
+		if (!data) {
+			return llae::string_error::create("need data");
+		}
+		if (auto e = try_start()) {
+			return std::move(e);
+		}
+		llae::sequental_scope l{m_seq};
+		if (auto e = l.start("update")) {
+			return std::move(e);
+		}
+		return update_impl(data);
+	}
+	llae::result<void> md::update_impl(const llae::write_buffers& data) {
+		for (auto& b:data.get_buffers()) {
+			if (b.get_len() == 0)
+				continue;
+			auto status = mbedtls_md_update(&m_ctx, 
+				reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len() );
+			if (status != 0) {
+				return status_error::create(status);
+			}
+		}
+		return llae::result<void>{};
+	}
+	llae::result<void> md::sync_update(const llae::write_buffers& data) {
+		if (auto e = try_start()) {
+			return std::move(e);
+		}
+		llae::sequental_scope l{m_seq};
+		if (auto e = l.start("update")) {
+			return std::move(e);
+		}
+		return update_impl(data);
+	}
+	llae::result<llae::buffer_base_ptr> md::finish_impl() {
+		size_t size = mbedtls_md_get_size(m_info);
+		auto digest = llae::buffer::alloc(size);
+		auto r = mbedtls_md_finish(&m_ctx,static_cast<unsigned char*>(digest->get_base()));
+		if (r != 0) {
+			return status_error::create(r);
+		}
+		llae::buffer_base_ptr res(std::move(digest));
+		return llae::result<llae::buffer_base_ptr>{std::move(res)};
+	}
+	llae::result<llae::buffer_base_ptr> md::sync_finish() {
+		llae::sequental_scope l{m_seq};
+		if (auto e = l.start("finish")) {
+			return std::move(e);
+		}
+		return finish_impl();
+	}
+
+	llae::result_promise_ptr<void> md::async_update(llae::app& a,llae::buffer_base_ptr&& data) {
+		if (!data) {
+			return llae::make_result_promise_string_error<void>("need data");
+		}
+		auto e = try_start();
+		if (e) {
+			return llae::result_promise_forward_error<void>(std::move(e));
+		}
+		using work_t = llae::sequental_method_work<void,md>;
+		return work_t::start(a, this, &md::m_seq, "update", [d = std::move(data)](md& self){
+			return self.update_impl(d);
+		});
+	}
+
+	llae::result_promise_ptr<llae::buffer_base_ptr> md::async_finish(llae::app& a) {
+		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,md>;
+		return work_t::start(a,this,&md::m_seq,"finish",[](md& self){
+			return self.finish_impl();
+		});
+	}
+
+	llae::result_promise_ptr<void> md::lasync_update(lua::state& l) {
+		auto e = try_start();
+		if (e) {
+			return llae::result_promise_forward_error<void>(std::move(e));
+		}
+		llae::write_buffers buffers;
+		if (!buffers.putm(l, 2)) {
+			buffers.reset(l);
+			return llae::make_result_promise_string_error<void>("invalid data");
+		}
+		using work_t = llae::sequental_method_write_buffers_work<void,md>;
+		return work_t::start(llae::app::get(l), std::move(buffers), this,&md::m_seq,"update", static_cast<llae::result<void>(md::*)(const llae::write_buffers&)>(&md::update_impl));
+	}
+
+	llae::error_ptr md::try_start() {
+		if (!m_stated) {
+			llae::sequental_scope l{m_seq};
+			if (auto e = l.start("try_start")) {
+				return std::move(e);
+			}
+			int r = mbedtls_md_starts(&m_ctx);
+			if (r != 0) {
+				return common::make_intrusive<status_error>(r);
+			}
+			m_stated = true;
+		}
+		return {};
+	}
+
 	lua::multiret md::lnew(lua::state& l) {
 		auto info = get_info(l,1);
 		if (!info) {
@@ -251,7 +195,7 @@ namespace crypto {
 			l.pushfstring("unknown md algorithm");
 			return {2};
 		}
-		lua::push(l,md_ptr(new md(info)));
+		lua::push(l,common::intrusive_ptr<md>(new md(info)));
 		return {1};
 	}
 }
