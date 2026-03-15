@@ -3,7 +3,6 @@
 #include "common/intrusive_ptr.h"
 #include "llae/error.h"
 #include "llae/logger.h"
-#include <format>
 
 namespace llae {
 
@@ -14,7 +13,9 @@ namespace llae {
     public:
         sequental_error(const char* active, const char* next) : m_active_op(active),m_new_op(next) {}
         virtual std::string to_string() const override {
-            return std::format("[{}]:failed start {}, {} is active",get_category(),m_new_op,m_active_op);
+            char buffer[128] = {0};
+            ::snprintf(buffer,sizeof(buffer),"[%s]:failed start %s, %s is active",get_category().c_str(),m_new_op,m_active_op);
+            return std::string(buffer);
         }
     };
 
@@ -22,7 +23,9 @@ namespace llae {
     public:
         sequental_scope_error(const char* active, const char* next) : sequental_error(active,next) {}
         virtual std::string to_string() const override {
-            return std::format("[{}]:failed scope start {}, {} is active",get_category(),m_new_op,m_active_op);
+            char buffer[128] = {0};
+            ::snprintf(buffer,sizeof(buffer),"[%s]:failed scope start %s, %s is active",get_category().c_str(),m_new_op,m_active_op);
+            return std::string(buffer);
         }
     };
 

@@ -8,7 +8,6 @@
 #include "llae/buffer.h"
 #include "llae/app.h"
 #include <cstdint>
-#include <format>
 
 META_OBJECT_INFO(crypto::status_error, llae::error)
 
@@ -24,7 +23,7 @@ namespace crypto {
 	std::string status_error::to_string() const {
 		char buffer[128] = {0};
 		mbedtls_strerror(get_code(),buffer,sizeof(buffer));
-		return std::format("[crypto]:{}",buffer);
+		return std::string("[crypto]:") + buffer;
 	}
 
 	static uint32_t sync_crc32_impl(uint32_t start,const llae::buffer_base_ptr& data) {
