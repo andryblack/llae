@@ -72,7 +72,7 @@ function base:update_env_location()
 end
 
 function base:on_root_set()
-	if self._env.replace_location then
+	if self._env and self._env.replace_location then
 		self._location = path.join(self._root,utils.replace_env(self._env.replace_location))
 	else
 		self._location = path.join(self._root,'build','modules', self:get_name())
