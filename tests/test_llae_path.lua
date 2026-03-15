@@ -40,11 +40,11 @@ function testPath:test_dirname()
 	lu.assertEquals(path.dirname('file.txt'), '')
 	lu.assertEquals(path.dirname('/path/to/dir/'), '/path/to/dir')
 	lu.assertEquals(path.dirname('/'), '/')
-	lu.assertEquals(path.dirname('path\\to\\file.txt'), 'path\\to')
+	lu.assertEquals(path.dirname('path\\to\\file.txt'), 'path/to')
 	-- Windows paths
-	lu.assertEquals(path.dirname('C:\\Windows\\System32\\cmd.exe'), 'C:\\Windows\\System32')
-	lu.assertEquals(path.dirname('C:\\Program Files\\'), 'C:\\Program Files')
-	lu.assertEquals(path.dirname('D:\\Games\\Steam\\steam.exe'), 'D:\\Games\\Steam')
+	lu.assertEquals(path.dirname('C:\\Windows\\System32\\cmd.exe'), 'C:/Windows/System32')
+	lu.assertEquals(path.dirname('C:\\Program Files\\'), 'C:/Program Files')
+	lu.assertEquals(path.dirname('D:\\Games\\Steam\\steam.exe'), 'D:/Games/Steam')
 end
 
 function testPath:test_extension()

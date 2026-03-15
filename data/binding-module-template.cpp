@@ -45,5 +45,7 @@ int luaopen_<%= module:get_bind_name() %>(lua_State* L) {
     lua::bind::value(l, "<%= enum:get_lua_value_name(val.name) %>", <%= enum:get_prefix() %>::<% if enum:is_scoped() then %><%= enum:get_name() %>::<% end %><%= val.name %>);<% end %>
     l.setfield(-2, "<%= enum:get_lua_name() %>");
     <% end %>
+    <% for _,value in ipairs(module:get_values()) do %>
+    lua::bind::value(l, "<%= value:get_lua_name() %>", <%= value:get_prefix() %>::<%= value:get_name() %>);<% end %>
     return 1;
 }

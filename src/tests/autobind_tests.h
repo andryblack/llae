@@ -102,4 +102,7 @@ namespace autobind_tests {
 
     /// @luabind
     static void test_function1(int) {}
+
+    /// @luabind
+    constexpr int test_value = 123;
 }

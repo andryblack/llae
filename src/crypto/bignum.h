@@ -30,6 +30,7 @@ namespace crypto {
         bool is0() const;
         /// @luabind
         bool get_bit(size_t bit) const;
+        void set_bit(size_t bit, bool value);
         /// @luabind(name=set_bit)
         void lset_bit(lua::state& l);
 

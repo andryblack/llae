@@ -29,6 +29,7 @@ namespace crypto {
 
 		/// @luabind
 		llae::result<void> reset();
+		llae::result<void> sync_start(const llae::buffer_base_ptr& key);
 		/// @luabind(name=start,async=true)
 		llae::result_promise_ptr<void> async_start(llae::app& a,llae::buffer_base_ptr key);
 

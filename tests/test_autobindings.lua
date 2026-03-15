@@ -322,3 +322,7 @@ function TestAutoBindings:test_string_field()
     b.data_field = "hello\0worl"
     lu.assertEquals(b.data_field, "hello\0worl")
 end
+
+function TestAutoBindings:test_value()
+    lu.assertEquals(bind_tests.test_value, 123)
+end

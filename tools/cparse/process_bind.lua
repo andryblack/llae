@@ -15,6 +15,7 @@ function bind_module:_init(name)
     self._functions = {}
     self._enums = {}
     self._headers = {}
+    self._values = {}
 end
 
 function bind_module:add_header(header)
@@ -87,6 +88,15 @@ end
 
 function bind_module:get_enums()
     return self._enums
+end
+
+function bind_module:add_value(value)
+    table.insert(self._values, value)
+    value:set_module(self)
+end
+
+function bind_module:get_values()
+    return self._values
 end
 
 function bind_module:get_name()
@@ -252,6 +262,11 @@ function bind_enum:get_lua_value_name(val_name)
     return val_name
 end
 
+local bind_value = class(module_element, 'bind_value')
+function bind_value:_init(name,prefix,bind)
+    bind_value.baseclass._init(self, name, prefix, bind)
+end
+
 local processor = class(nil, 'processor')
 
 local traverser = class(ast.traverser, 'traverser')
@@ -320,7 +335,10 @@ function traverser:traverse_field(node)
             local field = bind_field.new(node.name, self:get_full_name(), bind)
             current_bind:add_field(field)
         else
-            error('luabind field bind outside of class: ' .. node.name)
+            local value = bind_value.new(node.name, self:get_full_name(), bind)
+            local module = self._processor:get_module(value:get_module_name())
+            module:add_value(value)
+            self._result.modules[module:get_name()] = module
         end
     end
     traverser.baseclass.traverse_field(self, node)
