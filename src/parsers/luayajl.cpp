@@ -171,7 +171,7 @@ static void fill_parse_callbacks( yajl_callbacks& cb ) {
     
 static lua::multiret json_decode(lua::state& l) {
 
-    auto data = llae::buffer_view::get(l,1,true);
+    
     bool safe = false;
 
     if (l.isboolean(2)) {
@@ -181,7 +181,9 @@ static lua::multiret json_decode(lua::state& l) {
         safe = l.toboolean(-1);
         l.pop(1);
     }
-   
+
+    auto data = llae::buffer_view::get(l,1,!safe);
+    
     yajl_callbacks cb;
     fill_parse_callbacks(cb);
     parse_context ctx = {l};

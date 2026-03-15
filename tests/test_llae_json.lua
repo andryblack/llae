@@ -249,6 +249,10 @@ function TestJson:test_error_handling()
   )
   lu.assertNil(val)
   lu.assertNotNil(err)
+
+  local val,err = json.decode(nil, {safe = true})
+  lu.assertNil(val)
+  lu.assertNotNil(err)
 end
 
 return TestJson
