@@ -60,8 +60,7 @@ namespace crypto {
 		static lua::multiret get_length(lua::state& l);
 		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& l);
-	};
+		};
 
 }
 

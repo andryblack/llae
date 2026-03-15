@@ -1,5 +1,4 @@
 #include "rsa.h"
-#include "lua/bind.h"
 #include "crypto.h"
 
 META_OBJECT_INFO(crypto::rsa_base,meta::object)
@@ -15,10 +14,6 @@ namespace crypto {
 		auto hash_id = static_cast<mbedtls_md_type_t>(l.optinteger(3,MBEDTLS_MD_NONE));
 		auto res = mbedtls_rsa_set_padding(m_ctx,padding,hash_id);
 		return mbedtls_result(l,res);
-	}
-
-	void rsa_base::lbind(lua::state& l) {
-		lua::bind::function(l,"set_padding",&rsa_base::set_padding);
 	}
 
 }

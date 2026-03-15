@@ -13,6 +13,7 @@
 
 namespace crypto {
 
+	/// @luabind
 	class hmac : public meta::object {
 		META_OBJECT
 	private:
@@ -26,18 +27,21 @@ namespace crypto {
 	public:
 		~hmac();
 
+		/// @luabind
 		llae::result<void> reset();
-		llae::result<void> sync_start(const llae::buffer_base_ptr& key);
+		/// @luabind(name=start,async=true)
 		llae::result_promise_ptr<void> async_start(llae::app& a,llae::buffer_base_ptr key);
 
 		llae::result<void> sync_update(const llae::write_buffers& buffers);
+		/// @luabind(name=update,async=true)
 		llae::result_promise_ptr<void> lasync_update(lua::state& l);
 
 		llae::result<llae::buffer_base_ptr> sync_finish();
+		/// @luabind(name=finish,async=true)
 		llae::result_promise_ptr<llae::buffer_base_ptr> async_finish(llae::app& a);
 		
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& l);
 	};
 
 }

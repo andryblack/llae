@@ -1,5 +1,4 @@
 #include "random.h"
-#include "lua/bind.h"
 #include "crypto.h"
 #include "llae/buffer.h"
 #include "mbedtls/entropy.h"
@@ -34,11 +33,6 @@ namespace crypto {
 		return {1};
 	}
 
-	void entropy::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&entropy::lnew);
-		lua::bind::function(l,"update_manual",&entropy::update_manual);
-	}
-	
 	random::random(entropy_ptr&& e) : m_enthropy(std::move(e))  {
 		mbedtls_ctr_drbg_init( &m_ctr_drbg );
 		if (!m_enthropy) {
@@ -85,12 +79,6 @@ namespace crypto {
 		auto e = lua::stack<entropy_ptr>::get(l,1);
 		lua::push(l,random_ptr(new random( std::move(e) )));
 		return {1};
-	}
-
-	void random::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&random::lnew);
-		lua::bind::function(l,"update",&random::update);
-		lua::bind::function(l,"seed",&random::lseed);
 	}
 
 }

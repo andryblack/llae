@@ -46,13 +46,6 @@ namespace crypto {
 	}
 	
 
-	void md::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&md::lnew);
-		lua::bind::function(l,"get_length",&md::get_length);
-		llae::async_function(l,"update",&md::lasync_update);
-		llae::async_function(l,"finish",&md::async_finish);
-	}
-
 	const mbedtls_md_info_t* md::get_info(lua::state& l, int idx) {
 		if (l.get_type(idx) == lua::value_type::string) {
 			return mbedtls_md_info_from_string(l.tostring(idx));

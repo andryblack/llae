@@ -4,7 +4,6 @@
 #include "llae/work.h"
 #include "rsa.h"
 #include "random.h"
-#include "lua/bind.h"
 #include "llae/app.h"
 #include "llae/async_bind.h"
 
@@ -90,14 +89,6 @@ namespace crypto {
 		return work_t::start(a, [self = pk_ptr(this),lbuffer = std::move(buffer),lrandom = std::move(random)](){
 			return self->sync_encrypt(lbuffer, lrandom);
 		});
-	}
-
-	void pk::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&pk::lnew);
-		lua::bind::function(l,"parse_public_key",&pk::parse_public_key);
-		lua::bind::function(l,"get_name",&pk::get_name);
-		lua::bind::function(l,"get_rsa",&pk::get_rsa);
-		llae::async_function(l,"encrypt", &pk::async_encrypt);
 	}
 
 	lua::multiret pk::lnew(lua::state& l) {

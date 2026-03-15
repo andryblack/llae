@@ -6,6 +6,7 @@
 
 namespace crypto {
 
+	/// @luabind
 	class rsa_base : public meta::object {
 		META_OBJECT
 	protected:
@@ -14,9 +15,8 @@ namespace crypto {
 	public:
 		~rsa_base();
 
+		/// @luabind
 		lua::multiret set_padding(lua::state& l);
-
-		static void lbind(lua::state& l);
 	};
 
 }

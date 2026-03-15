@@ -1,6 +1,5 @@
 #include "bignum.h"
 #include "lua/stack.h"
-#include "lua/bind.h"
 #include "llae/buffer.h"
 #include <memory>
 #include "llae-private/mbedtls/error.h"
@@ -270,40 +269,6 @@ namespace crypto {
         auto bit = l.checkinteger(2);
         auto value = l.toboolean(3);
         check_error(l,mbedtls_mpi_set_bit(&m_mpi,bit,value ? 1 : 0));
-    }
-
-    void bignum::lbind(lua::state& l) {
-        lua::bind::function(l,"new",&bignum::lnew);
-        lua::bind::function(l,"random",&bignum::lrandom);
-        lua::bind::function(l,"__add",&bignum::add);
-        lua::bind::function(l,"__mul",&bignum::mul);
-        lua::bind::function(l,"__sub",&bignum::sub);
-        lua::bind::function(l,"__div",&bignum::div);
-        lua::bind::function(l,"__tostring",&bignum::tostring);
-        lua::bind::function(l,"__lt",&bignum::less);
-        lua::bind::function(l,"__le",&bignum::lequal);
-        lua::bind::function(l,"__eq",&bignum::equal);
-        lua::bind::function(l,"tostring",&bignum::tostring);
-        lua::bind::function(l,"add",&bignum::add);
-        lua::bind::function(l,"mul",&bignum::mul);
-        lua::bind::function(l,"sub",&bignum::sub);
-        lua::bind::function(l,"div",&bignum::div);
-        lua::bind::function(l,"mod",&bignum::mod);
-        lua::bind::function(l,"equal",&bignum::equal);
-        lua::bind::function(l,"self_lshift",&bignum::self_lshift);
-        lua::bind::function(l,"self_rshift",&bignum::self_rshift);
-        lua::bind::function(l,"exp_mod",&bignum::exp_mod);
-        lua::bind::function(l,"is0",&bignum::is0);
-        lua::bind::function(l,"get_bit",&bignum::get_bit);
-        lua::bind::function(l,"set_bit",&bignum::lset_bit);
-
-        lua::bind::function(l,"self_add",&bignum::self_add);
-        lua::bind::function(l,"self_mul",&bignum::self_mul);
-        lua::bind::function(l,"self_sub",&bignum::self_sub);
-        lua::bind::function(l,"write",&bignum::write);
-        lua::bind::function(l,"write_le",&bignum::write_le);
-        lua::bind::function(l,"read",&bignum::read);
-        lua::bind::function(l,"read_le",&bignum::read_le);
     }
 
     lua::multiret bignum::lnew(lua::state& l) {

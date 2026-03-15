@@ -9,6 +9,7 @@
 
 namespace crypto {
 
+	/// @luabind
 	class entropy : public meta::object {
 		META_OBJECT
 	private:
@@ -21,12 +22,14 @@ namespace crypto {
 
 		int read(unsigned char* dst, size_t len);
 
+		/// @luabind
 		lua::multiret update_manual(lua::state& l);
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& s);
 	};
 	using entropy_ptr = common::intrusive_ptr<entropy>;
 
+	/// @luabind
 	class random : public meta::object {
 		META_OBJECT
 	private:
@@ -40,17 +43,19 @@ namespace crypto {
         
         mbedtls_ctr_drbg_context* get() { return &m_ctr_drbg; }
 
+		/// @luabind
 		lua::multiret update(lua::state& l);
 
 		int seed(const llae::buffer_view& pers);
+		/// @luabind(name=seed)
 		lua::multiret lseed(lua::state& l);
 
 		static int read_func(void *p_rng,
                             unsigned char *output, size_t output_len);
 		int read(unsigned char *output, size_t output_len);
 
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& s);
 	};
 
 	using random_ptr = common::intrusive_ptr<random>;

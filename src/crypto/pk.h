@@ -11,6 +11,7 @@
 
 namespace crypto {
 
+	/// @luabind
 	class pk : public meta::object {
 		META_OBJECT
 	private:
@@ -19,15 +20,19 @@ namespace crypto {
 		pk();
 		~pk();
 
+		/// @luabind
 		lua::multiret parse_public_key(lua::state& l);
+		/// @luabind
 		lua::multiret get_name(lua::state& l);
+		/// @luabind
 		lua::multiret get_rsa(lua::state& l);
 
 		llae::result<llae::buffer_base_ptr> sync_encrypt(const llae::buffer_base_ptr& buffer,const random_ptr& random);
+		/// @luabind(name=encrypt,async=true)
 		llae::result_promise_ptr<llae::buffer_base_ptr> async_encrypt(llae::app& a,llae::buffer_base_ptr buffer,random_ptr random);
 		
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& l);
 	};
 
 }

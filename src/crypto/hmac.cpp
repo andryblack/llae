@@ -6,7 +6,6 @@
 #include "llae/buffer.h"
 #include "llae/app.h"
 #include "common/intrusive_ptr.h"
-#include "lua/bind.h"
 #include "lua/stack.h"
 #include "llae/write_buffers.h"
 #include "llae/async_bind.h"
@@ -116,14 +115,6 @@ namespace crypto {
 	}
 
 	
-	void hmac::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&hmac::lnew);
-		llae::async_function(l,"start",&hmac::async_start);
-		lua::bind::function(l,"reset",&hmac::reset);
-		llae::async_function(l,"update",&hmac::lasync_update);
-		llae::async_function(l,"finish",&hmac::async_finish);
-	}
-
 	lua::multiret hmac::lnew(lua::state& l) {
 		auto info = md::get_info(l,1);
 		if (!info) {

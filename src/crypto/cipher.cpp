@@ -6,7 +6,6 @@
 #include "llae/result.h"
 #include "llae/sequental.h"
 #include "llae/work.h"
-#include "lua/bind.h"
 #include "crypto.h"
 #include "llae/write_buffers.h"
 #include "llae/async_bind.h"
@@ -306,26 +305,6 @@ namespace crypto {
 		auto ret = mbedtls_cipher_check_tag(&m_ctx,
 			reinterpret_cast<const unsigned char*>(data.get_base()), data.get_len());
 		return make_result(ret);
-	}
-
-	void cipher::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&cipher::lnew);
-		lua::bind::function(l,"get_block_size",&cipher::get_block_size);
-		lua::bind::function(l,"get_iv_size",&cipher::get_iv_size);
-		lua::bind::function(l,"set_iv",&cipher::set_iv);
-		lua::bind::function(l,"set_key",&cipher::set_key);
-		lua::bind::function(l,"set_padding",&cipher::set_padding);
-		lua::bind::function(l,"reset",&cipher::reset);
-		
-		llae::async_function(l, "update", &cipher::lasync_update);
-		llae::async_function(l, "update_ad", &cipher::async_update_ad);
-		llae::async_function(l, "finish", &cipher::async_finish);
-		llae::async_function(l, "crypt", &cipher::async_crypt);
-		llae::async_function(l, "auth_encrypt", &cipher::async_auth_encrypt);
-		llae::async_function(l, "auth_decrypt", &cipher::async_auth_decrypt);
-
-		lua::bind::function(l,"write_tag",&cipher::write_tag);
-		lua::bind::function(l,"check_tag",&cipher::check_tag);
 	}
 
 	lua::multiret cipher::lnew(lua::state& l) {

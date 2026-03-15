@@ -22,6 +22,7 @@ namespace crypto {
     class ecp_point;
 	using ecp_point_ptr = common::intrusive_ptr<ecp_point>;
 
+	/// @luabind
 	class ecp_point : public meta::object {
 		META_OBJECT
 	private:
@@ -33,16 +34,21 @@ namespace crypto {
 		const mbedtls_ecp_point* get() const { return &m_point;}
         mbedtls_ecp_point* get() { return &m_point;}
 
+		/// @luabind
 		void set_zero();
+		/// @luabind
 		bool is_zero();
+		/// @luabind
 		bool cmp(const ecp_point_ptr& pnt) const;
+		/// @luabind
 		lua::multiret read_string(lua::state& l);
        
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& l);
 	};
 	
 
+	/// @luabind
 	class ecp : public meta::object {
 		META_OBJECT
 	private:
@@ -56,23 +62,37 @@ namespace crypto {
 	public:
 		~ecp();
 
+		/// @luabind
         lua::multiret point_read_binary(lua::state& l);
+		/// @luabind
         lua::multiret point_write_binary(lua::state& l);
+		/// @luabind
 		bool check_pubkey(const ecp_point_ptr& pnt) const;
+		/// @luabind
         bool check_privkey(const bignum_ptr& pnt) const;
+		/// @luabind
         lua::multiret ecdsa_verify(lua::state& l);
+		/// @luabind
         lua::multiret ecdsa_sign(lua::state& l);
+		/// @luabind
         lua::multiret gen_keypair(lua::state& l);
+		/// @luabind
         lua::multiret gen_privkey(lua::state& l);
+		/// @luabind
         lua::multiret gen_pubkey(lua::state& l);
+		/// @luabind
         void set_random_data(const llae::buffer_view& data);
+		/// @luabind
 		void set_random(const random_ptr& r) { m_random = r; }
+		/// @luabind
 		lua::multiret ecdh_gen_public(lua::state& l);
+		/// @luabind
 		lua::multiret ecdh_compute_shared(lua::state& l);
-        
-		lua::multiret scalar_mul(lua::state& l);
+		/// @luabind
+        lua::multiret scalar_mul(lua::state& l);
+
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& l);
 	};
 	using ecp_ptr = common::intrusive_ptr<ecp>;
 }

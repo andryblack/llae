@@ -1,7 +1,6 @@
 #include "ecp.h"
 #include "crypto.h"
 #include "bignum.h"
-#include "lua/bind.h"
 #include "llae/buffer.h"
 #include "lua/stack.h"
 #include "random.h"
@@ -47,14 +46,6 @@ namespace crypto {
 		l.pushnil();
         push_error(l,"read_string failed, code:%d, %s",r);
         return {2};
-	}
-
-	void ecp_point::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&ecp_point::lnew);
-		lua::bind::function(l,"set_zero",&ecp_point::set_zero);
-		lua::bind::function(l,"is_zero",&ecp_point::is_zero);
-		lua::bind::function(l,"cmp",&ecp_point::cmp);
-		lua::bind::function(l,"read_string",&ecp_point::read_string);
 	}
 
 	lua::multiret ecp_point::lnew(lua::state& l) {
@@ -320,24 +311,6 @@ namespace crypto {
         push_error(l,"scalar_mul failed, code:%d, %s",res);
         return {2};
     }
-	void ecp::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&ecp::lnew);
-		lua::bind::function(l,"check_pubkey",&ecp::check_pubkey);
-        lua::bind::function(l,"check_privkey",&ecp::check_privkey);
-        lua::bind::function(l,"point_read_binary",&ecp::point_read_binary);
-        lua::bind::function(l,"point_write_binary",&ecp::point_write_binary);
-        lua::bind::function(l,"ecdsa_verify",&ecp::ecdsa_verify);
-        lua::bind::function(l,"ecdsa_sign",&ecp::ecdsa_sign);
-        lua::bind::function(l,"gen_privkey",&ecp::gen_privkey);
-        lua::bind::function(l,"gen_pubkey",&ecp::gen_pubkey);
-        lua::bind::function(l,"gen_keypair",&ecp::gen_keypair);
-        lua::bind::function(l,"set_random_data",&ecp::set_random_data);
-        lua::bind::function(l,"set_random",&ecp::set_random);
-        lua::bind::function(l,"ecdh_gen_public",&ecp::ecdh_gen_public);
-        lua::bind::function(l,"ecdh_compute_shared",&ecp::ecdh_compute_shared);
-        lua::bind::function(l,"scalar_mul",&ecp::scalar_mul);
-	}
-
 	lua::multiret ecp::lnew(lua::state& l) {
 		const char* name = l.checkstring(1);
 		auto info = mbedtls_ecp_curve_info_from_name(name);
