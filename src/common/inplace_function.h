@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <utility>
 #include <cassert>
+#include <cstring>
 
 namespace common {
 
