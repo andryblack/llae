@@ -455,11 +455,23 @@ function Project:generate_bindings( )
 	local all_bind_headers = {}
 	for _,conf in ipairs(self._env.bind_headers or {}) do
 		conf.root = self:get_root()
+		if conf.filename then
+			conf.filename = utils.replace_tokens(conf.filename,self._env)
+		end
+		if conf.dir then
+			conf.dir = utils.replace_tokens(conf.dir,self._env)
+		end
 		table.insert(all_bind_headers,conf)
 	end
 	for _,m in ipairs(self._modules_list) do
 		for _,conf in ipairs(m:get_bind_headers()) do
 			conf.root = m:get_location() or self:get_root()
+			if conf.filename then
+				conf.filename = utils.replace_tokens(conf.filename,m:get_env())
+			end
+			if conf.dir then
+				conf.dir = utils.replace_tokens(conf.dir,m:get_env())
+			end
 			table.insert(all_bind_headers,conf)
 		end
 	end

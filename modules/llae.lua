@@ -173,7 +173,7 @@ dependencies = {
 
 bind_headers = {
 	{
-		dir = 'src/crypto',
+		dir = '${dir}/src/crypto',
 	}
 }
 
