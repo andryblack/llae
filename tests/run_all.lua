@@ -50,6 +50,7 @@ end
 local async = require 'llae.async'
 local fs = require 'llae.fs'
 local path = require 'llae.path'
+local llae = require 'llae'
 async.run(function()
 	for _,v in ipairs(fs.scanfiles_r('tests')) do
 		local filename = path.basename(v)
@@ -58,5 +59,8 @@ async.run(function()
 			dofile(path.join('tests',v))
 		end
 	end
-	os.exit( lu.LuaUnit.run(table.unpack(bypassargs)) )
+	local before_tests = llae.get_stack()
+	local res = lu.LuaUnit.run(table.unpack(bypassargs))
+	assert(before_tests == llae.get_stack())
+	os.exit( res )
 end)

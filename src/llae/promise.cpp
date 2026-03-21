@@ -37,14 +37,15 @@ namespace llae {
                 }
                 l.checkstack(2);
                 cont_m.push(l);
-                cont_m.reset(l);
                 auto toth = l.tothread(-1);
+                l.pop(1);// thread, at cont_m
                 toth.checkstack(3);
                 int nargs = p.push(toth);
                 auto s = toth.resume(l,nargs);
                 if (s != lua::status::ok && s != lua::status::yield) {
                     app::show_error(toth,s);
                 }
+                cont_m.reset(l);
             };
             await( std::move(func));
         }

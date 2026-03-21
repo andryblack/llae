@@ -15,6 +15,8 @@ function llae.release_object(obj) end
 function llae.resume(cont, ...) end
 ---@return string
 function llae.get_host_platform() end
+---@return integer
+function llae.get_stack() end
 
 ---@class llae.buffer_base
 local buffer_base = {}
