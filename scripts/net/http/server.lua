@@ -1,5 +1,6 @@
 local uv = require 'uv'
 local log = require 'llae.log'
+local async = require 'llae.async'
 
 -- server
 
@@ -33,8 +34,17 @@ end
 function server:listen( port, addr , backlog )
 	local res,err = self._server:bind(addr or '127.0.0.1',port)
 	if not res then return nil,err end
-	return self._server:listen(backlog or server.defaults.backlog,function(err)
-		self:on_connection(err)
+	async.run(function()
+		while true do
+			local res,err = self._server:listen(backlog or server.defaults.backlog)
+			if not res then
+				if err then
+					log.error('failed listen',err)
+				end
+				break
+			end
+			self:on_connection()
+		end
 	end)
 end
 
@@ -63,8 +73,7 @@ function server:_read_function( client , cb )
 	client:close()
 end
 
-function server:on_connection( err )
-	assert(not err, err)
+function server:on_connection( )
 	local client = uv.tcp_connection.new()
 	local res,err = self._server:accept(client)
 	if not res then

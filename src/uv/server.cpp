@@ -4,6 +4,7 @@
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
 #include "lua/bind.h"
+#include "llae/async_bind.h"
 
 META_OBJECT_INFO(uv::server,uv::handle)
 
@@ -17,11 +18,11 @@ namespace uv {
 	}
 
 	void server::on_closed() {
-        if (llae::app::closed(get_stream()->loop)) {
-            m_conn_cb.release();
-        } else {
-            m_conn_cb.reset(llae::app::get(get_stream()->loop).lua());
+        if (m_listen_promise) {
+			auto result = std::move(m_listen_promise);
+			result->set_result(llae::result<void>(llae::string_error::create("server closed")));
         }
+		handle::on_closed();
 	}
 
 	void server::connection_cb(uv_stream_t* s, int status) {
@@ -31,64 +32,61 @@ namespace uv {
 	}
 
 	void server::on_connection(int st) {
-		if (m_conn_cb.valid()) {
-			auto& l = llae::app::get(get_stream()->loop).lua();
-			l.checkstack(2);
-			m_conn_cb.push(l);
-
+		if (m_listen_promise) {
+			auto result = std::move(m_listen_promise);
 			if (st < 0) {
-				uv::push_error(l,st);
-			} else {
-				l.pushnil();
-			}
-			auto r = l.pcall(1,0,0);
-			if (r != lua::status::ok) {
-				llae::app::show_error(l,r);
+				result->set_result(status_error::create(st));
+ 			} else {
+				result->set_result(llae::result<void>());
 			}
 		}
 	}
 
-	lua::multiret server::listen(lua::state& l) {
-        if (m_conn_cb.valid()) {
-            l.pushnil();
-            l.pushstring("already listen");
-            return {2};
-        }
-		auto backlog = l.checkinteger(2);
-		l.checktype(3,lua::value_type::function);
-		l.pushvalue(3);
-		m_conn_cb.set(l);
-		int res = uv_listen(get_stream(),int(backlog),&server::connection_cb);
-		if (res < 0) {
-			l.pushnil();
-			uv::push_error(l,res);
-			return {2};
+	llae::result_promise_ptr<void> server::listen(lua::state& l) {
+		if (m_listen_promise) {
+			return llae::result_promise_forward_error<void>(llae::string_error::create("already listening"));
 		}
-		l.pushboolean(true);
-		return {1};
+		if (m_state == state_t::s_closing) {
+			m_state = state_t::s_none;
+			return llae::result_promise_forward_error<void>(llae::string_error::create("server closing"));
+		}
+        auto backlog = l.checkinteger(2);
+		m_listen_promise = common::make_intrusive<llae::result_promise<void>>();
+		if (m_state == state_t::s_none) {
+			int res = uv_listen(get_stream(),int(backlog),&server::connection_cb);
+			if (res < 0) {
+				m_listen_promise.reset();
+				return llae::result_promise_forward_error<void>(status_error::create(res));
+			}
+			m_state = state_t::s_listening;
+		}
+		return m_listen_promise;
 	}
 
-	lua::multiret server::accept(lua::state& l,const stream_ptr& stream) {
+	llae::result<void> server::accept(lua::state& l,const stream_ptr& stream) {
         assert(stream);
         assert(!stream->is_closing());
         assert(!stream->is_closed());
 		int res = uv_accept(get_stream(),stream->get_stream());
-		if (res < 0) {
-			l.pushnil();
-			uv::push_error(l,res);
-			return {2};
-		}
-		l.pushboolean(true);
-		return {1};
+		return make_result(res);
 	}
 
 	void server::stop(lua::state& l) {
-		m_conn_cb.reset(l);
-		close();
+		if (m_state == state_t::s_closing) {
+			return;
+		}
+		m_state = state_t::s_closing;
+		if (m_listen_promise) {
+			auto result = std::move(m_listen_promise);
+			result->set_result(llae::result<void>(llae::string_error::create("server close")));
+        }
+		if (!is_closing()) {
+			close();
+		}
 	}
 
 	void server::lbind(lua::state& l) {
-		lua::bind::function(l,"listen",&server::listen);
+		llae::async_function(l,"listen",&server::listen);
 		lua::bind::function(l,"accept",&server::accept);
 		lua::bind::function(l,"stop",&server::stop);
 	}

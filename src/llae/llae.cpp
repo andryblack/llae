@@ -3,6 +3,7 @@
 #include "llae/promise.h"
 #include "lua/bind.h"
 #include "logger.h"
+#include "lua/types.h"
 #include "uv/fs.h"
 #include "error.h"
 #include "result.h"
@@ -52,11 +53,25 @@ namespace llae {
         return 0;
     }
  
-    static int lua_resume(lua_State* L) {
-        lua::state l(L);
-        app::lua_resume(l);
-        return 0;
-    }   
+    static lua::multiret lua_resume(lua::state& l) {
+        l.checktype(1,lua::value_type::thread);
+        auto n = l.gettop();
+        auto t = l.tothread(1);
+        for (int i=2;i<=n;++i) {
+            l.pushvalue(i);
+            t.xmove(l,1);
+        }
+        auto s = t.resume(l,n-1);
+        if (s!=lua::status::yield && s!=lua::status::ok) {
+            app::show_error(t,s);
+        }
+        return {0};
+    }
+
+    static lua::multiret lua_get_stack(lua::state& l) {
+        l.pushinteger(l.gettop());
+        return {1};
+    }
 
     static int lua_get_host_platform(lua_State* L) {
     	lua::state l(L);
@@ -104,6 +119,7 @@ int luaopen_llae(lua_State* L) {
     lua::bind::function(l, "resume", llae::lua_resume );
     lua::bind::function(l, "get_host_platform", llae::lua_get_host_platform );
     lua::bind::function(l, "set_error_handler", set_error_handler );
+    lua::bind::function(l, "get_stack", llae::lua_get_stack );
 
     lua::bind::object<llae::buffer>::get_metatable(l);
 	l.setfield(-2,"buffer");

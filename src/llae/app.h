@@ -50,7 +50,6 @@ namespace llae {
 		void set_error_handler(const error_handler_ptr& handler) { m_error_handler = handler; }
 
 		static void show_error(lua::state& l,lua::status e,bool pop=false);
-		static void lua_resume(lua::state& l);
 		
         static bool closed(uv_loop_t* l);
 		static app& get(lua_State* L);

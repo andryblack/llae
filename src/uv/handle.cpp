@@ -42,9 +42,10 @@ namespace uv {
             return;
 		}
 		if (!uv_is_closing(get_handle())) {
-            on_closed();
-			uv_close(get_handle(),&handle::close_destroy_cb);
+       		uv_close(get_handle(),&handle::close_destroy_cb);
+		    on_closed();
 		} else {
+			on_closed();
 			meta::object::destroy(); 
 		}
 	}

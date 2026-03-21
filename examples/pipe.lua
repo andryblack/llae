@@ -15,32 +15,40 @@ async.run(function()
 
 	assert(server:bind(socket))
 
-	assert(server:listen(10,function(err)
-		if err then
-			log.error('listen',err)
-			server:stop()
-		end
-		local client = uv.pipe.new()
-		assert(server:accept(client))
-		async.run(function()
-			while true do
-				local data,err = client:read()
-				if not data then
-					if err then
-						log.error('server:',err)
-					end
-					break
-				end
-				log.info('server:',data)
-				client:write(data)
+	async.run(function()
+		while true do
+			log.info('listen')
+			local res,err = server:listen(10)
+			if not res then
+				log.error('listen',err)
+				server:stop()
+				break
 			end
-			client:shutdown()
-		end)
-	end))
+			log.info('accept')
+			local client = uv.pipe.new()
+			assert(server:accept(client))
+			async.run(function()
+				while true do
+					local data,err = client:read()
+					if not data then
+						if err then
+							log.error('server:',err)
+						end
+						break
+					end
+					log.info('server:',data)
+					client:write(data)
+				end
+				client:shutdown()
+			end)
+		end
+	end)
 
 	async.run(function()
 		local client = uv.pipe.new()
+		log.info('connect')
 		assert(client:connect(socket))
+		log.info('connected')
 		for i=1,10 do
 			client:write('msg'..i)
 			log.info('client:',client:read())

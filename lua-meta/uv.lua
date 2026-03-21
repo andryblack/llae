@@ -113,10 +113,12 @@ function stream:add_read_buffer(buffer) end
 ---@class uv.server : uv.handle
 local server = {}
 ---@param backlog integer
----@param func function
 ---@return boolean?
 ---@return string?
-function server:listen(backlog,func) end
+function server:listen(backlog) end
+---@param backlog integer
+---@return llae.promise<boolean> promise
+function server:listen_async(backlog) end
 ---@param client uv.stream
 ---@return boolean?
 ---@return string?

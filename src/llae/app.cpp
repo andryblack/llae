@@ -181,23 +181,6 @@ namespace llae {
         self.process_error(e);
     }
 
-    void app::lua_resume(lua::state& l) {
-        l.checktype(1,lua::value_type::thread);
-        auto n = l.gettop();
-        auto t = l.tothread(1);
-        for (int i=2;i<=n;++i) {
-            l.pushvalue(i);
-            t.xmove(l,1);
-        }
-        auto s = t.resume(l,n-1);
-        if (s!=lua::status::yield && s!=lua::status::ok) {
-            show_error(t,s);
-        }
-    }
-    
-    
-
-   
    
 }
 

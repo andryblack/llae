@@ -2,15 +2,20 @@
 
 #include "handle.h"
 #include "stream.h"
-#include "lua/ref.h"
+#include "llae/promise.h"
 
 namespace uv {
 
 	class server : public handle {
 		META_OBJECT
 	private:
-		lua::ref m_conn_cb;
 		static void connection_cb(uv_stream_t* server, int status);
+		llae::result_promise_ptr<void> m_listen_promise;
+		enum class state_t {
+			s_none,
+			s_listening,
+			s_closing
+		} m_state = state_t::s_none;
 	protected:
 		virtual uv_stream_t* get_stream() = 0;
 		virtual void on_connection(int st);
@@ -20,8 +25,8 @@ namespace uv {
 	public:
 		static void lbind(lua::state& l);
 
-		lua::multiret listen(lua::state& l);
+		llae::result_promise_ptr<void> listen(lua::state& l);
 		void stop(lua::state& l);
-		lua::multiret accept(lua::state& l,const stream_ptr& stream);
+		llae::result<void> accept(lua::state& l,const stream_ptr& stream);
 	};
 }
