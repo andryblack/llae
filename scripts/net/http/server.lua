@@ -46,6 +46,7 @@ function server:listen( port, addr , backlog )
 			self:on_connection()
 		end
 	end)
+	return true
 end
 
 --- Stops the server and closes all connections.
