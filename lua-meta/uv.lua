@@ -118,7 +118,7 @@ local server = {}
 function server:listen(backlog) end
 ---@param backlog integer
 ---@return llae.promise<boolean> promise
-function server:listen_async(backlog) end
+function server:async_listen(backlog) end
 ---@param client uv.stream
 ---@return boolean?
 ---@return string?
