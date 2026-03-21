@@ -1,6 +1,6 @@
 
 name = 'luaunit'
-version = 'master'
+version = 'main'
 url = 'https://github.com/bluebird75/luaunit.git'
 dir =  name .. '-' .. version 
 
