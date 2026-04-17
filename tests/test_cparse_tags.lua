@@ -305,3 +305,68 @@ function TestTagsComment:test_multiline_doc_comment_clean_preserved()
   lu.assertEquals(clean[1], 'Brief description')
 end
 
+-- ============================================================
+TestTagsValueList = {}
+-- ============================================================
+
+function TestTagsValueList:test_commas_inside_angle_brackets()
+  local t = tags.parse('@luabind(policy=foo<a,b>)')
+  local v = t:first('luabind').value
+  lu.assertEquals(v.policy, 'foo<a,b>')
+end
+
+function TestTagsValueList:test_commas_inside_braces()
+  local t = tags.parse('@luabind(opts={a=1,b=2})')
+  local v = t:first('luabind').value
+  lu.assertNotNil(v.opts)
+  lu.assertStrContains(v.opts, '{a=1,b=2}')
+end
+
+function TestTagsValueList:test_nested_parens_and_templates()
+  local t = tags.parse('@bind(a=b(c<d,e>),f=g)')
+  local v = t:first('bind').value
+  lu.assertEquals(v.a, 'b(c<d,e>)')
+  lu.assertEquals(v.f, 'g')
+end
+
+function TestTagsValueList:test_parse_value_list_direct()
+  local v = tags.parse_value_list('x=1<2,3>,y=z')
+  lu.assertEquals(v.x, '1<2,3>')
+  lu.assertEquals(v.y, 'z')
+end
+
+function TestTagsValueList:test_split_first_value()
+  local a, b = tags.split_first_value('name, k=v, x')
+  lu.assertEquals(a, 'name')
+  lu.assertEquals(b, 'k=v, x')
+end
+
+-- ============================================================
+TestTagsMerge = {}
+-- ============================================================
+
+function TestTagsMerge:test_merge_order_and_clean()
+  local a = tags.parse('/// line one')
+  local b = tags.new({ { tag = 'luabind', value = { readonly = 'true' } } })
+  local m = tags.merge(a, b)
+  lu.assertTrue(m:has('luabind'))
+  lu.assertEquals(m:collect('luabind').readonly, 'true')
+  local c = m:get_clean()
+  lu.assertNotNil(c)
+  lu.assertEquals(c[1], 'line one')
+end
+
+function TestTagsMerge:test_ensure_tag_prepends()
+  local t = tags.parse('@bind(name=x)')
+  t:ensure_tag('luabind', {})
+  lu.assertTrue(t:has('luabind'))
+  lu.assertEquals(t._list[1].tag, 'luabind')
+  lu.assertEquals(t._list[2].tag, 'bind')
+end
+
+function TestTagsMerge:test_ensure_tag_noop_when_present()
+  local t = tags.parse('/// @luabind(prefix=p_)')
+  t:ensure_tag('luabind', {})
+  lu.assertEquals(#t:get('luabind'), 1)
+end
+

@@ -127,6 +127,7 @@ function bind_module:get_bind_name()
 end
 
 local lua_type_map = {
+    ['extern_constant'] = 'nil',
     ['int'] = 'integer',
     ['size_t'] = 'integer',
     ['float'] = 'number',
@@ -593,8 +594,8 @@ function traverser:_get_current_bind()
 end
 
 function traverser:traverse_class(node)
-    local tags = tags.parse(node.doc or '')
-    local bind = tags:collect('luabind')
+    local node_tags = node.tags or tags.new()
+    local bind = node_tags:collect('luabind')
     if bind then
         local current_bind = self:_get_current_bind()
         local class = bind_class.new(node, self:get_full_name(), bind)
@@ -604,7 +605,7 @@ function traverser:traverse_class(node)
         table.insert(self._result.classes, class)
         table.insert(self._bind_stack, class)
         class:set_bases(node.bases or {})
-        class:set_tags(tags)
+        class:set_tags(node_tags)
     end
     traverser.baseclass.traverse_class(self, node)
     if bind then
@@ -623,8 +624,8 @@ function traverser:get_module_name()
 end
 
 function traverser:traverse_using(node)
-    local tags = tags.parse(node.doc or '')
-    local bind = tags:collect('luabind')
+    local node_tags = node.tags or tags.new()
+    local bind = node_tags:collect('luabind')
     if bind then
         local current_bind = self:_get_current_bind()
         local module = self._processor:get_module(current_bind or self:get_module_name())
@@ -638,41 +639,41 @@ function traverser:traverse_using(node)
 end
 
 function traverser:traverse_func(node)
-    local tags = tags.parse(node.doc or '')
-    local bind = tags:collect('luabind')
+    local node_tags = node.tags or tags.new()
+    local bind = node_tags:collect('luabind')
     if bind then
         local current_bind = self:_get_current_bind()
         if current_bind then
             local method = bind_method.new(node, self:get_full_name(), bind)
             current_bind:add_method(method)
-            method:set_tags(tags)
+            method:set_tags(node_tags)
             method:set_class(current_bind)
         else
             local func = bind_func.new(node, self:get_full_name(), bind)
             local module = self._processor:get_module(func:get_module_name())
             module:add_function(func)
             self._result.modules[module:get_name()] = module
-            func:set_tags(tags)
+            func:set_tags(node_tags)
         end
     end
     traverser.baseclass.traverse_func(self, node)
 end
 
 function traverser:traverse_field(node)
-    local tags = tags.parse(node.doc or '')
-    local bind = tags:collect('luabind')
+    local node_tags = node.tags or tags.new()
+    local bind = node_tags:collect('luabind')
     if bind then
         local current_bind = self:_get_current_bind()
         if current_bind then
             local field = bind_field.new(node, self:get_full_name(), bind)
             current_bind:add_field(field)
-            field:set_tags(tags)
+            field:set_tags(node_tags)
         else
             local value = bind_value.new(node, self:get_full_name(), bind)
             local module = self._processor:get_module(value:get_module_name())
             module:add_value(value)
             self._result.modules[module:get_name()] = module
-            value:set_tags(tags)
+            value:set_tags(node_tags)
         end
     end
     traverser.baseclass.traverse_field(self, node)
@@ -680,8 +681,8 @@ end
 
 function traverser:traverse_enum(node)
     if node.forward then return end
-    local tags = tags.parse(node.doc or '')
-    local bind = tags:collect('luabind')
+    local node_tags = node.tags or tags.new()
+    local bind = node_tags:collect('luabind')
     if bind then
         local current_bind = self:_get_current_bind()
         local enum = bind_enum.new(node, self:get_full_name(), bind, node.values, node.is_scoped)
@@ -692,7 +693,7 @@ function traverser:traverse_enum(node)
             module:add_enum(enum)
             self._result.modules[module:get_name()] = module
         end
-        enum:set_tags(tags)
+        enum:set_tags(node_tags)
     end
 end
 

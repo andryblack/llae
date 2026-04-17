@@ -1,7 +1,7 @@
 local class = require 'llae.class'
 
 ---@class token
----@field kind string  "keyword"|"ident"|"number"|"string"|"char"|"punct"|"doc_comment"|"eof"
+---@field kind string  "keyword"|"ident"|"number"|"string"|"char"|"punct"|"doc_comment"|"field_binding"|"func_binding"|"eof"
 ---@field value string
 ---@field line integer
 ---@field new fun(kind: string, value: string, line: integer): token
@@ -54,6 +54,18 @@ end
 ---@return boolean
 function token:is_doc()
   return self.kind == "doc_comment"
+end
+
+---True if this is an @field(...) binding directive (only lexed in extern-parse mode).
+---@return boolean
+function token:is_field_binding()
+  return self.kind == "field_binding"
+end
+
+---True if this is an @func(...) stub directive (only lexed in extern-parse mode).
+---@return boolean
+function token:is_func_binding()
+  return self.kind == "func_binding"
 end
 
 ---True if this is the end-of-file sentinel.

@@ -16,6 +16,14 @@ local function first(src)
   return ast.children[1]
 end
 
+local function clean_text_join(t)
+  local c = t:get_clean()
+  if not c then
+    return ''
+  end
+  return table.concat(c, '\n')
+end
+
 -- ============================================================
 TestParserBasic = {}
 
@@ -151,7 +159,7 @@ function TestParserClass:test_class_with_constructor2()
 ]]
   lu.assertEquals(n.children[2].kind, "function")
   lu.assertEquals(n.children[2].name, "test_bind_fields")
-  lu.assertStrContains(n.children[2].doc, "luabind")
+  lu.assertTrue(n.children[2].tags:has("luabind"))
 end
 
 
@@ -485,30 +493,27 @@ function TestParserDocComment:test_doc_attached_to_function()
   local src = "/// Get the value\nvoid getValue();"
   local n = first(src)
   lu.assertEquals(n.kind, "function")
-  lu.assertNotNil(n.doc)
-  lu.assertStrContains(n.doc, "Get the value")
+  lu.assertStrContains(clean_text_join(n.tags), "Get the value")
 end
 
 function TestParserDocComment:test_doc_attached_to_class()
   local src = "/** My class */\nclass Foo {};"
   local n = first(src)
   lu.assertEquals(n.kind, "class")
-  lu.assertNotNil(n.doc)
-  lu.assertStrContains(n.doc, "My class")
+  lu.assertStrContains(clean_text_join(n.tags), "My class")
 end
 
 function TestParserDocComment:test_doc_attached_to_field()
   local src = "struct S { /// field doc\nint x; };"
   local n = first(src)
   local f = n.children[1]
-  lu.assertNotNil(f.doc)
-  lu.assertStrContains(f.doc, "field doc")
+  lu.assertStrContains(clean_text_join(f.tags), "field doc")
 end
 
 function TestParserDocComment:test_doc_attached_to_namespace()
   local src = "/// ns doc\nnamespace Foo {}"
   local n = first(src)
-  lu.assertNotNil(n.doc)
+  lu.assertNotNil(n.tags:get_clean())
 end
 
 function TestParserDocComment:test_regular_comment_not_doc()
@@ -516,7 +521,8 @@ function TestParserDocComment:test_regular_comment_not_doc()
   -- lexer is fed raw source, regular // comments are just skipped
   local src = "// regular\nvoid f();"
   local n = first(src)
-  lu.assertNil(n.doc)
+  lu.assertNil(n.tags:get_clean())
+  lu.assertFalse(n.tags:has("luabind"))
 end
 
 function TestParserDocComment:test_extern_doc_block_expands_to_real_decls()
@@ -543,24 +549,22 @@ namespace ext {
   local en = ns.children[1]
   lu.assertEquals(en.kind, "enum")
   lu.assertEquals(en.name, "test_module_enum")
-  lu.assertNotNil(en.doc)
-  lu.assertStrContains(en.doc, "@luabind")
+  lu.assertTrue(en.tags:has("luabind"))
 
   local cls = ns.children[2]
   lu.assertEquals(cls.kind, "class")
   lu.assertEquals(cls.name, "test_bind_struct")
   lu.assertEquals(cls.struct_kind, "struct")
-  lu.assertNotNil(cls.doc)
-  lu.assertStrContains(cls.doc, "@luabind")
+  lu.assertTrue(cls.tags:has("luabind"))
   lu.assertEquals(cls.children[1].kind, "field")
   lu.assertEquals(cls.children[1].name, "x")
-  lu.assertStrContains(cls.children[1].doc, "@luabind")
+  lu.assertTrue(cls.children[1].tags:has("luabind"))
   lu.assertEquals(cls.children[2].kind, "enum")
   lu.assertEquals(cls.children[2].name, "state")
-  lu.assertStrContains(cls.children[2].doc, "@luabind")
+  lu.assertTrue(cls.children[2].tags:has("luabind"))
   lu.assertEquals(cls.children[3].kind, "field")
   lu.assertEquals(cls.children[3].name, "s")
-  lu.assertStrContains(cls.children[3].doc, "@luabind")
+  lu.assertTrue(cls.children[3].tags:has("luabind"))
 end
 
 function TestParserDocComment:test_extern_doc_preserves_explicit_luabind()
@@ -574,7 +578,98 @@ namespace ext {
   ]]
   local ns = first(src)
   local en = ns.children[1]
-  lu.assertStrContains(en.doc, "@luabind(prefix=foo_)")
+  local lb = en.tags:collect("luabind")
+  lu.assertNotNil(lb)
+  lu.assertEquals(lb.prefix, "foo_")
+end
+
+function TestParserDocComment:test_extern_field_directive_parses_as_fake_field()
+  local src = [[
+namespace ext {
+  /** @extern
+  struct S {
+    @field(m, readonly=true)
+    int keep;
+  };
+  */
+}
+  ]]
+  local ns = first(src)
+  local st = ns.children[1]
+  lu.assertEquals(st.kind, "class")
+  lu.assertEquals(st.name, "S")
+  lu.assertEquals(st.children[1].kind, "field")
+  lu.assertEquals(st.children[1].name, "m")
+  lu.assertEquals(st.children[1].type, "unknown_binding_type")
+  local lb = st.children[1].tags:collect("luabind")
+  lu.assertNotNil(lb)
+  lu.assertEquals(lb.readonly, "true")
+  lu.assertEquals(st.children[2].kind, "field")
+  lu.assertEquals(st.children[2].name, "keep")
+end
+
+function TestParserDocComment:test_extern_func_directive_parses_as_fake_function()
+  local src = [[
+namespace ext {
+  /** @extern
+  struct S {
+    @func(reset, static=true)
+    int keep;
+  };
+  */
+}
+  ]]
+  local ns = first(src)
+  local st = ns.children[1]
+  lu.assertEquals(st.kind, "class")
+  lu.assertEquals(st.name, "S")
+  lu.assertEquals(st.children[1].kind, "function")
+  lu.assertEquals(st.children[1].name, "reset")
+  lu.assertEquals(st.children[1].return_type, "void")
+  lu.assertEquals(#st.children[1].params, 0)
+  local lb = st.children[1].tags:collect("luabind")
+  lu.assertNotNil(lb)
+  lu.assertEquals(lb.static, "true")
+  lu.assertEquals(st.children[2].kind, "field")
+  lu.assertEquals(st.children[2].name, "keep")
+end
+
+function TestParserDocComment:test_extern_field_at_namespace_is_constant_stub()
+  local src = [[
+namespace n {
+  /** @extern
+  @field(MAX_N, readonly=true)
+  */
+}
+]]
+  local ns = first(src)
+  lu.assertEquals(ns.kind, "namespace")
+  lu.assertEquals(ns.name, "n")
+  lu.assertEquals(#ns.children, 1)
+  local c = ns.children[1]
+  lu.assertEquals(c.kind, "field")
+  lu.assertEquals(c.name, "MAX_N")
+  lu.assertEquals(c.type, "extern_constant")
+  local lb = c.tags:collect("luabind")
+  lu.assertNotNil(lb)
+  lu.assertEquals(lb.readonly, "true")
+end
+
+function TestParserDocComment:test_extern_func_at_namespace_is_function_stub()
+  local src = [[
+namespace n {
+  /** @extern
+  @func(do_work, static=true)
+  */
+}
+]]
+  local ns = first(src)
+  lu.assertEquals(#ns.children, 1)
+  local f = ns.children[1]
+  lu.assertEquals(f.kind, "function")
+  lu.assertEquals(f.name, "do_work")
+  lu.assertEquals(f.return_type, "void")
+  lu.assertEquals(f.tags:collect("luabind").static, "true")
 end
 
 function TestParserDocComment:test_regular_doc_comment_after_extern_block()
@@ -590,8 +685,7 @@ void foo();
   lu.assertEquals(#ast.children, 2)
   lu.assertEquals(ast.children[1].kind, "enum")
   lu.assertEquals(ast.children[2].kind, "function")
-  lu.assertNotNil(ast.children[2].doc)
-  lu.assertStrContains(ast.children[2].doc, "ordinary doc")
+  lu.assertStrContains(clean_text_join(ast.children[2].tags), "ordinary doc")
 end
 
 -- ============================================================
@@ -770,8 +864,7 @@ void getValue();
   ]]
   local n = first(src)
   lu.assertEquals(n.kind, "function")
-  lu.assertNotNil(n.doc)
-  lu.assertStrContains(n.doc, "Get the value")
+  lu.assertStrContains(clean_text_join(n.tags), "Get the value")
 end
 
 function TestParserDocs:test_doc_function_multi()
@@ -782,9 +875,8 @@ void getValue();
   ]]
   local n = first(src)
   lu.assertEquals(n.kind, "function")
-  lu.assertNotNil(n.doc)
-  lu.assertStrContains(n.doc, "Get the value")
-  lu.assertStrContains(n.doc, "Is a function")
+  lu.assertStrContains(clean_text_join(n.tags), "Get the value")
+  lu.assertStrContains(clean_text_join(n.tags), "Is a function")
 end
 
 function TestParserDocs:test_doc_class()
@@ -798,8 +890,7 @@ class MyClass {
   ]]
   local n = first(src)
   lu.assertEquals(n.kind, "class")
-  lu.assertNotNil(n.doc)
-  lu.assertStrContains(n.doc, "Is a class")
+  lu.assertStrContains(clean_text_join(n.tags), "Is a class")
 end
 
 TestParserFiles = {}

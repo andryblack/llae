@@ -7,7 +7,7 @@ local ast = {}
 ---@class ast_node
 ---@field kind string
 ---@field name string?
----@field doc string?
+---@field tags tags
 ---@field template_params string|nil
 ---@field attributes string|nil
 local ast_base = class(nil, 'ast_node')
@@ -26,8 +26,10 @@ end
 
 function ast_base:dump(callback,indent)
   callback((indent or '') .. self:__tostring())
-  if self.doc then
-    callback((indent or '') .. '\t' .. self.doc)
+  if self.tags then
+    for _, line in ipairs(self.tags:dump_lines()) do
+      callback((indent or '') .. '\t' .. line)
+    end
   end
 end
 

@@ -1,5 +1,18 @@
 local class = require 'llae.class'
 
+-- byte constants
+local B_DQUOTE = 34  -- '"'
+local B_SQUOTE = 39  -- "'"
+local B_BSLASH = 92  -- '\'
+local B_LPAREN = 40  -- '('
+local B_RPAREN = 41  -- ')'
+local B_COMMA  = 44  -- ','
+local B_LT     = 60  -- '<'
+local B_GT     = 62  -- '>'
+local B_LBRAK  = 91  -- '['
+local B_RBRAK  = 93  -- ']'
+local B_LBRACE = 123 -- '{'
+local B_RBRACE = 125 -- '}'
 
 -- ── tags class ────────────────────────────────────────────────────────────────
 
@@ -98,33 +111,284 @@ function tags:collect(name)
   return result
 end
 
--- ── Parsing ───────────────────────────────────────────────────────────────────
+-- ── Parsing helpers (balanced (), <>, [], {}, strings) ───────────────────────
 
 local function trim(s)
-  return s:match('^%s*(.-)%s*$')
+  return (s or ''):match('^%s*(.-)%s*$')
 end
 
--- Parses the content inside parentheses into a value table.
--- Supports positional args: "arg1,arg2" -> { "arg1", "arg2" }
--- Supports named args:      "k1=v1,k2=v2" -> { k1="v1", k2="v2" }
-local function parse_args(s)
-  local value = {}
-  if s == '' then
-    return value
-  end
-  for raw in (s .. ','):gmatch('([^,]*),') do
-    local arg = trim(raw)
-    if arg ~= '' then
-      local k, v = arg:match('^([%a_][%w_]*)%s*=%s*(.+)$')
-      if k then
-        value[k] = trim(v)
-      else
-        table.insert(value, arg)
-      end
+---Advance index `i` past a single- or double-quoted string starting at `i`.
+---@param s string
+---@param i number  index of opening quote
+---@return number  index of first char after closing quote
+local function skip_string(s, i)
+  local len = #s
+  local quote = s:byte(i)
+  i = i + 1
+  while i <= len do
+    local b = s:byte(i)
+    if b == B_BSLASH then
+      i = i + 2
+    elseif b == quote then
+      return i + 1
+    else
+      i = i + 1
     end
+  end
+  return i
+end
+
+---Find index of first top-level comma in `s`, or nil.
+---@param s string
+---@return number|nil
+local function find_first_top_comma(s)
+  local len = #s
+  local i = 1
+  local dp, da, db, dbr = 0, 0, 0, 0
+  while i <= len do
+    local b = s:byte(i)
+    if b == B_DQUOTE or b == B_SQUOTE then
+      i = skip_string(s, i)
+    elseif s:sub(i, i + 1) == '>>' then
+      da = math.max(0, da - 2)
+      i = i + 2
+    elseif b == B_LPAREN then
+      dp = dp + 1
+      i = i + 1
+    elseif b == B_RPAREN then
+      dp = math.max(0, dp - 1)
+      i = i + 1
+    elseif b == B_LT then
+      da = da + 1
+      i = i + 1
+    elseif b == B_GT then
+      da = math.max(0, da - 1)
+      i = i + 1
+    elseif b == B_LBRAK then
+      dbr = dbr + 1
+      i = i + 1
+    elseif b == B_RBRAK then
+      dbr = math.max(0, dbr - 1)
+      i = i + 1
+    elseif b == B_LBRACE then
+      db = db + 1
+      i = i + 1
+    elseif b == B_RBRACE then
+      db = math.max(0, db - 1)
+      i = i + 1
+    elseif b == B_COMMA and dp == 0 and da == 0 and db == 0 and dbr == 0 then
+      return i
+    else
+      i = i + 1
+    end
+  end
+  return nil
+end
+
+---Find index of `)` that closes the `(` at `open_idx`.
+---@param s string
+---@param open_idx number  index of `(`
+---@return number|nil
+local function find_matching_close_paren(s, open_idx)
+  local len = #s
+  local i = open_idx + 1
+  local dp, da, db, dbr = 1, 0, 0, 0
+  while i <= len do
+    local b = s:byte(i)
+    if b == B_DQUOTE or b == B_SQUOTE then
+      i = skip_string(s, i)
+    elseif s:sub(i, i + 1) == '>>' then
+      da = math.max(0, da - 2)
+      i = i + 2
+    elseif b == B_LPAREN then
+      dp = dp + 1
+      i = i + 1
+    elseif b == B_RPAREN then
+      dp = math.max(0, dp - 1)
+      if dp == 0 and da == 0 and db == 0 and dbr == 0 then
+        return i
+      end
+      i = i + 1
+    elseif b == B_LT then
+      da = da + 1
+      i = i + 1
+    elseif b == B_GT then
+      da = math.max(0, da - 1)
+      i = i + 1
+    elseif b == B_LBRAK then
+      dbr = dbr + 1
+      i = i + 1
+    elseif b == B_RBRAK then
+      dbr = math.max(0, dbr - 1)
+      i = i + 1
+    elseif b == B_LBRACE then
+      db = db + 1
+      i = i + 1
+    elseif b == B_RBRACE then
+      db = math.max(0, db - 1)
+      i = i + 1
+    else
+      i = i + 1
+    end
+  end
+  return nil
+end
+
+---Split `s` on top-level commas into trimmed non-empty segments (empty `s` → {}).
+---@param s string
+---@return string[]
+local function split_top_level_commas(s)
+  s = trim(s)
+  if s == '' then
+    return {}
+  end
+  local out = {}
+  local seg_start = 1
+  local len = #s
+  local i = 1
+  local dp, da, db, dbr = 0, 0, 0, 0
+  while i <= len do
+    local b = s:byte(i)
+    if b == B_DQUOTE or b == B_SQUOTE then
+      i = skip_string(s, i)
+    elseif s:sub(i, i + 1) == '>>' then
+      da = math.max(0, da - 2)
+      i = i + 2
+    elseif b == B_LPAREN then
+      dp = dp + 1
+      i = i + 1
+    elseif b == B_RPAREN then
+      dp = math.max(0, dp - 1)
+      i = i + 1
+    elseif b == B_LT then
+      da = da + 1
+      i = i + 1
+    elseif b == B_GT then
+      da = math.max(0, da - 1)
+      i = i + 1
+    elseif b == B_LBRAK then
+      dbr = dbr + 1
+      i = i + 1
+    elseif b == B_RBRAK then
+      dbr = math.max(0, dbr - 1)
+      i = i + 1
+    elseif b == B_LBRACE then
+      db = db + 1
+      i = i + 1
+    elseif b == B_RBRACE then
+      db = math.max(0, db - 1)
+      i = i + 1
+    elseif b == B_COMMA and dp == 0 and da == 0 and db == 0 and dbr == 0 then
+      local piece = trim(s:sub(seg_start, i - 1))
+      if piece ~= '' then
+        table.insert(out, piece)
+      end
+      seg_start = i + 1
+      i = i + 1
+    else
+      i = i + 1
+    end
+  end
+  local last = trim(s:sub(seg_start))
+  if last ~= '' then
+    table.insert(out, last)
+  end
+  return out
+end
+
+---Parse one argument segment: named `k=v` or positional.
+---@param arg string
+---@param value table
+local function ingest_arg_segment(arg, value)
+  if arg == '' then
+    return
+  end
+  local k, v = arg:match('^([%a_][%w_]*)%s*=%s*(.+)$')
+  if k then
+    value[k] = trim(v)
+  else
+    table.insert(value, arg)
+  end
+end
+
+---Parse a comma-separated argument list (commas only at nesting depth 0).
+---@param s string
+---@return table
+function tags.parse_value_list(s)
+  local value = {}
+  for _, seg in ipairs(split_top_level_commas(s)) do
+    ingest_arg_segment(seg, value)
   end
   return value
 end
+
+---First top-level comma splits `s` into `(first, rest)`.
+---@param s string
+---@return string, string
+function tags.split_first_value(s)
+  s = trim(s or '')
+  if s == '' then
+    return '', ''
+  end
+  local c = find_first_top_comma(s)
+  if not c then
+    return s, ''
+  end
+  return trim(s:sub(1, c - 1)), trim(s:sub(c + 1))
+end
+
+---Merge two tag lists and clean lines: entries from `a` then `b`; clean lines concatenated.
+---@param a tags|nil
+---@param b tags|nil
+---@return tags
+function tags.merge(a, b)
+  a = a or tags.new()
+  b = b or tags.new()
+  local list = {}
+  for _, e in ipairs(a._list) do
+    table.insert(list, { tag = e.tag, value = e.value, comment = e.comment })
+  end
+  for _, e in ipairs(b._list) do
+    table.insert(list, { tag = e.tag, value = e.value, comment = e.comment })
+  end
+  local t = tags.new(list)
+  for _, line in ipairs(a._clean) do
+    table.insert(t._clean, line)
+  end
+  for _, line in ipairs(b._clean) do
+    table.insert(t._clean, line)
+  end
+  return t
+end
+
+---If `@name` is absent, prepend `{ tag = name, value = default_value }` (position 1).
+---@param name string
+---@param default_value table|nil
+function tags:ensure_tag(name, default_value)
+  if self:has(name) then
+    return
+  end
+  table.insert(self._list, 1, { tag = name, value = default_value or {} })
+end
+
+---Lines for AST dump: tag names summary plus clean (non-tag) doc lines.
+---@return string[]
+function tags:dump_lines()
+  local out = {}
+  local names = {}
+  for _, e in ipairs(self._list) do
+    table.insert(names, '@' .. e.tag)
+  end
+  if #names > 0 then
+    table.insert(out, table.concat(names, ' '))
+  end
+  for _, line in ipairs(self._clean) do
+    table.insert(out, line)
+  end
+  return out
+end
+
+-- ── Parsing ───────────────────────────────────────────────────────────────────
 
 -- Scans plain text for @tagname and @tagname(...) annotations.
 -- Non-tag text is accumulated; after parsing, self._clean holds
@@ -155,11 +419,11 @@ function tags:_parse(text)
         end
         local name = text:sub(name_start, j - 1)
         local value = {}
-        -- optionally consume (...)
+        -- optionally consume (...) with balanced closing paren
         if j <= n and text:sub(j, j) == '(' then
-          local close = text:find(')', j + 1, true)
+          local close = find_matching_close_paren(text, j)
           if close then
-            value = parse_args(text:sub(j + 1, close - 1))
+            value = tags.parse_value_list(text:sub(j + 1, close - 1))
             j = close + 1
           end
         end
@@ -211,9 +475,9 @@ end
 ---@param text string
 ---@return tags
 function tags.parse(text)
-  local tags = tags.new()
-  tags:_parse(text)
-  return tags
+  local t = tags.new()
+  t:_parse(text)
+  return t
 end
 
 

@@ -66,3 +66,47 @@ namespace extern_bind {
     lu.assertEquals(module:get_values()[1]:get_name(), 'test_value')
 end
 
+function TestProcessBind:test_process_bind_extern_field_directive()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+namespace fb {
+    /** @extern
+    struct S {
+        @field(x, readonly=true)
+    };
+    */
+}
+]]
+    lu.assertNotNil(result.modules['fb'])
+    local module = result.modules['fb']
+    lu.assertEquals(#module:get_classes(), 1)
+    local cls = module:get_classes()[1]
+    lu.assertEquals(cls:get_name(), 'S')
+    local fields = cls:get_fields()
+    lu.assertEquals(#fields, 1)
+    lu.assertEquals(fields[1]:get_name(), 'x')
+    lu.assertEquals(fields[1]:get_type(), 'unknown_binding_type')
+    lu.assertEquals(fields[1]:get_bind('readonly'), 'true')
+end
+
+function TestProcessBind:test_process_bind_extern_field_and_func_at_namespace()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+namespace ns_ex {
+    /** @extern
+    @field(K, foo=1)
+    @func(f, bar=2)
+    */
+}
+]]
+    lu.assertNotNil(result.modules['ns_ex'])
+    local module = result.modules['ns_ex']
+    lu.assertEquals(#module:get_values(), 1)
+    lu.assertEquals(module:get_values()[1]:get_name(), 'K')
+    lu.assertEquals(module:get_values()[1]:get_type(), 'extern_constant')
+    lu.assertEquals(module:get_values()[1]:get_bind('foo'), '1')
+    lu.assertEquals(#module:get_functions(), 1)
+    lu.assertEquals(module:get_functions()[1]:get_name(), 'f')
+    lu.assertEquals(module:get_functions()[1]:get_bind('bar'), '2')
+end
+

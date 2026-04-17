@@ -4,17 +4,24 @@ local class = require 'llae.class'
 --package.path = package.path .. ';tools/?.lua'
 local processor = require 'cparse.process_bind'
 local ast = require 'cparse.ast'
+local tags = require 'cparse.tags'
 local traverser = class(ast.traverser, 'traverser')
 
 function traverser:traverse_class(node)
     log.info(node:__tostring())
-    log.info(node.doc)
+    local t = node.tags or tags.new()
+    for _, line in ipairs(t:dump_lines()) do
+        log.info(line)
+    end
     traverser.baseclass.traverse_class(self,node)
 end
 
 function traverser:traverse_func(node)
     log.info(node:__tostring())
-    log.info(node.doc)
+    local t = node.tags or tags.new()
+    for _, line in ipairs(t:dump_lines()) do
+        log.info(line)
+    end
     traverser.baseclass.traverse_func(self,node)
 end
 

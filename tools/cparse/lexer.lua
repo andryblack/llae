@@ -3,7 +3,7 @@ local token = require 'cparse.token'
 local log = require 'llae.log'
 
 ---@class lexer
----@field new fun(source: string): lexer
+---@field new fun(source: string, opts: table|nil): lexer
 ---@field _source string
 ---@field _pos    integer
 ---@field _len    integer
@@ -63,6 +63,7 @@ local B_Z_LO   = 122 -- 'z'
 local B_E_LO   = 101 -- 'e'
 local B_E_UP   = 69  -- 'E'
 local B_F_UP   = 70  -- 'F'
+local B_AT     = 64  -- '@'
 
 local function is_digit(b)
   return b ~= nil and b >= B_0 and b <= B_9
@@ -81,12 +82,14 @@ local function is_alnum(b)
 end
 
 ---@param source string
-function lexer:_init(source)
+---@param opts table|nil  { allow_field_binding = boolean }  also enables `@func(...)` in extern parse
+function lexer:_init(source, opts)
   self._source = source
   self._pos    = 1
   self._len    = #source
   self._line   = 1
   self._peeked = nil
+  self._allow_field_binding = opts and opts.allow_field_binding or false
 end
 
 ---Read and return the next token from source. Updates self._pos and self._line.
@@ -121,6 +124,23 @@ function lexer:_read_token()
 
   local line = self._line
   local b0 = src:byte(pos)
+
+  -- @field(...) / @func(...) — only in extern sub-parse (see parser.parse(..., { extern = true })).
+  if self._allow_field_binding and b0 == B_AT then
+    local rest = src:sub(pos)
+    local whole_field = rest:match("^(@field%s*%b())")
+    if whole_field then
+      self._pos = pos + #whole_field
+      return token.new("field_binding", whole_field, line)
+    end
+    local whole_func = rest:match("^(@func%s*%b())")
+    if whole_func then
+      self._pos = pos + #whole_func
+      return token.new("func_binding", whole_func, line)
+    end
+    self._pos = pos + 1
+    return token.new("punct", "@", line)
+  end
 
   -- comments  '/' ...
   if b0 == B_SLASH then

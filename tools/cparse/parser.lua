@@ -2,6 +2,7 @@ local class = require 'llae.class'
 local lexer_mod = require 'cparse.lexer'
 local token = require 'cparse.token'
 local ast = require 'cparse.ast'
+local tags = require 'cparse.tags'
 local log = require 'llae.log'
 
 ---@class parser
@@ -20,9 +21,12 @@ local FUNC_SPECS = {
 }
 
 ---@param source string
-function parser:_init(source)
-  self._lex = lexer_mod.new(source)
-  self._doc  = nil  -- pending doc comment
+---@param opts table|nil  `{ extern = true }` enables `@field(...)` / `@func(...)` inside `@extern` bodies only.
+function parser:_init(source, opts)
+  opts = opts or {}
+  self._extern_parse = opts.extern == true
+  self._lex = lexer_mod.new(source, { allow_field_binding = self._extern_parse })
+  self._pending_tag_text = nil  -- accumulated `///` / `/**` text before next decl
 end
 
 -- ── Utilities ────────────────────────────────────────────────────────────────
@@ -58,32 +62,56 @@ function parser:_skip_to_semi()
   end
 end
 
--- Return and clear the pending doc comment.
-function parser:_take_doc()
-  local d = self._doc
-  self._doc = nil
-  return d
+-- Parse and clear pending doc comment text into a `tags` instance.
+function parser:_take_tags()
+  local d = self._pending_tag_text
+  self._pending_tag_text = nil
+  return tags.parse(d or "")
 end
 
 local function trim(s)
   return (s or ""):match("^%s*(.-)%s*$")
 end
 
--- Inside `/** @extern ... */`, `/// @luabind` on class/enum/function/fields is optional:
--- if missing, we inject a plain `/// @luabind` so bind extraction matches normal headers.
-local function extern_doc_has_luabind(doc)
-  return type(doc) == "string" and doc:find("@luabind", 1, true) ~= nil
+---@param in_class boolean  true: member binding stub; false: namespace-level constant stub
+function parser:_parse_field_directive(raw, in_class)
+  local inner_paren = raw:match("^@field%s*(%b())$")
+  if not inner_paren then
+    error(string.format("parser: invalid @field directive %q", tostring(raw)), 2)
+  end
+  local inner = inner_paren:sub(2, -2)
+  local name_part, luabind_rest = tags.split_first_value(inner)
+  local name = trim(name_part):match("^([%a_][%w_]*)$")
+  if not name then
+    error(string.format("parser: @field first argument must be an identifier, got %q", name_part), 2)
+  end
+  local pending = self:_take_tags()
+  local lb_value = tags.parse_value_list(luabind_rest)
+  local field_tags = tags.new({ { tag = "luabind", value = lb_value } })
+  local binding_type = in_class and "unknown_binding_type" or "extern_constant"
+  local n = ast.field.new(name, binding_type, {})
+  n.tags = tags.merge(pending, field_tags)
+  return n
 end
 
-local function extern_doc_ensure_luabind(doc)
-  if extern_doc_has_luabind(doc) then
-    return doc
+function parser:_parse_func_directive(raw)
+  local inner_paren = raw:match("^@func%s*(%b())$")
+  if not inner_paren then
+    error(string.format("parser: invalid @func directive %q", tostring(raw)), 2)
   end
-  local tag = "/// @luabind"
-  if type(doc) == "string" and doc:match("%S") then
-    return tag .. "\n" .. doc
+  local inner = inner_paren:sub(2, -2)
+  local name_part, luabind_rest = tags.split_first_value(inner)
+  local name = trim(name_part):match("^([%a_][%w_]*)$")
+  if not name then
+    error(string.format("parser: @func first argument must be an identifier, got %q", name_part), 2)
   end
-  return tag
+  local pending = self:_take_tags()
+  local lb_value = tags.parse_value_list(luabind_rest)
+  local func_tags = tags.new({ { tag = "luabind", value = lb_value } })
+  -- Fake method declaration for bind extraction (`void name();`-shaped AST).
+  local n = ast.func.new(name, "void", {}, {})
+  n.tags = tags.merge(pending, func_tags)
+  return n
 end
 
 local function extern_apply_default_luabind_nodes(nodes, in_class)
@@ -100,16 +128,16 @@ function parser._extern_apply_default_luabind_one(node, in_class)
   if k == "namespace" then
     extern_apply_default_luabind_nodes(node.children, false)
   elseif k == "class" then
-    node.doc = extern_doc_ensure_luabind(node.doc)
+    node.tags:ensure_tag("luabind", {})
     extern_apply_default_luabind_nodes(node.children, true)
   elseif k == "enum" then
-    node.doc = extern_doc_ensure_luabind(node.doc)
+    node.tags:ensure_tag("luabind", {})
   elseif k == "function" then
-    node.doc = extern_doc_ensure_luabind(node.doc)
+    node.tags:ensure_tag("luabind", {})
   elseif k == "field" then
     local q = node.qualifiers or {}
-    if in_class or q.constexpr then
-      node.doc = extern_doc_ensure_luabind(node.doc)
+    if in_class or q.constexpr or node.type == "extern_constant" then
+      node.tags:ensure_tag("luabind", {})
     end
   elseif k == "access" then
     -- children stay in parent class list; `in_class` unchanged for following siblings
@@ -162,7 +190,7 @@ function parser:_parse_extern_doc(doc)
     return {}
   end
 
-  local parsed = parser.parse(source)
+  local parsed = parser.parse(source, { extern = true })
   if not parsed or not parsed.children then
     return {}
   end
@@ -283,7 +311,7 @@ end
 -- ── Namespace ────────────────────────────────────────────────────────────────
 
 function parser:_parse_namespace()
-  local doc = self:_take_doc()
+  local node_tags = self:_take_tags()
   self._lex:expect("keyword", "namespace")
   local name = ""
   if self._lex:peek():is_ident() then name = self._lex:next().value end
@@ -301,14 +329,14 @@ function parser:_parse_namespace()
   end
   self._lex:accept("punct", ";")
   local n = ast.namespace.new(name, children)
-  n.doc = doc
+  n.tags = node_tags
   return n
 end
 
 -- ── Class / struct / union ───────────────────────────────────────────────────
 
 function parser:_parse_class_struct()
-  local doc = self:_take_doc()
+  local node_tags = self:_take_tags()
   local struct_kind = self._lex:next().value  -- "class", "struct", or "union"
 
   local name = ""
@@ -320,7 +348,7 @@ function parser:_parse_class_struct()
   -- forward declaration
   if self._lex:accept("punct", ";") then
     local n = ast.class_forward.new(name, struct_kind)
-    n.doc = doc
+    n.tags = node_tags
     return n
   end
 
@@ -336,14 +364,14 @@ function parser:_parse_class_struct()
 
   self._lex:accept("punct", ";")
   local n = ast["class"].new(name, struct_kind, bases, children, var_name)
-  n.doc = doc
+  n.tags = node_tags
   return n
 end
 
 -- ── Enum ─────────────────────────────────────────────────────────────────────
 
 function parser:_parse_enum()
-  local doc = self:_take_doc()
+  local node_tags = self:_take_tags()
   self._lex:expect("keyword", "enum")
 
   local is_scoped = false
@@ -370,7 +398,7 @@ function parser:_parse_enum()
   -- forward declaration
   if self._lex:accept("punct", ";") then
     local n = ast.enum.new(name, is_scoped, base_type, nil, true)
-    n.doc = doc
+    n.tags = node_tags
     return n
   end
 
@@ -412,14 +440,14 @@ function parser:_parse_enum()
   end
   self._lex:accept("punct", ";")
   local n = ast.enum.new(name, is_scoped, base_type, values)
-  n.doc = doc
+  n.tags = node_tags
   return n
 end
 
 -- ── Typedef ──────────────────────────────────────────────────────────────────
 
 function parser:_parse_typedef()
-  local doc = self:_take_doc()
+  local node_tags = self:_take_tags()
   self._lex:expect("keyword", "typedef")
 
   -- typedef struct/class/union/enum { ... } Name;
@@ -427,13 +455,13 @@ function parser:_parse_typedef()
   if peek:is_keyword("struct") or peek:is_keyword("class") or peek:is_keyword("union") then
     local inner = self:_parse_class_struct()
     local n = ast.typedef.new(inner.var_name or "", nil, inner)
-    n.doc = doc
+    n.tags = node_tags
     return n
   end
   if peek:is_keyword("enum") then
     local inner = self:_parse_enum()
     local n = ast.typedef.new(inner.var_name or "", nil, inner)
-    n.doc = doc
+    n.tags = node_tags
     return n
   end
 
@@ -456,18 +484,18 @@ function parser:_parse_typedef()
     local type_parts = {}
     for i = 1, name_idx - 1 do table.insert(type_parts, toks[i].value) end
     local n = ast.typedef.new(toks[name_idx].value, table.concat(type_parts, " "))
-    n.doc = doc
+    n.tags = node_tags
     return n
   end
   local n = ast.typedef.new("", "")
-  n.doc = doc
+  n.tags = node_tags
   return n
 end
 
 -- ── Using ─────────────────────────────────────────────────────────────────────
 
 function parser:_parse_using()
-  local doc = self:_take_doc()
+  local node_tags = self:_take_tags()
   self._lex:expect("keyword", "using")
 
   -- using namespace Foo;
@@ -484,7 +512,7 @@ function parser:_parse_using()
     end
     self._lex:accept("punct", ";")
     local n = ast.using_namespace.new(table.concat(np))
-    n.doc = doc
+    n.tags = node_tags
     return n
   end
 
@@ -507,14 +535,14 @@ function parser:_parse_using()
     end
     self._lex:accept("punct", ";")
     local n = ast.using.new(name, table.concat(tp, " "))
-    n.doc = doc
+    n.tags = node_tags
     return n
   end
 
   -- using Base::member; or other forms
   self:_skip_to_semi()
   local n = ast.using.new(name, nil)
-  n.doc = doc
+  n.tags = node_tags
   return n
 end
 
@@ -665,7 +693,7 @@ end
 -- Parse everything from the current position that constitutes a field or function decl.
 -- extra_specs: list of specifier strings already consumed (e.g. {"extern"})
 function parser:_parse_type_and_name_decl(extra_specs,class_name)
-  local doc = self:_take_doc()
+  local node_tags = self:_take_tags()
 
   -- Collect leading specifier keywords
   local qualifiers = {}
@@ -836,11 +864,11 @@ function parser:_parse_type_and_name_decl(extra_specs,class_name)
 
     -- if class_name and name and class_name == name then
     --   local n = ast.constructor.new(class_name, type_str, params, qualifiers)
-    --   n.doc = doc
+    --   n.tags = node_tags
     --   return n
     -- end
     local n = ast.func.new(name or "?", type_str, params, qualifiers)
-    n.doc = doc
+    n.tags = node_tags
     return n
   end
 
@@ -863,7 +891,7 @@ function parser:_parse_type_and_name_decl(extra_specs,class_name)
   self._lex:accept("punct", ";")
 
   local n = ast.field.new(name or "?", type_str, qualifiers)
-  n.doc = doc
+  n.tags = node_tags
   return n
 end
 
@@ -932,7 +960,7 @@ function parser:_parse_decl(class_name)
         self._lex:accept("punct", "}")
         self._lex:accept("punct", ";")
         local n = ast.extern_block.new(linkage, children)
-        n.doc = self:_take_doc()
+        n.tags = self:_take_tags()
         n.template_params = template_params
         return n
       else
@@ -977,7 +1005,29 @@ function parser:_parse_decl_list(class_name)
     if tok:is_eof() then break end
     if tok:is_punct("}") then break end
 
-    if tok:is_doc() then
+    if tok:is_field_binding() then
+      if not self._extern_parse then
+        error(string.format(
+          "parser: @field(...) is only valid within @extern (line %d)",
+          tok.line), 2)
+      end
+      local fb = self._lex:next()
+      local result = self:_parse_field_directive(fb.value, class_name ~= nil)
+      if result then
+        table.insert(decls, result)
+      end
+    elseif tok:is_func_binding() then
+      if not self._extern_parse then
+        error(string.format(
+          "parser: @func(...) is only valid within @extern (line %d)",
+          tok.line), 2)
+      end
+      local fb = self._lex:next()
+      local result = self:_parse_func_directive(fb.value)
+      if result then
+        table.insert(decls, result)
+      end
+    elseif tok:is_doc() then
       local v = self._lex:next().value
       local extern_children = self:_parse_extern_doc(v)
       if extern_children then
@@ -985,7 +1035,7 @@ function parser:_parse_decl_list(class_name)
           table.insert(decls, child)
         end
       else
-        self._doc = self._doc and (self._doc .. "\n" .. v) or v
+        self._pending_tag_text = self._pending_tag_text and (self._pending_tag_text .. "\n" .. v) or v
       end
     else
       local stale = self._lex:peek()
@@ -1016,8 +1066,10 @@ end
 ---Parse C++ source text and return a file-level AST node.
 ---@param source string preprocessed C++ source
 ---@return ast_file
-function parser.parse(source)
-  local p = parser.new(source)
+---@param source string
+---@param opts table|nil  `{ extern = true }` for `@extern` sub-parse (enables `@field(...)` / `@func(...)`).
+function parser.parse(source, opts)
+  local p = parser.new(source, opts)
   return p:_parse_impl()
 end
 
