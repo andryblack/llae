@@ -38,3 +38,31 @@ namespace foo {
     lu.assertEquals(cls2:get_prefix(), 'foo::bar')
 end
 
+function TestProcessBind:test_process_bind_with_extern_doc_block()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+namespace extern_bind {
+    /** @extern
+    enum class test_module_enum { a, b };
+    struct test_bind_struct {
+        int x = 0;
+    };
+    static void test_function1(int) {}
+    constexpr int test_value = 123;
+    */
+}
+]]
+    lu.assertIsTable(result)
+    lu.assertIsTable(result.modules)
+    lu.assertNotNil(result.modules['extern_bind'])
+    local module = result.modules['extern_bind']
+    lu.assertEquals(#module:get_classes(), 1)
+    lu.assertEquals(module:get_classes()[1]:get_name(), 'test_bind_struct')
+    lu.assertEquals(#module:get_enums(), 1)
+    lu.assertEquals(module:get_enums()[1]:get_name(), 'test_module_enum')
+    lu.assertEquals(#module:get_functions(), 1)
+    lu.assertEquals(module:get_functions()[1]:get_name(), 'test_function1')
+    lu.assertEquals(#module:get_values(), 1)
+    lu.assertEquals(module:get_values()[1]:get_name(), 'test_value')
+end
+

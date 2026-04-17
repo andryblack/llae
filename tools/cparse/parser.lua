@@ -65,6 +65,111 @@ function parser:_take_doc()
   return d
 end
 
+local function trim(s)
+  return (s or ""):match("^%s*(.-)%s*$")
+end
+
+-- Inside `/** @extern ... */`, `/// @luabind` on class/enum/function/fields is optional:
+-- if missing, we inject a plain `/// @luabind` so bind extraction matches normal headers.
+local function extern_doc_has_luabind(doc)
+  return type(doc) == "string" and doc:find("@luabind", 1, true) ~= nil
+end
+
+local function extern_doc_ensure_luabind(doc)
+  if extern_doc_has_luabind(doc) then
+    return doc
+  end
+  local tag = "/// @luabind"
+  if type(doc) == "string" and doc:match("%S") then
+    return tag .. "\n" .. doc
+  end
+  return tag
+end
+
+local function extern_apply_default_luabind_nodes(nodes, in_class)
+  for _, node in ipairs(nodes or {}) do
+    parser._extern_apply_default_luabind_one(node, in_class)
+  end
+end
+
+function parser._extern_apply_default_luabind_one(node, in_class)
+  if not node or not node.kind then
+    return
+  end
+  local k = node.kind
+  if k == "namespace" then
+    extern_apply_default_luabind_nodes(node.children, false)
+  elseif k == "class" then
+    node.doc = extern_doc_ensure_luabind(node.doc)
+    extern_apply_default_luabind_nodes(node.children, true)
+  elseif k == "enum" then
+    node.doc = extern_doc_ensure_luabind(node.doc)
+  elseif k == "function" then
+    node.doc = extern_doc_ensure_luabind(node.doc)
+  elseif k == "field" then
+    local q = node.qualifiers or {}
+    if in_class or q.constexpr then
+      node.doc = extern_doc_ensure_luabind(node.doc)
+    end
+  elseif k == "access" then
+    -- children stay in parent class list; `in_class` unchanged for following siblings
+  elseif k == "extern_block" then
+    extern_apply_default_luabind_nodes(node.children, in_class)
+  end
+end
+
+function parser:_parse_extern_doc(doc)
+  if type(doc) ~= "string" then
+    return nil
+  end
+  if doc:sub(1, 3) ~= "/**" then
+    return nil
+  end
+
+  local body = doc:gsub("^/%*%*", "", 1)
+  body = body:gsub("%*/%s*$", "")
+
+  local lines = {}
+  for line in (body .. "\n"):gmatch("(.-)\n") do
+    line = line:gsub("\r", "")
+    line = line:gsub("^%s*%*%s?", "")
+    table.insert(lines, line)
+  end
+
+  local marker_found = false
+  local source_lines = {}
+  for _, line in ipairs(lines) do
+    local normalized = trim(line)
+    if not marker_found then
+      if normalized == "" then
+        -- Skip empty lines before @extern marker.
+      elseif normalized:match("^@extern%s*$") or normalized:match("^///%s*@extern%s*$") then
+        marker_found = true
+      else
+        return nil
+      end
+    else
+      table.insert(source_lines, line)
+    end
+  end
+
+  if not marker_found then
+    return nil
+  end
+
+  local source = table.concat(source_lines, "\n")
+  if not source:match("%S") then
+    return {}
+  end
+
+  local parsed = parser.parse(source)
+  if not parsed or not parsed.children then
+    return {}
+  end
+  extern_apply_default_luabind_nodes(parsed.children, false)
+  return parsed.children
+end
+
 local toks_to_str = token.join
 
 -- ── Attributes ───────────────────────────────────────────────────────────────
@@ -874,7 +979,14 @@ function parser:_parse_decl_list(class_name)
 
     if tok:is_doc() then
       local v = self._lex:next().value
-      self._doc = self._doc and (self._doc .. "\n" .. v) or v
+      local extern_children = self:_parse_extern_doc(v)
+      if extern_children then
+        for _, child in ipairs(extern_children) do
+          table.insert(decls, child)
+        end
+      else
+        self._doc = self._doc and (self._doc .. "\n" .. v) or v
+      end
     else
       local stale = self._lex:peek()
       local result = self:_parse_decl(class_name)

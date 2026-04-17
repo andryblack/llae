@@ -519,6 +519,81 @@ function TestParserDocComment:test_regular_comment_not_doc()
   lu.assertNil(n.doc)
 end
 
+function TestParserDocComment:test_extern_doc_block_expands_to_real_decls()
+  local src = [[
+namespace ext {
+  /** @extern
+  enum class test_module_enum { a, b, c };
+  struct test_bind_struct {
+    int x = 0;
+    enum class state {
+      off,
+      on,
+    };
+    state s;
+  };
+  */
+}
+  ]]
+  local ns = first(src)
+  lu.assertEquals(ns.kind, "namespace")
+  lu.assertEquals(ns.name, "ext")
+  lu.assertEquals(#ns.children, 2)
+
+  local en = ns.children[1]
+  lu.assertEquals(en.kind, "enum")
+  lu.assertEquals(en.name, "test_module_enum")
+  lu.assertNotNil(en.doc)
+  lu.assertStrContains(en.doc, "@luabind")
+
+  local cls = ns.children[2]
+  lu.assertEquals(cls.kind, "class")
+  lu.assertEquals(cls.name, "test_bind_struct")
+  lu.assertEquals(cls.struct_kind, "struct")
+  lu.assertNotNil(cls.doc)
+  lu.assertStrContains(cls.doc, "@luabind")
+  lu.assertEquals(cls.children[1].kind, "field")
+  lu.assertEquals(cls.children[1].name, "x")
+  lu.assertStrContains(cls.children[1].doc, "@luabind")
+  lu.assertEquals(cls.children[2].kind, "enum")
+  lu.assertEquals(cls.children[2].name, "state")
+  lu.assertStrContains(cls.children[2].doc, "@luabind")
+  lu.assertEquals(cls.children[3].kind, "field")
+  lu.assertEquals(cls.children[3].name, "s")
+  lu.assertStrContains(cls.children[3].doc, "@luabind")
+end
+
+function TestParserDocComment:test_extern_doc_preserves_explicit_luabind()
+  local src = [[
+namespace ext {
+  /** @extern
+  /// @luabind(prefix=foo_)
+  enum class E { a };
+  */
+}
+  ]]
+  local ns = first(src)
+  local en = ns.children[1]
+  lu.assertStrContains(en.doc, "@luabind(prefix=foo_)")
+end
+
+function TestParserDocComment:test_regular_doc_comment_after_extern_block()
+  local src = [[
+/** @extern
+/// @luabind
+enum class E { A };
+*/
+/// ordinary doc
+void foo();
+  ]]
+  local ast = parse(src)
+  lu.assertEquals(#ast.children, 2)
+  lu.assertEquals(ast.children[1].kind, "enum")
+  lu.assertEquals(ast.children[2].kind, "function")
+  lu.assertNotNil(ast.children[2].doc)
+  lu.assertStrContains(ast.children[2].doc, "ordinary doc")
+end
+
 -- ============================================================
 TestParserComplex = {}
 
