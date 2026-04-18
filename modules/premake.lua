@@ -65,7 +65,10 @@ function bootstrap()
 
 	local PLATFORM = project:get_host_platform()
 	if PLATFORM ~= 'windows' then
-		PLATFORM = exec_res('uname',{'-s'})
+		PLATFORM = exec_res{
+			bin = 'uname',
+			args = {'-s'}
+		}
 		if string.match(PLATFORM,'Darwin.*') then
 			exec{
 				bin = 'xcode-select',

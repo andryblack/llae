@@ -240,14 +240,25 @@ function m:exec(config)
 	return not err,err
 end
 
-function m:exec_res(bin,args)
+function m:exec_res(config)
+	local bin = config.bin or error('need bin')
+	local args = config.args or {}
+	local cwd = config.cwd or path.getabsolute(self.location)
+	local env = nil
+	if config.env then
+		env = os.getallenv()
+		for k,v in pairs(config.env) do
+			env[k]=v
+		end
+	end
+
 	local exename = get_exename(self.root,bin)
-	local eargs = args or {}
 	local rpipe = uv.pipe.new(1)
 	local epipe = uv.pipe.new(1)
 	local p = assert(uv.process.spawn{
 		file = exename,
-		args = eargs,
+		args = args,
+		cwd = cwd,
 		streams = {
 			{uv.process.IGNORE},
 			{uv.process.CREATE_PIPE|uv.process.WRITABLE_PIPE,rpipe},
@@ -276,13 +287,18 @@ function m:exec_res(bin,args)
 
 	
 	local code,sig = p:wait_exit()
-	if code ~= 0 or sig ~= 0 then
-		error(string.format('process code:%d sig:%d',code,sig))
-	end
+
 	rpipe:close()
 	epipe:close()
+	
+	if code ~= 0 or sig ~= 0 then
+		log.error('exec_res failed:',exename,table.concat( args, ' ' ))
+		log.error(table.concat(result,'\n'))
+		error(string.format('process code:%d sig:%d',code,sig))
+	end
+	
 	result = table.concat(result,'')
-	log.info('cmd:',exename,table.concat( eargs, ' ' ),'>',result)
+	log.info('cmd:',exename,table.concat( args, ' ' ),'>',result)
 	return result
 end
 
