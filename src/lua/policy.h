@@ -86,6 +86,10 @@ namespace lua {
 			static int push_result(state& s,R&& result) {
 				return stack<R>::push(s,std::forward<R>(result));
 			}
+			template <typename R>
+			static int push_result(state& s,const R& result) {
+				return push(s,result);
+			}
 			
 			template <size_t ArgIdx>
 			struct arg_policy {
