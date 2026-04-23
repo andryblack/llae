@@ -92,7 +92,7 @@ function token.join(toks, from, to)
     local t    = toks[i]
     local prev = toks[i - 1]
     local no_space_before = prev and (
-      t.value == "::" or t.value == ">" or t.value == ">>" or
+      t.value == "::" or t.value == "<" or t.value == ">" or t.value == ">>" or
       t.value == "*"  or t.value == "&" or t.value == "&&" or
       t.value == ")"  or t.value == "]" or t.value == ","
     )

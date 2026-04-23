@@ -6,6 +6,30 @@ local parser = require 'cparse.parser'
 local ast = require 'cparse.ast'
 local tags = require 'cparse.tags'
 
+local function replace_cpp_identifiers(type_str, replacements)
+    if not next(replacements) then
+        return type_str
+    end
+    local res = {}
+    local idx = 1
+    while idx <= #type_str do
+        local start_idx, end_idx, token = type_str:find('([_%a][_%w]*)', idx)
+        if not start_idx then
+            table.insert(res, type_str:sub(idx))
+            break
+        end
+        table.insert(res, type_str:sub(idx, start_idx - 1))
+        local prev_char = start_idx > 1 and type_str:sub(start_idx - 1, start_idx - 1) or ''
+        if prev_char ~= ':' and replacements[token] then
+            table.insert(res, replacements[token])
+        else
+            table.insert(res, token)
+        end
+        idx = end_idx + 1
+    end
+    return table.concat(res)
+end
+
 local resolve_collector = class(nil, 'resolve_collector')
 function resolve_collector:_init()
     self._replace = {}
@@ -13,12 +37,15 @@ end
 
 function resolve_collector:add_using(node)
     self._replace[node.name] = node.type
-    self._replace['const ' .. node.name .. ' &'] = node.type
     --log.info('add using: ', node.name, node.type)
 end
 
 function resolve_collector:resolve(type_str)
-    return self._replace[type_str]
+    local resolved = self._replace[type_str]
+    if resolved then
+        return resolved
+    end
+    return replace_cpp_identifiers(type_str, self._replace)
 end
 
 local bind_module = class(nil, 'bind_module')
@@ -155,30 +182,6 @@ local function resolve_lua_type(type_str,recursive,is_return)
     return recursive(type_str,is_return)
 end
 
-local function qualify_declared_cpp_type(type_str, declared_types)
-    if not next(declared_types) then
-        return type_str
-    end
-    local res = {}
-    local idx = 1
-    while idx <= #type_str do
-        local start_idx, end_idx, token = type_str:find('([_%a][_%w]*)', idx)
-        if not start_idx then
-            table.insert(res, type_str:sub(idx))
-            break
-        end
-        table.insert(res, type_str:sub(idx, start_idx - 1))
-        local prev_char = start_idx > 1 and type_str:sub(start_idx - 1, start_idx - 1) or ''
-        if prev_char ~= ':' and declared_types[token] then
-            table.insert(res, declared_types[token])
-        else
-            table.insert(res, token)
-        end
-        idx = end_idx + 1
-    end
-    return table.concat(res)
-end
-
 function bind_module:resolve_cpp_type(type_str)
     local resolved = self._resolve:resolve(type_str)
     if resolved then
@@ -197,7 +200,7 @@ function bind_module:resolve_cpp_type(type_str)
             declared_types[enum_ref:get_name()] = enum_prefix .. '::' .. enum_ref:get_name()
         end
     end
-    return qualify_declared_cpp_type(type_str, declared_types)
+    return replace_cpp_identifiers(type_str, declared_types)
 end
 
 function bind_module:resolve_lua_type_inner(type_str,is_return)
@@ -418,6 +421,14 @@ function bind_class:resolve_cpp_type(type_str)
     if resolved then
         type_str = resolved
     end
+    local class_declared_types = {}
+    local class_prefix = self:get_prefix()
+    for _, enum_ref in ipairs(self._enums) do
+        if class_prefix ~= '' then
+            class_declared_types[enum_ref:get_name()] = class_prefix .. '::' .. enum_ref:get_name()
+        end
+    end
+    type_str = replace_cpp_identifiers(type_str, class_declared_types)
     return self._module:resolve_cpp_type(type_str)
 end
 

@@ -394,10 +394,10 @@ function parser:_parse_enum()
     while true do
       local t = self._lex:peek()
       if t:is_eof() or t:is_punct("{") or t:is_punct(";") then break end
-      table.insert(tp, self._lex:next().value)
+      table.insert(tp, self._lex:next())
       parser._yield()
     end
-    base_type = table.concat(tp, " ")
+    base_type = toks_to_str(tp)
   end
 
   -- forward declaration
@@ -433,9 +433,9 @@ function parser:_parse_enum()
           if vt:is_punct(")") or vt:is_punct("}") then
             if depth == 0 then break else depth = depth - 1 end
           end
-          table.insert(vp, self._lex:next().value)
+          table.insert(vp, self._lex:next())
         end
-        vval = table.concat(vp, " ")
+        vval = toks_to_str(vp)
       end
       table.insert(values, {name = vname, value = vval})
       if not self._lex:accept("punct", ",") then break end
@@ -487,8 +487,8 @@ function parser:_parse_typedef()
   end
   if name_idx then
     local type_parts = {}
-    for i = 1, name_idx - 1 do table.insert(type_parts, toks[i].value) end
-    local n = ast.typedef.new(toks[name_idx].value, table.concat(type_parts, " "))
+    for i = 1, name_idx - 1 do table.insert(type_parts, toks[i]) end
+    local n = ast.typedef.new(toks[name_idx].value, toks_to_str(type_parts))
     n.tags = node_tags
     return n
   end
@@ -535,11 +535,11 @@ function parser:_parse_using()
       if t:is_punct(")") or t:is_punct(">") or t:is_punct("]") then
         if depth == 0 then break else depth = depth - 1 end
       end
-      table.insert(tp, self._lex:next().value)
+      table.insert(tp, self._lex:next())
       parser._yield()
     end
     self._lex:accept("punct", ";")
-    local n = ast.using.new(name, table.concat(tp, " "))
+    local n = ast.using.new(name, toks_to_str(tp))
     n.tags = node_tags
     return n
   end
@@ -784,15 +784,15 @@ function parser:_parse_type_and_name_decl(extra_specs,class_name)
   end
 
   -- Build type string, moving any stray specifiers into qualifiers
-  local type_parts = {}
+  local type_tokens = {}
   for _, t in ipairs(type_toks) do
     if t:is_keyword() and FUNC_SPECS[t.value] then
       qualifiers[t.value] = true
     else
-      table.insert(type_parts, t.value)
+      table.insert(type_tokens, t)
     end
   end
-  local type_str = table.concat(type_parts, " ")
+  local type_str = toks_to_str(type_tokens)
 
   -- ── FUNCTION ──────────────────────────────────────────────────────────────
   if found_paren then
@@ -830,10 +830,10 @@ function parser:_parse_type_and_name_decl(extra_specs,class_name)
           if tt:is_punct(")") or tt:is_punct(">") then
             if d == 0 then break else d = d - 1 end
           end
-          table.insert(tr, self._lex:next().value)
+          table.insert(tr, self._lex:next())
         end
         if type_str == "" or type_str == "auto" then
-          type_str = table.concat(tr, " ")
+          type_str = toks_to_str(tr)
         end
       elseif t:is_punct("=") then
         -- = 0 / = delete / = default
