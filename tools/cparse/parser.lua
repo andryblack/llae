@@ -599,16 +599,15 @@ local function parse_one_param(lex)
           ni = i; break
         end
       end
-      local nm, tp = nil, {}
+      local nm = nil
       if ni then
         nm = toks[ni].value
-        for i, tk in ipairs(toks) do
-          if i ~= ni then table.insert(tp, tk.value) end
-        end
-      else
-        for _, tk in ipairs(toks) do table.insert(tp, tk.value) end
+        local left = toks_to_str(toks, 1, ni - 1)
+        local right = toks_to_str(toks, ni + 1, #toks)
+        local joined = (left ~= "" and right ~= "") and (left .. " " .. right) or (left ~= "" and left or right)
+        return {type = joined, name = nm, default = table.concat(dp, " ")}
       end
-      return {type = table.concat(tp, " "), name = nm, default = table.concat(dp, " ")}
+      return {type = toks_to_str(toks), name = nm, default = table.concat(dp, " ")}
     end
     -- tag current depth onto token for later name detection
     local tt = lex:next()
@@ -624,15 +623,13 @@ local function parse_one_param(lex)
       ni = i; break
     end
   end
-  -- only treat it as name if it's the last token (not followed by >/*/ etc.)
-  if ni and ni == #toks then
-    local tp = {}
-    for i = 1, ni - 1 do table.insert(tp, toks[i].value) end
-    return {type = table.concat(tp, " "), name = toks[ni].value}
+  -- only treat it as name if it's a plausible declarator identifier.
+  -- do not treat single-token or scoped-type tails (e.g. std::string) as a parameter name.
+  local prev = ni and toks[ni - 1] or nil
+  if ni and ni == #toks and ni > 1 and not (prev and prev:is_punct("::")) then
+    return {type = toks_to_str(toks, 1, ni - 1), name = toks[ni].value}
   end
-  local tp = {}
-  for _, tk in ipairs(toks) do table.insert(tp, tk.value) end
-  return {type = table.concat(tp, " "), name = nil}
+  return {type = toks_to_str(toks), name = nil}
 end
 
 -- Parse a full parameter list (the '(' has already been consumed).
@@ -666,14 +663,18 @@ function parser:_parse_params()
     if #remaining_toks > 0 and remaining_toks[#remaining_toks]:is_ident() then
       ni = #remaining_toks
     end
-    local nm, tp = nil, {"void"}
+    local nm = nil
+    local type_str = nil
     if ni then
       nm = remaining_toks[ni].value
-      for i = 1, ni - 1 do table.insert(tp, remaining_toks[i].value) end
+      local left = "void"
+      local right = toks_to_str(remaining_toks, 1, ni - 1)
+      type_str = right ~= "" and (left .. " " .. right) or left
     else
-      for _, tk in ipairs(remaining_toks) do table.insert(tp, tk.value) end
+      local right = toks_to_str(remaining_toks)
+      type_str = right ~= "" and ("void " .. right) or "void"
     end
-    table.insert(params, {type = table.concat(tp, " "), name = nm})
+    table.insert(params, {type = type_str, name = nm})
     if not self._lex:accept("punct", ",") then return params end
   end
 

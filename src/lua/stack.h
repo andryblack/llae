@@ -293,7 +293,13 @@ namespace lua {
     }
     template <class T>
     static int push(state& s,T& val) {
-        return stack<T>::push(s,val);
+        if constexpr (raw_pushable<T>::value) {
+			static_assert(std::is_copy_constructible_v<T>, "T must be copy constructible");
+			push_raw(s,val);
+			return 1;
+		} else {
+        	return stack<T>::push(s,val);
+		}
     }
     template <class T>
     static int push(state& s, T&& val) {

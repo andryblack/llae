@@ -8,9 +8,9 @@
 static void luabind_<%= class:get_bind_name() %>(lua::state& l) {
     <% local constructor = class:get_constructor() if constructor then %>
     <% if constructor:get_bind('raw') then %>
-    lua::bind::raw_constructor<<%= class:get_prefix() %>::<%= class:get_name() %>>(l);
+    lua::bind::raw_constructor<<%= class:get_prefix() %>::<%= class:get_name() %><%- constructor:get_bind_args() %>>(l);
     <% else %>
-    lua::bind::constructor<<%= class:get_prefix() %>::<%= class:get_name() %>>(l);
+    lua::bind::constructor<<%= class:get_prefix() %>::<%= class:get_name() %><%- constructor:get_bind_args() %>>(l);
     <% end %>
     <% end %>
     <% for _,method in ipairs(class:get_methods()) do %>

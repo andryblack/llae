@@ -134,25 +134,70 @@ local lua_type_map = {
     ['float'] = 'number',
     ['double'] = 'number',
     ['bool'] = 'boolean',
-    ['std :: string'] = 'string',
+    ['std::string'] = 'string',
     ['void'] = 'none',
-    ['llae :: buffer_base_ptr'] = {'string|llae.buffer_base?','llae.buffer_base?'},
-    ['llae :: buffer_base_ptr &'] = {'string|llae.buffer_base?','llae.buffer_base?'},
-    ['llae :: buffer_base_ptr &&'] = {'string|llae.buffer_base?','llae.buffer_base?'},
-    ['llae :: buffer_view'] = {'string|llae.buffer_base','string'},
-    ['const llae :: buffer_view &'] = {'string|llae.buffer_base','string'},
+    ['llae::buffer_base_ptr'] = {'string|llae.buffer_base?','llae.buffer_base?'},
+    ['llae::buffer_base_ptr&'] = {'string|llae.buffer_base?','llae.buffer_base?'},
+    ['llae::buffer_base_ptr&&'] = {'string|llae.buffer_base?','llae.buffer_base?'},
+    ['llae::buffer_view'] = {'string|llae.buffer_base','string'},
+    ['const llae::buffer_view&'] = {'string|llae.buffer_base','string'},
 }
 
 local function resolve_lua_type(type_str,recursive,is_return)
-    local inner = string.match(type_str, 'std :: optional <%s*(.-)%s*>')
+    local inner = string.match(type_str, 'std::optional<%s*(.-)%s*>')
     if inner then
         return recursive(inner,is_return) .. '?'
     end
-    inner = string.match(type_str, 'common :: intrusive_ptr <%s*(.-)%s*>')
+    inner = string.match(type_str, 'common::intrusive_ptr<%s*(.-)%s*>')
     if inner then
         return recursive(inner,is_return) .. '?'
     end
     return recursive(type_str,is_return)
+end
+
+local function qualify_declared_cpp_type(type_str, declared_types)
+    if not next(declared_types) then
+        return type_str
+    end
+    local res = {}
+    local idx = 1
+    while idx <= #type_str do
+        local start_idx, end_idx, token = type_str:find('([_%a][_%w]*)', idx)
+        if not start_idx then
+            table.insert(res, type_str:sub(idx))
+            break
+        end
+        table.insert(res, type_str:sub(idx, start_idx - 1))
+        local prev_char = start_idx > 1 and type_str:sub(start_idx - 1, start_idx - 1) or ''
+        if prev_char ~= ':' and declared_types[token] then
+            table.insert(res, declared_types[token])
+        else
+            table.insert(res, token)
+        end
+        idx = end_idx + 1
+    end
+    return table.concat(res)
+end
+
+function bind_module:resolve_cpp_type(type_str)
+    local resolved = self._resolve:resolve(type_str)
+    if resolved then
+        type_str = resolved
+    end
+    local declared_types = {}
+    for _, class_ref in ipairs(self._classes) do
+        local class_prefix = class_ref:get_prefix()
+        if class_prefix ~= '' then
+            declared_types[class_ref:get_name()] = class_prefix .. '::' .. class_ref:get_name()
+        end
+    end
+    for _, enum_ref in ipairs(self._enums) do
+        local enum_prefix = enum_ref:get_prefix()
+        if enum_prefix ~= '' then
+            declared_types[enum_ref:get_name()] = enum_prefix .. '::' .. enum_ref:get_name()
+        end
+    end
+    return qualify_declared_cpp_type(type_str, declared_types)
 end
 
 function bind_module:resolve_lua_type_inner(type_str,is_return)
@@ -295,6 +340,10 @@ function bind_class:add_method(method)
             error('multiple constructors for class: ' .. self:get_name())
         end
         self._constructor = method
+        local cls = self
+        function method:get_bind_args()
+            return cls:get_constructor_bind_args()
+        end
     else
         table.insert(self._methods, method)
     end
@@ -302,6 +351,14 @@ end
 
 function bind_class:get_constructor()
     return self._constructor
+end
+
+function bind_class:get_constructor_bind_args()
+    local args = self._constructor:get_args_types()
+    if next(args) then
+        return ', ' .. table.concat(args, ', ')
+    end
+    return ''
 end
 
 function bind_class:get_methods()
@@ -356,14 +413,22 @@ function bind_class:resolve_lua_type(type_str,is_return)
     end,is_return)
 end
 
+function bind_class:resolve_cpp_type(type_str)
+    local resolved = self._resolve:resolve(type_str)
+    if resolved then
+        type_str = resolved
+    end
+    return self._module:resolve_cpp_type(type_str)
+end
+
 local bind_func = class(module_element, 'bind_func')
 function bind_func:_init(node,prefix,bind)
     bind_func.baseclass._init(self, node, prefix, bind)
 end
 
 local param_lua_skip_types = {
-    ['llae :: app &'] = true,
-    ['lua :: state &'] = true,
+    ['llae::app&'] = true,
+    ['lua::state&'] = true,
 }
 local function skip_param_for_lua(param)
     if param_lua_skip_types[param.type] then
@@ -443,7 +508,7 @@ local function get_lua_results(return_type,async,func)
     local res = {}
     -- llae::result_promise_ptr<void>
     -- llae::result<>
-    local inner = string.match(return_type, 'llae :: result <%s*(.-)%s*>')
+    local inner = string.match(return_type, 'llae::result<%s*(.-)%s*>')
     if inner then
         if inner == 'void' then
             inner = 'boolean'
@@ -464,7 +529,7 @@ local function get_lua_results(return_type,async,func)
             }
         }
     end
-    inner = string.match(return_type, 'llae :: result_promise_ptr <%s*(.-)%s*>')
+    inner = string.match(return_type, 'llae::result_promise_ptr<%s*(.-)%s*>')
     if inner then
         if inner == 'void' then
             inner = 'boolean'
@@ -527,6 +592,14 @@ end
 
 function bind_method:resolve_lua_type(type_str,is_return)
     return self._class:resolve_lua_type(type_str,is_return)
+end
+
+function bind_method:get_args_types()
+    local res = {}
+    for _, param in ipairs(self._node.params or {}) do
+        table.insert(res, self._class:resolve_cpp_type(param.type))
+    end
+    return res
 end
 
 function bind_method:is_static()

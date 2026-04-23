@@ -7,6 +7,8 @@ META_INFO(autobind_tests::test_bind_fields,void)
 META_INFO(autobind_tests::zooo,void)
 META_INFO(autobind_tests::azoo,autobind_tests::zooo)
 
+META_INFO(autobind_tests::ctr_args,void)
+
 namespace autobind_tests {
     
 

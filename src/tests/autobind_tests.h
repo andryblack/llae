@@ -105,4 +105,10 @@ namespace autobind_tests {
 
     /// @luabind
     constexpr int test_value = 123;
+
+    /// @luabind
+    struct ctr_args {
+        /// @luabind(raw=true)
+        ctr_args(int,float,zooo&) {}
+    };
 }
