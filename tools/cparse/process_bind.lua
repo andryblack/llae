@@ -423,10 +423,12 @@ function bind_class:resolve_cpp_type(type_str)
     end
     local class_declared_types = {}
     local class_prefix = self:get_prefix()
+    local class_full_name = self:get_name()
+    if class_prefix ~= '' then
+        class_full_name = class_prefix .. '::' .. class_full_name
+    end
     for _, enum_ref in ipairs(self._enums) do
-        if class_prefix ~= '' then
-            class_declared_types[enum_ref:get_name()] = class_prefix .. '::' .. enum_ref:get_name()
-        end
+        class_declared_types[enum_ref:get_name()] = class_full_name .. '::' .. enum_ref:get_name()
     end
     type_str = replace_cpp_identifiers(type_str, class_declared_types)
     return self._module:resolve_cpp_type(type_str)

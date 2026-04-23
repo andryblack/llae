@@ -95,6 +95,32 @@ namespace module_name {
   lu.assertEquals(method:get_name(), 'set_inner_enum')
   local args = method:get_args_types()
   lu.assertEquals(#args, 1)
-  lu.assertEquals(args[1], 'module_name::inner_enum')
+  lu.assertEquals(args[1], 'module_name::class_name::inner_enum')
+
+end
+
+function TestProcessBindGetArgsTypes:test_inner_class()
+  local processor = process_bind.new()
+  local result = processor:process_content[[
+namespace module_name {
+  /// @luabind
+  struct class_name {
+    /// @luabind
+    class inner_class {  };
+    /// @luabind
+    void set_inner_class(inner_class* value);
+  };
+}
+]]
+  lu.assertNotNil(result.modules['module_name'])
+  local module = result.modules['module_name']
+  local holder = find_class(module:get_classes(), 'class_name')
+  lu.assertNotNil(holder)
+  lu.assertEquals(#holder:get_methods(), 1)
+  local method = holder:get_methods()[1]
+  lu.assertEquals(method:get_name(), 'set_inner_class')
+  local args = method:get_args_types()
+  lu.assertEquals(#args, 1)
+  lu.assertEquals(args[1], 'module_name::class_name::inner_class*')
 
 end
