@@ -196,10 +196,43 @@ namespace enum_meta {
         escape = tostring,
         module = module,
     })
-    lu.assertStrContains(meta, '---@enum enum_meta.module_enum')
-    lu.assertStrContains(meta, '---@enum enum_meta.holder.class_enum')
-    lu.assertStrContains(meta, 'enum_meta.module_enum = {')
-    lu.assertStrContains(meta, 'holder.class_enum = {')
-    lu.assertStrContains(meta, 'first = 1')
+    local function normalize_text(text)
+        text = text:gsub('\r\n', '\n')
+        text = text:gsub('[ \t]+\n', '\n')
+        text = text:gsub('\n\n', '\n')
+        text = text:gsub('\n\n', '\n')
+        text = text:gsub('%s+$', '')
+        return text
+    end
+    meta = normalize_text(meta)
+    local expected_meta = ([[
+---@meta enum_meta
+---@class enum_meta
+local enum_meta = {}
+--- module_enum
+---@enum enum_meta.module_enum
+local enum_meta_module_enum = {
+  first = 1,
+  second = 2,
+}
+enum_meta.module_enum = enum_meta_module_enum
+--- holder
+---@class enum_meta.holder
+local holder = {}
+--- class_enum
+---@enum enum_meta.holder.class_enum
+local enum_meta_holder_class_enum = {
+  alpha = 3,
+  beta = 4,
+}
+holder.class_enum = enum_meta_holder_class_enum
+--- set_mode
+---@param mode enum_meta.module_enum
+function holder:set_mode(mode) end
+enum_meta.holder = holder
+return enum_meta
+    ]])
+    expected_meta = normalize_text(expected_meta)
+    lu.assertEquals(meta, expected_meta)
 end
 

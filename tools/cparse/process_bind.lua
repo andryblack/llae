@@ -317,6 +317,8 @@ function bind_class:get_fields()
 end
 
 function bind_class:add_enum(enum)
+    enum:set_class(self)
+    enum:set_module(self._module)
     table.insert(self._enums, enum)
 end
 
@@ -570,6 +572,76 @@ function bind_enum:get_lua_value_name(val_name)
         return val_name:sub(#prefix + 1)
     end
     return val_name
+end
+
+function bind_enum:set_class(class_ref)
+    self._class = class_ref
+end
+
+function bind_enum:get_lua_local_name()
+    local parts = {}
+    if self._module then
+        table.insert(parts, self._module:get_name())
+    end
+    if self._class then
+        table.insert(parts, self._class:get_name())
+    end
+    table.insert(parts, self:get_lua_name())
+    return table.concat(parts, '_'):gsub('[^%w_]', '_')
+end
+
+local function normalize_enum_value(value)
+    value = tostring(value):gsub('^%s+', ''):gsub('%s+$', '')
+    local as_number = tonumber(value)
+    if as_number ~= nil then
+        return tostring(as_number)
+    end
+    if value:sub(1, 2) == '0x' or value:sub(1, 2) == '0X' then
+        local hex = tonumber(value:sub(3), 16)
+        if hex ~= nil then
+            return tostring(hex)
+        end
+    end
+    return value
+end
+
+local function enum_entry_value(base_value, implicit_offset)
+    local base_number = tonumber(base_value)
+    if base_number ~= nil then
+        return tostring(base_number + implicit_offset)
+    end
+    if implicit_offset == 0 then
+        return base_value
+    end
+    return '(' .. base_value .. ') + ' .. tostring(implicit_offset)
+end
+
+function bind_enum:get_lua_values()
+    ---@type {name:string, value:string}[]
+    local values = {}
+    local base_value = nil
+    local implicit_offset = 0
+    for _, enum_value in ipairs(self._values) do
+        local resolved_value = enum_value.value
+        if resolved_value then
+            base_value = normalize_enum_value(resolved_value)
+            implicit_offset = 0
+            resolved_value = base_value
+        else
+            if not base_value then
+                base_value = '0'
+                implicit_offset = 0
+            else
+                implicit_offset = implicit_offset + 1
+            end
+            resolved_value = enum_entry_value(base_value, implicit_offset)
+        end
+        table.insert(values, {
+            name = self:get_lua_value_name(enum_value.name),
+            value = resolved_value,
+        })
+    end
+    return values
 end
 
 local bind_value = class(module_element, 'bind_value')
