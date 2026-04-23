@@ -417,6 +417,12 @@ function TestLexerFieldBinding:test_field_binding_balanced_parens()
   lu.assertStrContains(toks[1].value, "field_ref_policy{}")
 end
 
+function TestLexerFieldBinding:test_field_binding_with_inline_description()
+  local toks = lex_all_field_binding("@field(x, readonly=true) value description")
+  lu.assertEquals(toks[1].kind, "field_binding")
+  lu.assertEquals(toks[1].value, "@field(x, readonly=true) value description")
+end
+
 function TestLexerFieldBinding:test_func_binding_token_when_enabled()
   lu.assertEquals(kinds_field_binding("@func(x)"), { "func_binding" })
   local toks = lex_all_field_binding("@func(reset, static=true)")

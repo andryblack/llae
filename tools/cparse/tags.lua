@@ -14,6 +14,13 @@ local B_RBRAK  = 93  -- ']'
 local B_LBRACE = 123 -- '{'
 local B_RBRACE = 125 -- '}'
 
+---Trim leading and trailing whitespace from a string.
+---@param s string?
+---@return string
+local function trim(s)
+  return (s or ''):match('^%s*(.-)%s*$')
+end
+
 -- ── tags class ────────────────────────────────────────────────────────────────
 
 ---@class tags_entry
@@ -33,6 +40,15 @@ end
 
 function tags:get_clean()
   return next(self._clean) and self._clean or nil
+end
+
+---Adds one clean (non-tag) doc line after trim; ignores empty values.
+---@param text string|nil
+function tags:add_cleantext(text)
+  local t = trim(text)
+  if t ~= '' then
+    table.insert(self._clean, t)
+  end
 end
 
 
@@ -113,9 +129,6 @@ end
 
 -- ── Parsing helpers (balanced (), <>, [], {}, strings) ───────────────────────
 
-local function trim(s)
-  return (s or ''):match('^%s*(.-)%s*$')
-end
 
 ---Advance index `i` past a single- or double-quoted string starting at `i`.
 ---@param s string

@@ -75,10 +75,12 @@ end
 
 ---@param in_class boolean  true: member binding stub; false: namespace-level constant stub
 function parser:_parse_field_directive(raw, in_class)
-  local inner_paren = raw:match("^@field%s*(%b())$")
-  if not inner_paren then
+  local directive, trailing_comment = raw:match("^(@field%s*%b())%s*(.-)%s*$")
+  if not directive then
     error(string.format("parser: invalid @field directive %q", tostring(raw)), 2)
   end
+  trailing_comment = trim(trailing_comment)
+  local inner_paren = directive:match("^@field%s*(%b())$")
   local inner = inner_paren:sub(2, -2)
   local name_part, luabind_rest = tags.split_first_value(inner)
   local name = trim(name_part):match("^([%a_][%w_]*)$")
@@ -88,6 +90,9 @@ function parser:_parse_field_directive(raw, in_class)
   local pending = self:_take_tags()
   local lb_value = tags.parse_value_list(luabind_rest)
   local field_tags = tags.new({ { tag = "luabind", value = lb_value } })
+  if trailing_comment ~= "" then
+    field_tags:add_cleantext(trailing_comment)
+  end
   local binding_type = in_class and "unknown_binding_type" or "extern_constant"
   local n = ast.field.new(name, binding_type, {})
   n.tags = tags.merge(pending, field_tags)

@@ -127,7 +127,8 @@ function bind_module:get_bind_name()
 end
 
 local lua_type_map = {
-    ['extern_constant'] = 'nil',
+    ['extern_constant'] = 'any',
+    ['unknown_binding_type'] = 'any',
     ['int'] = 'integer',
     ['size_t'] = 'integer',
     ['float'] = 'number',
@@ -411,9 +412,6 @@ local function get_lua_results(return_type,async,func)
     if not return_type then
         return {}
     end
-    if return_type == 'void' then
-        return {}
-    end
     local tags = func:get_tags():get('lreturn')
     if tags and next(tags) then
         for _, tag in ipairs(tags) do
@@ -423,6 +421,9 @@ local function get_lua_results(return_type,async,func)
             })
         end
         return res
+    end
+    if return_type == 'void' then
+        return {}
     end
     if return_type == 'lua :: multiret' then
         return {
@@ -537,6 +538,9 @@ function bind_field:_init(node,prefix,bind)
     bind_field.baseclass._init(self, node, prefix, bind)
 end
 function bind_field:get_type()
+    if self._bind and self._bind.type then
+        return self._bind.type
+    end
     return self._node.type
 end
 

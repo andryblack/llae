@@ -72,7 +72,7 @@ function TestProcessBind:test_process_bind_extern_field_directive()
 namespace fb {
     /** @extern
     struct S {
-        @field(x, readonly=true)
+        @field(x, readonly=true) integer field from extern docs
     };
     */
 }
@@ -87,6 +87,7 @@ namespace fb {
     lu.assertEquals(fields[1]:get_name(), 'x')
     lu.assertEquals(fields[1]:get_type(), 'unknown_binding_type')
     lu.assertEquals(fields[1]:get_bind('readonly'), 'true')
+    lu.assertStrContains(fields[1]:get_lua_comments(), 'integer field from extern docs')
 end
 
 function TestProcessBind:test_process_bind_extern_field_and_func_at_namespace()
@@ -108,5 +109,53 @@ namespace ns_ex {
     lu.assertEquals(#module:get_functions(), 1)
     lu.assertEquals(module:get_functions()[1]:get_name(), 'f')
     lu.assertEquals(module:get_functions()[1]:get_bind('bar'), '2')
+end
+
+
+function TestProcessBind:test_process_bind_extern_func_tags()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+namespace ns_ex {
+    /** @extern
+    /// @lparam(x,integer)
+    /// @lreturn(res,string?)
+    @func(f, bar=2)
+    struct S {
+        /// this is g function
+        /// @lparam(x,integer)
+        /// @lreturn(res,string?)
+        @func(g)
+    };
+    */
+}
+]]
+    lu.assertNotNil(result.modules['ns_ex'])
+    local module = result.modules['ns_ex']
+    lu.assertEquals(#module:get_functions(), 1)
+    local func = module:get_functions()[1]
+    lu.assertEquals(func:get_name(), 'f')
+    lu.assertEquals(#func:get_lua_args(), 1)
+    local arg_x = func:get_lua_args()[1]
+    lu.assertEquals(arg_x.name, 'x')
+    lu.assertEquals(arg_x.type, 'integer')
+    lu.assertEquals(#func:get_lua_results(), 1)
+    local result_res = func:get_lua_results()[1]
+    lu.assertEquals(result_res.name, 'res')
+    lu.assertEquals(result_res.type, 'string?')
+    lu.assertEquals(#module:get_classes(), 1)
+    local cls = module:get_classes()[1]
+    lu.assertEquals(cls:get_name(), 'S')
+    lu.assertEquals(#cls:get_methods(), 1)
+    local func_g = cls:get_methods()[1]
+    lu.assertEquals(func_g:get_name(), 'g')
+    lu.assertEquals(#func_g:get_lua_args(), 1)
+    local arg_x_g = func_g:get_lua_args()[1]
+    lu.assertEquals(arg_x_g.name, 'x')
+    lu.assertEquals(arg_x_g.type, 'integer')
+    lu.assertEquals(#func_g:get_lua_results(), 1)
+    local result_res_g = func_g:get_lua_results()[1]
+    lu.assertEquals(result_res_g.name, 'res')
+    lu.assertEquals(result_res_g.type, 'string?')
+    lu.assertStrContains(func_g:get_lua_comments(), 'this is g function')
 end
 

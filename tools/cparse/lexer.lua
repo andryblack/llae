@@ -81,6 +81,29 @@ local function is_alnum(b)
   return is_alpha(b) or is_digit(b)
 end
 
+local function skip_space(src, pos, len)
+  while pos <= len do
+    local b = src:byte(pos)
+    if b == B_SPACE or b == B_TAB then
+      pos = pos + 1
+    else
+      break
+    end
+  end
+  return pos
+end
+
+local function find_eol(src, pos, len)
+  while pos <= len do
+    local b = src:byte(pos)
+    if b == B_LF or b == B_CR then
+      break
+    end
+    pos = pos + 1
+  end
+  return pos
+end
+
 ---@param source string
 ---@param opts table|nil  { allow_field_binding = boolean }  also enables `@func(...)` in extern parse
 function lexer:_init(source, opts)
@@ -128,10 +151,13 @@ function lexer:_read_token()
   -- @field(...) / @func(...) — only in extern sub-parse (see parser.parse(..., { extern = true })).
   if self._allow_field_binding and b0 == B_AT then
     local rest = src:sub(pos)
-    local whole_field = rest:match("^(@field%s*%b())")
+    -- Keep trailing text on the same line so parser can use it as description.
+    local whole_field = rest:match("^@field%s*%b()")
     if whole_field then
-      self._pos = pos + #whole_field
-      return token.new("field_binding", whole_field, line)
+      local p = skip_space(src, pos + #whole_field, len)
+      local line_end = find_eol(src, p, len)
+      self._pos = line_end
+      return token.new("field_binding", src:sub(pos, line_end - 1), line)
     end
     local whole_func = rest:match("^(@func%s*%b())")
     if whole_func then

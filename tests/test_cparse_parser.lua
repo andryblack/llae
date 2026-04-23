@@ -588,7 +588,7 @@ function TestParserDocComment:test_extern_field_directive_parses_as_fake_field()
 namespace ext {
   /** @extern
   struct S {
-    @field(m, readonly=true)
+    @field(m, readonly=true) Mapped member field
     int keep;
   };
   */
@@ -604,6 +604,7 @@ namespace ext {
   local lb = st.children[1].tags:collect("luabind")
   lu.assertNotNil(lb)
   lu.assertEquals(lb.readonly, "true")
+  lu.assertEquals(st.children[1].tags:get_clean()[1], "Mapped member field")
   lu.assertEquals(st.children[2].kind, "field")
   lu.assertEquals(st.children[2].name, "keep")
 end
