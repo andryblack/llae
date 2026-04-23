@@ -121,6 +121,7 @@ namespace ns_ex {
     /// @lreturn(res,string?)
     @func(f, bar=2)
     struct S {
+        @field(x,type=integer) is a x field
         /// this is g function
         /// @lparam(x,integer)
         /// @lreturn(res,string?)
@@ -157,5 +158,10 @@ namespace ns_ex {
     lu.assertEquals(result_res_g.name, 'res')
     lu.assertEquals(result_res_g.type, 'string?')
     lu.assertStrContains(func_g:get_lua_comments(), 'this is g function')
+    lu.assertEquals(#cls:get_fields(), 1)
+    local field_x = cls:get_fields()[1]
+    lu.assertEquals(field_x:get_name(), 'x')
+    lu.assertEquals(field_x:get_type(), 'integer')
+    lu.assertStrContains(field_x:get_lua_comments(), 'is a x field')
 end
 

@@ -19,7 +19,7 @@ local <%= module_name %> = {}
 <% for _,class in ipairs(module:get_sorted_classes()) do %><% class_name = class:get_name() %>
 <%- class:get_lua_comments() %>
 ---@class <%= module_name %>.<%= class_name %><% for _,field in ipairs(class:get_fields()) do %>
----@field <%= field:get_name() %> <%= class:resolve_lua_type(field:get_type()) %><% end %>
+---@field <%= field:get_name() %> <%= class:resolve_lua_type(field:get_type()) %> <%= field:get_lua_comments() %><% end %>
 local <%= class_name %> = {}
 <% for _,method in ipairs(class:get_methods()) do %>
 <% format_func(method,class) %>
