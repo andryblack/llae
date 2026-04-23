@@ -111,4 +111,7 @@ namespace autobind_tests {
         /// @luabind(raw=true)
         ctr_args(int,float,zooo&) {}
     };
+
+    /// @luabind
+    inline constexpr zooo test_zooo = zooo();
 }

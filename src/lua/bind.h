@@ -442,7 +442,12 @@ namespace lua {
         }
     
         template <class T>
-        static void value(state& s,const char* name,T v) {
+        static void value(state& s,const char* name,T&& v) {
+            push(s,std::forward<T>(v));
+            metatable_set_field(s,name,-2);
+        }
+		template <class T>
+        static void value(state& s,const char* name,const T& v) {
             push(s,v);
             metatable_set_field(s,name,-2);
         }
