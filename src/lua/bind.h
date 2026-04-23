@@ -443,7 +443,7 @@ namespace lua {
     
         template <class T>
         static void value(state& s,const char* name,T v) {
-            stack<T>::push(s,v);
+            push(s,v);
             metatable_set_field(s,name,-2);
         }
 
