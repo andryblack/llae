@@ -156,6 +156,11 @@ local function resolve_lua_type(type_str,recursive,is_return)
 end
 
 function bind_module:resolve_lua_type_inner(type_str,is_return)
+    for _,enum in ipairs(self:get_enums()) do
+        if enum:get_name() == type_str then
+            return self:get_name() .. '.' .. enum:get_lua_name()
+        end
+    end
     local res = lua_type_map[type_str]
     if res then
         if is_return then

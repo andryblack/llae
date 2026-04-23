@@ -15,12 +15,28 @@ end %>
 ---@class <%= module_name %><% for _,value in ipairs(module:get_values()) do %>
 ---@field <%= value:get_name() %> <%= module:resolve_lua_type(value:get_type()) %><% end %>
 local <%= module_name %> = {}
+<% for _,enum in ipairs(module:get_enums()) do %>
+---@enum <%= module_name %>.<%= enum:get_lua_name() %>
+<%= module_name %>.<%= enum:get_lua_name() %> = {
+<% for _,enum_value in ipairs(enum:get_values()) do %>
+  <%= enum:get_lua_value_name(enum_value.name) %> = <%= enum_value.value or '0' %>,
+<% end %>
+}
+<% end %>
 
 <% for _,class in ipairs(module:get_sorted_classes()) do %><% class_name = class:get_name() %>
 <%- class:get_lua_comments() %>
 ---@class <%= module_name %>.<%= class_name %><% for _,field in ipairs(class:get_fields()) do %>
 ---@field <%= field:get_name() %> <%= class:resolve_lua_type(field:get_type()) %> <%= field:get_lua_comments() %><% end %>
 local <%= class_name %> = {}
+<% for _,enum in ipairs(class:get_enums()) do %>
+---@enum <%= module_name %>.<%= class_name %>.<%= enum:get_lua_name() %>
+<%= class_name %>.<%= enum:get_lua_name() %> = {
+<% for _,enum_value in ipairs(enum:get_values()) do %>
+  <%= enum:get_lua_value_name(enum_value.name) %> = <%= enum_value.value or '0' %>,
+<% end %>
+}
+<% end %>
 <% for _,method in ipairs(class:get_methods()) do %>
 <% format_func(method,class) %>
 function <%= class_name %><%= method:is_static() and '.' or ':' %><%= method:get_lua_name() %>(<%= table.concat(method:get_lua_parameters(), ', ') %>) end

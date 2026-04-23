@@ -1,4 +1,5 @@
 local lu = require('luaunit')
+local template = require('llae.template')
 local store_path = package.path
 package.path = store_path .. ';tools/?.lua'
 local process_bind = require('cparse.process_bind')
@@ -163,5 +164,42 @@ namespace ns_ex {
     lu.assertEquals(field_x:get_name(), 'x')
     lu.assertEquals(field_x:get_type(), 'integer')
     lu.assertStrContains(field_x:get_lua_comments(), 'is a x field')
+end
+
+function TestProcessBind:test_meta_template_generates_enum_annotations()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+namespace enum_meta {
+    /// @luabind
+    enum class module_enum { first = 1, second };
+
+    /// @luabind
+    class holder {
+        /// @luabind
+        enum class class_enum { alpha = 3, beta };
+
+        /// @luabind
+        void set_mode(module_enum mode);
+    };
+}
+]]
+    lu.assertNotNil(result.modules['enum_meta'])
+    local module = result.modules['enum_meta']
+    lu.assertEquals(module:resolve_lua_type('module_enum'), 'enum_meta.module_enum')
+
+    local cls = module:get_classes()[1]
+    lu.assertEquals(#cls:get_methods(), 1)
+    local method = cls:get_methods()[1]
+    lu.assertEquals(method:get_lua_args()[1].type, 'enum_meta.module_enum')
+
+    local meta = template.render_file('data/binding-meta-template.lua', {
+        escape = tostring,
+        module = module,
+    })
+    lu.assertStrContains(meta, '---@enum enum_meta.module_enum')
+    lu.assertStrContains(meta, '---@enum enum_meta.holder.class_enum')
+    lu.assertStrContains(meta, 'enum_meta.module_enum = {')
+    lu.assertStrContains(meta, 'holder.class_enum = {')
+    lu.assertStrContains(meta, 'first = 1')
 end
 
