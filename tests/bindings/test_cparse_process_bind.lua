@@ -246,3 +246,30 @@ namespace ns_all_extern {
     lu.assertEquals(cls:get_methods()[1]:get_name(), 'g')
 end
 
+function TestProcessBind:test_process_bind_extern_fields()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+
+/// @luabind(all=true)
+namespace ns1::ns2 {
+
+#ifdef LUABIND_PARSE
+
+/// @luabind
+struct Foo {
+};
+
+/// @luabind(type=ns1.ns2.Foo)
+LUABIND_FIELD(bar)
+/// @luabind(type=ns1.ns2.Foo)
+LUABIND_FIELD(baz)
+#endif
+}
+]]
+    lu.assertNotNil(result.modules['ns1.ns2'])
+    local module = result.modules['ns1.ns2']
+    lu.assertEquals(#module:get_classes(), 1)
+    lu.assertEquals(#module:get_values(), 2)
+    lu.assertEquals(module:get_values()[1]:get_name(), 'bar')
+    lu.assertEquals(module:get_values()[2]:get_name(), 'baz')
+end
