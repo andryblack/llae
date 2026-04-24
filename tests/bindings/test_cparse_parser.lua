@@ -752,3 +752,22 @@ function TestParserFiles:test_include_file()
   --       end
   --   end
 end
+
+TestParserArgs = {}
+
+function TestParserArgs:test_multiple_simple_params()
+  local n = first("void foo(int,float);")
+  lu.assertEquals(n.kind, "function")
+  lu.assertEquals(n.name, "foo")
+  lu.assertEquals(#n.params, 2)
+  lu.assertEquals(n.params[1].type, "int")
+  lu.assertEquals(n.params[2].type, "float")
+end
+
+function TestParserArgs:test_single_scoped_type_param()
+  local n = first("void foo(std::string);")
+  lu.assertEquals(n.kind, "function")
+  lu.assertEquals(n.name, "foo")
+  lu.assertEquals(#n.params, 1)
+  lu.assertEquals(n.params[1].type, "std::string")
+end
