@@ -39,18 +39,23 @@ namespace foo {
     lu.assertEquals(cls2:get_prefix(), 'foo::bar')
 end
 
-function TestProcessBind:test_process_bind_with_extern_doc_block()
+function TestProcessBind:test_process_bind_with_luabind_parse_block()
     local processor = process_bind.new()
     local result = processor:process_content[[
 namespace extern_bind {
-    /** @extern
+    #ifdef LUABIND_PARSE
+    /// @luabind
     enum class test_module_enum { a, b };
+    /// @luabind
     struct test_bind_struct {
+        /// @luabind
         int x = 0;
     };
+    /// @luabind
     static void test_function1(int) {}
+    /// @luabind
     constexpr int test_value = 123;
-    */
+    #endif
 }
 ]]
     lu.assertIsTable(result)
@@ -67,15 +72,19 @@ namespace extern_bind {
     lu.assertEquals(module:get_values()[1]:get_name(), 'test_value')
 end
 
-function TestProcessBind:test_process_bind_extern_field_directive()
+function TestProcessBind:test_process_bind_with_external_stub_decls()
     local processor = process_bind.new()
     local result = processor:process_content[[
 namespace fb {
-    /** @extern
+    #ifdef LUABIND_PARSE
+    /// @luabind
     struct S {
-        @field(x, readonly=true) integer field from extern docs
+        /// @luabind(readonly=true)
+        inline constexpr ::luabind_autobind_type x = {};
+        /// @luabind
+        ::luabind_autobind_type g();
     };
-    */
+    #endif
 }
 ]]
     lu.assertNotNil(result.modules['fb'])
@@ -86,84 +95,11 @@ namespace fb {
     local fields = cls:get_fields()
     lu.assertEquals(#fields, 1)
     lu.assertEquals(fields[1]:get_name(), 'x')
-    lu.assertEquals(fields[1]:get_type(), 'unknown_binding_type')
+    lu.assertEquals(fields[1]:get_type(), '::luabind_autobind_type')
     lu.assertEquals(fields[1]:get_bind('readonly'), 'true')
-    lu.assertStrContains(fields[1]:get_lua_comments(), 'integer field from extern docs')
-end
-
-function TestProcessBind:test_process_bind_extern_field_and_func_at_namespace()
-    local processor = process_bind.new()
-    local result = processor:process_content[[
-namespace ns_ex {
-    /** @extern
-    @field(K, foo=1)
-    @func(f, bar=2)
-    */
-}
-]]
-    lu.assertNotNil(result.modules['ns_ex'])
-    local module = result.modules['ns_ex']
-    lu.assertEquals(#module:get_values(), 1)
-    lu.assertEquals(module:get_values()[1]:get_name(), 'K')
-    lu.assertEquals(module:get_values()[1]:get_type(), 'extern_constant')
-    lu.assertEquals(module:get_values()[1]:get_bind('foo'), '1')
-    lu.assertEquals(#module:get_functions(), 1)
-    lu.assertEquals(module:get_functions()[1]:get_name(), 'f')
-    lu.assertEquals(module:get_functions()[1]:get_bind('bar'), '2')
-end
-
-
-function TestProcessBind:test_process_bind_extern_func_tags()
-    local processor = process_bind.new()
-    local result = processor:process_content[[
-namespace ns_ex {
-    /** @extern
-    /// @lparam(x,integer)
-    /// @lreturn(res,string?)
-    @func(f, bar=2)
-    struct S {
-        @field(x,type=integer) is a x field
-        /// this is g function
-        /// @lparam(x,integer)
-        /// @lreturn(res,string?)
-        @func(g)
-    };
-    */
-}
-]]
-    lu.assertNotNil(result.modules['ns_ex'])
-    local module = result.modules['ns_ex']
-    lu.assertEquals(#module:get_functions(), 1)
-    local func = module:get_functions()[1]
-    lu.assertEquals(func:get_name(), 'f')
-    lu.assertEquals(#func:get_lua_args(), 1)
-    local arg_x = func:get_lua_args()[1]
-    lu.assertEquals(arg_x.name, 'x')
-    lu.assertEquals(arg_x.type, 'integer')
-    lu.assertEquals(#func:get_lua_results(), 1)
-    local result_res = func:get_lua_results()[1]
-    lu.assertEquals(result_res.name, 'res')
-    lu.assertEquals(result_res.type, 'string?')
-    lu.assertEquals(#module:get_classes(), 1)
-    local cls = module:get_classes()[1]
-    lu.assertEquals(cls:get_name(), 'S')
     lu.assertEquals(#cls:get_methods(), 1)
     local func_g = cls:get_methods()[1]
     lu.assertEquals(func_g:get_name(), 'g')
-    lu.assertEquals(#func_g:get_lua_args(), 1)
-    local arg_x_g = func_g:get_lua_args()[1]
-    lu.assertEquals(arg_x_g.name, 'x')
-    lu.assertEquals(arg_x_g.type, 'integer')
-    lu.assertEquals(#func_g:get_lua_results(), 1)
-    local result_res_g = func_g:get_lua_results()[1]
-    lu.assertEquals(result_res_g.name, 'res')
-    lu.assertEquals(result_res_g.type, 'string?')
-    lu.assertStrContains(func_g:get_lua_comments(), 'this is g function')
-    lu.assertEquals(#cls:get_fields(), 1)
-    local field_x = cls:get_fields()[1]
-    lu.assertEquals(field_x:get_name(), 'x')
-    lu.assertEquals(field_x:get_type(), 'integer')
-    lu.assertStrContains(field_x:get_lua_comments(), 'is a x field')
 end
 
 function TestProcessBind:test_meta_template_generates_enum_annotations()

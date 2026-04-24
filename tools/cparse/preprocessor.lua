@@ -18,7 +18,13 @@ end
 ---@param token string
 ---@param value string | nil
 function preprocessor:define(token, value)
-    self._defines[token] = value or ""
+    local normalized = (token or ""):match("^%s*(.-)%s*$") or ""
+    local macro_value = value or ""
+    local rest = normalized
+    if macro_value ~= "" then
+        rest = rest .. " " .. macro_value
+    end
+    self:_define_from_rest(rest)
 end
 
 ---Undefine a macro
@@ -56,6 +62,34 @@ local BYTE_GT     = string.byte(">")
 
 local function trim_string(s)
     return s:match("^%s*(.-)%s*$") or ''
+end
+
+---@param rest string
+function preprocessor:_define_from_rest(rest)
+    rest = trim_string(rest or "")
+    if rest == "" then
+        return
+    end
+    -- function-like: NAME(params) body
+    local name, params_str, body = rest:match("^([%w_]+)(%b())%s*(.*)")
+    if name and params_str then
+        local params = {}
+        for param in params_str:sub(2, -2):gmatch("[%w_]+") do
+            table.insert(params, param)
+        end
+        self._func_defines[name] = {
+            params = params,
+            body = trim_string(body),
+        }
+        self._defines[name] = nil
+        return
+    end
+    -- object-like: NAME body
+    local token, value = rest:match("^([%w_]+)%s*(.*)")
+    if token then
+        self._defines[token] = trim_string(value)
+        self._func_defines[token] = nil
+    end
 end
 
 ---Evaluate a simple expression (supports defined(), identifiers, numbers, ==, !=, &&, ||, !, <, >, <=, >=)
@@ -414,20 +448,7 @@ function preprocessor:process(data)
                 if not skip then
                     local rest = trimmed:match("^#define%s+(.+)")
                     if rest then
-                        -- try function-like: NAME(params) body
-                        local name, params_str, body = rest:match("^([%w_]+)(%b())%s*(.*)")
-                        if name and params_str then
-                            local params = {}
-                            for param in params_str:sub(2, -2):gmatch("[%w_]+") do
-                                table.insert(params, param)
-                            end
-                            self._func_defines[name] = {params = params, body = trim_string(body)}
-                        else
-                            local token, value = rest:match("^([%w_]+)%s*(.*)")
-                            if token then
-                                self:define(token, trim_string(value))
-                            end
-                        end
+                        self:_define_from_rest(rest)
                     end
                 end
                 

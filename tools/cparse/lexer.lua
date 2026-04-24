@@ -63,7 +63,6 @@ local B_Z_LO   = 122 -- 'z'
 local B_E_LO   = 101 -- 'e'
 local B_E_UP   = 69  -- 'E'
 local B_F_UP   = 70  -- 'F'
-local B_AT     = 64  -- '@'
 
 local function is_digit(b)
   return b ~= nil and b >= B_0 and b <= B_9
@@ -81,38 +80,13 @@ local function is_alnum(b)
   return is_alpha(b) or is_digit(b)
 end
 
-local function skip_space(src, pos, len)
-  while pos <= len do
-    local b = src:byte(pos)
-    if b == B_SPACE or b == B_TAB then
-      pos = pos + 1
-    else
-      break
-    end
-  end
-  return pos
-end
-
-local function find_eol(src, pos, len)
-  while pos <= len do
-    local b = src:byte(pos)
-    if b == B_LF or b == B_CR then
-      break
-    end
-    pos = pos + 1
-  end
-  return pos
-end
-
 ---@param source string
----@param opts table|nil  { allow_field_binding = boolean }  also enables `@func(...)` in extern parse
 function lexer:_init(source, opts)
   self._source = source
   self._pos    = 1
   self._len    = #source
   self._line   = 1
   self._peeked = nil
-  self._allow_field_binding = opts and opts.allow_field_binding or false
 end
 
 ---Read and return the next token from source. Updates self._pos and self._line.
@@ -147,26 +121,6 @@ function lexer:_read_token()
 
   local line = self._line
   local b0 = src:byte(pos)
-
-  -- @field(...) / @func(...) — only in extern sub-parse (see parser.parse(..., { extern = true })).
-  if self._allow_field_binding and b0 == B_AT then
-    local rest = src:sub(pos)
-    -- Keep trailing text on the same line so parser can use it as description.
-    local whole_field = rest:match("^@field%s*%b()")
-    if whole_field then
-      local p = skip_space(src, pos + #whole_field, len)
-      local line_end = find_eol(src, p, len)
-      self._pos = line_end
-      return token.new("field_binding", src:sub(pos, line_end - 1), line)
-    end
-    local whole_func = rest:match("^(@func%s*%b())")
-    if whole_func then
-      self._pos = pos + #whole_func
-      return token.new("func_binding", whole_func, line)
-    end
-    self._pos = pos + 1
-    return token.new("punct", "@", line)
-  end
 
   -- comments  '/' ...
   if b0 == B_SLASH then

@@ -154,8 +154,6 @@ function bind_module:get_bind_name()
 end
 
 local lua_type_map = {
-    ['extern_constant'] = 'any',
-    ['unknown_binding_type'] = 'any',
     ['int'] = 'integer',
     ['size_t'] = 'integer',
     ['float'] = 'number',
@@ -867,6 +865,9 @@ end
 function processor:_init()
     self._defines = {}
     self._modules = {}
+    self:define('LUABIND_PARSE', '1')
+    self:define('LUABIND_FIELD(Name)', 'inline constexpr ::luabind_autobind_type Name = {}')
+    self:define('LUABIND_FUNC(Name)', '::luabind_autobind_type Name()')
 end
 
 function processor:define(token, value)

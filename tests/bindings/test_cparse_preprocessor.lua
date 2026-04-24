@@ -563,6 +563,20 @@ function TestPreprocessor:test_define_with_spaces()
     lu.assertEquals(pp:get_define('FOO'), 'bar baz')
 end
 
+function TestPreprocessor:test_define_function_like_via_api()
+    local pp = create_pp()
+    pp:define('FOO(X)', 'x X x')
+    local result = pp:process('FOO(aaa)')
+    lu.assertEquals(result, 'x aaa x')
+end
+
+function TestPreprocessor:test_define_function_like_luabind_field_via_api()
+    local pp = create_pp()
+    pp:define('LUABIND_FIELD(Name)', 'inline constexpr ::luabind_autobind_type Name = {}')
+    local result = pp:process('LUABIND_FIELD(foo)')
+    lu.assertEquals(result, 'inline constexpr ::luabind_autobind_type foo = {}')
+end
+
 function TestPreprocessor:test_if_zero()
     local pp = create_pp()
     local input = [[

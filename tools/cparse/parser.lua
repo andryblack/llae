@@ -21,11 +21,8 @@ local FUNC_SPECS = {
 }
 
 ---@param source string
----@param opts table|nil  `{ extern = true }` enables `@field(...)` / `@func(...)` inside `@extern` bodies only.
 function parser:_init(source, opts)
-  opts = opts or {}
-  self._extern_parse = opts.extern == true
-  self._lex = lexer_mod.new(source, { allow_field_binding = self._extern_parse })
+  self._lex = lexer_mod.new(source)
   self._pending_tag_text = nil  -- accumulated `///` / `/**` text before next decl
 end
 
@@ -67,140 +64,6 @@ function parser:_take_tags()
   local d = self._pending_tag_text
   self._pending_tag_text = nil
   return tags.parse(d or "")
-end
-
-local function trim(s)
-  return (s or ""):match("^%s*(.-)%s*$")
-end
-
----@param in_class boolean  true: member binding stub; false: namespace-level constant stub
-function parser:_parse_field_directive(raw, in_class)
-  local directive, trailing_comment = raw:match("^(@field%s*%b())%s*(.-)%s*$")
-  if not directive then
-    error(string.format("parser: invalid @field directive %q", tostring(raw)), 2)
-  end
-  trailing_comment = trim(trailing_comment)
-  local inner_paren = directive:match("^@field%s*(%b())$")
-  local inner = inner_paren:sub(2, -2)
-  local name_part, luabind_rest = tags.split_first_value(inner)
-  local name = trim(name_part):match("^([%a_][%w_]*)$")
-  if not name then
-    error(string.format("parser: @field first argument must be an identifier, got %q", name_part), 2)
-  end
-  local pending = self:_take_tags()
-  local lb_value = tags.parse_value_list(luabind_rest)
-  local field_tags = tags.new({ { tag = "luabind", value = lb_value } })
-  if trailing_comment ~= "" then
-    field_tags:add_cleantext(trailing_comment)
-  end
-  local binding_type = in_class and "unknown_binding_type" or "extern_constant"
-  local n = ast.field.new(name, binding_type, {})
-  n.tags = tags.merge(pending, field_tags)
-  return n
-end
-
-function parser:_parse_func_directive(raw)
-  local inner_paren = raw:match("^@func%s*(%b())$")
-  if not inner_paren then
-    error(string.format("parser: invalid @func directive %q", tostring(raw)), 2)
-  end
-  local inner = inner_paren:sub(2, -2)
-  local name_part, luabind_rest = tags.split_first_value(inner)
-  local name = trim(name_part):match("^([%a_][%w_]*)$")
-  if not name then
-    error(string.format("parser: @func first argument must be an identifier, got %q", name_part), 2)
-  end
-  local pending = self:_take_tags()
-  local lb_value = tags.parse_value_list(luabind_rest)
-  local func_tags = tags.new({ { tag = "luabind", value = lb_value } })
-  -- Fake method declaration for bind extraction (`void name();`-shaped AST).
-  local n = ast.func.new(name, "void", {}, {})
-  n.tags = tags.merge(pending, func_tags)
-  return n
-end
-
-local function extern_apply_default_luabind_nodes(nodes, in_class)
-  for _, node in ipairs(nodes or {}) do
-    parser._extern_apply_default_luabind_one(node, in_class)
-  end
-end
-
-function parser._extern_apply_default_luabind_one(node, in_class)
-  if not node or not node.kind then
-    return
-  end
-  local k = node.kind
-  if k == "namespace" then
-    extern_apply_default_luabind_nodes(node.children, false)
-  elseif k == "class" then
-    node.tags:ensure_tag("luabind", {})
-    extern_apply_default_luabind_nodes(node.children, true)
-  elseif k == "enum" then
-    node.tags:ensure_tag("luabind", {})
-  elseif k == "function" then
-    node.tags:ensure_tag("luabind", {})
-  elseif k == "field" then
-    local q = node.qualifiers or {}
-    if in_class or q.constexpr or node.type == "extern_constant" then
-      node.tags:ensure_tag("luabind", {})
-    end
-  elseif k == "access" then
-    -- children stay in parent class list; `in_class` unchanged for following siblings
-  elseif k == "extern_block" then
-    extern_apply_default_luabind_nodes(node.children, in_class)
-  end
-end
-
-function parser:_parse_extern_doc(doc)
-  if type(doc) ~= "string" then
-    return nil
-  end
-  if doc:sub(1, 3) ~= "/**" then
-    return nil
-  end
-
-  local body = doc:gsub("^/%*%*", "", 1)
-  body = body:gsub("%*/%s*$", "")
-
-  local lines = {}
-  for line in (body .. "\n"):gmatch("(.-)\n") do
-    line = line:gsub("\r", "")
-    line = line:gsub("^%s*%*%s?", "")
-    table.insert(lines, line)
-  end
-
-  local marker_found = false
-  local source_lines = {}
-  for _, line in ipairs(lines) do
-    local normalized = trim(line)
-    if not marker_found then
-      if normalized == "" then
-        -- Skip empty lines before @extern marker.
-      elseif normalized:match("^@extern%s*$") or normalized:match("^///%s*@extern%s*$") then
-        marker_found = true
-      else
-        return nil
-      end
-    else
-      table.insert(source_lines, line)
-    end
-  end
-
-  if not marker_found then
-    return nil
-  end
-
-  local source = table.concat(source_lines, "\n")
-  if not source:match("%S") then
-    return {}
-  end
-
-  local parsed = parser.parse(source, { extern = true })
-  if not parsed or not parsed.children then
-    return {}
-  end
-  extern_apply_default_luabind_nodes(parsed.children, false)
-  return parsed.children
 end
 
 local toks_to_str = token.join
@@ -1011,38 +874,9 @@ function parser:_parse_decl_list(class_name)
     if tok:is_eof() then break end
     if tok:is_punct("}") then break end
 
-    if tok:is_field_binding() then
-      if not self._extern_parse then
-        error(string.format(
-          "parser: @field(...) is only valid within @extern (line %d)",
-          tok.line), 2)
-      end
-      local fb = self._lex:next()
-      local result = self:_parse_field_directive(fb.value, class_name ~= nil)
-      if result then
-        table.insert(decls, result)
-      end
-    elseif tok:is_func_binding() then
-      if not self._extern_parse then
-        error(string.format(
-          "parser: @func(...) is only valid within @extern (line %d)",
-          tok.line), 2)
-      end
-      local fb = self._lex:next()
-      local result = self:_parse_func_directive(fb.value)
-      if result then
-        table.insert(decls, result)
-      end
-    elseif tok:is_doc() then
+    if tok:is_doc() then
       local v = self._lex:next().value
-      local extern_children = self:_parse_extern_doc(v)
-      if extern_children then
-        for _, child in ipairs(extern_children) do
-          table.insert(decls, child)
-        end
-      else
-        self._pending_tag_text = self._pending_tag_text and (self._pending_tag_text .. "\n" .. v) or v
-      end
+      self._pending_tag_text = self._pending_tag_text and (self._pending_tag_text .. "\n" .. v) or v
     else
       local stale = self._lex:peek()
       local result = self:_parse_decl(class_name)
@@ -1073,7 +907,6 @@ end
 ---@param source string preprocessed C++ source
 ---@return ast_file
 ---@param source string
----@param opts table|nil  `{ extern = true }` for `@extern` sub-parse (enables `@field(...)` / `@func(...)`).
 function parser.parse(source, opts)
   local p = parser.new(source, opts)
   return p:_parse_impl()

@@ -37,27 +37,6 @@ local function values(src)
   return result
 end
 
-local function lex_all_field_binding(src)
-  local l = lexer.new(src, { allow_field_binding = true })
-  local tokens = {}
-  while true do
-    local tok = l:next()
-    table.insert(tokens, tok)
-    if tok.kind == "eof" then break end
-  end
-  return tokens
-end
-
-local function kinds_field_binding(src)
-  local result = {}
-  for _, tok in ipairs(lex_all_field_binding(src)) do
-    if tok.kind ~= "eof" then
-      table.insert(result, tok.kind)
-    end
-  end
-  return result
-end
-
 -- ============================================================
 TestLexerConstructor = {}
 
@@ -398,43 +377,7 @@ function TestLexerComments:test_regular_double_slash_not_triple()
 end
 
 -- ============================================================
-TestLexerFieldBinding = {}
-
-function TestLexerFieldBinding:test_field_binding_not_lexed_by_default()
-  lu.assertEquals(kinds("@field(x)"), { "punct", "ident", "punct", "ident", "punct" })
-end
-
-function TestLexerFieldBinding:test_field_binding_token_when_enabled()
-  lu.assertEquals(kinds_field_binding("@field(x)"), { "field_binding" })
-  local toks = lex_all_field_binding("@field(foo, readonly=true)")
-  lu.assertEquals(toks[1].kind, "field_binding")
-  lu.assertEquals(toks[1].value, "@field(foo, readonly=true)")
-end
-
-function TestLexerFieldBinding:test_field_binding_balanced_parens()
-  local toks = lex_all_field_binding("@field(x, policy=field_ref_policy{})")
-  lu.assertEquals(toks[1].kind, "field_binding")
-  lu.assertStrContains(toks[1].value, "field_ref_policy{}")
-end
-
-function TestLexerFieldBinding:test_field_binding_with_inline_description()
-  local toks = lex_all_field_binding("@field(x, readonly=true) value description")
-  lu.assertEquals(toks[1].kind, "field_binding")
-  lu.assertEquals(toks[1].value, "@field(x, readonly=true) value description")
-end
-
-function TestLexerFieldBinding:test_func_binding_token_when_enabled()
-  lu.assertEquals(kinds_field_binding("@func(x)"), { "func_binding" })
-  local toks = lex_all_field_binding("@func(reset, static=true)")
-  lu.assertEquals(toks[1].kind, "func_binding")
-  lu.assertEquals(toks[1].value, "@func(reset, static=true)")
-end
-
-function TestLexerFieldBinding:test_func_binding_balanced_parens()
-  local toks = lex_all_field_binding("@func(x, policy=cb_policy{})")
-  lu.assertEquals(toks[1].kind, "func_binding")
-  lu.assertStrContains(toks[1].value, "cb_policy{}")
-end
+TestLexerAtPunct = {}
 
 -- ============================================================
 TestLexerPunct = {}
