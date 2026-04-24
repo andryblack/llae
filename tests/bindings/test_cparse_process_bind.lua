@@ -172,3 +172,77 @@ return enum_meta
     lu.assertEquals(meta, expected_meta)
 end
 
+function TestProcessBind:test_process_bind_class_scope_all_true()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+namespace scoped_all {
+    /// @luabind(all=true)
+    class Foo {
+        void bar();
+        int value = 0;
+        enum class Kind { one = 1, two };
+    };
+}
+]]
+    lu.assertNotNil(result.modules['scoped_all'])
+    local module = result.modules['scoped_all']
+    lu.assertEquals(#module:get_classes(), 1)
+    local cls = module:get_classes()[1]
+    lu.assertEquals(cls:get_name(), 'Foo')
+    lu.assertEquals(#cls:get_methods(), 1)
+    lu.assertEquals(cls:get_methods()[1]:get_name(), 'bar')
+    lu.assertEquals(#cls:get_fields(), 1)
+    lu.assertEquals(cls:get_fields()[1]:get_name(), 'value')
+    lu.assertEquals(#cls:get_enums(), 1)
+    lu.assertEquals(cls:get_enums()[1]:get_name(), 'Kind')
+end
+
+function TestProcessBind:test_process_bind_namespace_scope_all_true()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+/// @luabind(all=true)
+namespace ns_all {
+    class Foo {
+        void bar();
+    };
+    static void ping(int);
+    constexpr int answer = 42;
+    enum class State { idle, active };
+}
+]]
+    lu.assertNotNil(result.modules['ns_all'])
+    local module = result.modules['ns_all']
+    lu.assertEquals(#module:get_classes(), 1)
+    local cls = module:get_classes()[1]
+    lu.assertEquals(cls:get_name(), 'Foo')
+    lu.assertEquals(#cls:get_methods(), 1)
+    lu.assertEquals(cls:get_methods()[1]:get_name(), 'bar')
+    lu.assertEquals(#module:get_functions(), 1)
+    lu.assertEquals(module:get_functions()[1]:get_name(), 'ping')
+    lu.assertEquals(#module:get_values(), 1)
+    lu.assertEquals(module:get_values()[1]:get_name(), 'answer')
+    lu.assertEquals(#module:get_enums(), 1)
+    lu.assertEquals(module:get_enums()[1]:get_name(), 'State')
+end
+
+function TestProcessBind:test_process_bind_class_scope_all_true_extern_parse()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+namespace ns_all_extern {
+    #ifdef LUABIND_PARSE
+    /// @luabind(all=true)
+    struct S {
+        ::luabind_autobind_type g();
+    };
+    #endif
+}
+]]
+    lu.assertNotNil(result.modules['ns_all_extern'])
+    local module = result.modules['ns_all_extern']
+    lu.assertEquals(#module:get_classes(), 1)
+    local cls = module:get_classes()[1]
+    lu.assertEquals(cls:get_name(), 'S')
+    lu.assertEquals(#cls:get_methods(), 1)
+    lu.assertEquals(cls:get_methods()[1]:get_name(), 'g')
+end
+

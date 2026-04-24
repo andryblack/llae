@@ -758,9 +758,43 @@ function traverser:_get_current_bind()
     return self._bind_stack[#self._bind_stack]
 end
 
+function traverser:_is_all_enabled(bind)
+    if not bind then
+        return false
+    end
+    local all = bind.all
+    return all == true or all == 'true'
+end
+
+function traverser:_is_parent_scope_all_enabled()
+    for i = #self._stack, 1, -1 do
+        local parent = self._stack[i]
+        local parent_tags = parent.tags
+        if parent_tags then
+            local parent_bind = parent_tags:collect('luabind')
+            if self:_is_all_enabled(parent_bind) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function traverser:_resolve_node_bind(node_tags)
+    local bind = node_tags:collect('luabind')
+    if bind then
+        return bind
+    end
+    if self:_is_parent_scope_all_enabled() then
+        -- Parent scope with all=true enables generation even without local luabind tag.
+        return {}
+    end
+    return nil
+end
+
 function traverser:traverse_class(node)
     local node_tags = node.tags or tags.new()
-    local bind = node_tags:collect('luabind')
+    local bind = self:_resolve_node_bind(node_tags)
     if bind then
         local current_bind = self:_get_current_bind()
         local class = bind_class.new(node, self:get_full_name(), bind)
@@ -790,7 +824,7 @@ end
 
 function traverser:traverse_using(node)
     local node_tags = node.tags or tags.new()
-    local bind = node_tags:collect('luabind')
+    local bind = self:_resolve_node_bind(node_tags)
     if bind then
         local current_bind = self:_get_current_bind()
         local module = self._processor:get_module(current_bind or self:get_module_name())
@@ -805,7 +839,7 @@ end
 
 function traverser:traverse_func(node)
     local node_tags = node.tags or tags.new()
-    local bind = node_tags:collect('luabind')
+    local bind = self:_resolve_node_bind(node_tags)
     if bind then
         local current_bind = self:_get_current_bind()
         if current_bind then
@@ -826,7 +860,7 @@ end
 
 function traverser:traverse_field(node)
     local node_tags = node.tags or tags.new()
-    local bind = node_tags:collect('luabind')
+    local bind = self:_resolve_node_bind(node_tags)
     if bind then
         local current_bind = self:_get_current_bind()
         if current_bind then
@@ -847,7 +881,7 @@ end
 function traverser:traverse_enum(node)
     if node.forward then return end
     local node_tags = node.tags or tags.new()
-    local bind = node_tags:collect('luabind')
+    local bind = self:_resolve_node_bind(node_tags)
     if bind then
         local current_bind = self:_get_current_bind()
         local enum = bind_enum.new(node, self:get_full_name(), bind, node.values, node.is_scoped)
