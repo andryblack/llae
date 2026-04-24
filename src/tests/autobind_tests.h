@@ -116,6 +116,8 @@ namespace autobind_tests {
     struct ctr_args {
         /// @luabind(raw=true)
         ctr_args(int,float,zooo&) {}
+        /// @luabind
+        zooo get_zooo() { return zooo(); }
     };
 
     /// @luabind
