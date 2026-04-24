@@ -624,6 +624,19 @@ function bind_method:set_class(cls)
     self._class = cls
 end
 
+function bind_method:get_wrapper()
+    local wrapper = self:get_bind('wrapper')
+    return wrapper
+end
+
+function bind_method:get_c_ptr()
+    local wrapper = self:get_wrapper()
+    if wrapper then
+        return wrapper
+    end
+    return self:get_prefix() .. '::' .. self:get_name()
+end
+
 local bind_field = class(bind_base, 'bind_field')
 function bind_field:_init(node,prefix,bind)
     bind_field.baseclass._init(self, node, prefix, bind)

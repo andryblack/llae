@@ -38,6 +38,10 @@ namespace autobind_tests {
         state s;
     };
 
+    static inline int test_bind_struct_wrapper(int x, int y) {
+        return x + y;
+    }
+
     /// @luabind
     struct test_bind_fields {
         static size_t count;
@@ -93,6 +97,8 @@ namespace autobind_tests {
             }
             return llae::result<test_bind_struct>(optional_field5.value());
         }
+        /// @luabind(wrapper=autobind_tests::test_bind_struct_wrapper)
+        void test_wrapped() {}
     };
 
     /// @luabind

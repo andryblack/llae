@@ -326,3 +326,7 @@ end
 function TestAutoBindings:test_value()
     lu.assertEquals(bind_tests.test_value, 123)
 end
+
+function TestAutoBindings:test_wrapped()
+    lu.assertEquals(bind_tests.test_bind_fields.test_wrapped(2,3), 5)
+end
