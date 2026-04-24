@@ -579,7 +579,17 @@ end
 function bind_func:get_lua_results(async)
     return get_lua_results(self._node.return_type,async,self)
 end
-
+function bind_func:get_lua_overloads()
+    local tags = self:get_tags()
+    if not tags then
+         return {}
+    end
+    local res = {}
+    for _, tag in ipairs(tags:get('loverload')) do
+         table.insert(res, tag.value[1])
+    end
+    return res
+ end
 function bind_func:resolve_lua_type(type_str,is_return)
     return self._module:resolve_lua_type(type_str,is_return)
 end
@@ -635,6 +645,18 @@ function bind_method:get_c_ptr()
         return wrapper
     end
     return self:get_prefix() .. '::' .. self:get_name()
+end
+
+function bind_method:get_lua_overloads()
+   local tags = self:get_tags()
+   if not tags then
+        return {}
+   end
+   local res = {}
+   for _, tag in ipairs(tags:get('loverload')) do
+        table.insert(res, tag.value[1])
+   end
+   return res
 end
 
 local bind_field = class(bind_base, 'bind_field')

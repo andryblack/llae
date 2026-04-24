@@ -116,6 +116,11 @@ namespace enum_meta {
 
         /// @luabind
         void set_mode(module_enum mode);
+        /// @luabind
+        /// @lparam(x,integer)
+        /// @lreturn(r,string)
+        /// @loverload(fun(a:string,b:integet):boolean)
+        void method();
     };
 }
 ]]
@@ -124,7 +129,7 @@ namespace enum_meta {
     lu.assertEquals(module:resolve_lua_type('module_enum'), 'enum_meta.module_enum')
 
     local cls = module:get_classes()[1]
-    lu.assertEquals(#cls:get_methods(), 1)
+    lu.assertEquals(#cls:get_methods(), 2)
     local method = cls:get_methods()[1]
     lu.assertEquals(method:get_lua_args()[1].type, 'enum_meta.module_enum')
 
@@ -165,6 +170,11 @@ holder.class_enum = enum_meta_holder_class_enum
 --- set_mode
 ---@param mode enum_meta.module_enum
 function holder:set_mode(mode) end
+--- method
+---@param x integer
+---@return string r
+---@overload fun(a:string,b:integet):boolean
+function holder:method(x) end
 enum_meta.holder = holder
 return enum_meta
     ]])

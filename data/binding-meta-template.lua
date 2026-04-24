@@ -4,6 +4,8 @@
 ---@param <%= arg.name %> <%= arg.type %> <%= arg.descr or '' %><% end
 for _,result in ipairs(func:get_lua_results()) do %>
 ---@return <%= result.type %> <%= result.name %><% end
+for _,overload in ipairs(func:get_lua_overloads()) do %>
+---@overload <%- overload %><% end
 end
 local function format_async_func(func,up) %>
 <%- func:get_lua_comments() %><% for _,arg in ipairs(func:get_lua_args()) do %>
