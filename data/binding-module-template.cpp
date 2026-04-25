@@ -38,7 +38,7 @@ int luaopen_<%= module:get_bind_name() %>(lua_State* L) {
     l.setfield(-2,"<%= class:get_lua_name() %>");
     <% end %>
     <% for _,func in ipairs(module:get_functions()) do %>
-    <%= func:get_bind('async') and 'llae::async_function' or 'lua::bind::function' %>(l,"<%= func:get_lua_name() %>",&<%= func:get_prefix() %>::<%= func:get_name() %><% if func:get_policy() then %>,lua::bind::<%= func:get_policy() %><% end %>);<% end %>
+    <%= func:get_bind('async') and 'llae::async_function' or 'lua::bind::function' %>(l,"<%= func:get_lua_name() %>",&<%= func:get_c_ptr() %><% if func:get_policy() then %>,lua::bind::<%= func:get_policy() %><% end %>);<% end %>
     <% for _,enum in ipairs(module:get_enums()) do %>
     l.newtable();
     <% for _,val in ipairs(enum:get_values()) do %>

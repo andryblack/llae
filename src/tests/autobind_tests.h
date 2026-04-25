@@ -122,4 +122,7 @@ namespace autobind_tests {
 
     /// @luabind
     inline constexpr zooo test_zooo = zooo();
+
+    /// @luabind(wrapper=autobind_tests::test_bind_struct_wrapper)
+    static inline void test_free_wrapped() {}
 }

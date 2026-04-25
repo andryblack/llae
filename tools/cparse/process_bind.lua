@@ -594,6 +594,19 @@ function bind_func:resolve_lua_type(type_str,is_return)
     return self._module:resolve_lua_type(type_str,is_return)
 end
 
+function bind_func:get_wrapper()
+    local wrapper = self:get_bind('wrapper')
+    return wrapper
+end
+
+function bind_func:get_c_ptr()
+    local wrapper = self:get_wrapper()
+    if wrapper then
+        return wrapper
+    end
+    return self:get_prefix() .. '::' .. self:get_name()
+end
+
 local bind_method = class(bind_base, 'bind_method')
 function bind_method:_init(node,prefix,bind)
     bind_method.baseclass._init(self, node, prefix, bind)
