@@ -29,6 +29,7 @@ namespace uv {
         META_OBJECT
     private:
         lua::ref m_cont;
+        bool m_active = false;
         virtual void on_closed() override;
     protected:
         virtual void on_async() override;

@@ -16,7 +16,7 @@ namespace uv {
 	}
 
 	void async::async_cb(uv_async_t* h) {
-		async* self = static_cast<async*>(uv_handle_get_data(reinterpret_cast<uv_handle_t*>(h)));
+		async_ptr self{static_cast<async*>(uv_handle_get_data(reinterpret_cast<uv_handle_t*>(h)))};
 		self->on_async();
 	}
 
@@ -30,10 +30,13 @@ namespace uv {
     }
 
     void async_continue::on_async() {
+        if (m_active) {
+            remove_ref();
+            m_active = false;
+        }
         auto& l = llae::app::get(get_handle()->loop).lua();
         if (!l.native()) {
             release();
-            remove_ref();
             return;
         }
         if (!m_cont.valid()) {
@@ -56,6 +59,10 @@ namespace uv {
         int r = async::send();
         if (r<0) {
             return r;
+        }
+        if (!m_active) {
+            add_ref();
+            m_active = true;
         }
         return r;
     }
