@@ -101,7 +101,7 @@ function views:use( app )
 	self._app = app
 	app:register_handler( function (request, resp )
 		resp.render = function (_,view, ...) 
-			return self._render(resp,view,...)
+			return self:_render(resp,view,...)
 		end
 	end)
 end
