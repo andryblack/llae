@@ -43,7 +43,8 @@ function views:get( view )
 	end
 	local fn = self._app:get_fs_path(path.join(self._root,view .. '.' .. self._ext))
 	log.debug('load template',fn)
-	t = template.load(fn,self._options)
+	local roptions = setmetatable({name=view},self._options)
+	t = template.load(fn,roptions)
 	self._cache[view] = t
 	return t
 end
@@ -80,14 +81,27 @@ function views:get_parts( view )
 	return t
 end
 
+local function format_error(err)
+	return 'Error rendering template: ' .. tostring(err)
+end
+
+---@param resp net.http.server_response
+function views:_render( resp, view, ... )
+	local t = self:get(view)
+	local context = utils.merge(self._options.env,self._funcs,...)
+	local content,err = pcall(t,context)
+	if not content then
+		return resp:status(500):finish(format_error(err))
+	end
+	resp:set_header("Content-Type", "text/html")
+	return resp:finish(content)
+end
 
 function views:use( app )
 	self._app = app
 	app:register_handler( function (request, resp )
 		resp.render = function (_,view, ...) 
-			local t = self:get(view)
-			resp:set_header("Content-Type", "text/html")
-			resp:finish(t(utils.merge(self._options.env,self._funcs,...)))
+			return self._render(resp,view,...)
 		end
 	end)
 end
