@@ -21,14 +21,43 @@ function views:_init( root, options )
 	self._funcs = {}
 
 	self._funcs.include = function (view,...) 
-		local t = self:get(view)
-		return t(utils.merge(self._options.env,self._funcs,...))
+		return self:_include(view,...)
 	end
 
 	self._funcs.include_parts = function (view,...) 
-		local t = self:get_parts(view)
-		return t
+		return self:_include_parts(view,...)
 	end
+end
+
+function views:_include(view,...)
+	local t = self:get(view)
+	return t(self:_merge_context(...))
+end
+
+function views:_include_parts(view,...)
+	local t = self:get_parts(view)
+	return t
+end
+
+function views:_merge_context(...)
+	return utils.merge(self._options.env,self._funcs,...)
+end
+
+function views:_resolve_view_path(view)
+	return self._app:get_fs_path(path.join(self._root,view .. '.' .. self._ext))
+end
+
+function views:_load_template(fn,options)
+	return template.load(fn,options)
+end
+
+function views:_load_parts_source(fn)
+	return tostring(fs.load_file(fn))
+end
+
+function views:_compile_part(part,view,part_name)
+	local options = utils.merge(self._options,{name = view .. '/' .. part_name})
+	return template.compile(part,options)
 end
 
 function views:check( fn )
@@ -41,10 +70,10 @@ function views:get( view )
 	if t and not self._options.nocache then
 		return t
 	end
-	local fn = self._app:get_fs_path(path.join(self._root,view .. '.' .. self._ext))
+	local fn = self:_resolve_view_path(view)
 	log.debug('load template',fn)
-	local roptions = setmetatable({name=view},self._options)
-	t = template.load(fn,roptions)
+	local roptions = utils.merge(self._options,{name=view})
+	t = self:_load_template(fn,roptions)
 	self._cache[view] = t
 	return t
 end
@@ -54,9 +83,9 @@ function views:get_parts( view )
 	if t and not self._options.nocache then
 		return t
 	end
-	local fn = self._app:get_fs_path(path.join(self._root,view .. '.' .. self._ext))
+	local fn = self:_resolve_view_path(view)
 	--log.debug('load parts template',fn)
-	local data = tostring(fs.load_file(fn))
+	local data = self:_load_parts_source(fn)
 
 	t = {}
 	local pos = 1
@@ -65,10 +94,10 @@ function views:get_parts( view )
 		local npos,epos = string.find(data,'%-{.-}%-',pos)
 		--log.info('found part:',npos,epos)
 		local part = string.sub(data,pos,npos and npos-1)
-		local r = template.compile(part,self._options)
+		local r = self:_compile_part(part,view,name)
 		--log.info('compile part',name)
 		t[name] = function(...)
-			return r(utils.merge(self._options.env,self._funcs,...))
+			return r(self:_merge_context(...))
 		end
 		if not npos then
 			break
@@ -88,9 +117,10 @@ end
 ---@param resp net.http.server_response
 function views:_render( resp, view, ... )
 	local t = self:get(view)
-	local context = utils.merge(self._options.env,self._funcs,...)
-	local content,err = pcall(t,context)
-	if not content then
+	local context = self:_merge_context(...)
+	local ok,content = pcall(t,context)
+	if not ok then
+		local err = content
 		return resp:status(500):finish(format_error(err))
 	end
 	resp:set_header("Content-Type", "text/html")
