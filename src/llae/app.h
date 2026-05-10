@@ -9,6 +9,7 @@
 #include "lua/stack.h"
 #include "lua/ref.h"
 #include "error_handler.h"
+#include "loop.h"
 #include <vector>
 
 namespace llae {
@@ -56,6 +57,7 @@ namespace llae {
 		static app& get(uv_loop_t* l);
 		static app& get(lua::state& s) { return get(s.native()); }
 		static app& get(uv::loop& l) { return get(l.native()); }
+		static app& get(::llae::loop& l) { return get(static_cast<uv::loop&>(l)); }
 
 		template <typename ...Args>
 		void resume(lua::ref& cont,Args&&... args) {

@@ -6,7 +6,7 @@
 #include "llae-private/mbedtls/hkdf.h"
 #include "llae-private/zlib.h"
 #include "llae/buffer.h"
-#include "llae/app.h"
+#include "llae/loop.h"
 #include <cstdint>
 
 META_OBJECT_INFO(crypto::status_error, llae::error)
@@ -31,7 +31,7 @@ namespace crypto {
 			static_cast<uInt>(data->get_len())));
 	}
 
-	llae::result_promise_ptr<uint32_t> async_crc32(llae::app& a,uint32_t start,llae::buffer_base_ptr data) {
+	llae::result_promise_ptr<uint32_t> async_crc32(llae::loop& a,uint32_t start,llae::buffer_base_ptr data) {
 		if (!data) {
 			return llae::make_result_promise_string_error<uint32_t>("need data");
 		}
@@ -87,7 +87,7 @@ namespace crypto {
 		auto key = llae::buffer_base::get(l,4);
 		auto osize = l.checkinteger(5);
 		using work_t = llae::function_work<llae::buffer_base_ptr,llae::default_function_work_hold<llae::buffer_base_ptr,6>>;
-		return work_t::start(llae::app::get(l), [md_info,lsalt = std::move(salt),linfo=std::move(info),lkey=std::move(key),osize]{
+		return work_t::start(llae::loop::get(l), [md_info,lsalt = std::move(salt),linfo=std::move(info),lkey=std::move(key),osize]{
 			return sync_hkdf(md_info, lsalt, linfo, lkey, osize);
 		});
 	}

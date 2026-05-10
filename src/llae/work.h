@@ -6,24 +6,23 @@
 #include "meta/object.h"
 #include "result.h"
 #include "promise.h"
-#include "app.h"
+#include "loop.h"
 #include <algorithm>
 #include <type_traits>
 #include <utility>
 
 namespace llae {
 
-    class app;
 
     class work_base : public meta::object {
         META_OBJECT
     public:
         virtual void do_work() = 0;
     protected:
-        error_ptr schedule_work(app& a);
+        error_ptr schedule_work(loop& a);
     private:
         class work_impl;
-        virtual void on_after_work(app& a,error_ptr e) = 0;
+        virtual void on_after_work(loop& a,error_ptr e) = 0;
     };
 
     template <typename R>
@@ -34,12 +33,12 @@ namespace llae {
         using promise_ptr = common::intrusive_ptr<promise_type>;
         using this_ptr = common::intrusive_ptr<work<R>>;
     protected:
-        virtual result_type after_work(app& a) = 0;
-        virtual void release(app& a) {}
+        virtual result_type after_work(loop& a) = 0;
+        virtual void release(loop& a) {}
     private:
         promise_ptr m_promise;
 
-        virtual void on_after_work(app& a,error_ptr e) override final {
+        virtual void on_after_work(loop& a,error_ptr e) override final {
             if (m_promise && !m_promise->is_resolved()) {
                 if (e) {
                     release(a);
@@ -60,7 +59,7 @@ namespace llae {
         static promise_ptr forward_error(error_ptr&& e) {
             return result_promise_forward_error<R>(std::move(e));
         }
-        promise_ptr async_run(app& a) {
+        promise_ptr async_run(loop& a) {
             if (m_promise) {
                 return make_result_promise_string_error<R>("already scheduled");
             }
@@ -119,7 +118,7 @@ namespace llae {
                 return error_ptr{};
             }
         }
-        void release_hold(app& a) {
+        void release_hold(loop& a) {
             if constexpr (work_hold_traits::has_release<Hold>::value) {
                 m_hold.release(a);
             }
@@ -131,20 +130,20 @@ namespace llae {
         virtual void do_work() override final {
             m_result = m_hold();
         }
-        virtual result<R> after_work(app&) override final {
+        virtual result<R> after_work(loop&) override final {
             if (!m_result.has_value()) {
                 return string_error::create("work failed");
             }
             return std::move(*m_result);
         } 
-        virtual void release(app& a) override {
+        virtual void release(loop& a) override {
             m_result.reset();
             release_hold(a);
             m_hold.reset();
         }
 
         template<typename...Args>
-        static promise_ptr start(app& a,Args...args) {
+        static promise_ptr start(loop& a,Args...args) {
             auto w = common::make_intrusive<function_work<R,Hold>>(std::forward<Args>(args)...);
             if (auto err = w->try_start()) {
                 w->release(a);

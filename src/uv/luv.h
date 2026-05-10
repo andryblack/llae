@@ -11,6 +11,10 @@
 #include <vector>
 #include "llae/buffer.h"
 
+namespace llae {
+	class loop;
+}
+
 namespace uv {
 
 	void error(lua::state& l,int e);
@@ -75,7 +79,7 @@ namespace uv {
 		using this_ptr = common::intrusive_ptr<this_type>;
 		using result_type = llae::result<R>;
 	protected:
-		void resolve_status(llae::app& a,int status) {
+		void resolve_status(llae::loop& a,int status) {
 			this->set_result(a,result_type(common::make_intrusive<status_error>(status)));
 		}
 	};

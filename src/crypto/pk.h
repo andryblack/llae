@@ -9,6 +9,10 @@
 #include "llae/buffer.h"
 #include "llae/promise.h"
 
+namespace llae {
+	class loop;
+}
+
 namespace crypto {
 
 	/**
@@ -43,7 +47,7 @@ namespace crypto {
 		llae::result<llae::buffer_base_ptr> sync_encrypt(const llae::buffer_base_ptr& buffer,const random_ptr& random);
 		/// Encrypts data using the public key.
 		/// @luabind(name=encrypt,async=true)
-		llae::result_promise_ptr<llae::buffer_base_ptr> async_encrypt(llae::app& a,llae::buffer_base_ptr buffer,random_ptr random);
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_encrypt(llae::loop& a,llae::buffer_base_ptr buffer,random_ptr random);
 		
 		/// Creates a new public key instance.
 		/// @lreturn(result,crypto.pk)

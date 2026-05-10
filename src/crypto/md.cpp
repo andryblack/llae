@@ -8,7 +8,7 @@
 #include "llae/sequental.h"
 #include "lua/state.h"
 #include "llae/buffer.h"
-#include "llae/app.h"
+#include "llae/loop.h"
 #include "lua/bind.h"
 #include "lua/stack.h"
 #include "llae/write_buffers.h"
@@ -131,7 +131,7 @@ namespace crypto {
 		return finish_impl();
 	}
 
-	llae::result_promise_ptr<void> md::async_update(llae::app& a,llae::buffer_base_ptr&& data) {
+	llae::result_promise_ptr<void> md::async_update(llae::loop& a,llae::buffer_base_ptr&& data) {
 		if (!data) {
 			return llae::make_result_promise_string_error<void>("need data");
 		}
@@ -145,7 +145,7 @@ namespace crypto {
 		});
 	}
 
-	llae::result_promise_ptr<llae::buffer_base_ptr> md::async_finish(llae::app& a) {
+	llae::result_promise_ptr<llae::buffer_base_ptr> md::async_finish(llae::loop& a) {
 		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,md>;
 		return work_t::start(a,this,&md::m_seq,"finish",[](md& self){
 			return self.finish_impl();
@@ -163,7 +163,7 @@ namespace crypto {
 			return llae::make_result_promise_string_error<void>("invalid data");
 		}
 		using work_t = llae::sequental_method_write_buffers_work<void,md>;
-		return work_t::start(llae::app::get(l), std::move(buffers), this,&md::m_seq,"update", static_cast<llae::result<void>(md::*)(const llae::write_buffers&)>(&md::update_impl));
+		return work_t::start(llae::loop::get(l), std::move(buffers), this,&md::m_seq,"update", static_cast<llae::result<void>(md::*)(const llae::write_buffers&)>(&md::update_impl));
 	}
 
 	llae::error_ptr md::try_start() {

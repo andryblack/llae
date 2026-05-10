@@ -2,10 +2,11 @@
 #define __LLAE_UV_LOOP_H_INCLUDED__
 
 #include "decl.h"
+#include "llae/loop.h"
 
 namespace uv {
 
-	class loop {
+	class loop : public llae::loop {
 	private:
 		uv_loop_t* m_loop;
 		loop(const loop&) = delete;

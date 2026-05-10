@@ -7,13 +7,13 @@
 #include "llae/result.h"
 #include "lua/bind.h"
 #include "lua/state.h"
-#include "llae/app.h"
+#include "llae/loop.h"
 #include <cassert>
 
 
 namespace tests {
 
-    static llae::result_promise_ptr<llae::buffer_base_ptr> test_md(llae::app& a) {
+    static llae::result_promise_ptr<llae::buffer_base_ptr> test_md(llae::loop& a) {
         auto md = crypto::md::create(MBEDTLS_MD_MD5);
         if (!md) {
             co_return llae::string_error::create("failed create md");
@@ -29,7 +29,7 @@ namespace tests {
     }
 
     static llae::result_promise_ptr<llae::buffer_base_ptr> lua_test_md(lua::state& l) {
-        return test_md(llae::app::get(l));
+        return test_md(llae::loop::get(l));
     }
 }
 

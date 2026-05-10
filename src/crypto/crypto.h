@@ -13,7 +13,7 @@
 #include "llae-private/mbedtls/md.h"
 
 namespace llae {
-	class app;
+	class loop;
 	class buffer_base;
 	using buffer_base_ptr = common::intrusive_ptr<buffer_base>;
 }
@@ -52,7 +52,7 @@ namespace crypto {
 
 	/// Calculates CRC32 checksum of the input data.
 	/// @luabind(name=crc32,async=true)
-	llae::result_promise_ptr<uint32_t> async_crc32(llae::app& a, uint32_t start, llae::buffer_base_ptr data);
+	llae::result_promise_ptr<uint32_t> async_crc32(llae::loop& a, uint32_t start, llae::buffer_base_ptr data);
 
 	/// HKDF (HMAC-based Key Derivation Function) for key derivation.
 	/// @lparam(md,string|integer) The message digest algorithm to use

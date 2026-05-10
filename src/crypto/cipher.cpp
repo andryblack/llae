@@ -1,7 +1,7 @@
 #include "cipher.h"
 #include "common/intrusive_ptr.h"
 #include "llae/buffer.h"
-#include "llae/app.h"
+#include "llae/loop.h"
 #include "llae/promise.h"
 #include "llae/result.h"
 #include "llae/sequental.h"
@@ -108,7 +108,7 @@ namespace crypto {
 			return llae::make_result_promise_string_error<llae::buffer_base_ptr>("invalid data");
 		}
 		using work_t = llae::sequental_method_write_buffers_work<llae::buffer_base_ptr,cipher>;
-		return work_t::start(llae::app::get(l), std::move(buffers), this,&cipher::m_seq,"update", static_cast<llae::result<llae::buffer_base_ptr>(cipher::*)(const llae::write_buffers&)>(&cipher::update_impl));
+		return work_t::start(llae::loop::get(l), std::move(buffers), this,&cipher::m_seq,"update", static_cast<llae::result<llae::buffer_base_ptr>(cipher::*)(const llae::write_buffers&)>(&cipher::update_impl));
 	}
 
 	llae::result<void> cipher::update_ad_impl(const llae::buffer_base_ptr& data) {
@@ -127,7 +127,7 @@ namespace crypto {
 		return update_ad_impl(data);
 	}
 
-	llae::result_promise_ptr<void> cipher::async_update_ad(llae::app& a,llae::buffer_base_ptr&& data) {
+	llae::result_promise_ptr<void> cipher::async_update_ad(llae::loop& a,llae::buffer_base_ptr&& data) {
 		if (!data) {
 			return llae::make_result_promise_string_error<void>("need data");
 		}
@@ -158,7 +158,7 @@ namespace crypto {
 		return finish_impl();
 	}
 
-	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_finish(llae::app& a) {
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_finish(llae::loop& a) {
 		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher>;
 		return work_t::start(a, this, &cipher::m_seq, "finish", [](cipher& self){
 			return self.finish_impl();
@@ -191,7 +191,7 @@ namespace crypto {
 		return crypt_impl(iv, buffer);
 	}
 
-	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_crypt(llae::app& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr buffer) {
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_crypt(llae::loop& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr buffer) {
 		if (!buffer) {
 			return llae::make_result_promise_string_error<llae::buffer_base_ptr> ("need data");
 		}
@@ -229,7 +229,7 @@ namespace crypto {
 		}
 		return auth_encrypt_impl(iv, ad, buffer, tag_len);
 	}
-	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_auth_encrypt(llae::app& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len) {
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_auth_encrypt(llae::loop& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len) {
 		if (!buffer) {
 			return llae::make_result_promise_string_error<llae::buffer_base_ptr> ("need data");
 		}
@@ -266,7 +266,7 @@ namespace crypto {
 		}
 		return auth_decrypt_impl(iv, ad, buffer, tag_len);
 	}
-	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_auth_decrypt(llae::app& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len) {
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_auth_decrypt(llae::loop& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len) {
 		if (!buffer) {
 			return llae::make_result_promise_string_error<llae::buffer_base_ptr> ("need data");
 		}

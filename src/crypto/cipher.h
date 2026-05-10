@@ -16,7 +16,7 @@ namespace llae {
 	using buffer_ptr = common::intrusive_ptr<buffer>;
 	class buffer_base;
 	using buffer_base_ptr = common::intrusive_ptr<buffer_base>;
-	class app;
+	class loop;
 	class write_buffers;
 }
 
@@ -61,7 +61,7 @@ namespace crypto {
 		llae::result<void> sync_update_ad(const llae::buffer_base_ptr& data);
 		/// Processes additional data through the cipher (encrypt/decrypt).
 		/// @luabind(name=update_ad,async=true)
-		llae::result_promise_ptr<void> async_update_ad(llae::app& a,llae::buffer_base_ptr&& data);
+		llae::result_promise_ptr<void> async_update_ad(llae::loop& a,llae::buffer_base_ptr&& data);
 		/// Writes a tag from the cipher.
 		/// @luabind
 		llae::result<llae::buffer_base_ptr> write_tag(size_t tag_len);
@@ -71,19 +71,19 @@ namespace crypto {
 		llae::result<llae::buffer_base_ptr> sync_finish();
 		/// Finalizes the cipher operation and returns any remaining data.
 		/// @luabind(name=finish,async=true)
-		llae::result_promise_ptr<llae::buffer_base_ptr> async_finish(llae::app& a);
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_finish(llae::loop& a);
 		llae::result<llae::buffer_base_ptr> sync_crypt(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& data);
 		/// Processes data through the cipher (encrypt/decrypt).
 		/// @luabind(name=crypt,async=true)
-		llae::result_promise_ptr<llae::buffer_base_ptr> async_crypt(llae::app& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr data);
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_crypt(llae::loop& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr data);
 		llae::result<llae::buffer_base_ptr> sync_auth_encrypt(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& ad, const llae::buffer_base_ptr& buffer, size_t tag_len);
 		/// Authenticates and encrypts data through the cipher.
 		/// @luabind(name=auth_encrypt,async=true)
-		llae::result_promise_ptr<llae::buffer_base_ptr> async_auth_encrypt(llae::app& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len);
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_auth_encrypt(llae::loop& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len);
 		llae::result<llae::buffer_base_ptr> sync_auth_decrypt(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& ad, const llae::buffer_base_ptr& buffer, size_t tag_len);
 		/// Authenticates and decrypts data through the cipher.
 		/// @luabind(name=auth_decrypt,async=true)
-		llae::result_promise_ptr<llae::buffer_base_ptr> async_auth_decrypt(llae::app& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len);
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_auth_decrypt(llae::loop& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len);
 		/// @luabind
 		int get_block_size() const;
 		/// @luabind

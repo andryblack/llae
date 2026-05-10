@@ -4,7 +4,7 @@
 #include "llae/sequental.h"
 #include "llae/work.h"
 #include "llae/buffer.h"
-#include "llae/app.h"
+#include "llae/loop.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
 #include "llae/write_buffers.h"
@@ -41,7 +41,7 @@ namespace crypto {
 		}
 		return start_impl(*key);
 	}
-	llae::result_promise_ptr<void> hmac::async_start(llae::app& a,llae::buffer_base_ptr key) {
+	llae::result_promise_ptr<void> hmac::async_start(llae::loop& a,llae::buffer_base_ptr key) {
 		if (!key) {
 			return llae::make_result_promise_string_error<void>("need key");
 		}
@@ -76,7 +76,7 @@ namespace crypto {
 			return llae::make_result_promise_string_error<void>("invalid data");
 		}
 		using work_t = llae::sequental_method_write_buffers_work<void,hmac>;
-		return work_t::start(llae::app::get(l), std::move(buffers), this,&hmac::m_seq,"update", static_cast<llae::result<void>(hmac::*)(const llae::write_buffers&)>(&hmac::update_impl));
+		return work_t::start(llae::loop::get(l), std::move(buffers), this,&hmac::m_seq,"update", static_cast<llae::result<void>(hmac::*)(const llae::write_buffers&)>(&hmac::update_impl));
 	}
 
 	llae::result<llae::buffer_base_ptr> hmac::finish_impl() {
@@ -97,7 +97,7 @@ namespace crypto {
 		}
 		return finish_impl();
 	}
-	llae::result_promise_ptr<llae::buffer_base_ptr> hmac::async_finish(llae::app& a) {
+	llae::result_promise_ptr<llae::buffer_base_ptr> hmac::async_finish(llae::loop& a) {
 		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,hmac>;
 		return work_t::start(a,this,&hmac::m_seq,"finish",[](hmac& self){
 			return self.finish_impl();

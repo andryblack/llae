@@ -13,9 +13,6 @@
 #include "llae/result.h"
 #include "llae/sequental.h"
 
-namespace uv {
-	class loop;
-}
 namespace llae {
 	class buffer;
 	using buffer_ptr = common::intrusive_ptr<buffer>;
@@ -57,10 +54,10 @@ namespace crypto {
 		llae::result<void> sync_update(const llae::write_buffers& data);
 		llae::result<llae::buffer_base_ptr> sync_finish();
 
-		llae::result_promise_ptr<void> async_update(llae::app& a,llae::buffer_base_ptr&& data);
+		llae::result_promise_ptr<void> async_update(llae::loop& a,llae::buffer_base_ptr&& data);
 		/// Finalizes the digest and returns the hash result.
 		/// @luabind(name=finish,async=true)
-		llae::result_promise_ptr<llae::buffer_base_ptr> async_finish(llae::app& a);
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_finish(llae::loop& a);
 		
 		static const mbedtls_md_info_t* get_info(lua::state& l, int idx);
 		/// @luabind

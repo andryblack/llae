@@ -8,7 +8,7 @@
 
 namespace llae {
 
-    class app;
+    class loop;
 
     class sequental {
     private:
@@ -68,7 +68,7 @@ namespace llae {
             };
         }
 
-        void release(app& a) {
+        void release(loop& a) {
             if constexpr (work_hold_traits::has_release<Base>::value) {
                 base.release(a);
             }

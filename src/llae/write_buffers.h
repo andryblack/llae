@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include "llae/work.h"
 #include "llae/sequental.h"
+#include "llae/app.h"
 
 
 namespace llae {
@@ -43,8 +44,8 @@ namespace llae {
         using func_t = result<R> (T::*)(const write_buffers&);
         func_t func;
         explicit method_write_buffers_work_hold_base(write_buffers&& buffers,func_t func) : buffers(std::move(buffers)),func(func) {}
-        void release(app& a) {
-            buffers.reset(a.lua());
+        void release(loop& a) {
+            buffers.reset(llae::app::get(a).lua());
         }
         void reset() {
         }

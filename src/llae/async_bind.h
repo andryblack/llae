@@ -3,9 +3,10 @@
 #include "lua/stack.h"
 #include "promise.h"
 #include "lua/bind.h"
-#include "app.h"
+#include "llae/loop.h"
 
 namespace llae {
+
 
     template <typename P,typename R,typename T,typename ... Args>
     struct async_helper;
@@ -76,13 +77,13 @@ namespace llae {
     };
 
     template <class P, class R,class T,typename ... Args>
-    struct async_helper<P,R,T,app&,Args...> {
+    struct async_helper<P,R,T,loop&,Args...> {
         using policy_t = P;
         using result_t = result_promise_ptr<R>;
-        typedef result_t (T::*func_t)(app&,Args ... args);
+        typedef result_t (T::*func_t)(loop&,Args ... args);
         template <size_t... Is>
         static result_t apply(lua::state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
-            return (obj->*func)(app::get(l),policy_t::template arg_policy<Is>::template type<Args>::get(l,2+Is)...);
+            return (obj->*func)(loop::get(l),policy_t::template arg_policy<Is>::template type<Args>::get(l,2+Is)...);
         }
         static int function(lua_State* L) {
             auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -110,13 +111,13 @@ namespace llae {
     };
 
     template <class P, class R,typename ... Args>
-    struct async_helper<P,R,void,app&,Args...> {
+    struct async_helper<P,R,void,loop&,Args...> {
         using policy_t = P;
         using result_t = result_promise_ptr<R>;
-        typedef result_t (*func_t)(app&,Args ... args);
+        typedef result_t (*func_t)(loop&,Args ... args);
         template <size_t... Is>
         static result_t apply(lua::state&l,func_t func,const std::index_sequence<Is...>) {
-            return (*func)(app::get(l),policy_t::template arg_policy<Is>::template type<Args>::get(l,1+Is)...);
+            return (*func)(loop::get(l),policy_t::template arg_policy<Is>::template type<Args>::get(l,1+Is)...);
         }
         static int function(lua_State* L) {
             auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));

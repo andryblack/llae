@@ -4,7 +4,7 @@
 #include "llae/work.h"
 #include "rsa.h"
 #include "random.h"
-#include "llae/app.h"
+#include "llae/loop.h"
 #include "llae/async_bind.h"
 
 META_OBJECT_INFO(crypto::pk,meta::object)
@@ -80,7 +80,7 @@ namespace crypto {
 		llae::buffer_base_ptr r = std::move(result);
 		return llae::result<llae::buffer_base_ptr>(std::move(r));
 	}
-	llae::result_promise_ptr<llae::buffer_base_ptr> pk::async_encrypt(llae::app& a,llae::buffer_base_ptr buffer,random_ptr random) {
+	llae::result_promise_ptr<llae::buffer_base_ptr> pk::async_encrypt(llae::loop& a,llae::buffer_base_ptr buffer,random_ptr random) {
 		if (!random) {
 			random = random_ptr(new crypto::random(entropy_ptr{}));
 			random->seed(llae::buffer_view{});

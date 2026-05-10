@@ -15,8 +15,6 @@
 
 namespace llae {
 
-    class app;
-
     
     class promise_base : public meta::object {
         META_OBJECT
