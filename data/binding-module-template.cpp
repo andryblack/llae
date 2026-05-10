@@ -24,6 +24,8 @@ static void luabind_<%= class:get_bind_name() %>(lua::state& l) {
     lua::bind::value(l, "<%= enum:get_lua_value_name(val.name) %>", <%= class:get_prefix() %>::<%= class:get_name() %>::<% if enum:is_scoped() then %><%= enum:get_name() %>::<% end %><%= val.name %>);<% end %>
     l.setfield(-2, "<%= enum:get_lua_name() %>");
     <% end %>
+    <% for _,value in ipairs(class:get_values()) do %>
+    lua::bind::value(l, "<%= value:get_lua_name() %>", <%= value:get_prefix() %>::<%= value:get_name() %>);<% end %>
 }
 <% end %>
 

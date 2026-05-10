@@ -92,11 +92,9 @@ namespace fb {
     lu.assertEquals(#module:get_classes(), 1)
     local cls = module:get_classes()[1]
     lu.assertEquals(cls:get_name(), 'S')
-    local fields = cls:get_fields()
-    lu.assertEquals(#fields, 1)
-    lu.assertEquals(fields[1]:get_name(), 'x')
-    lu.assertEquals(fields[1]:get_type(), '::luabind_autobind_type')
-    lu.assertEquals(fields[1]:get_bind('readonly'), 'true')
+    local values = cls:get_values()
+    lu.assertEquals(#values, 1)
+    lu.assertEquals(values[1]:get_name(), 'x')
     lu.assertEquals(#cls:get_methods(), 1)
     local func_g = cls:get_methods()[1]
     lu.assertEquals(func_g:get_name(), 'g')

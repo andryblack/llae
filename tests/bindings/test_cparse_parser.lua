@@ -771,3 +771,54 @@ function TestParserArgs:test_single_scoped_type_param()
   lu.assertEquals(#n.params, 1)
   lu.assertEquals(n.params[1].type, "std::string")
 end
+
+TestParserFields = {}
+
+function TestParserFields:test_field_simple()
+  local n = first("struct S { int x = 0; };")
+  lu.assertEquals(n.children[1].kind, "field")
+  lu.assertEquals(n.children[1].name, "x")
+  lu.assertEquals(n.children[1].qualifiers,{})
+  lu.assertFalse(n.children[1]:is_const())
+end
+
+function TestParserFields:test_field_const()
+  local n = first("struct S { constexpr int x = 0; };")
+  lu.assertEquals(n.children[1].kind, "field")
+  lu.assertEquals(n.children[1].name, "x")
+  lu.assertEquals(n.children[1].qualifiers,{constexpr=true})
+  lu.assertTrue(n.children[1]:is_const())
+  lu.assertTrue(n.children[1]:is_static())
+end
+
+function TestParserFields:test_field_static()
+  local n = first("struct S { static int x = 0; };")
+  lu.assertEquals(n.children[1].kind, "field")
+  lu.assertEquals(n.children[1].name, "x")
+  lu.assertEquals(n.children[1].qualifiers,{static=true})
+  lu.assertTrue(n.children[1]:is_static())
+end
+
+function TestParserFields:test_field_static_const()
+  local n = first("struct S { static const int x = 0; };")
+  lu.assertEquals(n.children[1].kind, "field")
+  lu.assertEquals(n.children[1].name, "x")
+  lu.assertEquals(n.children[1].type, "const int")
+  lu.assertEquals(n.children[1].qualifiers,{static=true})
+  lu.assertTrue(n.children[1]:is_static())
+  lu.assertTrue(n.children[1]:is_const())
+end
+
+function TestParserFields:test_fields_complex()
+  local n = first("struct S { static constexpr int x = 0; int y;};")
+  lu.assertEquals(n.children[1].kind, "field")
+  lu.assertEquals(n.children[1].name, "x")
+  lu.assertTrue(n.children[1]:is_static())
+  lu.assertTrue(n.children[1]:is_const())
+  lu.assertEquals(n.children[2].kind, "field")
+  lu.assertEquals(n.children[2].name, "y")
+  lu.assertFalse(n.children[2]:is_static())
+  lu.assertFalse(n.children[2]:is_const())
+end
+
+

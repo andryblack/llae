@@ -331,3 +331,8 @@ function TestAutoBindings:test_wrapped()
     lu.assertEquals(bind_tests.test_bind_fields.test_wrapped(2,3), 5)
     lu.assertEquals(bind_tests.test_free_wrapped(4,7), 11)
 end
+
+function TestAutoBindings:test_class_values()
+    lu.assertEquals(bind_tests.test_bind_fields.constexpr_value, 123)
+    lu.assertEquals(bind_tests.test_bind_fields.static_const_value, 456)
+end

@@ -227,6 +227,21 @@ function ast_field:_init(name, type_str, qualifiers)
   self.qualifiers = qualifiers or {}
 end
 
+function ast_field:is_static()
+  return (self.qualifiers.static or self.qualifiers.constexpr) and true or false
+end
+
+function ast_field:is_constexpr()
+  return self.qualifiers.constexpr and true or false
+end
+
+function ast_field:is_const()
+  if self.qualifiers.const or self.qualifiers.constexpr then
+    return true
+  end
+  return (self.type and self.type:find('const ',1,true) == 1) and true or false
+end
+
 -- ── Access specifier ──────────────────────────────────────────────────────────
 
 ---@class ast_access : ast_node

@@ -319,6 +319,7 @@ function bind_class:_init(node,prefix,bind)
     self._fields = {}
     self._enums = {}
     self._bases = {}
+    self._values = {}
     self._resolve = resolve_collector.new()
 end
 
@@ -334,6 +335,14 @@ function bind_class:add_using(node)
     self._resolve:add_using(node)
 end
 
+function bind_class:add_value(value)
+    table.insert(self._values, value)
+    value:set_module(self)
+end
+
+function bind_class:get_values()
+    return self._values
+end
 
 function bind_class:add_method(method)
     if method:get_name() == self:get_name() then
@@ -912,9 +921,15 @@ function traverser:traverse_field(node)
     if bind then
         local current_bind = self:_get_current_bind()
         if current_bind then
-            local field = bind_field.new(node, self:get_full_name(), bind)
-            current_bind:add_field(field)
-            field:set_tags(node_tags)
+            if node:is_constexpr() or (node:is_static() and node:is_const()) then
+                local value = bind_value.new(node, self:get_full_name(), bind)
+                current_bind:add_value(value)
+                value:set_tags(node_tags)
+            else
+                local field = bind_field.new(node, self:get_full_name(), bind)
+                current_bind:add_field(field)
+                field:set_tags(node_tags)
+            end
         else
             local value = bind_value.new(node, self:get_full_name(), bind)
             local module = self._processor:get_module(value:get_module_name())
@@ -948,7 +963,7 @@ function processor:_init()
     self._defines = {}
     self._modules = {}
     self:define('LUABIND_PARSE', '1')
-    self:define('LUABIND_FIELD(Name)', 'inline constexpr ::luabind_autobind_type Name = {};')
+    self:define('LUABIND_FIELD(Name)', '::luabind_autobind_type Name;')
     self:define('LUABIND_FUNC(Name)', '::luabind_autobind_type Name();')
 end
 

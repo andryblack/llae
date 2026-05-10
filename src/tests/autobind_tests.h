@@ -99,6 +99,10 @@ namespace autobind_tests {
         }
         /// @luabind(wrapper=autobind_tests::test_bind_struct_wrapper)
         void test_wrapped() {}
+        /// @luabind
+        static constexpr int constexpr_value = 123;
+        /// @luabind
+        inline static const int static_const_value = 456;
     };
 
     /// @luabind
