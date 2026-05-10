@@ -38,3 +38,20 @@ function TestUV:test_ip6_addr_binary()
     lu.assertEquals(ip, '\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10')
 end
 
+
+TestUVFS = {}
+
+function TestUVFS:setUp()
+    os.execute('rm -rf build/tests')
+end
+
+function TestUVFS:tearDown()
+    os.execute('rm -rf build/tests')
+end
+
+function TestUVFS:test_mkdir()
+    local res = uv.fs.mkdir('build/tests')
+    lu.assertTrue(res)
+    local res = uv.fs.async_mkdir('build/tests/inner')
+    lu.assertTrue(res:await())
+end

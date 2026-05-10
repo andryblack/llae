@@ -50,7 +50,7 @@ end
 ---@return fun(context: table<string,any>?): string
 function template:load( filename , name)
 	self._name = name or path.getrelative(filename)
-	local data = fs.load_file(filename)
+	local data = tostring(fs.load_file(filename))
 	return self:parse(data)
 end
 

@@ -60,6 +60,7 @@ namespace llae {
         static lua::multiret base64_decode(lua::state& l);
         static lua::multiret base64_encode(lua::state& l);
 
+        static lua::multiret lconcat_table(lua::state& l);
     protected:
         void* m_data = nullptr;
         size_t m_size = 0;

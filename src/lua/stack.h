@@ -68,30 +68,42 @@ namespace lua {
 		static int push(state& s,int v) { s.pushinteger(v); return 1; }
 	};
 	template <>
+	struct stack<const int&> : stack<int> {};
+	template <>
 	struct stack<unsigned int> {
 		static unsigned int get(state& s,int idx) { return static_cast<unsigned int>(s.tointeger(idx)); }
 		static int push(state& s,unsigned int v) { s.pushinteger(v); return 1; }
 	};
+	template <>
+	struct stack<const unsigned int&> : stack<unsigned int> {};
 	template <>
 	struct stack<long> {
 		static long get(state& s,int idx) { return s.tointeger(idx); }
 		static int push(state& s,long v) { s.pushinteger(v); return 1; }
 	};
 	template <>
+	struct stack<const long&> : stack<long> {};
+	template <>
 	struct stack<unsigned long> {
 		static unsigned long get(state& s,int idx) { return s.tointeger(idx); }
 		static int push(state& s,unsigned long v) { s.pushinteger(v); return 1; }
 	};
+	template <>
+	struct stack<const unsigned long&> : stack<unsigned long> {};
 	template <>
 	struct stack<long long> {
 		static long long get(state& s,int idx) { return s.tointeger(idx); }
 		static int push(state& s,long long v) { s.pushinteger(v); return 1; }
 	};
 	template <>
+	struct stack<const long long&> : stack<long long> {};
+	template <>
 	struct stack<unsigned long long> {
 		static unsigned long long get(state& s,int idx) { return s.tointeger(idx); }
 		static int push(state& s,unsigned long long v) { s.pushinteger(v); return 1; }
 	};
+	template <>
+	struct stack<const unsigned long long&> : stack<unsigned long long> {};
     
 	template <>
 	struct stack<const char*> {
@@ -104,10 +116,14 @@ namespace lua {
 		static int push(state& s,float v) { s.pushnumber(v); return 1; }
 	};
 	template <>
+	struct stack<const float&> : stack<float> {};
+	template <>
 	struct stack<double> {
 		static double get(state& s,int idx) { return s.tonumber(idx); }
 		static int push(state& s,double v) { s.pushnumber(v); return 1; }
 	};
+	template <>
+	struct stack<const double&> : stack<double> {};
 	template <>
 	struct stack<bool> {
 		static bool get(state& s,int idx) { return s.toboolean(idx); }

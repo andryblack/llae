@@ -56,9 +56,10 @@ static void luabind_uv_file(lua::state& l) {
     
     
     lua::bind::function(l,"get_handle",&uv::file::get);
-    lua::bind::function(l,"close",&uv::file::fclose);
-    lua::bind::function(l,"write",&uv::file::lwrite);
-    lua::bind::function(l,"read",&uv::file::read);
+    llae::async_function(l,"close",&uv::file::async_close);
+    llae::async_function(l,"fsync",&uv::file::async_fsync);
+    llae::async_function(l,"write",&uv::file::lasync_write);
+    llae::async_function(l,"read",&uv::file::async_read);
     lua::bind::function(l,"seek",&uv::file::seek);
     lua::bind::function(l,"tell",&uv::file::tell);
     

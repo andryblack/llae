@@ -1,19 +1,94 @@
 #include "fs.h"
 #include "llae/app.h"
 #include "common/intrusive_ptr.h"
+#include "llae/promise.h"
 #include "luv.h"
 #include "llae/write_buffers.h"
 #include <vector>
 
 META_OBJECT_INFO(uv::file,meta::object)
 
+namespace lua {
+
+	
+	static void push_timespec(lua::state& l,const uv_timespec_t& ts) {
+		l.createtable(0,2);
+		l.pushinteger(ts.tv_sec);
+		l.setfield(-2,"sec");
+		l.pushinteger(ts.tv_nsec);
+		l.setfield(-2,"nsec");
+	}
+
+	int stack<uv_stat_t>::push(lua::state& l,const uv_stat_t& statbuf) {
+		l.createtable(0,0);
+		push_timespec(l,statbuf.st_mtim);
+		l.setfield(-2,"mtim");
+		l.pushinteger(statbuf.st_size);
+		l.setfield(-2,"size");
+		int fmt = statbuf.st_mode & S_IFMT;
+		if (fmt == S_IFREG) {
+			l.pushboolean(true);
+			l.setfield(-2,"isfile");
+		} else if (fmt == S_IFDIR) {
+			l.pushboolean(true);
+			l.setfield(-2,"isdir");
+		}
+		return 1;
+	}
+
+	int stack<uv::dirent_t>::push(lua::state& l,const uv::dirent_t& ent) {
+		l.createtable(0,0);
+		l.pushstring(ent.name.c_str());
+		l.setfield(-2,"name");
+		l.pushinteger(ent.type);
+		l.setfield(-2,"type");
+		if (ent.type == UV_DIRENT_FILE) {
+			l.pushboolean(true);
+			l.setfield(-2,"isfile");
+		} else if (ent.type == UV_DIRENT_DIR) {
+			l.pushboolean(true);
+			l.setfield(-2,"isdir");
+		} else if (ent.type == UV_DIRENT_LINK) {
+			l.pushboolean(true);
+			l.setfield(-2,"islink");
+		}
+		return 1;
+	}
+
+	int stack<std::vector<uv::dirent_t>>::push(lua::state& l,const std::vector<uv::dirent_t>& entries) {
+		l.newtable();
+		lua_Integer idx = 1;
+		for (const auto& entry : entries) {
+			stack<uv::dirent_t>::push(l,entry);
+			l.seti(-2,idx);
+			++idx;
+		}
+		return 1;
+	}
+}
+
 namespace uv {
 
 	
+	class fs_req : public req {
+	private:
+		uv_fs_t	m_fs;
+	protected:
+		static fs_req* get(uv_fs_t* req);
+	protected:
+		fs_req();
+		virtual ~fs_req() override;
+		virtual void on_cb() = 0;
+		virtual void release() {}
+	public:
+		uv_fs_t* get() { return &m_fs; }
+		static void fs_cb(uv_fs_t* req);
+	};
 
 	fs_req::fs_req() {
 		uv_req_set_data(reinterpret_cast<uv_req_t*>(&m_fs),this);
 	}
+	
 	fs_req::~fs_req() {
 		uv_fs_req_cleanup(&m_fs);
 	}
@@ -24,23 +99,47 @@ namespace uv {
 	void fs_req::fs_cb(uv_fs_t* req) {
 		fs_req* self = get(req);
 		self->on_cb();
+		self->release();
 		self->remove_ref();
 	}
 
 
+	class fs_none : public fs_req {
+	public:
+		explicit fs_none() : fs_req() {}
+		virtual void on_cb() override final {}
+	};
+
+	class fs_file_req : public fs_req {
+	private:
+		file_ptr m_file;
+	protected:
+		uv_file get_file() const { return m_file->get(); }
+		size_t get_offset() const { return m_file->get_offset(); }
+	protected:
+		explicit fs_file_req(file_ptr&& file) : fs_req(),m_file(std::move(file)) {}
+		virtual ~fs_file_req() override {}
+	};
+	
 	class fs_cont : public fs_req {
 		lua::ref m_cont;
 	protected:
 		virtual int on_cont(lua::state& l) = 0;
-        virtual void release() {
-            m_cont.release();
+        virtual void release() override {
+            auto& l = llae::app::get(get()->loop).lua();
+			if (l.native()) {
+				m_cont.reset(l);
+			} else {
+				m_cont.release();
+			}
         }
 	public:
-		explicit fs_cont(lua::ref&& cont) : m_cont(std::move(cont)) {}
+		explicit fs_cont(lua::ref&& cont) : fs_req(),m_cont(std::move(cont)) {}
+		virtual ~fs_cont() override {}
 		virtual void on_cb() override final {
 			auto& l = llae::app::get(get()->loop).lua();
             if (!l.native()) {
-                release();
+                m_cont.release();
                 return;
             }
 			l.checkstack(2);
@@ -59,381 +158,214 @@ namespace uv {
             m_cont.reset(l);
         }
 	};
-
-	class fs_none : public fs_req {
-	public:
-		explicit fs_none() {}
-		virtual void on_cb() override final {}
-	};
-	class fs_status : public fs_cont {
-	public:
-		fs_status(lua::ref&& cont) : fs_cont(std::move(cont)) {}
-		int on_cont(lua::state& l) override {
-			auto res = uv_fs_get_result(get());
-			if (res < 0) {
-				l.pushnil();
-				uv::push_error(l,int(res));
-				return 2;
-			} 
-			l.pushboolean(true);
-			return 1;
-		}
-	};
-
-	static void push_timespec(lua::state& l,const uv_timespec_t& ts) {
-		l.createtable(0,2);
-		l.pushinteger(ts.tv_sec);
-		l.setfield(-2,"sec");
-		l.pushinteger(ts.tv_nsec);
-		l.setfield(-2,"nsec");
-	}
 	
-	class fs_stat : public fs_cont {
+	
+	class fs_stat : public fs_req {
+	private:
+		llae::result_promise_ptr<uv_stat_t> m_result;
 	public:
-		fs_stat(lua::ref&& cont) : fs_cont(std::move(cont)) {}
-		int on_cont(lua::state& l) override {
-		
+		explicit fs_stat(const llae::result_promise_ptr<uv_stat_t>& result) : fs_req(),m_result(result) {}
+		virtual void on_cb() override final {
 			auto res = uv_fs_get_result(get());
 			if (res < 0) {
-				l.pushnil();
-				uv::push_error(l,int(res));
-				return 2;
-			} 
-			auto& statbuf(*uv_fs_get_statbuf(get()));
-			l.createtable(0,0);
-			push_timespec(l,statbuf.st_mtim);
-			l.setfield(-2,"mtim");
-			l.pushinteger(statbuf.st_size);
-			l.setfield(-2,"size");
-			int fmt = statbuf.st_mode & S_IFMT;
-			if (fmt == S_IFREG) {
-				l.pushboolean(true);
-				l.setfield(-2,"isfile");
-			} else if (fmt == S_IFDIR) {
-				l.pushboolean(true);
-				l.setfield(-2,"isdir");
+				m_result->set_result(status_error::create(res));
+			} else {
+				m_result->set_result(llae::result<uv_stat_t>(*uv_fs_get_statbuf(get())));
 			}
-			return 1;
 		}
 	};
 
-	class fs_scandir : public fs_cont {
+
+	class fs_promise_status : public fs_req {
+	private:
+		llae::result_promise_ptr<void> m_result;
 	public:
-		fs_scandir(lua::ref&& cont) : fs_cont(std::move(cont)) {}
-		int on_cont(lua::state& l) override {
+		explicit fs_promise_status(const llae::result_promise_ptr<void>& result) : fs_req(),m_result(result) {}
+		virtual void on_cb() override final {
+			auto res = uv_fs_get_result(get());
+			if (res < 0) {
+				m_result->set_result(uv::make_result(res));
+			} else {
+				m_result->set_result(llae::result<>());
+			}
+		}
+	};
+
+	class fs_file_promise_status : public fs_file_req {
+	private:
+		llae::result_promise_ptr<void> m_result;
+	public:
+		explicit fs_file_promise_status(file_ptr&& file,const llae::result_promise_ptr<void>& result) : fs_file_req(std::move(file)),m_result(result) {}
+		virtual void on_cb() override final {
+			auto res = uv_fs_get_result(get());
+			if (res < 0) {
+				m_result->set_result(uv::make_result(res));
+			} else {
+				m_result->set_result(llae::result<>());
+			}
+		}
+	};
+
+	class fs_scandir : public fs_req {
+	private:
+		llae::result_promise_ptr<std::vector<dirent_t>> m_result;
+	public:
+		explicit fs_scandir(const llae::result_promise_ptr<std::vector<dirent_t>>& result) : fs_req(),m_result(result) {}
+		virtual void on_cb() override final {
 			auto req = get();
 			auto res = uv_fs_get_result(req);
 			if (res < 0) {
-				l.pushnil();
-				uv::push_error(l,int(res));
-				return 2;
+				m_result->set_result(uv::status_error::create(res));
+				return;
 			} 
-			l.createtable();
-			lua_Integer idx = 1;
+			std::vector<dirent_t> entries;
 			while(true) {
 				uv_dirent_t ent;
 				int r = uv_fs_scandir_next(req,&ent);
 				if (r == UV_EOF) {
-					return 1;
+					break;
 				}
-				if (ent.type == UV_DIRENT_FILE || ent.type == UV_DIRENT_DIR) {
-					l.createtable();
-					l.pushstring(ent.name);
-					l.setfield(-2,"name");
-					if (ent.type == UV_DIRENT_FILE) {
-						l.pushboolean(true);
-						l.setfield(-2,"isfile");
-					} else if (ent.type == UV_DIRENT_DIR) {
-						l.pushboolean(true);
-						l.setfield(-2,"isdir");
-					} else if (ent.type == UV_DIRENT_LINK) {
-						l.pushboolean(true);
-						l.setfield(-2,"islink");
-					}
-					l.seti(-2,idx);
-					++idx;
-				}
+				dirent_t rent;
+				rent.name = ent.name;
+				rent.type = ent.type;
+				entries.emplace_back(std::move(rent));
 			}
-			return 1;
+			m_result->set_result(std::move(entries));
 		}
 	};
 
-	class fs_open : public fs_cont {
+	class fs_open : public fs_req {
+	private:
+		llae::result_promise_ptr<file_ptr> m_result;
 	public:
-		fs_open(lua::ref&& cont) : fs_cont(std::move(cont)) {}
-		int on_cont(lua::state& l) override {
+		explicit fs_open(const llae::result_promise_ptr<file_ptr>& result) : fs_req(),m_result(result) {}
+		virtual void on_cb() override final {
 			auto res = uv_fs_get_result(get());
 			if (res < 0) {
-				l.pushnil();
-				uv::push_error(l,int(res));
-				return 2;
-			} 
-			common::intrusive_ptr<file> f(new file(uv_file(res),get()->loop));
-			lua::push_meta_object(l,std::move(f));
-			return 1;
+				m_result->set_result(uv::status_error::create(res));
+			} else {
+				auto f = common::make_intrusive<file>(uv_file(res),get()->loop);
+				m_result->set_result(std::move(f));
+			}
 		}
 	};
 	
 
-	int fs::mkdir(lua_State* L) {
-		lua::state l(L);
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("mkdir is async");
-			return 2;
-		}
-		{
-			auto path = l.checkstring(1);
-			int mode = int(l.optinteger(2,0755));
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+	llae::result_promise_ptr<void> fs::async_mkdir(llae::loop& l,std::string_view path,std::optional<int> mode) {
+		auto result = common::make_intrusive<llae::result_promise<void>>();
+		auto req = common::make_intrusive<fs_promise_status>(result);
+		auto res = uv_fs_mkdir(get_native(l),req->get(),path.data(),mode.value_or(0755),&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::make_result(res));
+		} else {
 			req->add_ref();
-			int r = uv_fs_mkdir(app.loop().native(),
-				req->get(),path,mode,&fs_req::fs_cb);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return 2;
-			} 
 		}
-		l.yield(0);
-		return 0;
+		return result;
 	}
 
 
-	int fs::rmdir(lua_State* L) {
-		lua::state l(L);
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("rmdir is async");
-			return 2;
-		}
-		{
-			auto path = l.checkstring(1);
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+	llae::result_promise_ptr<void> fs::async_rmdir(llae::loop& l,std::string_view path) {
+		auto result = common::make_intrusive<llae::result_promise<void>>();
+		auto req = common::make_intrusive<fs_promise_status>(result);
+		auto res = uv_fs_rmdir(get_native(l),
+				req->get(),path.data(),&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::make_result(res));
+		} else {
 			req->add_ref();
-			int r = uv_fs_rmdir(app.loop().native(),
-				req->get(),path,&fs_req::fs_cb);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return 2;
-			} 
 		}
-		l.yield(0);
-		return 0;
+		return result;
 	}
 
-	int fs::unlink(lua_State* L) {
-		lua::state l(L);
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("unlink is async");
-			return 2;
-		}
-		{
-			auto path = l.checkstring(1);
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+	llae::result_promise_ptr<void> fs::async_unlink(llae::loop& l,std::string_view path) {
+		auto result = common::make_intrusive<llae::result_promise<void>>();
+		auto req = common::make_intrusive<fs_promise_status>(result);
+		auto res = uv_fs_unlink(get_native(l),
+			req->get(),path.data(),&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::make_result(res));
+		} else {
 			req->add_ref();
-			int r = uv_fs_unlink(app.loop().native(),
-				req->get(),path,&fs_req::fs_cb);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return 2;
-			} 
 		}
-		l.yield(0);
-		return 0;
+		return result;
 	}
 
-	int fs::copyfile(lua_State* L) {
-		lua::state l(L);
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("copyfile is async");
-			return 2;
-		}
-		{
-			auto path = l.checkstring(1);
-			auto new_path = l.checkstring(2);
-			auto flags = l.optinteger(3,0);
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+	llae::result_promise_ptr<void> fs::async_copyfile(llae::loop& l,std::string_view path,std::string_view new_path,std::optional<int> flags) {
+		auto result = common::make_intrusive<llae::result_promise<void>>();
+		auto req = common::make_intrusive<fs_promise_status>(result);
+		auto res = uv_fs_copyfile(get_native(l),
+			req->get(),path.data(),new_path.data(),flags.value_or(0),&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::make_result(res));
+		} else {
 			req->add_ref();
-			int r = uv_fs_copyfile(app.loop().native(),
-				req->get(),path,new_path,int(flags),&fs_req::fs_cb);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return 2;
-			} 
 		}
-		l.yield(0);
-		return 0;
+		return result;
 	}
 
-	int fs::rename(lua_State* L) {
-		lua::state l(L);
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("rename is async");
-			return 2;
-		}
-		{
-			auto path = l.checkstring(1);
-			auto new_path = l.checkstring(2);
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+	llae::result_promise_ptr<void> fs::async_rename(llae::loop& l,std::string_view path,std::string_view new_path) {
+		auto result = common::make_intrusive<llae::result_promise<void>>();
+		auto req = common::make_intrusive<fs_promise_status>(result);
+		auto res = uv_fs_rename(get_native(l),
+			req->get(),path.data(),new_path.data(),&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::make_result(res));
+		} else {
 			req->add_ref();
-			int r = uv_fs_rename(app.loop().native(),
-				req->get(),path,new_path,&fs_req::fs_cb);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return 2;
-			} 
 		}
-		l.yield(0);
-		return 0;
+		return result;
 	}
 
-	int fs::stat(lua_State* L) {
-		lua::state l(L);
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("stat is async");
-			return 2;
-		}
-		{
-			auto path = l.checkstring(1);
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_stat(std::move(cont))};
+	llae::result_promise_ptr<uv_stat_t> fs::async_stat(llae::loop& l,std::string_view path) {
+		auto result = common::make_intrusive<llae::result_promise<uv_stat_t>>();
+		auto req = common::make_intrusive<fs_stat>(result);
+		auto res = uv_fs_stat(get_native(l),
+				req->get(),path.data(),&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::status_error::create(res));
+		} else {
 			req->add_ref();
-			int r = uv_fs_stat(app.loop().native(),
-				req->get(),path,&fs_req::fs_cb);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return 2;
-			} 
 		}
-		l.yield(0);
-		return 0;
+		return result;
 	}
 
-	int fs::scandir(lua_State* L) {
-		lua::state l(L);
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("scandir is async");
-			return 2;
-		}
-		{
-			auto path = l.checkstring(1);
-			int flags = int(l.optinteger(2,0));
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_scandir(std::move(cont))};
+	llae::result_promise_ptr<std::vector<dirent_t>> fs::async_scandir(llae::loop& l,std::string_view path,std::optional<int> flags) {
+		auto result = common::make_intrusive<llae::result_promise<std::vector<dirent_t>>>();
+		auto req = common::make_intrusive<fs_scandir>(result);
+		auto res = uv_fs_scandir(get_native(l),
+			req->get(),path.data(),flags.value_or(0),&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::status_error::create(res));
+		} else {
 			req->add_ref();
-			int r = uv_fs_scandir(app.loop().native(),
-				req->get(),path,flags,&fs_req::fs_cb);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return 2;
-			} 
 		}
-		l.yield(0);
-		return 0;
+		return result;
+	}
+		
+	llae::result_promise_ptr<file_ptr> fs::async_open(llae::loop& l,std::string_view path,std::optional<int> flags,std::optional<int> mode) {
+		auto result = common::make_intrusive<llae::result_promise<file_ptr>>();
+		auto req = common::make_intrusive<fs_open>(result);
+		auto res = uv_fs_open(get_native(l),
+			req->get(),path.data(),flags.value_or(UV_FS_O_RDONLY),mode.value_or(0644),&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::status_error::create(res));
+		} else {
+			req->add_ref();
+		}
+		return result;
 	}
 
-	int fs::open(lua_State* L) {
-		lua::state l(L);
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("open is async");
-			return 2;
-		}
-		{
-			auto path = l.checkstring(1);
-			int flags = int(l.optinteger(2,UV_FS_O_RDONLY));
-			int mode = int(l.optinteger(3,0644));
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_open(std::move(cont))};
+	llae::result_promise_ptr<void> fs::async_chmod(llae::loop& l,std::string_view path,int mode) {
+		auto result = common::make_intrusive<llae::result_promise<void>>();
+		auto req = common::make_intrusive<fs_promise_status>(result);
+		auto res = uv_fs_chmod(get_native(l),
+			req->get(),path.data(),mode,&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::make_result(res));
+		} else {
 			req->add_ref();
-			int r = uv_fs_open(app.loop().native(),
-				req->get(),path,flags,mode,&fs_req::fs_cb);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return 2;
-			} 
 		}
-		l.yield(0);
-		return 0;
-	}
-
-	int fs::chmod(lua_State* L) {
-		lua::state l(L);
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("chmod is async");
-			return 2;
-		}
-		{
-			auto path = l.checkstring(1);
-			int mode = int(l.checkinteger(2));
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
-			req->add_ref();
-			int r = uv_fs_chmod(app.loop().native(),
-				req->get(),path,mode,&fs_req::fs_cb);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return 2;
-			} 
-		}
-		l.yield(0);
-		return 0;
+		return result;
 	}
 
 	file::file(uv_file f,uv_loop_t* l) : m_file(f),m_loop(l) {
@@ -454,246 +386,179 @@ namespace uv {
 		meta::object::destroy();
 	}
 
-	class file_close_req : public fs_none {
-	private:
-	public:
-		file_close_req() {}
-	};
-	fs_req_ptr file::close(loop& l) {
-		auto req = common::make_intrusive<file_close_req>();
+	
+	llae::result_promise_ptr<void> file::async_close(llae::loop& l) {
+		auto result = common::make_intrusive<llae::result_promise<void>>();
+		if (!m_file) {
+			result->set_result(llae::string_error::create("file already closed"));
+			return result;
+		}
+		auto req = common::make_intrusive<fs_file_promise_status>(file_ptr(this),result);
 		auto f = m_file;
 		m_file = 0;
-		int r = uv_fs_close(l.native(),
-			req->get(),m_file,&fs_req::fs_cb);
+		int r = uv_fs_close(get_native(l),
+			req->get(),f,&fs_req::fs_cb);
 		if (r < 0) {
 			m_file = f;
-			return {};
-		}
-        req->add_ref();
-		return req;
-	}
-	lua::multiret file::fclose(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("close is async");
-			return {2};
-		}
-		if (!m_file) {
-			l.pushnil();
-			l.pushstring("file already closed");
-			return {2};
-		}
-		{
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_req> req{new fs_status(std::move(cont))};
+			result->set_result(uv::status_error::create(r));
+		} else {
 			req->add_ref();
-			auto f = m_file;
-			m_file = 0;
-			int r = uv_fs_close(app.loop().native(),
-				req->get(),f,&fs_req::fs_cb);
-			if (r < 0) {
-				m_file = f;
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
 		}
-		l.yield(0);
-		return {0};
+		return result;
 	}
 
-	class fs_write : public fs_cont {
-	private:
-		common::intrusive_ptr<file> m_file;
-		llae::write_buffers m_buffers;
-		virtual void release() override {
-            fs_cont::release();
-            m_buffers.release();
-        }
-	public:
-		fs_write(common::intrusive_ptr<file>&& file,lua::ref&& cont,llae::write_buffers&& buffers) : fs_cont(std::move(cont)),m_file(std::move(file)),m_buffers(std::move(buffers)) {}
-		int64_t size() { return m_buffers.get_total_size(); }
-        void reset(lua::state& l) {
-            m_buffers.reset(l);
-            m_file.reset();
-            fs_cont::reset(l);
-        }
-		int on_cont(lua::state& l) override {
-            reset(l);
-			auto res = uv_fs_get_result(get());
-			if (res < 0) {
-				l.pushnil();
-				uv::push_error(l,int(res));
-				return 2;
-			} 
-			
-			l.pushinteger(res);
-			return 1;
+	llae::result_promise_ptr<void> file::async_fsync(llae::loop& l) {
+		auto result = common::make_intrusive<llae::result_promise<void>>();
+		if (!m_file) {
+			result->set_result(llae::string_error::create("file is closed"));
+			return result;
 		}
-        int start(loop& l) {
-            add_ref();
-            auto buffers = get_buffers(m_buffers.get_buffers());
-            int r = uv_fs_write(l.native(),
-                get(),m_file->get(),buffers.data(),
-                static_cast<unsigned int>(buffers.size()),m_file->get_offset(),&fs_req::fs_cb);
-            if (r < 0) {
-                remove_ref();
-            }
-            return r;
-        }
-	};
+		auto req = common::make_intrusive<fs_file_promise_status>(file_ptr(this),result);
+		int r = uv_fs_fsync(get_native(l),
+			req->get(),m_file,&fs_req::fs_cb);
+		if (r < 0) {
+			result->set_result(uv::status_error::create(r));
+		} else {
+			req->add_ref();
+		}
+		return result;
+	}
 
-	class file_write_req : public fs_none {
+	
+
+	class file_write_req : public fs_file_promise_status {
 	private:
         llae::buffer_base_ptr m_hold;
 	public:
-		file_write_req(llae::buffer_base_ptr&& data) : m_hold(std::move(data)) {}
+		file_write_req(file_ptr&& file, const llae::result_promise_ptr<void>& result,llae::buffer_base_ptr&& data) : fs_file_promise_status(std::move(file),result),m_hold(std::move(data)) {}
         uv_buf_t get_buffer() {
             return ::uv::get_buffer(m_hold);
         }
 	};
-	fs_req_ptr file::write(loop& l,const llae::buffer_view& data) {
-        auto store = llae::buffer::hold(data);
-		auto req = common::make_intrusive<file_write_req>(std::move(store));
+
+	llae::result_promise_ptr<void> file::async_write(llae::loop& l,const llae::buffer_view& data) {
+		auto result = common::make_intrusive<llae::result_promise<void>>();
+		auto store = llae::buffer::hold(data);
+		auto req = common::make_intrusive<file_write_req>(file_ptr(this),result,std::move(store));
 		auto buffer = req->get_buffer();
-		auto res = uv_fs_write(l.native(),
+		auto res = uv_fs_write(get_native(l),
 			req->get(),m_file,&buffer,1,get_offset(),&fs_req::fs_cb);
 		if (res < 0) {
-			return {};
+			result->set_result(uv::status_error::create(res));
+		} else {
+			req->add_ref();
+			m_offset += data.get_len();
 		}
-        req->add_ref();
-		m_offset += data.get_len();
-		return req;
+		return result;
 	}
 
-	class file_fsync_req : public fs_none {
+	class fs_write_buffers : public fs_file_promise_status {
+	private:
+		llae::write_buffers m_buffers;
 	public:
-		file_fsync_req() {}
-	};
-	fs_req_ptr file::fsync(loop& l) {
-       auto req = common::make_intrusive<file_fsync_req>();
-		auto res = uv_fs_fsync(l.native(),
-			req->get(),m_file,&fs_req::fs_cb);
-		if (res < 0) {
-			return {};
+		fs_write_buffers(file_ptr&& file,const llae::result_promise_ptr<void>& result,llae::write_buffers&& buffers) : fs_file_promise_status(std::move(file),result),m_buffers(std::move(buffers)) {}
+		int start(loop& l) {
+			auto buffers = uv::get_buffers(m_buffers.get_buffers());
+			return uv_fs_write(l.native(),
+				get(),get_file(),buffers.data(),
+				static_cast<unsigned int>(buffers.size()),get_offset(),&fs_req::fs_cb);
 		}
-        req->add_ref();
-		return req;
-	}
-
-	lua::multiret file::lwrite(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("write is async");
-			return {2};
-		}
-		if (!m_file) {
-			l.pushnil();
-			l.pushstring("file already closed");
-			return {2};
-		}
-		{
-            llae::write_buffers buffers;
-            {
-                int n = l.gettop();
-                for (int i=2;i<=n;++i) {
-                    l.pushvalue(i);
-                    if (!buffers.put(l)) {
-                        buffers.reset(l);
-                        l.argerror(i,"data expected");
-                    }
-                }
-            }
-            if (buffers.empty()) {
-                l.pushinteger(0);
-                return {1};
-            }
-
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<fs_write> req{new fs_write(common::intrusive_ptr<file>(this),std::move(cont),std::move(buffers))};
-			int r = req->start(app.loop());
-            if (r < 0) {
-                req->reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
+		virtual void release() override {
+			auto& l = llae::app::get(get()->loop).lua();
+			if (l.native()) {
+				m_buffers.reset(l);
 			} else {
-				m_offset += req->size();
+				m_buffers.release();
 			}
 		}
-		l.yield(0);
-		return {0};
+		size_t size() const {
+			return m_buffers.get_total_size();
+		}
+	};
+
+	llae::result_promise_ptr<void> file::lasync_write(lua::state& l) {
+		if (!l.isyieldable()) {
+			return llae::make_result_promise_string_error<void>("write is async");
+		}
+		if (!m_file) {
+			return llae::make_result_promise_string_error<void>("file is closed");
+		}
+
+		llae::result_promise_ptr<void> result = common::make_intrusive<llae::result_promise<void>>();
+		
+		llae::write_buffers buffers;
+		{
+			int n = l.gettop();
+			for (int i=2;i<=n;++i) {
+				l.pushvalue(i);
+				if (!buffers.put(l)) {
+					buffers.reset(l);
+					l.argerror(i,"data expected");
+				}
+			}
+		}
+		if (buffers.empty()) {
+			result->set_result(llae::result<void>());
+			return result;
+		}
+
+		auto req = common::make_intrusive<fs_write_buffers>(file_ptr(this),result,std::move(buffers));
+		auto res = req->start(llae::app::get(l).loop());
+		if (res < 0) {
+			result->set_result(uv::status_error::create(res));
+		} else {
+			m_offset += req->size();
+			req->add_ref();
+		}
+		return result;
 	}
 
-    class fs_read : public fs_cont {
+    class fs_read : public fs_req {
     private:
         common::intrusive_ptr<file> m_file;
-        uv_buf_t m_buffer;
-        std::vector<char> m_data;
+		llae::result_promise_ptr<llae::buffer_ptr> m_result;
+		llae::buffer_ptr m_buffer;
     public:
-        fs_read(common::intrusive_ptr<file>&& file,lua::ref&& cont) : fs_cont(std::move(cont)),m_file(std::move(file)) {}
+        fs_read(common::intrusive_ptr<file>&& file,const llae::result_promise_ptr<llae::buffer_ptr>& result,llae::buffer_ptr&& buffer) : m_file(std::move(file)),m_result(result),m_buffer(std::move(buffer)) {}
         ~fs_read() {}
-        uv_buf_t& buffer() { return m_buffer; }
-        int64_t size() { return m_data.size(); }
-        int on_cont(lua::state& l) override {
+        uv_buf_t get_buffer() { return ::uv::get_buffer(m_buffer); }
+        virtual void on_cb() override final {
             auto res = uv_fs_get_result(get());
-            if (res < 0) {
-                m_file.reset();
-                l.pushnil();
-                uv::push_error(l,int(res));
-                return 2;
+			if (res == UV_EOF) {
+				m_buffer.reset();
+				m_result->set_result(std::move(m_buffer));
+			} else if (res < 0) {
+                m_result->set_result(uv::status_error::create(res));
+            } else {
+				m_buffer->set_len(res);
+				m_result->set_result(std::move(m_buffer));
             }
-            m_file.reset();
-            l.pushlstring(m_data.data(), res);
-            return 1;
-        }
-        void alloc(lua::state& l) {
-            m_data.resize(l.optinteger(2,1024*16));
-            m_buffer = uv_buf_init(m_data.data(), static_cast<unsigned int>(m_data.size()));
         }
     };
 
-    lua::multiret file::read(lua::state& l) {
-        if (!l.isyieldable()) {
-            l.pushnil();
-            l.pushstring("write is async");
-            return {2};
-        }
-        if (!m_file) {
-            l.pushnil();
-            l.pushstring("file already closed");
-            return {2};
-        }
-        {
-            llae::app& app(llae::app::get(l));
-            lua::ref cont;
-            l.pushthread();
-            cont.set(l);
-            common::intrusive_ptr<fs_read> req{new fs_read(common::intrusive_ptr<file>(this),std::move(cont))};
-            req->alloc(l);
-            req->add_ref();
-            int r = uv_fs_read(app.loop().native(),
-                req->get(),m_file,&req->buffer(),1,m_offset,&fs_req::fs_cb);
-            if (r < 0) {
-                req->remove_ref();
-                l.pushnil();
-                uv::push_error(l,r);
-                return {2};
-            } else {
-                m_offset += req->size();
-            }
-        }
-        l.yield(0);
-        return {0};
+    llae::result_promise_ptr<llae::buffer_ptr> file::async_read(llae::loop& l,std::optional<size_t> size) {
+		auto result = common::make_intrusive<llae::result_promise<llae::buffer_ptr>>();
+		if (!m_file) {
+			result->set_result(llae::string_error::create("file is closed"));
+			return result;
+		}
+		auto buffer = llae::buffer::alloc(size.value_or(1024*16));
+		if (!buffer) {
+			result->set_result(llae::string_error::create("failed to allocate buffer"));
+			return result;
+		}
+		auto req = common::make_intrusive<fs_read>(file_ptr(this),result,std::move(buffer));
+		auto buf = req->get_buffer();
+		auto res = uv_fs_read(get_native(l),
+                req->get(),m_file,&buf,1,m_offset,&fs_req::fs_cb);
+		if (res < 0) {
+			result->set_result(uv::status_error::create(res));
+		} else {
+			m_offset += buf.len;
+			req->add_ref();
+		}
+		return result;
     }
-
-
 	
 }
+

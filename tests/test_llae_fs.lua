@@ -56,14 +56,14 @@ end
 function testFs:test_load_file()
   local file_path = path.join(self.test_dir, 'file1.txt')
   local content = fs.load_file(file_path)
-  lu.assertEquals(content, 'test content 1')
+  lu.assertEquals(tostring(content), 'test content 1')
 end
 
 function testFs:test_write_file()
   local file_path = path.join(self.test_dir, 'new_file.txt')
   fs.write_file(file_path, 'new content')
   local content = fs.load_file(file_path)
-  lu.assertEquals(content, 'new content')
+  lu.assertEquals(tostring(content), 'new content')
 end
 
 function testFs:test_scanfiles_r()

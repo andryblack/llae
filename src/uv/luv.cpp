@@ -69,6 +69,10 @@ namespace uv {
     	if (err) return err;
     	return "unknown";
     }
+
+	uv_loop_t* get_native(llae::loop& l) {
+		return static_cast<uv::loop&>(l).native();
+	}
 }
 
 int uv::lexepath(lua_State* L) {

@@ -198,6 +198,45 @@ namespace llae {
         return {0};
     }
 
+    lua::multiret buffer_base::lconcat_table(lua::state& l) {
+        l.checktype(1,lua::value_type::table);
+        lua_Integer n = l.rawlen(1);
+        std::vector<buffer_base_ptr> buffers;
+        std::vector<buffer_view> views;
+        buffers.reserve(n);
+        views.reserve(n);
+        size_t total_size = 0;
+        for (lua_Integer i=1;i<=n;++i) {
+            auto t = l.rawgeti(1, i);
+            if (t == lua::value_type::userdata) {
+                auto b = buffer_base::get(l, -1, true);
+                buffers.emplace_back(std::move(b));
+                views.emplace_back(*buffers.back());
+                total_size += views.back().get_len();
+            } else if (t == lua::value_type::string) {
+                size_t size = 0;
+                auto base = l.tolstring(-1,size);
+                views.emplace_back(base,size);
+                total_size += views.back().get_len();
+            } else {
+                std::string name = l.get_typename(-1);
+                l.pop(1);
+                l.error("invalid value at index %d(%s): need buffer or string",i,name.c_str());
+            }
+            l.pop(1);
+        }
+
+        auto res = buffer::alloc(total_size);
+        auto dst = static_cast<uint8_t*>(res->get_base());
+        for (auto& v:views) {
+            ::memcpy(dst,v.get_base(),v.get_len());
+            dst += v.get_len();
+        }
+        res->set_len(total_size);
+        lua::push(l,std::move(res));
+        return {1};
+    }
+
     lua::multiret buffer_base::lxor(lua::state& l) {
         auto a = buffer_view::get(l,1,true);
         auto b = buffer_view::get(l,2,true);
@@ -382,6 +421,7 @@ namespace llae {
         lua::bind::function(l,"hex_encode",&buffer_base::hex_encode);
         lua::bind::function(l,"base64_encode",&buffer_base::base64_encode);
         lua::bind::function(l,"base64_decode",&buffer_base::base64_decode);
+        lua::bind::function(l,"concat",&buffer_base::lconcat_table);
     }
 
 

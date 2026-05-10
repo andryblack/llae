@@ -30,6 +30,8 @@ namespace uv {
 	std::string get_error(int r);
     std::string get_cwd();
 
+	uv_loop_t* get_native(llae::loop& l);
+
 	/// @luabind(name=exepath)
 	int lexepath(lua_State* L);
 	/// @luabind(name=getaddrinfo)

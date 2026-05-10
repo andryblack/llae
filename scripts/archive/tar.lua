@@ -204,9 +204,15 @@ local function do_unpack(f,u, dir , strip)
 	end
 	while true do
 		if f then
-			local ch,e = f:read(1024*32)
+			local CHUNK_SIZE = 1024*32
+			local ch,e = f:read(CHUNK_SIZE)
 			if ch then
 				u:write(ch)
+				if #ch < CHUNK_SIZE then
+					u:finish()
+					f:close()
+					f = nil
+				end
 			elseif e then
 				error(e)
 			else

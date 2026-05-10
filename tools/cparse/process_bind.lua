@@ -164,6 +164,7 @@ local lua_type_map = {
     ['double'] = 'number',
     ['bool'] = 'boolean',
     ['std::string'] = 'string',
+    ['std::string_view'] = 'string',
     ['void'] = 'none',
     ['llae::buffer_base_ptr'] = {'string|llae.buffer_base?','llae.buffer_base?'},
     ['llae::buffer_base_ptr&'] = {'string|llae.buffer_base?','llae.buffer_base?'},
@@ -213,10 +214,14 @@ function bind_module:resolve_lua_type_inner(type_str,is_return)
     end
     local res = lua_type_map[type_str]
     if res then
-        if is_return then
-            return res[2]
+        if type(res) == 'table' then
+            if is_return then
+                return res[2]
+            else
+                return res[1]
+            end
         else
-            return res[1]
+            return res
         end
     end
     return type_str
@@ -559,7 +564,7 @@ local function get_lua_results(return_type,async,func)
     end
     inner = string.match(return_type, 'llae::result_promise_ptr<%s*(.-)%s*>')
     if inner then
-        if inner == 'void' then
+        if inner == 'void' or inner == '' then
             inner = 'boolean'
         else
             inner = func:resolve_lua_type(inner,true)

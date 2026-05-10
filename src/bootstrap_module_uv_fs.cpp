@@ -11,15 +11,15 @@ int luaopen_uv_fs(lua_State* L) {
     l.createtable();
     
     
-    lua::bind::function(l,"mkdir",&uv::fs::mkdir);
-    lua::bind::function(l,"rmdir",&uv::fs::rmdir);
-    lua::bind::function(l,"unlink",&uv::fs::unlink);
-    lua::bind::function(l,"copyfile",&uv::fs::copyfile);
-    lua::bind::function(l,"rename",&uv::fs::rename);
-    lua::bind::function(l,"stat",&uv::fs::stat);
-    lua::bind::function(l,"scandir",&uv::fs::scandir);
-    lua::bind::function(l,"open",&uv::fs::open);
-    lua::bind::function(l,"chmod",&uv::fs::chmod);
+    llae::async_function(l,"mkdir",&uv::fs::async_mkdir);
+    llae::async_function(l,"rmdir",&uv::fs::async_rmdir);
+    llae::async_function(l,"unlink",&uv::fs::async_unlink);
+    llae::async_function(l,"copyfile",&uv::fs::async_copyfile);
+    llae::async_function(l,"rename",&uv::fs::async_rename);
+    llae::async_function(l,"stat",&uv::fs::async_stat);
+    llae::async_function(l,"scandir",&uv::fs::async_scandir);
+    llae::async_function(l,"open",&uv::fs::async_open);
+    llae::async_function(l,"chmod",&uv::fs::async_chmod);
     
     
     lua::bind::value(l, "O_RDONLY", uv::fs::LO_RDONLY);

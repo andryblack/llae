@@ -1,12 +1,16 @@
 #ifndef __LLAE_UV_FS_H_INCLUDED__
 #define __LLAE_UV_FS_H_INCLUDED__
 
+#include "llae/promise.h"
 #include "req.h"
 #include "loop.h"
 #include "lua/state.h"
 #include "lua/ref.h"
+#include "llae/buffer.h"
 #include "common/intrusive_ptr.h"
 #include "meta/object.h"
+#include "llae/promise.h"
+#include <optional>
 
 namespace llae {
 	class buffer_view;
@@ -14,20 +18,7 @@ namespace llae {
 
 namespace uv {
 
-	class fs_req : public req {
-	private:
-		uv_fs_t	m_fs;
-	protected:
-		static fs_req* get(uv_fs_t* req);
-	protected:
-		fs_req();
-		~fs_req();
-		virtual void on_cb() = 0;
-	public:
-		uv_fs_t* get() { return &m_fs; }
-		static void fs_cb(uv_fs_t* req);
-	};
-	using fs_req_ptr = common::intrusive_ptr<fs_req>;
+	
 
 	/// @luabind
 	class file : public meta::object {
@@ -41,43 +32,47 @@ namespace uv {
 		explicit file(uv_file f,uv_loop_t* l);
 		/// @luabind(name=get_handle)
 		uv_file get() const { return m_file; }
-		/// @luabind(name=close)
-		lua::multiret fclose(lua::state& l);
-		/// @luabind(name=write)
-		lua::multiret lwrite(lua::state& l);
-        /// @luabind
-        lua::multiret read(lua::state& l);
+		/// @luabind(async=true,name=close)
+		llae::result_promise_ptr<void> async_close(llae::loop& l);
+		/// @luabind(async=true,name=fsync)
+		llae::result_promise_ptr<void> async_fsync(llae::loop& l);
+		/// @luabind(async=true,name=write)
+		llae::result_promise_ptr<void> lasync_write(lua::state& l);
+        /// @luabind(async=true,name=read)
+        llae::result_promise_ptr<llae::buffer_ptr> async_read(llae::loop& l,std::optional<size_t> size);
         /// @luabind
         void seek(size_t pos) { m_offset = pos; }
-        int64_t get_offset() const { return m_offset;}
+	    int64_t get_offset() const { return m_offset;}
         /// @luabind(name=tell)
         size_t tell() const { return m_offset; }
-		fs_req_ptr write(loop& l,const llae::buffer_view& data);
-		fs_req_ptr close(loop& l);
-		fs_req_ptr fsync(loop& l);
+		llae::result_promise_ptr<void> async_write(llae::loop& l,const llae::buffer_view& data);
 	};
 	typedef common::intrusive_ptr<file> file_ptr;
 
+	struct dirent_t {
+		std::string name;
+		uv_dirent_type_t type;
+	};
 	
 	namespace fs {
-		/// @luabind
-		int mkdir(lua_State* L);
-		/// @luabind
-		int rmdir(lua_State* L);
-		/// @luabind
-		int unlink(lua_State* L);
-		/// @luabind
-		int copyfile(lua_State* L);
-		/// @luabind
-		int rename(lua_State* L);
-		/// @luabind
-		int stat(lua_State* L);
-		/// @luabind
-		int scandir(lua_State* L);
-		/// @luabind
-		int open(lua_State* L);
-		/// @luabind
-		int chmod(lua_State* L);
+		/// @luabind(async=true,name=mkdir)
+		llae::result_promise_ptr<void> async_mkdir(llae::loop& l,std::string_view path,std::optional<int> mode);
+		/// @luabind(async=true,name=rmdir)
+		llae::result_promise_ptr<void> async_rmdir(llae::loop& l,std::string_view path);
+		/// @luabind(async=true,name=unlink)
+		llae::result_promise_ptr<void> async_unlink(llae::loop& l,std::string_view path);
+		/// @luabind(async=true,name=copyfile)
+		llae::result_promise_ptr<void> async_copyfile(llae::loop& l,std::string_view path,std::string_view new_path,std::optional<int> flags);
+		/// @luabind(async=true,name=rename)
+		llae::result_promise_ptr<void> async_rename(llae::loop& l,std::string_view path,std::string_view new_path);
+		/// @luabind(async=true,name=stat)
+		llae::result_promise_ptr<uv_stat_t> async_stat(llae::loop& l,std::string_view path);
+		/// @luabind(async=true,name=scandir)
+		llae::result_promise_ptr<std::vector<dirent_t>> async_scandir(llae::loop& l,std::string_view path,std::optional<int> flags);
+		/// @luabind(async=true,name=open)
+		llae::result_promise_ptr<file_ptr> async_open(llae::loop& l,std::string_view path,std::optional<int> flags,std::optional<int> mode);
+		/// @luabind(async=true,name=chmod)
+		llae::result_promise_ptr<void> async_chmod(llae::loop& l,std::string_view path,int mode);
 
 		/// @luabind(ltype=integer,name=O_RDONLY)
 		static constexpr auto LO_RDONLY = UV_FS_O_RDONLY;
@@ -92,4 +87,18 @@ namespace uv {
 	};
 }
 
+namespace lua {
+	template <>
+	struct stack<uv_stat_t> {
+		static int push(lua::state& l,const uv_stat_t& stat);
+	};
+	template <>
+	struct stack<uv::dirent_t> {
+		static int push(lua::state& l,const uv::dirent_t& ent);
+	};
+	template <>
+	struct stack<std::vector<uv::dirent_t>> {
+		static int push(lua::state& l,const std::vector<uv::dirent_t>& ent);
+	};
+}
 #endif /*__LLAE_UV_FS_H_INCLUDED__*/

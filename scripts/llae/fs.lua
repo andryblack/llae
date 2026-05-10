@@ -1,5 +1,6 @@
 local uv = require 'llae.uv'
 local path = require 'llae.path'
+local llae = require 'llae'
 
 ---The fs module provides a comprehensive set of functions for working with the file system.
 ---It wraps the libuv filesystem operations and adds additional high-level functionality.
@@ -139,14 +140,20 @@ function fs.load_file( fn )
 	local cont = {}
 	local f = assert( fs.open(fn,fs.O_RDONLY) )
 	while true do
-		local ch = assert(f:read(CHUNK_SIZE))
+		local ch,err = f:read(CHUNK_SIZE)
+		if not ch then
+			if err then
+				error(err)
+			end
+			break
+		end
 		table.insert(cont,ch)
 		if #ch < CHUNK_SIZE then
 			break
 		end
 	end
 	f:close()
-	return table.concat(cont,'')
+	return llae.buffer.concat(cont)
 end
 
 --- Creates an iterator to read a file in chunks.

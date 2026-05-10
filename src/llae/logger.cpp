@@ -153,18 +153,18 @@ namespace llae {
                 ss << log::level_to_string(level,false) << " " << message << std::endl;
             }
             auto str = ss.str();
-            m_file->write(m_loop,llae::buffer_view(str.data(),str.length()));
+            m_file->async_write(m_loop,llae::buffer_view(str.data(),str.length()));
         }
         virtual bool close() override {
             if (m_file) {
-                m_file->close(m_loop);
+                m_file->async_close(m_loop);
                 m_file.reset();
             }
             return true;
         }
         virtual void flush() override {
             if (m_file) {
-                m_file->fsync(m_loop);
+                m_file->async_fsync(m_loop);
             }
         }
     };
@@ -183,7 +183,7 @@ namespace llae {
                 ss << m_time_buf << " " << log::level_to_string(level,false) << " " << message << std::endl;
             }
             auto str = ss.str();
-            m_file->write(m_loop,llae::buffer_view(str.data(),str.length()));
+            m_file->async_write(m_loop,llae::buffer_view(str.data(),str.length()));
         }
     };
 
