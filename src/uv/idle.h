@@ -8,6 +8,7 @@ namespace uv {
 
 	class loop;
 
+	/// @luabind(hidden=true)
 	class idle : public handle {
 		META_OBJECT
 	public:

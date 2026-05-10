@@ -6,7 +6,7 @@ local log = require 'llae.log'
 local pgsql = require 'db.pgsql'
 local json = require 'llae.json'
 
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 local cin = assert(uv.tty.new(0))
 

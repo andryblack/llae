@@ -6,7 +6,7 @@ local http = require 'net.http'
 local log = require 'llae.log'
 local fs = require 'llae.fs'
 local json = require 'json'
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 local function do_request( url )
 	local req = http.createRequest{

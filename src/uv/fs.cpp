@@ -2,7 +2,6 @@
 #include "llae/app.h"
 #include "common/intrusive_ptr.h"
 #include "luv.h"
-#include "lua/bind.h"
 #include "llae/write_buffers.h"
 #include <vector>
 
@@ -696,41 +695,5 @@ namespace uv {
     }
 
 
-	void file::lbind(lua::state& l) {
-		lua::bind::function(l,"close",&file::fclose);
-		lua::bind::function(l,"write",&file::lwrite);
-        lua::bind::function(l,"read",&file::read);
-        lua::bind::function(l,"seek",&file::seek);
-        lua::bind::function(l,"tell",&file::tell);
-        lua::bind::function(l,"get_handle",&file::get);
-	}
-
-	void fs::lbind(lua::state& l) {
-		lua::bind::object<uv::file>::register_metatable(l,&uv::file::lbind);
-		lua::bind::object<uv::file>::get_metatable(l);
-		l.setfield(-2,"file");
-		l.createtable();
-		l.pushinteger(UV_FS_O_RDONLY);
-		l.setfield(-2,"O_RDONLY");
-		l.pushinteger(UV_FS_O_RDWR);
-		l.setfield(-2,"O_RDWR");
-		l.pushinteger(UV_FS_O_WRONLY);
-		l.setfield(-2,"O_WRONLY");
-		l.pushinteger(UV_FS_O_CREAT);
-		l.setfield(-2,"O_CREAT");
-		l.pushinteger(UV_FS_O_APPEND);
-		l.setfield(-2,"O_APPEND");
-
-		
-		lua::bind::function(l,"mkdir",&uv::fs::mkdir);
-		lua::bind::function(l,"rmdir",&uv::fs::rmdir);
-		lua::bind::function(l,"unlink",&uv::fs::unlink);
-		lua::bind::function(l,"copyfile",&uv::fs::copyfile);
-		lua::bind::function(l,"rename",&uv::fs::rename);
-		lua::bind::function(l,"stat",&uv::fs::stat);
-		lua::bind::function(l,"scandir",&uv::fs::scandir);
-		lua::bind::function(l,"open",&uv::fs::open);
-		lua::bind::function(l,"chmod",&uv::fs::chmod);
-		l.setfield(-2,"fs");
-	}
+	
 }

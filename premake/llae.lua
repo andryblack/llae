@@ -153,7 +153,7 @@ function _M.exe(  )
 	files {
 		path.join(_M.root,'src','main.cpp'),
 		path.join(_M.root,'src','bootstrap.cpp'),
-		path.join(_M.root,'src','bootstrap_module_crypto.cpp'),
+		path.join(_M.root,'src','bootstrap_module_*.cpp'),
 	}
 	filter {'configurations:release','toolset:gcc or clang'}
 		postbuildcommands{

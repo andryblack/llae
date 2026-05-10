@@ -71,7 +71,7 @@ namespace uv {
     }
 }
 
-static int lua_uv_exepath(lua_State* L) {
+int uv::lexepath(lua_State* L) {
 	char path[PATH_MAX];
 	lua::state l(L);
 	size_t size = sizeof(path);
@@ -85,7 +85,11 @@ static int lua_uv_exepath(lua_State* L) {
 	return 1;
 }
 
-static int lua_uv_cwd(lua_State* L) {
+lua::multiret uv::lgetaddrinfo(lua::state& l) {
+	return getaddrinfo_req::getaddrinfo(l);
+}
+
+int uv::lcwd(lua_State* L) {
 	lua::state l(L);
 	size_t size = 1;
 	char dummy;
@@ -103,7 +107,7 @@ static int lua_uv_cwd(lua_State* L) {
 	return 2;
 }
 
-static int lua_uv_gettimeofday(lua_State* L) {
+int uv::lgettimeofday(lua_State* L) {
 	lua::state l(L);
 	uv_timeval64_t tv;
 	uv_gettimeofday(&tv);
@@ -126,7 +130,7 @@ std::string uv::get_cwd() {
     return "";
 }
 
-static int lua_uv_chdir(lua_State* L) {
+int uv::lchdir(lua_State* L) {
 	lua::state l(L);
 	const char* dir = l.checkstring(1);
 	auto r = uv_chdir(dir);
@@ -139,7 +143,7 @@ static int lua_uv_chdir(lua_State* L) {
 	return 2;
 }
 
-static int lua_uv_interface_addresses(lua_State* L) {
+int uv::linterface_addresses(lua_State* L) {
 	lua::state l(L);
 	uv_interface_address_t *addresses = nullptr;
 	int count = 0;
@@ -183,7 +187,7 @@ static int lua_uv_interface_addresses(lua_State* L) {
 	return 1;
 }
 
-static int lua_uv_set_process_title(lua_State* L) {
+int uv::lset_process_title(lua_State* L) {
 	lua::state l(L);
 	const char* name = l.checkstring(1);
 	int r = uv_set_process_title(name);
@@ -196,37 +200,37 @@ static int lua_uv_set_process_title(lua_State* L) {
 	return 2;
 }
 
-static int lua_uv_get_free_memory(lua_State* L) {
+int uv::lget_free_memory(lua_State* L) {
 	lua::state l(L);
 	l.pushinteger(uv_get_free_memory());
 	return 1;
 }
 
-static int lua_uv_get_total_memory(lua_State* L) {
+int uv::lget_total_memory(lua_State* L) {
 	lua::state l(L);
 	l.pushinteger(uv_get_total_memory());
 	return 1;
 }
 
-static int lua_uv_get_constrained_memory(lua_State* L) {
+int uv::lget_constrained_memory(lua_State* L) {
 	lua::state l(L);
 	l.pushinteger(uv_get_constrained_memory());
 	return 1;
 }
 
-static int lua_uv_get_available_memory(lua_State* L) {
+int uv::lget_get_available_memory(lua_State* L) {
 	lua::state l(L);
 	l.pushinteger(uv_get_available_memory());
 	return 1;
 }
 
-static int lua_uv_hrtime(lua_State* L) {
+int uv::lhrtime(lua_State* L) {
 	lua::state l(L);
 	l.pushinteger(uv_hrtime());
 	return 1;
 }
 
-static int lua_uv_sleep(lua_State* L) {
+int uv::lsleep(lua_State* L) {
 	lua::state l(L);
 	uv_sleep(static_cast<unsigned int>(l.checkinteger(1)));
 	return 0;
@@ -302,7 +306,7 @@ public:
 	}
 };
 
-static int lua_uv_random(lua_State* L) {
+int uv::lrandom(lua_State* L) {
 	lua::state l(L);
 	if (!l.isyieldable()) {
 		l.pushnil();
@@ -339,7 +343,7 @@ static void print_walk_cb(uv_handle_t* handle,void* arg) {
     }
 }
 
-static int lua_uv_print_handles(lua_State* L) {
+int uv::lprint_handles(lua_State* L) {
     lua::state l(L);
     bool active = l.toboolean(1);
     llae::app& app(llae::app::get(l));
@@ -347,7 +351,7 @@ static int lua_uv_print_handles(lua_State* L) {
     return 0;
 }
 
-static int lua_uv_cpu_info(lua_State* L) {
+int uv::lcpu_info(lua_State* L) {
 	lua::state l(L);
 	uv_cpu_info_t *cpu_infos = nullptr;
 	int count = 0;
@@ -396,7 +400,7 @@ int lua_uv_clock_gettime(lua_State* L) {
 	return 2;
 }
 
-static lua::multiret lua_uv_ip4_addr(lua::state& l) {
+lua::multiret uv::lip4_addr(lua::state& l) {
 	const char* host = l.checkstring(1);
 	struct sockaddr_in addr;
 	auto r = uv_ip4_addr(host, 0, &addr);
@@ -407,7 +411,7 @@ static lua::multiret lua_uv_ip4_addr(lua::state& l) {
 	return {1};
 }
 
-static lua::multiret lua_uv_ip6_addr(lua::state& l) {
+lua::multiret uv::lip6_addr(lua::state& l) {
 	const char* host = l.checkstring(1);
 	struct sockaddr_in6 addr;
 	auto r = uv_ip6_addr(host, 0, &addr);
@@ -418,7 +422,7 @@ static lua::multiret lua_uv_ip6_addr(lua::state& l) {
 	return {1};
 }
 
-static lua::multiret lua_uv_ip4_name(lua::state& l) {
+lua::multiret uv::lip4_name(lua::state& l) {
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
 	addr.sin_port = 0;
@@ -434,7 +438,7 @@ static lua::multiret lua_uv_ip4_name(lua::state& l) {
 	return {1};
 }
 
-static lua::multiret lua_uv_ip6_name(lua::state& l) {
+lua::multiret uv::lip6_name(lua::state& l) {
 	struct sockaddr_in6 addr;
 	addr.sin6_family = AF_INET6;
 	addr.sin6_port = 0;
@@ -450,7 +454,7 @@ static lua::multiret lua_uv_ip6_name(lua::state& l) {
 	return {1};
 }
 
-static lua::multiret lua_uv_if_indextoname(lua::state& l) {
+lua::multiret uv::lif_indextoname(lua::state& l) {
 	int index = l.checkinteger(1);
 	char ifname[UV_IF_NAMESIZE];
 	size_t size = sizeof(ifname);
@@ -460,95 +464,4 @@ static lua::multiret lua_uv_if_indextoname(lua::state& l) {
 	}
 	l.pushstring(ifname);
 	return {1};
-}
-
-int luaopen_uv(lua_State* L) {
-	lua::state l(L);
-
-	lua::bind::object<uv::handle>::register_metatable(l);
-	lua::bind::object<uv::server>::register_metatable(l,&uv::server::lbind);
-	lua::bind::object<uv::tcp_server>::register_metatable(l,&uv::tcp_server::lbind);
-	lua::bind::object<uv::stream>::register_metatable(l,&uv::stream::lbind);
-	lua::bind::object<uv::tcp_connection>::register_metatable(l,&uv::tcp_connection::lbind);
-	lua::bind::object<uv::udp>::register_metatable(l,&uv::udp::lbind);
-    lua::bind::object<uv::tty>::register_metatable(l,&uv::tty::lbind);
-    lua::bind::object<uv::poll>::register_metatable(l,&uv::poll::lbind);
-    lua::bind::object<uv::process>::register_metatable(l,&uv::process::lbind);
-    lua::bind::object<uv::pipe>::register_metatable(l,&uv::pipe::lbind);
-    lua::bind::object<uv::pipe_server>::register_metatable(l,&uv::pipe_server::lbind);
-    lua::bind::object<uv::timer>::register_metatable(l);
-    lua::bind::object<uv::timer_lcb>::register_metatable(l,&uv::timer_lcb::lbind);
-    lua::bind::object<uv::timer_wait>::register_metatable(l,&uv::timer_wait::lbind);
-    lua::bind::object<uv::signal_base>::register_metatable(l);
-    lua::bind::object<uv::lua_signal>::register_metatable(l,&uv::lua_signal::lbind);
-    lua::bind::object<uv::async>::register_metatable(l);
-    lua::bind::object<uv::async_continue>::register_metatable(l);
-    lua::bind::object<uv::async_wait>::register_metatable(l,&uv::async_wait::lbind);
-    lua::bind::object<uv::idle>::register_metatable(l);
-	
-	l.createtable();
-	lua::bind::object<uv::tcp_server>::get_metatable(l);
-	l.setfield(-2,"tcp_server");
-	lua::bind::object<uv::tcp_connection>::get_metatable(l);
-	l.setfield(-2,"tcp_connection");
-    lua::bind::object<uv::udp>::get_metatable(l);
-    l.setfield(-2,"udp");
-    lua::bind::object<uv::tty>::get_metatable(l);
-    l.setfield(-2,"tty");
-    lua::bind::object<uv::poll>::get_metatable(l);
-    l.setfield(-2,"poll");
-    lua::bind::object<uv::process>::get_metatable(l);
-    l.setfield(-2,"process");
-    lua::bind::object<uv::pipe>::get_metatable(l);
-    l.setfield(-2,"pipe");
-    lua::bind::object<uv::pipe_server>::get_metatable(l);
-	l.setfield(-2,"pipe_server");
-    lua::bind::object<uv::timer_lcb>::get_metatable(l);
-    l.setfield(-2,"timer");
-    lua::bind::object<uv::timer_wait>::get_metatable(l);
-    l.setfield(-2,"timer_wait");
-    lua::bind::object<uv::lua_signal>::get_metatable(l);
-    l.setfield(-2,"signal");
-    lua::bind::object<uv::async_wait>::get_metatable(l);
-    l.setfield(-2,"async");
-    
-	lua::bind::function(l,"exepath",&lua_uv_exepath);
-	lua::bind::function(l,"getaddrinfo",&uv::getaddrinfo_req::getaddrinfo);
-	lua::bind::function(l,"cwd",&lua_uv_cwd);
-	lua::bind::function(l,"chdir",&lua_uv_chdir);
-	lua::bind::function(l,"pause",&uv::timer_pause::pause);
-	lua::bind::function(l,"resume_delayed",&uv::timer_pause::resume_delayed);
-	lua::bind::function(l,"gettimeofday",&lua_uv_gettimeofday);
-	lua::bind::function(l,"interface_addresses",&lua_uv_interface_addresses);
-	lua::bind::function(l,"set_process_title",&lua_uv_set_process_title);
-	lua::bind::function(l,"get_free_memory",&lua_uv_get_free_memory);
-	lua::bind::function(l,"get_total_memory",&lua_uv_get_total_memory);
-	lua::bind::function(l,"get_constrained_memory",&lua_uv_get_constrained_memory);
-	lua::bind::function(l,"get_get_available_memory",&lua_uv_get_available_memory);
-	lua::bind::function(l,"hrtime",&lua_uv_hrtime);
-	lua::bind::function(l,"sleep",&lua_uv_sleep);
-	lua::bind::function(l,"random",&lua_uv_random);
-    lua::bind::function(l,"print_handles", &lua_uv_print_handles);
-	lua::bind::function(l,"available_parallelism", &uv_available_parallelism);
-	lua::bind::function(l,"cpu_info", &lua_uv_cpu_info);
-
-	lua::bind::function(l,"ip4_addr", &lua_uv_ip4_addr);
-	lua::bind::function(l,"ip6_addr", &lua_uv_ip6_addr);
-	lua::bind::function(l,"ip4_name", &lua_uv_ip4_name);
-	lua::bind::function(l,"ip6_name", &lua_uv_ip6_name);
-	lua::bind::function(l,"if_indextoname", &lua_uv_if_indextoname);
-	
-	l.pushinteger(AF_INET);
-    l.setfield(-2,"AF_INET");
-    l.pushinteger(AF_INET6);
-    l.setfield(-2,"AF_INET6");
-
-	l.pushinteger(UV_CLOCK_MONOTONIC);
-    l.setfield(-2,"CLOCK_MONOTONIC");
-	l.pushinteger(UV_CLOCK_REALTIME);
-    l.setfield(-2,"CLOCK_REALTIME");
-	
-	uv::fs::lbind(l);
-	uv::os::lbind(l);
-	return 1;
 }

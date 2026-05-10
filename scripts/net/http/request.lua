@@ -1,5 +1,5 @@
 local url = require 'net.url'
-local uv = require 'uv'
+local uv = require 'llae.uv'
 local ssl = require 'ssl'
 
 local class = require 'llae.class'

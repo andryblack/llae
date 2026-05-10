@@ -4,7 +4,6 @@
 #include "llae/app.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
-#include "lua/bind.h"
 
 META_OBJECT_INFO(uv::pipe,uv::stream)
 
@@ -104,10 +103,5 @@ namespace uv {
         return {0};
     }
 
-        
-    void pipe::lbind(lua::state& l) {
-        lua::bind::function(l,"new",&pipe::lnew);
-        lua::bind::function(l,"connect",&pipe::connect);
-    }
 }
 

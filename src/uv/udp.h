@@ -51,6 +51,7 @@ namespace uv {
     };
     typedef common::intrusive_ptr<udp_recv_consumer> udp_recv_consumer_ptr;
 
+    /// @luabind
     class udp : public handle {
         META_OBJECT
     private:
@@ -70,9 +71,9 @@ namespace uv {
     public:
         explicit udp(uv::loop& loop,int af);
         
+        /// @luabind(name=new)
         static lua::multiret lnew(lua::state& l);
-        static void lbind(lua::state& l);
-
+    
         int do_bind(struct sockaddr* addr,int flags);
         int do_set_ttl(int ttl);
         int do_set_broadcast(bool b);
@@ -84,25 +85,63 @@ namespace uv {
         int do_set_multicast_interface(const char* interface_addr);
         int do_try_send(const llae::buffer_base_ptr& buffer,const struct sockaddr *addr);
         
+        /// @luabind
         lua::multiret bind(lua::state& l);
+        /// @luabind
         lua::multiret send(lua::state& l);
+        /// @luabind
         lua::multiret try_send(lua::state& l);
+        /// @luabind
         lua::multiret connect(lua::state& l);
+        /// @luabind
         lua::multiret set_ttl(lua::state& l,int ttl);
+        /// @luabind
         lua::multiret set_broadcast(lua::state& l,bool b);
+        /// @luabind
         lua::multiret set_membership(lua::state& l,const char *multicast_addr, const char *interface_addr, uv_membership membership);
+        /// @luabind
         lua::multiret set_source_membership(lua::state& l,const char *multicast_addr, const char *interface_addr, 
                 const char* source_addr, uv_membership membership);
+        /// @luabind
         lua::multiret set_multicast_loop(lua::state& l,bool on);
+        /// @luabind
         lua::multiret set_multicast_ttl(lua::state& l,int ttl);
+        /// @luabind
         lua::multiret set_multicast_interface(lua::state& l,const char* interface_addr);
+        /// @luabind
         lua::multiret getpeername(lua::state& l);
+        /// @luabind
         lua::multiret getsockname(lua::state& l);
+        /// @luabind
         void add_buffer(llae::buffer_ptr&& buffer);
+        /// @luabind
         void disconnect();
+        /// @luabind
         lua::multiret recv(lua::state& l);
         int start_recv( const udp_recv_consumer_ptr& consumer );
+        /// @luabind(name=stop_recv)
         void stop_recv();
+
+        /// @luabind(ltype=integer)
+        static constexpr auto IPV6ONLY = UV_UDP_IPV6ONLY;
+        /// @luabind(ltype=integer)
+        static constexpr auto PARTIAL = UV_UDP_PARTIAL;
+        /// @luabind(ltype=integer)
+        static constexpr auto REUSEADDR = UV_UDP_REUSEADDR;
+        /// @luabind(ltype=integer)
+        static constexpr auto MMSG_CHUNK = UV_UDP_MMSG_CHUNK;
+        /// @luabind(ltype=integer)
+        static constexpr auto MMSG_FREE = UV_UDP_MMSG_FREE;
+        /// @luabind(ltype=integer)
+        static constexpr auto LINUX_RECVERR = UV_UDP_LINUX_RECVERR;
+        /// @luabind(ltype=integer)
+        static constexpr auto REUSEPORT = UV_UDP_REUSEPORT;
+        /// @luabind(ltype=integer)
+        static constexpr auto RECVMMSG = UV_UDP_RECVMMSG;
+        /// @luabind(ltype=integer)
+        static constexpr auto LEAVE_GROUP = UV_LEAVE_GROUP;
+        /// @luabind(ltype=integer)
+        static constexpr auto JOIN_GROUP = UV_JOIN_GROUP;
     };
 
 }

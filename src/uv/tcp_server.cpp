@@ -3,7 +3,6 @@
 #include "luv.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
-#include "lua/bind.h"
 
 META_OBJECT_INFO(uv::tcp_server,uv::server)
 
@@ -42,9 +41,5 @@ namespace uv {
 		common::intrusive_ptr<tcp_server> server{new tcp_server(llae::app::get(l).loop())};
 		lua::push(l,std::move(server));
 		return {1};
-	}
-	void tcp_server::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&tcp_server::lnew);
-		lua::bind::function(l,"bind",&tcp_server::bind);
 	}
 }

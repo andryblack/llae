@@ -6,11 +6,17 @@
 #include "lua/ref.h"
 #include "common/intrusive_ptr.h"
 #include <functional>
+#include "llae/result.h"
+
+namespace llae {
+	class loop;
+}
 
 namespace uv {
 
 	class loop;
 
+	/// @luabind(hidden=true)
 	class timer : public handle {
 		META_OBJECT
 	public:
@@ -50,6 +56,7 @@ namespace uv {
 		static lua::multiret resume_delayed(lua::state& l);
 	};
 
+	/// @luabind(name=timer)
 	class timer_lcb : public timer {
 		META_OBJECT
 	private:
@@ -60,12 +67,15 @@ namespace uv {
 		explicit timer_lcb(loop& l) : timer(l) {}
 	public:
 		
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& l);
+		/// @luabind(name=start)
 		lua::multiret lstart(lua::state& l);
+		/// @luabind(name=stop)
 		lua::multiret lstop(lua::state& l);
 	};
 
+	/// @luabind
 	class timer_wait : public timer {
 		META_OBJECT
 	private:
@@ -78,10 +88,15 @@ namespace uv {
 		explicit timer_wait(loop& l) : timer(l) {}
 		void resume(lua::state& l,const char* status);
 	public:
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& l);
-		lua::multiret lstart(lua::state& l);
-		lua::multiret lstop(lua::state& l);
+		/// @lparam(timeout,integer)
+		/// @lparam(repeat,integer?
+		/// @luabind(name=start)
+		llae::result<> lstart(lua::state& l,int timeout);
+		/// @luabind(name=stop)
+		llae::result<> lstop(lua::state& l);
+		/// @luabind(name=wait)
 		lua::multiret lwait(lua::state& l);
 	};
 

@@ -2,7 +2,6 @@
 #include "loop.h"
 #include "llae/app.h"
 #include "luv.h"
-#include "lua/bind.h"
 #include "stream.h"
 
 META_OBJECT_INFO(uv::process,uv::handle)
@@ -256,19 +255,5 @@ namespace uv {
     }
 
 
-	void process::lbind(lua::state& l) {
-		lua::bind::function(l,"spawn",&process::spawn);
-		lua::bind::function(l,"kill",&process::kill);
-        lua::bind::function(l,"wait_exit",&process::wait_exit);
-        
-        lua::bind::value(l, "IGNORE", UV_IGNORE);
-        lua::bind::value(l, "CREATE_PIPE", UV_CREATE_PIPE);
-        lua::bind::value(l, "INHERIT_FD", UV_INHERIT_FD);
-        lua::bind::value(l, "INHERIT_STREAM", UV_INHERIT_STREAM);
-        lua::bind::value(l, "READABLE_PIPE", UV_READABLE_PIPE);
-        lua::bind::value(l, "WRITABLE_PIPE", UV_WRITABLE_PIPE);
-        lua::bind::value(l, "NONBLOCK_PIPE", UV_NONBLOCK_PIPE);
-        
-        lua::bind::value(l, "PROCESS_DETACHED", UV_PROCESS_DETACHED);
-	}
+
 }

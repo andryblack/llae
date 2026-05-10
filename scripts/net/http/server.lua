@@ -1,4 +1,4 @@
-local uv = require 'uv'
+local uv = require 'llae.uv'
 local log = require 'llae.log'
 local async = require 'llae.async'
 

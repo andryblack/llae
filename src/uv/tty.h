@@ -10,6 +10,7 @@ namespace uv {
 
 	class loop;
 	
+	/// @luabind
 	class tty : public stream {
 		META_OBJECT
 	private:
@@ -23,11 +24,19 @@ namespace uv {
 		explicit tty(uv::loop& loop,posix::fd_ptr && fd );
 	public:
 		explicit tty(uv::loop& loop,uv_file fd );
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& l);
-
+		/// @luabind
 		lua::multiret set_mode(lua::state& l,uv_tty_mode_t mode);
+		/// @luabind
 		static lua::multiret reset_mode(lua::state& l);
+
+		/// @luabind(ltype=integer)
+		static constexpr auto MODE_NORMAL = UV_TTY_MODE_NORMAL;
+		/// @luabind(ltype=integer)
+		static constexpr auto MODE_RAW = UV_TTY_MODE_RAW;
+		/// @luabind(ltype=integer)
+		static constexpr auto MODE_IO = UV_TTY_MODE_IO;
 	};
 	typedef common::intrusive_ptr<tty> tty_ptr;
 

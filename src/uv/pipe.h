@@ -10,6 +10,7 @@ namespace uv {
 
     class loop;
     
+    /// @luabind
     class pipe : public stream {
         META_OBJECT
     private:
@@ -23,9 +24,10 @@ namespace uv {
         uv_pipe_t* get_pipe() { return &m_pipe; }
     public:
         explicit pipe(uv::loop& loop,int ipc);
+        /// @luabind(name=new)
         static lua::multiret lnew(lua::state& l);
+        /// @luabind
         lua::multiret connect(lua::state& l);
-        static void lbind(lua::state& l);
     };
     typedef common::intrusive_ptr<pipe> pipe_ptr;
 

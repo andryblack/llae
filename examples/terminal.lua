@@ -6,7 +6,7 @@ local log = require 'llae.log'
 
 local serial = require 'posix.serial'
 
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 local cin = assert(uv.tty.new(0))
 local cout = assert(uv.tty.new(0))

@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include "llae/buffer.h"
+#include "lua/types.h"
 
 namespace llae {
 	class loop;
@@ -29,6 +30,66 @@ namespace uv {
 	std::string get_error(int r);
     std::string get_cwd();
 
+	/// @luabind(name=exepath)
+	int lexepath(lua_State* L);
+	/// @luabind(name=getaddrinfo)
+	lua::multiret lgetaddrinfo(lua::state& l);
+	/// @luabind(name=cwd)
+	int lcwd(lua_State* L);
+	/// @luabind(name=chdir)
+	int lchdir(lua_State* L);
+	/// @luabind(name=pause,wrapper=uv::timer_pause::pause)
+	int lpause(lua_State* L);
+	/// @luabind(name=resume_delayed,wrapper=uv::timer_pause::resume_delayed)
+	int lresume_delayed(lua_State* L);
+	/// @luabind(name=gettimeofday)
+	int lgettimeofday(lua_State* L);
+	/// @luabind(name=interface_addresses)
+	int linterface_addresses(lua_State* L);
+	/// @luabind(name=set_process_title)
+	int lset_process_title(lua_State* L);
+	/// @luabind(name=get_free_memory)
+	int lget_free_memory(lua_State* L);
+	/// @luabind(name=get_total_memory)
+	int lget_total_memory(lua_State* L);
+	/// @luabind(name=get_constrained_memory)
+	int lget_constrained_memory(lua_State* L);
+	/// @luabind(name=get_get_available_memory)
+	int lget_get_available_memory(lua_State* L);
+	/// @luabind(name=hrtime)
+	int lhrtime(lua_State* L);
+	/// @luabind(name=sleep)
+	int lsleep(lua_State* L);
+	/// @luabind(name=random)
+	int lrandom(lua_State* L);
+	/// @luabind(name=print_handles)
+	int lprint_handles(lua_State* L);
+	/// @luabind(name=available_parallelism,wrapper=uv_available_parallelism)
+	int lavailable_parallelism(lua_State* L);
+	/// @luabind(name=cpu_info)
+	int lcpu_info(lua_State* L);
+	/// @luabind(name=ip4_addr)
+	lua::multiret lip4_addr(lua::state& l);
+	/// @luabind(name=ip6_addr)
+	lua::multiret lip6_addr(lua::state& l);
+	/// @luabind(name=ip4_name)
+	lua::multiret lip4_name(lua::state& l);
+	/// @luabind(name=ip6_name)
+	lua::multiret lip6_name(lua::state& l);
+	/// @luabind(name=if_indextoname)
+	lua::multiret lif_indextoname(lua::state& l);
+
+#ifdef LUABIND_PARSE
+	/// @luabind(value=AF_INET)
+	LUABIND_FIELD(AF_INET)
+	/// @luabind(value=AF_INET6)
+	LUABIND_FIELD(AF_INET6)
+#endif
+
+	/// @luabind(ltype=integer)
+	constexpr auto CLOCK_MONOTONIC = UV_CLOCK_MONOTONIC;
+	/// @luabind(ltype=integer)
+	constexpr auto CLOCK_REALTIME = UV_CLOCK_REALTIME;
 
 	static inline uv_buf_t get_buffer(const llae::buffer_base_ptr& buf) {
 		if (!buf) {

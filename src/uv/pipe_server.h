@@ -10,6 +10,7 @@ namespace uv {
 
     class loop;
     
+    /// @luabind
     class pipe_server : public server {
         META_OBJECT
     private:
@@ -22,9 +23,9 @@ namespace uv {
     public:
         explicit pipe_server(loop& l,int ipc);
         
+        /// @luabind(name=new)
         static lua::multiret lnew(lua::state& l);
-        static void lbind(lua::state& l);
-
+        /// @luabind
         lua::multiret bind(lua::state& l);
     };
     using pipe_server_ptr = common::intrusive_ptr<pipe_server>;

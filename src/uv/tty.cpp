@@ -4,7 +4,6 @@
 #include "llae/app.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
-#include "lua/bind.h"
 
 META_OBJECT_INFO(uv::tty,uv::stream)
 
@@ -61,14 +60,4 @@ namespace uv {
 		return {1};
 	}
 
-		
-	void tty::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&tty::lnew);
-		lua::bind::function(l,"set_mode",&tty::set_mode);
-		lua::bind::function(l,"reset_mode",&tty::reset_mode);
-
-		lua::bind::value(l,"MODE_NORMAL",UV_TTY_MODE_NORMAL);
-		lua::bind::value(l,"MODE_RAW",UV_TTY_MODE_RAW);
-		lua::bind::value(l,"MODE_IO",UV_TTY_MODE_IO);
-	}
 }

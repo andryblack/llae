@@ -6,6 +6,7 @@
 
 namespace uv {
 
+	/// @luabind(hidden=true)
 	class handle : public meta::object {
 		META_OBJECT
 	public:

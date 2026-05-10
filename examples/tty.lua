@@ -3,7 +3,7 @@ package.path = package.path .. ';scripts/?.lua'
 local async = require 'llae.async'
 local log = require 'llae.log'
 
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 local cerr = assert(uv.tty.new(2))
 local cin = assert(uv.tty.new(0))

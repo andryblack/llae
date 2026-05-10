@@ -3,7 +3,7 @@ local log = require 'llae.log'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
 local async = require 'llae.async'
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 ---@class net.ftp : net.connection
 ---@field new fun() : net.ftp

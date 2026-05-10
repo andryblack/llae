@@ -1,7 +1,7 @@
 local class = require 'llae.class'
 local llae = require 'llae'
 local log = require 'llae.log'
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 ---The async module provides functionality for asynchronous programming using coroutines.
 ---It includes utilities for coroutine management, locks for synchronization, and event handling.

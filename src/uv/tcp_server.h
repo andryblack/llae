@@ -8,6 +8,7 @@
 namespace uv {
 
 	class loop;
+	/// @luabind
 	class tcp_server : public server {
 		META_OBJECT
 	private:
@@ -20,9 +21,10 @@ namespace uv {
 	public:
 		explicit tcp_server(loop& l);
 		
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		static void lbind(lua::state& l);
-
+	
+		/// @luabind
 		lua::multiret bind(lua::state& l);
 	};
 	using tcp_server_ptr = common::intrusive_ptr<tcp_server>;

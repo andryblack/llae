@@ -9,7 +9,7 @@ local untar = require 'archive.tar'
 local unzip = require 'archive.zip'
 local tool = require 'tool'
 local crypto = require 'llae.crypto'
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 local modules_base = require 'modules.base'
 local modules_git = require 'modules.git'

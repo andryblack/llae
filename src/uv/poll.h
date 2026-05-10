@@ -20,6 +20,7 @@ namespace uv {
     };
     typedef common::intrusive_ptr<poll_consumer> poll_consumer_ptr;
 	
+	/// @luabind
 	class poll : public handle {
 		META_OBJECT
 	private:
@@ -37,13 +38,24 @@ namespace uv {
 	public:
 		explicit poll(uv::loop& loop,int fd );
 		explicit poll(uv::loop& loop,posix::fd_ptr && fd );
-		static void lbind(lua::state& l);
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
 
 		int start_poll(int events,const poll_consumer_ptr& poll);
 		int stop_poll();
+		/// @luabind(name=poll)
 		lua::multiret lpoll(lua::state& l, int events);
+		/// @luabind(name=stop)
 		lua::multiret lstop(lua::state& l);
+
+		/// @luabind(ltype=integer)
+		static constexpr auto READABLE = UV_READABLE;
+		/// @luabind(ltype=integer)
+		static constexpr auto WRITABLE = UV_WRITABLE;
+		/// @luabind(ltype=integer)
+		static constexpr auto PRIORITIZED = UV_PRIORITIZED;
+		/// @luabind(ltype=integer)
+		static constexpr auto DISCONNECT = UV_DISCONNECT;
 	};
 	typedef common::intrusive_ptr<poll> poll_ptr;
 

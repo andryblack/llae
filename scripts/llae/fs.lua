@@ -1,4 +1,4 @@
-local uv = require 'uv'
+local uv = require 'llae.uv'
 local path = require 'llae.path'
 
 ---The fs module provides a comprehensive set of functions for working with the file system.

@@ -4,7 +4,7 @@ local path = require 'llae.path'
 local fs = require 'llae.fs'
 local async = require 'llae.async'
 local url = require 'net.url'
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 ---@class net.pop3 : net.connection
 local pop3 = class(require 'net.connection','net.pop3')

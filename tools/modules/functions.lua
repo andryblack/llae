@@ -9,7 +9,7 @@ local http = require 'net.http'
 local os = require 'llae.os'
 local netutils = require 'net.utils'
 
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 local m = {}
 

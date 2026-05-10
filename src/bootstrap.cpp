@@ -9,6 +9,8 @@
 
 
 int luaopen_uv(lua_State*);
+int luaopen_uv_os(lua_State*);
+int luaopen_uv_fs(lua_State*);
 int luaopen_ssl(lua_State*);
 int luaopen_llae(lua_State*);
 int luaopen_archive(lua_State*);
@@ -18,6 +20,8 @@ int luaopen_archive_bzip2(lua_State*);
 
 const lua::embedded_module lua::embedded_module::modules[] = {
 	{"uv",&luaopen_uv},
+	{"uv.os",&luaopen_uv_os},
+	{"uv.fs",&luaopen_uv_fs},
 	{"ssl",&luaopen_ssl},
 	{"llae",&luaopen_llae},
 	{"archive",&luaopen_archive},
@@ -28,7 +32,7 @@ const lua::embedded_module lua::embedded_module::modules[] = {
 };
 
 static const char main_code[] = 
-"local uv = require 'uv' \n" 
+"local uv = require 'llae.uv' \n" 
 "local utils = require 'llae.utils' \n"
 
 "local commands = require 'commands' \n"

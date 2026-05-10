@@ -112,6 +112,7 @@ namespace uv {
         void add_read_buffer(llae::buffer_ptr&& b);
     };
 
+	/// @luabind(hidden=true)
 	class stream : public handle, public readable_stream {
 		META_OBJECT
 	private:
@@ -128,15 +129,21 @@ namespace uv {
         virtual lua::state& get_lua() override final;
 	public:
 		virtual uv_stream_t* get_stream() = 0;
-		static void lbind(lua::state& l);
 		bool write(llae::buffer_base_ptr&& buf);
-		lua::multiret write(lua::state& l);
+		/// @luabind(name=write)
+		lua::multiret lwrite(lua::state& l);
+        /// @luabind
         lua::multiret read(lua::state& l) { return readable_stream::read(l); }
+        /// @luabind
         lua::multiret shutdown(lua::state& l);
+		/// @luabind
 		lua::multiret send(lua::state& l);
+        /// @luabind
         void add_read_buffer(llae::buffer_ptr&& b) { readable_stream::add_read_buffer(std::move(b)); }
+		/// @luabind
 		void close();
         int start_read( const stream_read_consumer_ptr& consumer ) override;
+        /// @luabind(name=stop_read)
         void stop_read() override;
         
 	};

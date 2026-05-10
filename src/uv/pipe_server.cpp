@@ -3,7 +3,6 @@
 #include "luv.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
-#include "lua/bind.h"
 
 META_OBJECT_INFO(uv::pipe_server,uv::server)
 
@@ -38,9 +37,5 @@ namespace uv {
 		common::intrusive_ptr<pipe_server> server{new pipe_server(llae::app::get(l).loop(),ipc)};
 		lua::push(l,std::move(server));
 		return {1};
-	}
-	void pipe_server::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&pipe_server::lnew);
-		lua::bind::function(l,"bind",&pipe_server::bind);
 	}
 }

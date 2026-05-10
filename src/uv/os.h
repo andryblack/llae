@@ -4,19 +4,29 @@
 #include "lua/state.h"
 
 namespace uv {
-	struct os {
-		static int homedir(lua_State* L);
-		static int tmpdir(lua_State* L);
-		static int getenv(lua_State* L);
-		static int setenv(lua_State* L);
-		static int getallenv(lua_State* L);
-		static int unsetenv(lua_State* L);
-		static int gethostname(lua_State* L);
-		static int uname(lua_State* L);
-		static int getpriority(lua_State* L);
-		static int setpriority(lua_State* L);
-		static int getpid(lua_State* L);
-		static void lbind(lua::state& l);
+	namespace os {
+		/// @luabind
+		int homedir(lua_State* L);
+		/// @luabind
+		int tmpdir(lua_State* L);
+		/// @luabind
+		int getenv(lua_State* L);
+		/// @luabind
+		int setenv(lua_State* L);
+		/// @luabind
+		int getallenv(lua_State* L);
+		/// @luabind
+		int unsetenv(lua_State* L);
+		/// @luabind
+		int gethostname(lua_State* L);
+		/// @luabind
+		int uname(lua_State* L);
+		/// @luabind
+		int getpriority(lua_State* L);
+		/// @luabind
+		int setpriority(lua_State* L);
+		/// @luabind
+		int getpid(lua_State* L);
 	};
 }
 

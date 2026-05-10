@@ -1,7 +1,7 @@
 local posix = require 'posix'
 local termios = require 'posix.termios'
 local class = require 'llae.class'
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 ---@class posix.serial
 ---@field new fun(fd:posix.fd):posix.serial

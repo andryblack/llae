@@ -6,6 +6,7 @@
 
 namespace uv {
 
+	/// @luabind(hidden=true)
 	class server : public handle {
 		META_OBJECT
 	private:
@@ -23,10 +24,11 @@ namespace uv {
 		explicit server();
 		~server();
 	public:
-		static void lbind(lua::state& l);
-
+		/// @luabind(async=true)
 		llae::result_promise_ptr<void> listen(lua::state& l);
+		/// @luabind
 		void stop(lua::state& l);
+		/// @luabind
 		llae::result<void> accept(lua::state& l,const stream_ptr& stream);
 	};
 }

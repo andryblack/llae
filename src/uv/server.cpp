@@ -3,8 +3,6 @@
 #include "luv.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
-#include "lua/bind.h"
-#include "llae/async_bind.h"
 
 META_OBJECT_INFO(uv::server,uv::handle)
 
@@ -85,9 +83,4 @@ namespace uv {
 		}
 	}
 
-	void server::lbind(lua::state& l) {
-		llae::async_function(l,"listen",&server::listen);
-		lua::bind::function(l,"accept",&server::accept);
-		lua::bind::function(l,"stop",&server::stop);
-	}
 }

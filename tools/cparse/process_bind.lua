@@ -101,9 +101,13 @@ function bind_module:get_sorted_classes()
             if not added[class:get_name()] then
                 local all_bases_added = true
                 for _,base in ipairs(class:get_bases()) do
-                    if available[base] then
+                    local base_name = base.name or error('base name not found: ' .. tostring(base))
+                    if available[base_name] then
+                        --log.info('base not added: ', class:get_name(), tostring(base_name))
                         all_bases_added = false
                         break
+                    else
+                        --log.info('base not found: ', class:get_name(), tostring(base_name))
                     end
                 end
                 if all_bases_added then
@@ -439,6 +443,10 @@ function bind_class:resolve_cpp_type(type_str)
     end
     type_str = replace_cpp_identifiers(type_str, class_declared_types)
     return self._module:resolve_cpp_type(type_str)
+end
+
+function bind_class:is_hidden()
+    return self:get_bind('hidden') == 'true'
 end
 
 local bind_func = class(module_element, 'bind_func')
@@ -791,6 +799,14 @@ function bind_value:_init(node,prefix,bind)
 end
 function bind_value:get_type()
     return self._node.type
+end
+
+function bind_value:get_c_value()
+    local value = self:get_bind('value')
+    if value then
+        return value
+    end
+    return self:get_prefix() .. '::' .. self:get_name()
 end
 
 local processor = class(nil, 'processor')

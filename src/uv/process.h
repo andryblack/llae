@@ -15,6 +15,7 @@ namespace uv {
 
 	class process;
 	
+	/// @luabind
 	class process : public handle {
 		META_OBJECT
 	private:
@@ -40,11 +41,30 @@ namespace uv {
 		explicit process();
 		int do_spawn(loop& l,const uv_process_options_t *options);
 	public:
-		static void lbind(lua::state& l);
 		
+		/// @luabind
 		static lua::multiret spawn(lua::state& l);
+		/// @luabind
 		lua::multiret kill(lua::state& l,int signal);
+        /// @luabind
         lua::multiret wait_exit(lua::state& l);
+
+		/// @luabind(ltype=integer)
+		static constexpr auto IGNORE = UV_IGNORE;
+		/// @luabind(ltype=integer)
+		static constexpr auto CREATE_PIPE = UV_CREATE_PIPE;
+		/// @luabind(ltype=integer)
+		static constexpr auto INHERIT_FD = UV_INHERIT_FD;
+		/// @luabind(ltype=integer)
+		static constexpr auto INHERIT_STREAM = UV_INHERIT_STREAM;
+		/// @luabind(ltype=integer)
+		static constexpr auto READABLE_PIPE = UV_READABLE_PIPE;
+		/// @luabind(ltype=integer)
+		static constexpr auto WRITABLE_PIPE = UV_WRITABLE_PIPE;
+		/// @luabind(ltype=integer)
+		static constexpr auto NONBLOCK_PIPE = UV_NONBLOCK_PIPE;
+		/// @luabind(ltype=integer)
+		static constexpr auto PROCESS_DETACHED = UV_PROCESS_DETACHED;
 	};
 	typedef common::intrusive_ptr<process> process_ptr;
 

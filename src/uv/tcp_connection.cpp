@@ -3,7 +3,6 @@
 #include "luv.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
-#include "lua/bind.h"
 #include <iostream>
 
 META_OBJECT_INFO(uv::tcp_connection,uv::stream)
@@ -159,11 +158,4 @@ namespace uv {
 		return return_status_error(l,r);
 	}
 
-	void tcp_connection::lbind(lua::state& l) {
-		lua::bind::function(l,"new",&tcp_connection::lnew);
-		lua::bind::function(l,"connect",&tcp_connection::connect);
-        lua::bind::function(l,"getpeername",&tcp_connection::getpeername);
-        lua::bind::function(l,"keepalive",&tcp_connection::keepalive);
-        lua::bind::function(l,"nodelay",&tcp_connection::nodelay);
-	}
 }

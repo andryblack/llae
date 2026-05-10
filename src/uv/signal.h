@@ -10,6 +10,7 @@ namespace uv {
 
 	class loop;
 
+	/// @luabind(hidden=true)
 	class signal_base : public handle {
 		META_OBJECT
 	public:
@@ -40,6 +41,7 @@ namespace uv {
         using signal_base::stop;
 	};
 
+	/// @luabind(name=signal)
 	class lua_signal : public signal_base {
 		META_OBJECT
 	private:
@@ -48,10 +50,13 @@ namespace uv {
 		explicit lua_signal(loop& l) : signal_base(l) {}
 		void on_signal(int s) override;
 		lua::multiret start_oneshot(lua::state& l, int signum, int i);
-		static lua::multiret oneshot(lua::state& l);
-		lua::multiret stop(lua::state& l);
 	public:
-		static void lbind(lua::state& l);
+		/// @luabind
+		static lua::multiret oneshot(lua::state& l);
+		/// @luabind
+		lua::multiret stop(lua::state& l);
+		/// @luabind
+		void unref() { handle::unref(); }
 	};
 }
 

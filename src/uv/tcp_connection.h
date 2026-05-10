@@ -9,6 +9,7 @@ namespace uv {
 
 	class loop;
 	
+	/// @luabind
 	class tcp_connection : public stream {
 		META_OBJECT
 	private:
@@ -22,12 +23,16 @@ namespace uv {
 		uv_tcp_t* get_tcp() { return &m_tcp; }
 	public:
 		explicit tcp_connection(uv::loop& loop);
+		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
+		/// @luabind
 		lua::multiret connect(lua::state& l);
+        /// @luabind
         lua::multiret getpeername(lua::state& l);
+        /// @luabind
         lua::multiret keepalive(lua::state& l);
+        /// @luabind
         lua::multiret nodelay(lua::state& l);
-		static void lbind(lua::state& l);
 	};
 	typedef common::intrusive_ptr<tcp_connection> tcp_connection_ptr;
 

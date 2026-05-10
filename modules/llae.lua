@@ -174,6 +174,9 @@ dependencies = {
 bind_headers = {
 	{
 		dir = '${dir}/src/crypto',
+	},
+	{
+		dir = '${dir}/src/uv',
 	}
 }
 

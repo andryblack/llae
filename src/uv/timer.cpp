@@ -2,7 +2,6 @@
 #include "loop.h"
 #include "llae/app.h"
 #include "luv.h"
-#include "lua/bind.h"
 
 META_OBJECT_INFO(uv::timer,uv::handle)
 META_OBJECT_INFO(uv::timer_lcb,uv::timer)
@@ -174,11 +173,6 @@ namespace uv {
 		return return_status_error(l,r);
 	}
 
-	void timer_lcb::lbind(lua::state& l) {
-		lua::bind::function(l,"start",&timer_lcb::lstart);
-		lua::bind::function(l,"stop",&timer_lcb::lstop);
-		lua::bind::function(l,"new",&timer_lcb::lnew);
-	}
 
 	void timer_wait::resume(lua::state& l,const char* status) {
         l.checkstack(2);
@@ -229,25 +223,20 @@ namespace uv {
 		return {1};
 	}
 
-	lua::multiret timer_wait::lstart(lua::state& l) {
+	llae::result<> timer_wait::lstart(lua::state& l,int timeout) {
 		m_ready = false;
 		if (m_started) {
-			l.pushnil();
-			l.pushstring("already started");
-			return {2};
+			return llae::result<>(llae::string_error::create("already started"));
 		}
-		auto timeout = l.checkinteger(2);
-		auto repeat = l.optinteger(3,0);
 		m_started = true;
+		auto repeat = l.optinteger(3,0);
 		auto r = start(timeout,repeat);
-		return return_status_error(l,r);
+		return make_result(r);
 	}
 
-	lua::multiret timer_wait::lstop(lua::state& l) {
+	llae::result<> timer_wait::lstop(lua::state& l) {
 		if (!m_started) {
-			l.pushnil();
-			l.pushstring("not started");
-			return {2};
+			return llae::result<>(llae::string_error::create("not started"));
 		}
 		m_ready = false;
 		m_started = false;
@@ -255,7 +244,7 @@ namespace uv {
 		if (m_cont.valid()) {
 			resume(l,"stop");
 		}
-		return return_status_error(l,r);
+		return make_result(r);
 	}
 
 	lua::multiret timer_wait::lwait(lua::state& l) {
@@ -289,10 +278,4 @@ namespace uv {
 		return {0};
 	}
 
-	void timer_wait::lbind(lua::state& l) {
-		lua::bind::function(l,"start",&timer_wait::lstart);
-		lua::bind::function(l,"stop",&timer_wait::lstop);
-		lua::bind::function(l,"wait",&timer_wait::lwait);
-		lua::bind::function(l,"new",&timer_wait::lnew);
-	}
 }

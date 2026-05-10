@@ -10,6 +10,7 @@ namespace uv {
     
     class loop;
 
+	/// @luabind(hidden=true)
 	class async : public handle {
         META_OBJECT
 	private:
@@ -25,6 +26,7 @@ namespace uv {
 	};
 	using async_ptr = common::intrusive_ptr<async>;
 
+    /// @luabind(hidden=true)
     class async_continue : public async {
         META_OBJECT
     private:
@@ -56,16 +58,21 @@ namespace uv {
     };
     using async_continue_ptr = common::intrusive_ptr<async_continue>;
 
+    /// @luabind(name=async)
     class async_wait : public async_continue {
         META_OBJECT
     protected:
         explicit async_wait(loop& loop) : async_continue(loop) {}
         virtual int on_cont(lua::state& l) override;
     public:
+        /// @luabind(name=new)
         static lua::multiret lnew(lua::state& l);
+        /// @luabind
         lua::multiret emmit(lua::state& l);
+        /// @luabind
         lua::multiret wait(lua::state& l);
-        static void lbind(lua::state& l);
+        /// @luabind
+        void close() { handle::close(); }
     };
 }
 

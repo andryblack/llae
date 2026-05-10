@@ -1,7 +1,6 @@
 #include "udp.h"
 #include "llae/app.h"
 #include "luv.h"
-#include "lua/bind.h"
 #include "lua/stack.h"
 #include "llae/logger.h"
 
@@ -481,38 +480,5 @@ namespace uv {
         common::intrusive_ptr<udp> server{new udp(llae::app::get(l).loop(),af)};
         lua::push(l,std::move(server));
         return {1};
-    }
-    void udp::lbind(lua::state& l) {
-        lua::bind::function(l,"new",&udp::lnew);
-        lua::bind::function(l,"bind",&udp::bind);
-        lua::bind::function(l,"send",&udp::send);
-        lua::bind::function(l,"try_send",&udp::try_send);
-        lua::bind::function(l,"recv",&udp::recv);
-        lua::bind::function(l,"connect",&udp::connect);
-        lua::bind::function(l,"disconnect", &udp::disconnect);
-        lua::bind::function(l,"stop_recv",&udp::stop_recv);
-        lua::bind::function(l,"add_buffer",&udp::add_buffer);
-        lua::bind::function(l,"close",&udp::close);
-        lua::bind::function(l,"set_ttl",&udp::set_ttl);
-        lua::bind::function(l,"set_broadcast",&udp::set_broadcast);
-        lua::bind::function(l,"set_membership",&udp::set_membership);
-        lua::bind::function(l,"set_source_membership",&udp::set_source_membership);
-        lua::bind::function(l,"set_multicast_loop",&udp::set_multicast_loop);
-        lua::bind::function(l,"set_multicast_ttl",&udp::set_multicast_ttl);
-        lua::bind::function(l,"set_multicast_interface",&udp::set_multicast_interface);
-        lua::bind::function(l,"getpeername",&udp::getpeername);
-        lua::bind::function(l,"getsockname",&udp::getsockname);
-
-        lua::bind::value(l, "IPV6ONLY", UV_UDP_IPV6ONLY);
-        lua::bind::value(l, "PARTIAL", UV_UDP_PARTIAL);
-        lua::bind::value(l, "REUSEADDR", UV_UDP_REUSEADDR);
-        lua::bind::value(l, "MMSG_CHUNK", UV_UDP_MMSG_CHUNK);
-        lua::bind::value(l, "MMSG_FREE", UV_UDP_MMSG_FREE);
-        lua::bind::value(l, "LINUX_RECVERR", UV_UDP_LINUX_RECVERR);
-        lua::bind::value(l, "REUSEPORT", UV_UDP_REUSEPORT);
-        lua::bind::value(l, "RECVMMSG", UV_UDP_RECVMMSG);
-
-        lua::bind::value(l, "LEAVE_GROUP", UV_LEAVE_GROUP);
-        lua::bind::value(l, "JOIN_GROUP", UV_JOIN_GROUP);
     }
 }

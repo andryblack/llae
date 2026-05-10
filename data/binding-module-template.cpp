@@ -25,7 +25,7 @@ static void luabind_<%= class:get_bind_name() %>(lua::state& l) {
     l.setfield(-2, "<%= enum:get_lua_name() %>");
     <% end %>
     <% for _,value in ipairs(class:get_values()) do %>
-    lua::bind::value(l, "<%= value:get_lua_name() %>", <%= value:get_prefix() %>::<%= value:get_name() %>);<% end %>
+    lua::bind::value(l, "<%= value:get_lua_name() %>", <%= value:get_c_value() %>);<% end %>
 }
 <% end %>
 
@@ -35,10 +35,10 @@ int luaopen_<%= module:get_bind_name() %>(lua_State* L) {
     lua::bind::object<<%= class:get_prefix() %>::<%= class:get_name() %>>::register_metatable(l, &luabind_<%= class:get_bind_name() %>);
     <% end %>
     l.createtable();
-    <% for _,class in ipairs(module:get_classes()) do %>
+    <% for _,class in ipairs(module:get_classes()) do if not class:is_hidden() then %>
     lua::bind::object<<%= class:get_prefix() %>::<%= class:get_name() %>>::get_metatable(l);
     l.setfield(-2,"<%= class:get_lua_name() %>");
-    <% end %>
+    <% end end %>
     <% for _,func in ipairs(module:get_functions()) do %>
     <%= func:get_bind('async') and 'llae::async_function' or 'lua::bind::function' %>(l,"<%= func:get_lua_name() %>",&<%= func:get_c_ptr() %><% if func:get_policy() then %>,lua::bind::<%= func:get_policy() %><% end %>);<% end %>
     <% for _,enum in ipairs(module:get_enums()) do %>
@@ -48,6 +48,6 @@ int luaopen_<%= module:get_bind_name() %>(lua_State* L) {
     l.setfield(-2, "<%= enum:get_lua_name() %>");
     <% end %>
     <% for _,value in ipairs(module:get_values()) do %>
-    lua::bind::value(l, "<%= value:get_lua_name() %>", <%= value:get_prefix() %>::<%= value:get_name() %>);<% end %>
+    lua::bind::value(l, "<%= value:get_lua_name() %>", <%= value:get_c_value() %>);<% end %>
     return 1;
 }

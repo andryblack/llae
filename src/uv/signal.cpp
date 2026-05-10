@@ -2,7 +2,6 @@
 #include "loop.h"
 #include "llae/app.h"
 #include "luv.h"
-#include "lua/bind.h"
 
 META_OBJECT_INFO(uv::signal_base,uv::handle)
 META_OBJECT_INFO(uv::signal,uv::signal_base)
@@ -106,12 +105,6 @@ namespace uv {
 			close();
 		}
 		return return_status_error(l,res);
-	}
-
-	void lua_signal::lbind(lua::state& l) {
-		lua::bind::function(l,"oneshot",&lua_signal::oneshot);
-		lua::bind::function(l,"stop",&lua_signal::stop);
-        lua::bind::function(l,"unref",&lua_signal::unref);
 	}
 
 }

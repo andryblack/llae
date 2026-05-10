@@ -1,7 +1,6 @@
 #include "poll.h"
 
 #include "lua/stack.h"
-#include "lua/bind.h"
 #include "llae/app.h"
 #include "luv.h"
 
@@ -189,14 +188,4 @@ namespace uv {
 		return {1};
 	}
 		
-	void poll::lbind(lua::state& l) {
-		lua::bind::function(l,"poll",&poll::lpoll);
-		lua::bind::function(l,"stop",&poll::lstop);
-		lua::bind::function(l,"new",&poll::lnew);
-
-		lua::bind::value(l,"READABLE",UV_READABLE);
-		lua::bind::value(l,"WRITABLE",UV_WRITABLE);
-		lua::bind::value(l,"PRIORITIZED",UV_PRIORITIZED);
-		lua::bind::value(l,"DISCONNECT",UV_DISCONNECT);
-	}
 }

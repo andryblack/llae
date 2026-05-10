@@ -1,4 +1,4 @@
-local uv = require 'uv'
+local uv = require 'llae.uv'
 
 local llae = require 'llae'
 

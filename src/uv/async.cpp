@@ -2,7 +2,6 @@
 #include "loop.h"
 #include "llae/app.h"
 #include "luv.h"
-#include "lua/bind.h"
 
 META_OBJECT_INFO(uv::async,uv::handle)
 META_OBJECT_INFO(uv::async_continue,uv::async)
@@ -100,11 +99,5 @@ namespace uv {
         return {0};
     }
 
-    void async_wait::lbind(lua::state& l) {
-        lua::bind::function(l,"new",&async_wait::lnew);
-        lua::bind::function(l,"emmit",&async_wait::emmit);
-        lua::bind::function(l,"wait",&async_wait::wait);
-        lua::bind::function(l,"close",&async_wait::close);
-    }
 
 }

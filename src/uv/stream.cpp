@@ -1,6 +1,5 @@
 #include "stream.h"
 #include "lua/stack.h"
-#include "lua/bind.h"
 #include "llae/app.h"
 #include "luv.h"
 #include "fs.h"
@@ -512,7 +511,7 @@ namespace uv {
         return res;
     }
 
-	lua::multiret stream::write(lua::state& l) {
+	lua::multiret stream::lwrite(lua::state& l) {
         if (is_closing() || is_closed()) {
             l.pushnil();
             l.pushstring("stream::write is closed");
@@ -641,13 +640,4 @@ namespace uv {
 		handle::close();
 	}
 
-	void stream::lbind(lua::state& l) {
-		lua::bind::function(l,"read",&stream::read);
-		lua::bind::function(l,"write",static_cast<lua::multiret(stream::*)(lua::state&)>(&stream::write));
-		lua::bind::function(l,"send",&stream::send);
-		lua::bind::function(l,"shutdown",&stream::shutdown);
-		lua::bind::function(l,"close",&stream::close);
-        lua::bind::function(l,"stop_read",&stream::stop_read);
-        lua::bind::function(l,"add_read_buffer",&stream::add_read_buffer);
-	}
 }

@@ -29,6 +29,7 @@ namespace uv {
 	};
 	using fs_req_ptr = common::intrusive_ptr<fs_req>;
 
+	/// @luabind
 	class file : public meta::object {
 		META_OBJECT
 	private:
@@ -38,13 +39,18 @@ namespace uv {
 		virtual void destroy() override final;
 	public:
 		explicit file(uv_file f,uv_loop_t* l);
+		/// @luabind(name=get_handle)
 		uv_file get() const { return m_file; }
-		static void lbind(lua::state& l);
+		/// @luabind(name=close)
 		lua::multiret fclose(lua::state& l);
+		/// @luabind(name=write)
 		lua::multiret lwrite(lua::state& l);
+        /// @luabind
         lua::multiret read(lua::state& l);
+        /// @luabind
         void seek(size_t pos) { m_offset = pos; }
         int64_t get_offset() const { return m_offset;}
+        /// @luabind(name=tell)
         size_t tell() const { return m_offset; }
 		fs_req_ptr write(loop& l,const llae::buffer_view& data);
 		fs_req_ptr close(loop& l);
@@ -53,17 +59,36 @@ namespace uv {
 	typedef common::intrusive_ptr<file> file_ptr;
 
 	
-	struct fs {
-		static int mkdir(lua_State* L);
-		static int rmdir(lua_State* L);
-		static int unlink(lua_State* L);
-		static int copyfile(lua_State* L);
-		static int rename(lua_State* L);
-		static int stat(lua_State* L);
-		static int scandir(lua_State* L);
-		static int open(lua_State* L);
-		static int chmod(lua_State* L);
-		static void lbind(lua::state& l);
+	namespace fs {
+		/// @luabind
+		int mkdir(lua_State* L);
+		/// @luabind
+		int rmdir(lua_State* L);
+		/// @luabind
+		int unlink(lua_State* L);
+		/// @luabind
+		int copyfile(lua_State* L);
+		/// @luabind
+		int rename(lua_State* L);
+		/// @luabind
+		int stat(lua_State* L);
+		/// @luabind
+		int scandir(lua_State* L);
+		/// @luabind
+		int open(lua_State* L);
+		/// @luabind
+		int chmod(lua_State* L);
+
+		/// @luabind(ltype=integer,name=O_RDONLY)
+		static constexpr auto LO_RDONLY = UV_FS_O_RDONLY;
+		/// @luabind(ltype=integer,name=O_RDWR)
+		static constexpr auto LO_RDWR = UV_FS_O_RDWR;
+		/// @luabind(ltype=integer,name=O_WRONLY)
+		static constexpr auto LO_WRONLY = UV_FS_O_WRONLY;
+		/// @luabind(ltype=integer,name=O_CREAT)
+		static constexpr auto LO_CREAT = UV_FS_O_CREAT;
+		/// @luabind(ltype=integer,name=O_APPEND)
+		static constexpr auto LO_APPEND = UV_FS_O_APPEND;
 	};
 }
 
