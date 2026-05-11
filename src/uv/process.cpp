@@ -127,7 +127,10 @@ namespace uv {
         if (l.isstring(-1)) {
             m_cwd = l.tostring(-1);
         } else {
-            m_cwd = get_cwd();
+            auto r = get_cwd();
+            if (r.has_result()) {
+                m_cwd = r.get_result();
+            }
         }
         l.pop(1);
         

@@ -28,18 +28,16 @@ namespace uv {
 	lua::multiret return_status_error(lua::state& s,int r);
 	void print_error(int r);
 	std::string get_error(int r);
-    std::string get_cwd();
-
 	uv_loop_t* get_native(llae::loop& l);
 
 	/// @luabind(name=exepath)
-	int lexepath(lua_State* L);
+	llae::result<std::string> exepath();
 	/// @luabind(name=getaddrinfo)
 	lua::multiret lgetaddrinfo(lua::state& l);
 	/// @luabind(name=cwd)
-	int lcwd(lua_State* L);
+	llae::result<std::string> get_cwd();
 	/// @luabind(name=chdir)
-	int lchdir(lua_State* L);
+	llae::result<> lchdir(std::string_view dir);
 	/// @luabind(name=pause,wrapper=uv::timer_pause::pause)
 	int lpause(lua_State* L);
 	/// @luabind(name=resume_delayed,wrapper=uv::timer_pause::resume_delayed)
@@ -49,19 +47,8 @@ namespace uv {
 	/// @luabind(name=interface_addresses)
 	int linterface_addresses(lua_State* L);
 	/// @luabind(name=set_process_title)
-	int lset_process_title(lua_State* L);
-	/// @luabind(name=get_free_memory)
-	int lget_free_memory(lua_State* L);
-	/// @luabind(name=get_total_memory)
-	int lget_total_memory(lua_State* L);
-	/// @luabind(name=get_constrained_memory)
-	int lget_constrained_memory(lua_State* L);
-	/// @luabind(name=get_get_available_memory)
-	int lget_get_available_memory(lua_State* L);
-	/// @luabind(name=hrtime)
-	int lhrtime(lua_State* L);
-	/// @luabind(name=sleep)
-	int lsleep(lua_State* L);
+	llae::result<> lset_process_title(std::string_view title);
+	
 	/// @luabind(name=random)
 	int lrandom(lua_State* L);
 	/// @luabind(name=print_handles)
@@ -86,6 +73,19 @@ namespace uv {
 	LUABIND_FIELD(AF_INET)
 	/// @luabind(value=AF_INET6)
 	LUABIND_FIELD(AF_INET6)
+
+	/// @luabind(wrapper=uv_get_free_memory)
+	uint64_t get_free_memory();
+	/// @luabind(wrapper=uv_get_total_memory)
+	uint64_t get_total_memory();
+	/// @luabind(wrapper=uv_get_constrained_memory)
+	uint64_t get_constrained_memory();
+	/// @luabind(wrapper=uv_get_available_memory)
+	uint64_t get_available_memory();
+	/// @luabind(wrapper=uv_hrtime)
+	uint64_t hrtime();
+	/// @luabind(wrapper=uv_sleep)
+	void sleep(unsigned int ms);
 #endif
 
 	/// @luabind(ltype=integer)

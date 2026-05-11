@@ -75,41 +75,20 @@ namespace uv {
 	}
 }
 
-int uv::lexepath(lua_State* L) {
+llae::result<std::string> uv::exepath() {
 	char path[PATH_MAX];
-	lua::state l(L);
 	size_t size = sizeof(path);
 	auto r = uv_exepath(path, &size);
 	if (r<0) {
-		l.pushnil();
-		uv::push_error(l,r);
-		return 2;
+		return status_error::create(r);
 	}
-	l.pushstring(path);
-	return 1;
+	return std::string(path,size);
 }
 
 lua::multiret uv::lgetaddrinfo(lua::state& l) {
 	return getaddrinfo_req::getaddrinfo(l);
 }
 
-int uv::lcwd(lua_State* L) {
-	lua::state l(L);
-	size_t size = 1;
-	char dummy;
-	auto r = uv_cwd(&dummy,&size);
-	if (r == UV_ENOBUFS) {
-        std::unique_ptr<char[]> data(new char[size]);
-		r = uv_cwd(data.get(),&size);
-        if (r>=0) {
-			lua_pushlstring(L,data.get(),size);
-			return 1;
-		}
-	}
-	l.pushnil();
-	uv::push_error(l,r);
-	return 2;
-}
 
 int uv::lgettimeofday(lua_State* L) {
 	lua::state l(L);
@@ -120,31 +99,27 @@ int uv::lgettimeofday(lua_State* L) {
 	return 2;
 }
 
-std::string uv::get_cwd() {
+llae::result<std::string> uv::get_cwd() {
     size_t size = 1;
     char dummy;
     auto r = uv_cwd(&dummy,&size);
     if (r == UV_ENOBUFS) {
         std::unique_ptr<char[]> data(new char[size]);
         r = uv_cwd(data.get(),&size);
-        if (r>=0) {
-            return data.get();
+        if (r < 0) {
+			return status_error::create(r);
         }
+		return std::string(data.get(),size);
     }
-    return "";
+    return status_error::create(r);
 }
 
-int uv::lchdir(lua_State* L) {
-	lua::state l(L);
-	const char* dir = l.checkstring(1);
-	auto r = uv_chdir(dir);
-	if (r>0) {
-		l.pushboolean(true);
-		return 1;
+llae::result<> uv::lchdir(std::string_view dir) {
+	auto r = uv_chdir(dir.data());
+	if (r < 0) {
+		return status_error::create(r);
 	}
-	l.pushnil();
-	uv::push_error(l,r);
-	return 2;
+	return llae::result<>();
 }
 
 int uv::linterface_addresses(lua_State* L) {
@@ -191,54 +166,14 @@ int uv::linterface_addresses(lua_State* L) {
 	return 1;
 }
 
-int uv::lset_process_title(lua_State* L) {
-	lua::state l(L);
-	const char* name = l.checkstring(1);
-	int r = uv_set_process_title(name);
-	if (r>0) {
-		l.pushboolean(true);
-		return 1;
+llae::result<> uv::lset_process_title(std::string_view title) {
+	int r = uv_set_process_title(title.data());
+	if (r < 0) {
+		return status_error::create(r);
 	}
-	l.pushnil();
-	uv::push_error(l,r);
-	return 2;
+	return llae::result<>();
 }
 
-int uv::lget_free_memory(lua_State* L) {
-	lua::state l(L);
-	l.pushinteger(uv_get_free_memory());
-	return 1;
-}
-
-int uv::lget_total_memory(lua_State* L) {
-	lua::state l(L);
-	l.pushinteger(uv_get_total_memory());
-	return 1;
-}
-
-int uv::lget_constrained_memory(lua_State* L) {
-	lua::state l(L);
-	l.pushinteger(uv_get_constrained_memory());
-	return 1;
-}
-
-int uv::lget_get_available_memory(lua_State* L) {
-	lua::state l(L);
-	l.pushinteger(uv_get_available_memory());
-	return 1;
-}
-
-int uv::lhrtime(lua_State* L) {
-	lua::state l(L);
-	l.pushinteger(uv_hrtime());
-	return 1;
-}
-
-int uv::lsleep(lua_State* L) {
-	lua::state l(L);
-	uv_sleep(static_cast<unsigned int>(l.checkinteger(1)));
-	return 0;
-}
 
 class rand_req : public uv::req {
 private:

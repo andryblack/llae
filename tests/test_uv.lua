@@ -38,6 +38,16 @@ function TestUV:test_ip6_addr_binary()
     lu.assertEquals(ip, '\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10')
 end
 
+function TestUV:test_funcs()
+    uv.exepath()
+    uv.cwd()
+    uv.get_free_memory()
+    uv.get_total_memory()
+    uv.get_constrained_memory()
+    uv.get_available_memory()
+    uv.hrtime()
+    uv.sleep(1)
+end
 
 TestUVFS = {}
 
