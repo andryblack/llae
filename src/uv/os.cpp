@@ -1,132 +1,9 @@
 #include "os.h"
 #include "luv.h"
-#include "lua/bind.h"
 #include <memory>
 
-namespace uv {
-
-
-	int os::homedir(lua_State* L) {
-		lua::state l(L);
-		size_t size = 1;
-		char dummy;
-		auto r = uv_os_homedir(&dummy,&size);
-		if (r == UV_ENOBUFS) {
-            std::unique_ptr<char[]> data(new char[size]);
-			r = uv_os_homedir(data.get(),&size);
-            if (r>=0) {
-            	lua_pushlstring(L,data.get(),size);
-				return 1;
-			}
-		}
-		l.pushnil();
-		uv::push_error(l,r);
-		return 2;
-	}
-	int os::tmpdir(lua_State* L) {
-		lua::state l(L);
-        size_t size = 1;
-        char dummy;
-		auto r = uv_os_tmpdir(&dummy,&size);
-		if (r == UV_ENOBUFS) {
-            std::unique_ptr<char[]> data(new char[size]);
-			r = uv_os_tmpdir(data.get(),&size);
-            if (r>=0) {
-            	lua_pushlstring(L,data.get(),size);
-				return 1;
-			}
-		}
-		l.pushnil();
-		uv::push_error(l,r);
-		return 2;
-	}
-	int os::getenv(lua_State* L) {
-		lua::state l(L);
-		auto name = l.checkstring(1);
-        size_t size = 1;
-        char dummy;
-		auto r = uv_os_getenv(name,&dummy,&size);
-		if (r == UV_ENOBUFS) {
-            std::unique_ptr<char[]> data(new char[size]);
-			r = uv_os_getenv(name,data.get(),&size);
-            if (r>=0) {
-				lua_pushlstring(L,data.get(),size);
-				return 1;
-			}
-		}
-		l.pushnil();
-		uv::push_error(l,r);
-		return 2;
-	}
-	int os::getallenv(lua_State* L) {
-		lua::state l(L);
-		uv_env_item_t* envs = nullptr;
-		int count = 0;
-		auto r = uv_os_environ(&envs,&count);
-		if (r<0) {
-			l.pushnil();
-			uv::push_error(l,r);
-			return 2;
-		}
-		l.createtable();
-		for (int i=0;i<count;++i) {
-			l.pushstring(envs[i].value);
-			l.setfield(-2,envs[i].name);
-		}
-		uv_os_free_environ(envs,count);
-		return 1;
-	}
-	int os::setenv(lua_State* L) {
-		lua::state l(L);
-		auto name = l.checkstring(1);
-		auto value = l.checkstring(2);
-		auto r = uv_os_setenv(name,value);
-		if (r<0) {
-			l.pushnil();
-			uv::push_error(l,r);
-			return 2;
-		}
-		l.pushboolean(true);
-		return 1;
-	}
-	int os::unsetenv(lua_State* L) {
-		lua::state l(L);
-		auto name = l.checkstring(1);
-		auto r = uv_os_unsetenv(name);
-		if (r<0) {
-			l.pushnil();
-			uv::push_error(l,r);
-			return 2;
-		}
-		l.pushboolean(true);
-		return 1;
-	}
-	int os::gethostname(lua_State* L) {
-		lua::state l(L);
-        size_t size = 1;
-        char dummy;
-		auto r = uv_os_gethostname(&dummy,&size);
-		if (r == UV_ENOBUFS) {
-            std::unique_ptr<char[]> data(new char[size]);
-			r = uv_os_gethostname(data.get(),&size);
-            if (r>=0) {
-            	lua_pushlstring(L,data.get(),size);
-				return 1;
-			}
-		}
-		l.pushnil();
-		uv::push_error(l,r);
-		return 2;
-	}
-	int os::uname(lua_State* L) {
-		lua::state l(L);
-		uv_utsname_t n;
-		auto r = uv_os_uname(&n);
-		if (r<0) {
-			l.pushnil();
-			uv::push_error(l,r);
-			return 2;
-		}
+namespace lua {
+	int stack<uv_utsname_t>::push(state& l,const uv_utsname_t& n) {
 		l.createtable(0,4);
 		l.pushstring(n.sysname);
 		l.setfield(-2,"sysname");
@@ -138,46 +15,122 @@ namespace uv {
 		l.setfield(-2,"machine");
 		return 1;
 	}
-
-	int os::getpid(lua_State* L) {
-		lua::state l(L);
-		l.pushinteger(uv_os_getpid());
+	int stack<std::unordered_map<std::string,std::string>>::push(state& l,const std::unordered_map<std::string,std::string>& m) {
+		l.newtable();
+		for (const auto& [key,value] : m) {
+			l.pushstring(key.c_str());
+			l.pushstring(value.c_str());
+			l.settable(-3);
+		}
 		return 1;
 	}
+}
 
-	int os::getpriority(lua_State* L) {
-		lua::state l(L);
-		int prio = 0;
-		auto r = uv_os_getpriority(static_cast<uv_pid_t>(l.optinteger(1,uv_os_getpid())),&prio);
-		if (r<0) {
-			l.pushnil();
-			uv::push_error(l,r);
-			return 2;
+namespace uv {
+
+
+	llae::result<std::string> os::homedir() {
+		size_t size = 1;
+		char dummy;
+		auto r = uv_os_homedir(&dummy,&size);
+		if (r == UV_ENOBUFS) {
+            std::unique_ptr<char[]> data(new char[size]);
+			r = uv_os_homedir(data.get(),&size);
+            if (r>=0) {
+				return std::string(data.get(),size);
+			}
 		}
-		l.pushinteger(prio);
-		return 1;
+		return status_error::create(r);
+	}
+	llae::result<std::string> os::tmpdir() {
+		size_t size = 1;
+        char dummy;
+		auto r = uv_os_tmpdir(&dummy,&size);
+		if (r == UV_ENOBUFS) {
+            std::unique_ptr<char[]> data(new char[size]);
+			r = uv_os_tmpdir(data.get(),&size);
+            if (r>=0) {
+				return std::string(data.get(),size);
+			}
+		}
+		return status_error::create(r);
+	}
+	llae::result<std::string> os::getenv(std::string_view name) {
+		size_t size = 1;
+        char dummy;
+		auto r = uv_os_getenv(name.data(),&dummy,&size);
+		if (r == UV_ENOBUFS) {
+            std::unique_ptr<char[]> data(new char[size]);
+			r = uv_os_getenv(name.data(),data.get(),&size);
+            if (r>=0) {
+				return std::string(data.get(),size);
+			}
+		}
+		return status_error::create(r);
+	}
+	llae::result<std::unordered_map<std::string,std::string>> os::getallenv() {
+		uv_env_item_t* envs = nullptr;
+		int count = 0;
+		auto r = uv_os_environ(&envs,&count);
+		if (r<0) {
+			return status_error::create(r);
+		}
+		std::unordered_map<std::string,std::string> result;
+		for (int i=0;i<count;++i) {
+			result[envs[i].name] = envs[i].value;
+		}
+		uv_os_free_environ(envs,count);
+		return std::move(result);
+	}
+	llae::result<> os::setenv(std::string_view name, std::string_view value) {
+		auto r = uv_os_setenv(name.data(),value.data());
+		if (r<0) {
+			return status_error::create(r);
+		}
+		return llae::result<>();
+	}
+	llae::result<> os::unsetenv(std::string_view name) {
+		auto r = uv_os_unsetenv(name.data());
+		if (r<0) {
+			return status_error::create(r);
+		}
+		return llae::result<>();
+	}
+	llae::result<std::string> os::gethostname() {
+        size_t size = 1;
+        char dummy;
+		auto r = uv_os_gethostname(&dummy,&size);
+		if (r == UV_ENOBUFS) {
+            std::unique_ptr<char[]> data(new char[size]);
+			r = uv_os_gethostname(data.get(),&size);
+            if (r>=0) {
+				return std::string(data.get(),size);
+			}
+		}
+		return status_error::create(r);
+	}
+	llae::result<uv_utsname_t> os::uname() {
+		uv_utsname_t n;
+		auto r = uv_os_uname(&n);
+		if (r<0) { return status_error::create(r); }
+		return n;
 	}
 
-	int os::setpriority(lua_State* L) {
-		lua::state l(L);
-		int prio = 0;
-		uv_pid_t p = 0;
-		if (l.gettop() > 1) {
-			p = static_cast<uv_pid_t>(l.checkinteger(1));
-			prio = int(l.checkinteger(2));
-		} else {
-			p = uv_os_getpid();
-			prio = int(l.checkinteger(1));
-		}
+	int os::getpid() {
+		return uv_os_getpid();
+	}
 
-		auto r = uv_os_setpriority(p,prio);
-		if (r<0) {
-			l.pushnil();
-			uv::push_error(l,r);
-			return 2;
-		}
-		l.pushboolean(true);
-		return 1;
+	llae::result<int> os::getpriority(std::optional<int> pid) {
+		int prio = 0;
+		auto r = uv_os_getpriority(pid.has_value() ? static_cast<uv_pid_t>(pid.value()) : uv_os_getpid(),&prio);
+		if (r<0) { return status_error::create(r); }
+		return prio;
+	}
+
+	llae::result<> os::setpriority(int priority,std::optional<int> pid) {
+		auto r = uv_os_setpriority(pid.has_value() ? static_cast<uv_pid_t>(pid.value()) : uv_os_getpid(),priority);
+		if (r<0) { return status_error::create(r); }
+		return llae::result<>();
 	}
 
 

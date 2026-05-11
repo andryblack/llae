@@ -2,32 +2,50 @@
 #define __LLAE_UV_OS_H_INCLUDED__
 
 #include "lua/state.h"
+#include "llae/result.h"
+#include "decl.h"
+#include <map>
 
 namespace uv {
 	namespace os {
 		/// @luabind
-		int homedir(lua_State* L);
+		llae::result<std::string> homedir();
 		/// @luabind
-		int tmpdir(lua_State* L);
+		llae::result<std::string> tmpdir();
 		/// @luabind
-		int getenv(lua_State* L);
+		llae::result<std::string> getenv(std::string_view name);
 		/// @luabind
-		int setenv(lua_State* L);
+		llae::result<> setenv(std::string_view name, std::string_view value);
 		/// @luabind
-		int getallenv(lua_State* L);
+		llae::result<std::unordered_map<std::string,std::string>> getallenv();
 		/// @luabind
-		int unsetenv(lua_State* L);
+		llae::result<> unsetenv(std::string_view name);
 		/// @luabind
-		int gethostname(lua_State* L);
+		llae::result<std::string> gethostname();
 		/// @luabind
-		int uname(lua_State* L);
+		llae::result<uv_utsname_t> uname();
 		/// @luabind
-		int getpriority(lua_State* L);
+		llae::result<int> getpriority(std::optional<int> pid);
 		/// @luabind
-		int setpriority(lua_State* L);
+		llae::result<> setpriority(int priority,std::optional<int> pid);
 		/// @luabind
-		int getpid(lua_State* L);
+		int getpid();
 	};
+}
+
+namespace lua {
+	template <>
+	struct stack<uv_utsname_t> {
+		static int push(state& s,const uv_utsname_t& r);
+	};
+	template <>
+	struct stack<const uv_utsname_t&> : stack<uv_utsname_t> {};
+	template <>
+	struct stack<std::unordered_map<std::string,std::string>> {
+		static int push(state& s,const std::unordered_map<std::string,std::string>& r);
+	};
+	template <>
+	struct stack<const std::unordered_map<std::string,std::string>&> : stack<std::unordered_map<std::string,std::string>> {};
 }
 
 #endif /*__LLAE_UV_OS_H_INCLUDED__*/
