@@ -1,5 +1,6 @@
 local lu = require 'luaunit'
 local async = require 'llae.async'
+local log = require 'llae.log'
 
 TestAsyncLock = {}
 
@@ -8,19 +9,23 @@ function TestAsyncLock:test_lock_blocks_second_coroutine()
   local lock = async.lock.new()
   local order = {}
   
+  local function checkpoint(name)
+    table.insert(order, name)
+    log.info(name)
+  end
   local t
   do
     lock:lock()
-    table.insert(order, 'first_acquired')
+    checkpoint('first_acquired')
     -- Hold lock for a bit
     t = async.run(function()
-      table.insert(order, 'second_waiting')
+      checkpoint('second_waiting')
       lock:lock()
-      table.insert(order, 'second_acquired')
+      checkpoint('second_acquired')
       lock:unlock()
     end)
     -- Release lock after second coroutine starts waiting
-    table.insert(order, 'first_releasing')
+    checkpoint('first_releasing')
     lock:unlock()
   end
 

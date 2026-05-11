@@ -59,11 +59,27 @@ namespace uv {
 		return res;
 	}
 
-	timer_pause::timer_pause(lua::state& l) : timer(llae::app::get(l).loop()) {
-
+	void timer_pause::on_cb() {
+		if (m_promise) {
+			m_promise->set_result(llae::result<>());
+			m_promise.reset();
+		}
 	}
 
-	void timer_pause::on_cb() {
+	llae::result_promise_ptr<void> timer_pause::pause(llae::loop& l,unsigned int delay) {
+		llae::result_promise_ptr<void> result = common::make_intrusive<llae::result_promise<void>>();
+		common::intrusive_ptr<timer_pause> req{new timer_pause(static_cast<loop&>(l),result)};
+		auto res = req->start(delay,0);
+		if (res < 0) {
+			result->set_result(make_result(res));
+		}
+		return result;
+	}
+
+	timer_delayed_resume::timer_delayed_resume(lua::state& l) : timer(llae::app::get(l).loop()) {
+	}
+
+	void timer_delayed_resume::on_cb() {
 		auto& l = llae::app::get(get_handle()->loop).lua();
         if (!l.native()) {
             m_cont.release();
@@ -80,52 +96,26 @@ namespace uv {
         if (s != lua::status::ok && s != lua::status::yield) {
             llae::app::show_error(toth,s);
         }
-	}
 
-	lua::multiret timer_pause::pause(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("timer_pause::pause is async");
-			return {2};
-		}
-		{
-			lua_Integer delay = l.checkinteger(1);
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<timer_pause> req{new timer_pause(l)};
-			req->m_cont = std::move(cont);
-			auto r = req->timer::start(delay,0);
-			if (r < 0) {
-				req->m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			} 
-		}
-		l.yield(0);
-		return {0};
 	}
+		
 
-	lua::multiret timer_pause::resume_delayed(lua::state& l) {
+	llae::result<void> timer_delayed_resume::resume_delayed(lua::state& l) {
 		l.checktype(1, lua::value_type::thread);
 		{
 			lua_Integer delay = l.optinteger(2,0);
 			lua::ref cont;
 			l.pushvalue(1);
 			cont.set(l);
-			common::intrusive_ptr<timer_pause> req{new timer_pause(l)};
+			common::intrusive_ptr<timer_delayed_resume> req{new timer_delayed_resume(l)};
 			req->m_cont = std::move(cont);
 			auto r = req->timer::start(delay,0);
 			if (r < 0) {
 				req->m_cont.reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
+				return make_result(r);
 			} 
 		}
-		l.pushboolean(true);
-		return {1};
+		return llae::result<void>{};
 	}
 
 	void timer_lcb::on_cb() {

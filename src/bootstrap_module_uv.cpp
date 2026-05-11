@@ -380,21 +380,13 @@ int luaopen_uv(lua_State* L) {
     l.setfield(-2,"udp");
     
     
-    lua::bind::function(l,"exepath",&uv::lexepath);
+    lua::bind::function(l,"exepath",&uv::exepath);
     lua::bind::function(l,"getaddrinfo",&uv::lgetaddrinfo);
-    lua::bind::function(l,"cwd",&uv::lcwd);
+    lua::bind::function(l,"cwd",&uv::get_cwd);
     lua::bind::function(l,"chdir",&uv::lchdir);
-    lua::bind::function(l,"pause",&uv::timer_pause::pause);
-    lua::bind::function(l,"resume_delayed",&uv::timer_pause::resume_delayed);
     lua::bind::function(l,"gettimeofday",&uv::lgettimeofday);
     lua::bind::function(l,"interface_addresses",&uv::linterface_addresses);
     lua::bind::function(l,"set_process_title",&uv::lset_process_title);
-    lua::bind::function(l,"get_free_memory",&uv::lget_free_memory);
-    lua::bind::function(l,"get_total_memory",&uv::lget_total_memory);
-    lua::bind::function(l,"get_constrained_memory",&uv::lget_constrained_memory);
-    lua::bind::function(l,"get_get_available_memory",&uv::lget_get_available_memory);
-    lua::bind::function(l,"hrtime",&uv::lhrtime);
-    lua::bind::function(l,"sleep",&uv::lsleep);
     lua::bind::function(l,"random",&uv::lrandom);
     lua::bind::function(l,"print_handles",&uv::lprint_handles);
     lua::bind::function(l,"available_parallelism",&uv_available_parallelism);
@@ -404,6 +396,14 @@ int luaopen_uv(lua_State* L) {
     lua::bind::function(l,"ip4_name",&uv::lip4_name);
     lua::bind::function(l,"ip6_name",&uv::lip6_name);
     lua::bind::function(l,"if_indextoname",&uv::lif_indextoname);
+    lua::bind::function(l,"get_free_memory",&uv_get_free_memory);
+    lua::bind::function(l,"get_total_memory",&uv_get_total_memory);
+    lua::bind::function(l,"get_constrained_memory",&uv_get_constrained_memory);
+    lua::bind::function(l,"get_available_memory",&uv_get_available_memory);
+    lua::bind::function(l,"hrtime",&uv_hrtime);
+    lua::bind::function(l,"sleep",&uv_sleep);
+    llae::async_function(l,"pause",&uv::timer_pause::pause);
+    llae::async_function(l,"resume_delayed",&uv::timer_pause::resume_delayed);
     
     
     lua::bind::value(l, "AF_INET", AF_INET);

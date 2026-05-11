@@ -38,10 +38,6 @@ namespace uv {
 	llae::result<std::string> get_cwd();
 	/// @luabind(name=chdir)
 	llae::result<> lchdir(std::string_view dir);
-	/// @luabind(name=pause,wrapper=uv::timer_pause::pause)
-	int lpause(lua_State* L);
-	/// @luabind(name=resume_delayed,wrapper=uv::timer_pause::resume_delayed)
-	int lresume_delayed(lua_State* L);
 	/// @luabind(name=gettimeofday)
 	int lgettimeofday(lua_State* L);
 	/// @luabind(name=interface_addresses)
@@ -86,6 +82,12 @@ namespace uv {
 	uint64_t hrtime();
 	/// @luabind(wrapper=uv_sleep)
 	void sleep(unsigned int ms);
+
+	/// @luabind(async=true,wrapper=uv::timer_pause::pause)
+	int pause(lua_State* L);
+	/// @luabind(wrapper=uv::timer_delayed_resume::resume_delayed)
+	int resume_delayed(lua_State* L);
+	
 #endif
 
 	/// @luabind(ltype=integer)

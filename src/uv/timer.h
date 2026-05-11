@@ -6,7 +6,7 @@
 #include "lua/ref.h"
 #include "common/intrusive_ptr.h"
 #include <functional>
-#include "llae/result.h"
+#include "llae/promise.h"
 
 namespace llae {
 	class loop;
@@ -47,13 +47,23 @@ namespace uv {
 
 	class timer_pause : public timer {
 	private:
+		llae::result_promise_ptr<void> m_promise;
+	protected:
+		explicit timer_pause(loop& l,const llae::result_promise_ptr<void>& promise) : timer(l), m_promise(promise) {}
+		virtual void on_cb() override;
+	public:
+		static llae::result_promise_ptr<void> pause(llae::loop& l,unsigned int delay);
+		
+	};
+
+	class timer_delayed_resume : public timer {
+	private:
 		lua::ref m_cont;
 	protected:
 		virtual void on_cb() override;
+		explicit timer_delayed_resume(lua::state& l);		
 	public:
-		explicit timer_pause(lua::state& l);
-		static lua::multiret pause(lua::state& l);
-		static lua::multiret resume_delayed(lua::state& l);
+		static llae::result<void> resume_delayed(lua::state& l);
 	};
 
 	/// @luabind(name=timer)
