@@ -85,10 +85,6 @@ llae::result<std::string> uv::exepath() {
 	return std::string(path,size);
 }
 
-lua::multiret uv::lgetaddrinfo(lua::state& l) {
-	return getaddrinfo_req::getaddrinfo(l);
-}
-
 
 int uv::lgettimeofday(lua_State* L) {
 	lua::state l(L);

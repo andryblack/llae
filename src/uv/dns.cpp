@@ -2,68 +2,59 @@
 #include "llae/app.h"
 #include "luv.h"
 
-namespace uv {
+namespace lua {
 
-
-	static void push_addrinfo_i(lua::state& l,struct addrinfo* res) {
-		l.createtable();
-		switch (res->ai_family) {
-			case AF_INET:
+	int stack<uv::addrinfo_item>::push(lua::state& l,const uv::addrinfo_item& item) {
+		l.newtable();
+		switch (item.family) {
+			case uv::addrinfo_item::family_t::ipv4:
 				l.pushstring("ip4");
 				break;
-			case AF_INET6:
+			case uv::addrinfo_item::family_t::ipv6:
 				l.pushstring("ip6");
 				break;
 			default:
 				l.pushstring("unknown");
 				break;
-		};
+		}
 		l.setfield(-2,"family");
-		switch (res->ai_socktype) {
-			case 0:
+		switch (item.socktype) {
+			case uv::addrinfo_item::socktype_t::any:
 				l.pushstring("any");
-				break;	
-			case SOCK_STREAM:
+				break;
+			case uv::addrinfo_item::socktype_t::tcp:
 				l.pushstring("tcp");
 				break;
-			case SOCK_DGRAM:
+			case uv::addrinfo_item::socktype_t::udp:
 				l.pushstring("udp");
 				break;
 			default:
 				l.pushstring("unknown");
 				break;
-		};
+		}
 		l.setfield(-2,"socktype");
-
-		switch (res->ai_family) {
-			case AF_INET: {
-				struct sockaddr_in *addr_in = (struct sockaddr_in *)res->ai_addr;
-				char buf[INET_ADDRSTRLEN];
-				uv_inet_ntop(AF_INET, &(addr_in->sin_addr), buf, INET_ADDRSTRLEN);
-				l.pushstring(buf);
-				l.setfield(-2,"addr");
-			} break;
-			case AF_INET6: {
-				struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)res->ai_addr;
-				char buf[INET6_ADDRSTRLEN];
-				uv_inet_ntop(AF_INET6, &(addr_in6->sin6_addr), buf, INET6_ADDRSTRLEN);
-				l.pushstring(buf);
-				l.setfield(-2,"addr");
-			} break;
-		}
+		l.pushstring(item.addr.c_str());
+		l.setfield(-2,"addr");
+		return 1;
 	}
 
-	static void push_addrinfo(lua::state& l,struct addrinfo* res) {
-		l.createtable();
-		lua_Integer i = 0;
-		while (res) {
-			push_addrinfo_i(l,res);
-			l.seti(-2,++i);
-			res = res->ai_next;
+	int stack<std::vector<uv::addrinfo_item>>::push(lua::state& l,const std::vector<uv::addrinfo_item>& items) {
+		l.newtable();
+		lua_Integer idx = 1;
+		for (const auto& item : items) {
+			lua::stack<uv::addrinfo_item>::push(l,item);
+			l.seti(-2,idx);
+			++idx;
 		}
+		return 1;
 	}
+}
 
-	getaddrinfo_req::getaddrinfo_req(lua::ref&& cont) : m_cont(std::move(cont)) {
+namespace uv {
+
+
+
+	getaddrinfo_req::getaddrinfo_req(const llae::result_promise_ptr<std::vector<addrinfo_item>>& promise) : m_promise(promise) {
 		attach(reinterpret_cast<uv_req_t*>(get()));
 	}
 
@@ -71,67 +62,65 @@ namespace uv {
 
 	}
 
-	void getaddrinfo_req::on_end(int status,struct addrinfo* res) {
-		auto& l = llae::app::get(get()->loop).lua();
-		if (!l.native()) {
-			m_cont.release();
-			return;
-		}
-		l.checkstack(2);
-		m_cont.push(l);
-		auto toth = l.tothread(-1);
-		toth.checkstack(3);
-		int nargs;
-		if (status < 0) {
-			toth.pushnil();
-			uv::push_error(toth,status);
-			nargs = 2;
-		} else {
-			push_addrinfo(toth,res);
-			nargs = 1;
-		}
-		auto s = toth.resume(l,nargs);
-		if (s != lua::status::ok && s != lua::status::yield) {
-			llae::app::show_error(toth,s);
-		}
-		l.pop(1);// thread
-		m_cont.reset(l);
-	}
-
 	void getaddrinfo_req::getaddrinfo_cb(uv_getaddrinfo_t* req, int status, struct addrinfo* res) {
 		auto self = static_cast<getaddrinfo_req*>(req->data);
 		self->on_end(status,res);
-		if (res) {
-			uv_freeaddrinfo(res);
-		}
 		self->remove_ref();
 	}
 
-	lua::multiret getaddrinfo_req::getaddrinfo(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("getaddrinfo is async");
-			return {2};
+	void getaddrinfo_req::on_end(int status,struct addrinfo* res) {
+		if (!m_promise) {
+			return;
 		}
-		{
-			const char* node = l.checkstring(1);
-			llae::app& app(llae::app::get(l));
-			lua::ref cont;
-			l.pushthread();
-			cont.set(l);
-			common::intrusive_ptr<getaddrinfo_req> req{new getaddrinfo_req(std::move(cont))};
-			req->add_ref();
-			int r = uv_getaddrinfo(app.loop().native(),
-				req->get(),&getaddrinfo_req::getaddrinfo_cb,node,nullptr,nullptr);
-			if (r < 0) {
-				req->remove_ref();
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
+		if (status < 0) {
+			m_promise->set_result(uv::status_error::create(status));
+			return;
+		}
+		std::vector<addrinfo_item> items;
+		struct addrinfo* ai = res;
+		while (ai) {
+			addrinfo_item item;
+			if (ai->ai_family == AF_INET) {
+				item.family = addrinfo_item::family_t::ipv4;
+			} else if (ai->ai_family == AF_INET6) {
+				item.family = addrinfo_item::family_t::ipv6;
 			} 
+			if (ai->ai_socktype == SOCK_STREAM) {
+				item.socktype = addrinfo_item::socktype_t::tcp;
+			} else if (ai->ai_socktype == SOCK_DGRAM) {
+				item.socktype = addrinfo_item::socktype_t::udp;
+			} else if (ai->ai_socktype == 0) {
+				item.socktype = addrinfo_item::socktype_t::any;
+			}
+			if (ai->ai_addr->sa_family == AF_INET) {
+				struct sockaddr_in *addr_in = (struct sockaddr_in *)res->ai_addr;
+				char buf[INET_ADDRSTRLEN];
+				uv_inet_ntop(AF_INET, &(addr_in->sin_addr), buf, INET_ADDRSTRLEN);
+				item.addr = buf;
+			} else if (ai->ai_addr->sa_family == AF_INET6) {
+				struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)res->ai_addr;
+				char buf[INET6_ADDRSTRLEN];
+				uv_inet_ntop(AF_INET6, &(addr_in6->sin6_addr), buf, INET6_ADDRSTRLEN);
+				item.addr = buf;
+			}
+			items.emplace_back(std::move(item));
+			ai = ai->ai_next;
 		}
-		l.yield(0);
-		return {0};
+		m_promise->set_result(std::move(items));
 	}
+
+	llae::result_promise_ptr<std::vector<addrinfo_item>> getaddrinfo_req::async_getaddrinfo(llae::loop& l,std::string_view host,std::optional<std::string_view> service) {
+		auto promise = llae::result_promise_ptr<std::vector<addrinfo_item>>(new llae::result_promise<std::vector<addrinfo_item>>());
+		common::intrusive_ptr<getaddrinfo_req> req(new getaddrinfo_req(promise));
+		const char* serv = service.has_value() ? service.value().data() : nullptr;
+		int r = uv_getaddrinfo(get_native(l),req->get(),&getaddrinfo_req::getaddrinfo_cb,host.data(),serv,nullptr);
+		if (r < 0) {
+			promise->set_result(uv::status_error::create(r));
+		} else {
+			req->add_ref();
+		}
+		return promise;
+	}
+
 
 }

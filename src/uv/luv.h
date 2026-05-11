@@ -11,6 +11,7 @@
 #include <vector>
 #include "llae/buffer.h"
 #include "lua/types.h"
+#include "dns.h"
 
 namespace llae {
 	class loop;
@@ -32,8 +33,6 @@ namespace uv {
 
 	/// @luabind(name=exepath)
 	llae::result<std::string> exepath();
-	/// @luabind(name=getaddrinfo)
-	lua::multiret lgetaddrinfo(lua::state& l);
 	/// @luabind(name=cwd)
 	llae::result<std::string> get_cwd();
 	/// @luabind(name=chdir)
@@ -87,7 +86,8 @@ namespace uv {
 	int pause(lua_State* L);
 	/// @luabind(wrapper=uv::timer_delayed_resume::resume_delayed)
 	int resume_delayed(lua_State* L);
-	
+	/// @luabind(async=true,wrapper=uv::getaddrinfo_req::async_getaddrinfo)
+	llae::result_promise_ptr<std::vector<addrinfo_item>> getaddrinfo(llae::loop& l,std::string_view host,std::optional<std::string_view> service);
 #endif
 
 	/// @luabind(ltype=integer)

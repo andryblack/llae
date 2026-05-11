@@ -381,7 +381,6 @@ int luaopen_uv(lua_State* L) {
     
     
     lua::bind::function(l,"exepath",&uv::exepath);
-    lua::bind::function(l,"getaddrinfo",&uv::lgetaddrinfo);
     lua::bind::function(l,"cwd",&uv::get_cwd);
     lua::bind::function(l,"chdir",&uv::lchdir);
     lua::bind::function(l,"gettimeofday",&uv::lgettimeofday);
@@ -404,6 +403,7 @@ int luaopen_uv(lua_State* L) {
     lua::bind::function(l,"sleep",&uv_sleep);
     llae::async_function(l,"pause",&uv::timer_pause::pause);
     lua::bind::function(l,"resume_delayed",&uv::timer_delayed_resume::resume_delayed);
+    llae::async_function(l,"getaddrinfo",&uv::getaddrinfo_req::async_getaddrinfo);
     
     
     lua::bind::value(l, "AF_INET", AF_INET);
