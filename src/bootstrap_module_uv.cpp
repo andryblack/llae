@@ -29,22 +29,13 @@ static void luabind_uv_async(lua::state& l) {
     
 }
 
-/* class uv::async_continue */
-static void luabind_uv_async_continue(lua::state& l) {
-    
-    
-    
-    
-    
-}
-
 /* class uv::async_wait */
 static void luabind_uv_async_wait(lua::state& l) {
     
     
     lua::bind::function(l,"new",&uv::async_wait::lnew);
     lua::bind::function(l,"emmit",&uv::async_wait::emmit);
-    lua::bind::function(l,"wait",&uv::async_wait::wait);
+    llae::async_function(l,"wait",&uv::async_wait::wait);
     lua::bind::function(l,"close",&uv::async_wait::close);
     
     
@@ -340,8 +331,6 @@ int luaopen_uv(lua_State* L) {
     lua::bind::object<uv::udp>::register_metatable(l, &luabind_uv_udp);
     
     lua::bind::object<uv::async>::register_metatable(l, &luabind_uv_async);
-    
-    lua::bind::object<uv::async_continue>::register_metatable(l, &luabind_uv_async_continue);
     
     lua::bind::object<uv::async_wait>::register_metatable(l, &luabind_uv_async_wait);
     

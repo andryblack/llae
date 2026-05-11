@@ -4,8 +4,7 @@
 #include "luv.h"
 
 META_OBJECT_INFO(uv::async,uv::handle)
-META_OBJECT_INFO(uv::async_continue,uv::async)
-META_OBJECT_INFO(uv::async_wait,uv::async_continue)
+META_OBJECT_INFO(uv::async_wait,uv::async)
 
 namespace uv {
 
@@ -23,80 +22,65 @@ namespace uv {
 		return uv_async_send(&m_async);
 	}
 
-    void async_continue::on_closed() {
-        release();
-        async::on_closed();
-    }
 
-    void async_continue::on_async() {
-        if (m_active) {
-            remove_ref();
-            m_active = false;
+    class async_wait::promise : public llae::result_promise<void> {
+    private:
+        common::intrusive_ptr<async_wait> m_async;
+    public:
+        promise(async_wait* async) : llae::result_promise<void>(), m_async(async) {}
+        ~promise() override {
+            m_async->release();
+            m_async.reset();
         }
-        auto& l = llae::app::get(get_handle()->loop).lua();
-        if (!l.native()) {
-            release();
-            return;
+        void resolve() {
+            if (m_async) {
+                auto async = std::move(m_async);
+                m_async.reset();
+                async->release();
+                set_result(llae::result<>());
+            }
         }
-        if (!m_cont.valid()) {
-            return;
-        }
-        l.checkstack(2);
-        m_cont.push(l);
-        reset(l);
-        auto toth = l.tothread(-1);
-        toth.checkstack(3);
-        int nargs = on_cont(toth);
-        auto s = toth.resume(l,nargs);
-        if (s != lua::status::ok && s != lua::status::yield) {
-            llae::app::show_error(toth,s);
-        }
-        l.pop(1);// thread
-    }
-
-    int async_continue::send() {
-        int r = async::send();
-        if (r<0) {
-            return r;
-        }
-        if (!m_active) {
-            add_ref();
-            m_active = true;
-        }
-        return r;
-    }
+    };
 
     lua::multiret async_wait::lnew(lua::state& l) {
         lua::push(l,common::intrusive_ptr<async_wait>(new async_wait(llae::app::get(l).loop())));
         return {1};
     }
-    lua::multiret async_wait::emmit(lua::state& l) {
+    llae::result<> async_wait::emmit() {
         auto res = send();
-        return return_status_error(l,res);
+        return make_result(res);
     }
-    int async_wait::on_cont(lua::state& l) {
-        l.pushboolean(true);
-        return 1;
+
+    void async_wait::release() {
+        m_promise = nullptr;
     }
-    lua::multiret async_wait::wait(lua::state& l) {
-        if (!l.isyieldable()) {
-            l.pushnil();
-            l.pushstring("async_wait::wait is async");
-            return {2};
+
+    void async_wait::on_async() {
+        auto hold = common::intrusive_ptr<async_wait>(this);
+        if (m_promise) {
+            m_promise->resolve();
         }
-        {
-            lua::ref cont;
-            l.pushthread();
-            cont.set(l);
-            if (!start(std::move(cont))) {
-                l.pushnil();
-                l.pushstring("start failed");
-                cont.reset(l);
-                return {2};
-            }
+    }
+
+    llae::result_promise_ptr<void> async_wait::wait(llae::loop& l) {
+        if (is_closing()) {
+            return llae::result_promise_forward_error<void>(llae::string_error::create("async_wait closing"));
         }
-        l.yield(0);
-        return {0};
+        if (m_promise) {
+            return llae::result_promise_ptr<void>(m_promise);
+        }
+        auto p = common::make_intrusive<promise>(this);
+        m_promise = p.get();
+        return p;
+    }
+
+    void async_wait::close() {
+        if (m_promise) {
+            auto p = common::intrusive_ptr<promise>(m_promise);
+            m_promise = nullptr;
+            p->set_result(llae::string_error::create("async_wait closed"));
+        }
+        async::close();
     }
 
 

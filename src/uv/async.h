@@ -3,9 +3,12 @@
 
 #include "common/intrusive_ptr.h"
 #include "handle.h"
-#include "lua/ref.h"
+#include "llae/promise.h"
 #include <utility>
 
+namespace llae {
+    class loop;
+}
 namespace uv {
     
     class loop;
@@ -26,53 +29,26 @@ namespace uv {
 	};
 	using async_ptr = common::intrusive_ptr<async>;
 
-    /// @luabind(hidden=true)
-    class async_continue : public async {
+    /// @luabind(name=async)
+    class async_wait : public async {
         META_OBJECT
     private:
-        lua::ref m_cont;
-        bool m_active = false;
-        virtual void on_closed() override;
+        class promise;
+        promise* m_promise = nullptr;
     protected:
         virtual void on_async() override;
-        virtual int on_cont(lua::state& l) {
-            return 0;
-        }
-        virtual void release() {
-            m_cont.release();
-        }
-
+        void release();
     public:
-        explicit async_continue(loop& loop) : async(loop) {}
-        bool start(lua::ref&& ref) { 
-            if (m_cont.valid()) {
-                return false;
-            }
-            m_cont = std::move(ref); 
-            return true;
-        }
-        void reset(lua::state& l) {
-            m_cont.reset(l);
-        }
-        int send();
-    };
-    using async_continue_ptr = common::intrusive_ptr<async_continue>;
-
-    /// @luabind(name=async)
-    class async_wait : public async_continue {
-        META_OBJECT
-    protected:
-        explicit async_wait(loop& loop) : async_continue(loop) {}
-        virtual int on_cont(lua::state& l) override;
-    public:
+        explicit async_wait(loop& loop) : async(loop) {}
+        
         /// @luabind(name=new)
         static lua::multiret lnew(lua::state& l);
         /// @luabind
-        lua::multiret emmit(lua::state& l);
+        llae::result<> emmit();
+        /// @luabind(async=true,name=wait)
+        llae::result_promise_ptr<void> wait(llae::loop& l);
         /// @luabind
-        lua::multiret wait(lua::state& l);
-        /// @luabind
-        void close() { handle::close(); }
+        void close();
     };
 }
 
