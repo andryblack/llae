@@ -403,7 +403,7 @@ int luaopen_uv(lua_State* L) {
     lua::bind::function(l,"hrtime",&uv_hrtime);
     lua::bind::function(l,"sleep",&uv_sleep);
     llae::async_function(l,"pause",&uv::timer_pause::pause);
-    llae::async_function(l,"resume_delayed",&uv::timer_pause::resume_delayed);
+    lua::bind::function(l,"resume_delayed",&uv::timer_delayed_resume::resume_delayed);
     
     
     lua::bind::value(l, "AF_INET", AF_INET);
