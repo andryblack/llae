@@ -408,7 +408,7 @@ int luaopen_uv(lua_State* L) {
     
     lua::bind::value(l, "AF_INET", AF_INET);
     lua::bind::value(l, "AF_INET6", AF_INET6);
-    lua::bind::value(l, "CLOCK_MONOTONIC", uv::CLOCK_MONOTONIC);
-    lua::bind::value(l, "CLOCK_REALTIME", uv::CLOCK_REALTIME);
+    lua::bind::value(l, "CLOCK_MONOTONIC", UV_CLOCK_MONOTONIC);
+    lua::bind::value(l, "CLOCK_REALTIME", UV_CLOCK_REALTIME);
     return 1;
 }

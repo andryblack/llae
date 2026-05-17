@@ -88,12 +88,13 @@ namespace uv {
 	int resume_delayed(lua_State* L);
 	/// @luabind(async=true,wrapper=uv::getaddrinfo_req::async_getaddrinfo)
 	llae::result_promise_ptr<std::vector<addrinfo_item>> getaddrinfo(llae::loop& l,std::string_view host,std::optional<std::string_view> service);
+
+	/// @luabind(ltype=integer,value=UV_CLOCK_MONOTONIC)
+	constexpr auto CLOCK_MONOTONIC = UV_CLOCK_MONOTONIC;
+	/// @luabind(ltype=integer,value=UV_CLOCK_REALTIME)
+	constexpr auto CLOCK_REALTIME = UV_CLOCK_REALTIME;
 #endif
 
-	/// @luabind(ltype=integer)
-	constexpr auto CLOCK_MONOTONIC = UV_CLOCK_MONOTONIC;
-	/// @luabind(ltype=integer)
-	constexpr auto CLOCK_REALTIME = UV_CLOCK_REALTIME;
 
 	static inline uv_buf_t get_buffer(const llae::buffer_base_ptr& buf) {
 		if (!buf) {
