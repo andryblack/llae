@@ -4,7 +4,8 @@
 #include "lua/state.h"
 #include "llae/result.h"
 #include "decl.h"
-#include <map>
+#include <unordered_map>
+#include <string>
 
 namespace uv {
 	namespace os {
