@@ -49,22 +49,24 @@ namespace uv {
         /// @luabind
         lua::multiret wait_exit(lua::state& l);
 
-		/// @luabind(ltype=integer)
+#ifdef LUABIND_PARSE
+		/// @luabind(ltype=integer,value=UV_IGNORE)
 		static constexpr auto IGNORE = UV_IGNORE;
-		/// @luabind(ltype=integer)
+		/// @luabind(ltype=integer,value=UV_CREATE_PIPE)
 		static constexpr auto CREATE_PIPE = UV_CREATE_PIPE;
-		/// @luabind(ltype=integer)
+		/// @luabind(ltype=integer,value=UV_INHERIT_FD)
 		static constexpr auto INHERIT_FD = UV_INHERIT_FD;
-		/// @luabind(ltype=integer)
+		/// @luabind(ltype=integer,value=UV_INHERIT_STREAM)
 		static constexpr auto INHERIT_STREAM = UV_INHERIT_STREAM;
-		/// @luabind(ltype=integer)
+		/// @luabind(ltype=integer,value=UV_READABLE_PIPE)
 		static constexpr auto READABLE_PIPE = UV_READABLE_PIPE;
-		/// @luabind(ltype=integer)
+		/// @luabind(ltype=integer,value=UV_WRITABLE_PIPE)
 		static constexpr auto WRITABLE_PIPE = UV_WRITABLE_PIPE;
-		/// @luabind(ltype=integer)
+		/// @luabind(ltype=integer,value=UV_NONBLOCK_PIPE)
 		static constexpr auto NONBLOCK_PIPE = UV_NONBLOCK_PIPE;
-		/// @luabind(ltype=integer)
+		/// @luabind(ltype=integer,value=UV_PROCESS_DETACHED)
 		static constexpr auto PROCESS_DETACHED = UV_PROCESS_DETACHED;
+#endif
 	};
 	typedef common::intrusive_ptr<process> process_ptr;
 

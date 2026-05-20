@@ -124,14 +124,14 @@ static void luabind_uv_process(lua::state& l) {
     
     
     
-    lua::bind::value(l, "IGNORE", uv::process::IGNORE);
-    lua::bind::value(l, "CREATE_PIPE", uv::process::CREATE_PIPE);
-    lua::bind::value(l, "INHERIT_FD", uv::process::INHERIT_FD);
-    lua::bind::value(l, "INHERIT_STREAM", uv::process::INHERIT_STREAM);
-    lua::bind::value(l, "READABLE_PIPE", uv::process::READABLE_PIPE);
-    lua::bind::value(l, "WRITABLE_PIPE", uv::process::WRITABLE_PIPE);
-    lua::bind::value(l, "NONBLOCK_PIPE", uv::process::NONBLOCK_PIPE);
-    lua::bind::value(l, "PROCESS_DETACHED", uv::process::PROCESS_DETACHED);
+    lua::bind::value(l, "IGNORE", UV_IGNORE);
+    lua::bind::value(l, "CREATE_PIPE", UV_CREATE_PIPE);
+    lua::bind::value(l, "INHERIT_FD", UV_INHERIT_FD);
+    lua::bind::value(l, "INHERIT_STREAM", UV_INHERIT_STREAM);
+    lua::bind::value(l, "READABLE_PIPE", UV_READABLE_PIPE);
+    lua::bind::value(l, "WRITABLE_PIPE", UV_WRITABLE_PIPE);
+    lua::bind::value(l, "NONBLOCK_PIPE", UV_NONBLOCK_PIPE);
+    lua::bind::value(l, "PROCESS_DETACHED", UV_PROCESS_DETACHED);
 }
 
 /* class uv::server */
