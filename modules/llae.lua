@@ -265,7 +265,7 @@ generate_src = {{
 			content = content,	
 		})
 	end
-	local force_embedded = {'llae.fs','llae.path','llae.utils','llae.log'}
+	local force_embedded = {'llae.fs','llae.path','llae.utils','llae.log','llae.uv'}
 	for _,v in ipairs(force_embedded) do
 		if not installed_scripts[v] then
 			log.debug('embed',v)
