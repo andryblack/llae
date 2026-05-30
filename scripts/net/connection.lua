@@ -28,8 +28,8 @@ function connection:_configure_connection(data)
 			user = proxy.user,
 			pass = proxy.password,
 			create = function(self)
-				local net = require 'net'
-				return assert(net.socks5.tcp_connection.new(self.addr,self.port,self.user,self.pass))
+				local socks5 = require 'net.socks5'
+				return assert(socks5.tcp_connection.new(self.addr,self.port,self.user,self.pass))
 			end
 		}
 	end

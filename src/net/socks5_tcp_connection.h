@@ -12,6 +12,7 @@ namespace net {
 
 	namespace socks5 {
 
+		/// @luabind
 		class tcp_connection : public uv::tcp_connection {
 			META_OBJECT
 		protected:
