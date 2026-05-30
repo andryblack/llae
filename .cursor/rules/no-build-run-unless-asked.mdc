@@ -1,0 +1,31 @@
+---
+description: Do not build or run commands unless the user explicitly asks
+alwaysApply: true
+---
+
+# Build and run only on request
+
+Do not compile, build, install, or run the project (or its tests, examples, scripts, premake, make, `./bin/llae`, etc.) unless the user **explicitly** asks in the current message.
+
+## Default behavior
+
+- After code changes: describe what to run and why; do not execute it.
+- Do not run builds or tests to "verify" changes on your own.
+- Do not start servers, long-running processes, or background jobs unless asked.
+
+## When it is allowed
+
+Only when the user clearly requests it, for example:
+
+- "build the project", "run tests", "run ./bin/llae run tests"
+- "check that it compiles"
+- "build and fix errors"
+
+If the request is ambiguous (e.g. "check it"), ask whether they want a build/run or a static review.
+
+## Still allowed without explicit ask
+
+- Read/search files and grep the codebase
+- Edit files
+- Git read-only commands (`git status`, `git diff`, `git log`) when needed for the task
+- Other non-executing investigation tools

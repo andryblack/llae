@@ -155,7 +155,6 @@ cmodules = {
 	'xml',
 	'posix',
 	'posix.termios',
-	'net',
 	'utf16',
 }
 
@@ -177,6 +176,9 @@ bind_headers = {
 	},
 	{
 		dir = '${dir}/src/uv',
+	},
+	{
+		dir = '${dir}/src/net',
 	}
 }
 

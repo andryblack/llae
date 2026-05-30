@@ -3,7 +3,12 @@
 
 #include "stream.h"
 #include "lua/state.h"
-#include "lua/ref.h"
+#include "llae/promise.h"
+#include <string_view>
+
+namespace llae {
+	class loop;
+}
 
 namespace uv {
 
@@ -25,8 +30,8 @@ namespace uv {
 		explicit tcp_connection(uv::loop& loop);
 		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-		/// @luabind
-		lua::multiret connect(lua::state& l);
+		/// @luabind(async=true)
+		llae::result_promise_ptr<void> connect(llae::loop& l, std::string_view host, int port);
         /// @luabind
         lua::multiret getpeername(lua::state& l);
         /// @luabind

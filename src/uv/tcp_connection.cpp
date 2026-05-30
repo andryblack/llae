@@ -3,7 +3,7 @@
 #include "luv.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
-#include <iostream>
+#include <cstdio>
 
 META_OBJECT_INFO(uv::tcp_connection,uv::stream)
 
@@ -14,9 +14,10 @@ namespace uv {
 	private:
 		uv_connect_t m_req;
 		tcp_connection_ptr m_conn;
-		lua::ref m_cont;
+		llae::result_promise_ptr<void> m_promise;
 	public:
-		connect_req(tcp_connection_ptr&& con,lua::ref&& cont) : m_conn(std::move(con)),m_cont(std::move(cont)) {
+		connect_req(tcp_connection_ptr&& con,const llae::result_promise_ptr<void>& promise)
+			: m_conn(std::move(con)),m_promise(promise) {
 			attach(reinterpret_cast<uv_req_t*>(get()));
 		}
 		uv_connect_t* get() { return &m_req; }
@@ -33,38 +34,15 @@ namespace uv {
             }
             return r;
         }
-        void reset(lua::state& l) {
-            m_cont.reset(l);
-        }
 		void on_end(int status) {
-            if (llae::app::closed(m_conn->get_handle()->loop)) {
-                m_cont.release();
-                return;
-            }
-			auto& l = llae::app::get(m_conn->get_handle()->loop).lua();
-            if (!l.native()) {
-                m_cont.release();
-                return;
-            }
-            l.checkstack(2);
-			m_cont.push(l);
-			auto toth = l.tothread(-1);
-			toth.checkstack(3);
-			int nargs;
+			if (!m_promise) {
+				return;
+			}
 			if (status < 0) {
-				toth.pushnil();
-				uv::push_error(toth,status);
-				nargs = 2;
+				m_promise->set_result(uv::status_error::create(status));
 			} else {
-                toth.pushboolean(true);
-				nargs = 1;
+				m_promise->set_result(llae::result<void>());
 			}
-			auto s = toth.resume(toth,nargs);
-			if (s != lua::status::ok && s != lua::status::yield) {
-				llae::app::show_error(toth,s);
-			}
-			l.pop(1);// thread
-			m_cont.reset(l);
 		}
 	};
 
@@ -84,38 +62,23 @@ namespace uv {
 		return {1};
 	}
 
-	lua::multiret tcp_connection::connect(lua::state& l) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("tcp_connection::connect is async");
-			return {2};
-		}
-		
-		{
-			const char* host = l.checkstring(2);
-			int port = int(l.checkinteger(3));
-			struct sockaddr_storage addr;
-			if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
-		      	uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
-		    	l.error("invalid IP address or port [%s:%d]", host, port);
-		   	}
+	llae::result_promise_ptr<void> tcp_connection::connect(llae::loop& /*l*/, std::string_view host, int port) {
+		struct sockaddr_storage addr;
+		if (uv_ip4_addr(host.data(), port, (struct sockaddr_in*)&addr) &&
+	      	uv_ip6_addr(host.data(), port, (struct sockaddr_in6*)&addr)) {
+			char msg[256];
+			snprintf(msg, sizeof(msg), "invalid IP address or port [%.*s:%d]",
+				int(host.size()), host.data(), port);
+			return llae::make_result_promise_string_error<void>(msg);
+	   	}
 
-			l.pushthread();
-			lua::ref connect_cont;
-			connect_cont.set(l);
-		
-			common::intrusive_ptr<connect_req> req{new connect_req(tcp_connection_ptr(this),
-				std::move(connect_cont))};
-            int r = req->connect((struct sockaddr *)&addr);
-			if (r < 0) {
-                req->reset(l);
-				l.pushnil();
-				uv::push_error(l,r);
-				return {2};
-			}
-		} 
-		l.yield(0);
-		return {0};
+		auto promise = common::make_intrusive<llae::result_promise<void>>();
+		common::intrusive_ptr<connect_req> req{new connect_req(tcp_connection_ptr(this),promise)};
+		int r = req->connect((struct sockaddr *)&addr);
+		if (r < 0) {
+			promise->set_result(uv::status_error::create(r));
+		}
+		return promise;
 	}
 
     lua::multiret tcp_connection::getpeername(lua::state& l) {

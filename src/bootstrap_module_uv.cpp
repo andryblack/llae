@@ -188,7 +188,7 @@ static void luabind_uv_tcp_connection(lua::state& l) {
     
     
     lua::bind::function(l,"new",&uv::tcp_connection::lnew);
-    lua::bind::function(l,"connect",&uv::tcp_connection::connect);
+    llae::async_function(l,"connect",&uv::tcp_connection::connect);
     lua::bind::function(l,"getpeername",&uv::tcp_connection::getpeername);
     lua::bind::function(l,"keepalive",&uv::tcp_connection::keepalive);
     lua::bind::function(l,"nodelay",&uv::tcp_connection::nodelay);
