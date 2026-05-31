@@ -197,6 +197,9 @@ function request:exec(  )
 		elseif self._timeout_error then
 			return nil,'timeout'
 		end
+		if resp and self._timeout then
+			resp:set_timeout(self._timeout)
+		end
 		return resp,err
 	end
 end

@@ -2,6 +2,7 @@ local class = require 'llae.class'
 local log = require 'llae.log'
 local utils = require 'llae.utils'
 local archive = require 'archive'
+local uv = require 'llae.uv'
 
 ---@class net.http.request_response_data
 ---@field headers table<string,string|string[]>
@@ -10,6 +11,7 @@ local archive = require 'archive'
 ---@field message string
 ---@field connection any
 ---@field tail string?
+---@field timeout integer?
 
 ---@class net.http.request_response : net.http.headers
 ---@field new fun(data:net.http.request_response_data):net.http.request_response
@@ -50,7 +52,9 @@ function response:_init( data  )
 
 end
 
-
+function response:set_timeout( timeout )
+	self._timeout = timeout
+end
 
 function response:get_code(  )
 	return self._code
@@ -83,7 +87,23 @@ function response:read(  )
 	return ch
 end
 
+function response:_on_timeout(  )
+	self._error = 'timeout'
+	self:on_closed()
+	self._closed = true
+end
+
 function response:read_body(  )
+
+	local tmr
+	if self._timeout then
+		--log.debug('start wait request response for',self._timeout)
+		tmr = uv.timer.new()
+		tmr:start(function()
+			self:_on_timeout()
+		end,math.floor(self._timeout*1000))
+	end
+
 	local d = {}
 	while not self._closed do
 		local ch = self:read()
@@ -92,6 +112,12 @@ function response:read_body(  )
 		end
 		--log.debug('read body',#ch)
 		table.insert(d,tostring(ch))
+	end
+	if tmr then
+		tmr:stop()
+	end
+	if self._error then
+		return nil,self._error
 	end
 	return table.concat(d)
 end
