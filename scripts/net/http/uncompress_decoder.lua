@@ -32,7 +32,7 @@ function decoder:read( )
 		self._uncompress:finish()
 		self._finished = true
 	end
-	if not ch and e then
+	if (not ch and e) or not self._uncompress then
 		return ch,e 
 	end
 
