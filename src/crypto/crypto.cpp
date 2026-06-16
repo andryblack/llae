@@ -86,7 +86,8 @@ namespace crypto {
 		auto info = llae::buffer_base::get(l,3);
 		auto key = llae::buffer_base::get(l,4);
 		auto osize = l.checkinteger(5);
-		using work_t = llae::function_work<llae::buffer_base_ptr,llae::default_function_work_hold<llae::buffer_base_ptr,6>>;
+		constexpr size_t hold_size = sizeof(void*) == 4 ? 8 : 6;
+		using work_t = llae::function_work<llae::buffer_base_ptr,llae::default_function_work_hold<llae::buffer_base_ptr,hold_size>>;
 		return work_t::start(llae::loop::get(l), [md_info,lsalt = std::move(salt),linfo=std::move(info),lkey=std::move(key),osize]{
 			return sync_hkdf(md_info, lsalt, linfo, lkey, osize);
 		});

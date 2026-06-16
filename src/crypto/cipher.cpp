@@ -233,7 +233,8 @@ namespace crypto {
 		if (!buffer) {
 			return llae::make_result_promise_string_error<llae::buffer_base_ptr> ("need data");
 		}
-		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher,6>;
+		constexpr size_t hold_size = sizeof(void*) == 4 ? 8 : 6;
+		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher,hold_size>;
 		return work_t::start(a, this, &cipher::m_seq, "auth_encrypt", [liv = std::move(iv),lad = std::move(ad), lbuffer = std::move(buffer), tag_len](cipher& self){
 			return self.auth_encrypt_impl(liv,lad,lbuffer,tag_len);
 		});
@@ -270,7 +271,8 @@ namespace crypto {
 		if (!buffer) {
 			return llae::make_result_promise_string_error<llae::buffer_base_ptr> ("need data");
 		}
-		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher,6>;
+		constexpr size_t hold_size = sizeof(void*) == 4 ? 8 : 6;
+		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher,hold_size>;
 		return work_t::start(a, this, &cipher::m_seq, "auth_decrypt", [liv = std::move(iv),lad = std::move(ad), lbuffer = std::move(buffer), tag_len](cipher& self){
 			return self.auth_decrypt_impl(liv,lad,lbuffer,tag_len);
 		});
