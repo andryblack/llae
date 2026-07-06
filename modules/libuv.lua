@@ -9,7 +9,10 @@ dir = name .. '-' .. version
 function install()
 	download(url,archive,hash)
 	unpack_tgz(archive)
-	
+
+	isolate(dir .. '/include/uv',{'*.h'},{
+		['build/modules/libuv/'.. dir .. '/include'] = 'llae-private/'
+	})
 	install_files {
 		['build/include/llae-private/uv.h'] = dir .. '/include/uv.h', 
 		['build/include/llae-private/uv/aix.h'] = dir .. '/include/uv/aix.h',
@@ -24,6 +27,16 @@ function install()
 		['build/include/llae-private/uv/version.h'] = dir .. '/include/uv/version.h', 
 		['build/include/llae-private/uv/win.h'] = dir .. '/include/uv/win.h', 
 	}
+	isolate(dir .. '/src',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/unix',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/win',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+
 end
 
 
@@ -49,7 +62,7 @@ build_lib = {
 					<%= format_file(module.dir,'src',f) %>,<% end %>
 			}
 	includedirs{
-		'include/llae-private',
+		'include',
 		<%= format_file(module.dir,'src') %>
 	}
 	filter "system:linux or macosx"

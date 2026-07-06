@@ -512,6 +512,15 @@ function m:preprocess( config )
 	end
 end
 
+function m:isolate(dir, patterns, replaces)
+	local isolate = require 'cparse.isolate'
+	local resolved = {}
+	for key, prefix in pairs(replaces) do
+		resolved[path.join(self.root, key)] = prefix
+	end
+	isolate.run(_local(self, dir), patterns, resolved)
+end
+
 function m:preprocess_am( config )
 	local src_file = _local(self,config.src)
 	local dst_file = config.insource and _local(self,config.dst) or path.join(self.root,config.dst)

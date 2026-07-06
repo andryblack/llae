@@ -16,6 +16,9 @@ function install()
 	move_files{
 		['build/include/llae-private/bzlib.h'] = 		dir..'/bzlib.h',
 	}
+	isolate(dir,{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
 end
 
 cmodules = {
@@ -29,7 +32,6 @@ build_lib = {
 	project = [[
 		includedirs{
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
-			'include/llae-private',
 			'include',
 		}
 		defines{

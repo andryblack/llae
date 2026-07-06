@@ -104,8 +104,7 @@ solution '<%= project:name() %>'
 
 
 		includedirs {
-			'include',
-			'include/llae-private'
+			'include'
 		}
 
 		libdirs {

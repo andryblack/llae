@@ -36,6 +36,9 @@ function install()
 ]]
 		}
 	}
+	isolate(dir..'/src',{'*.h','*.c'},{
+		['build/include/llae-private'] = 'llae-private/',
+	})
 end
 
 
@@ -53,7 +56,7 @@ build_lib = {
 	},
 	project = [[
 		includedirs{
-			'include/llae-private',
+			'include',
 		}
 		files {
 			'include/llae-private/lua.h',

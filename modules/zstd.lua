@@ -20,6 +20,15 @@ function install()
 		['build/include/llae-private/zstd_errors.h'] = 		dir..'/lib/zstd_errors.h',
 	}
 
+	isolate(dir .. '/lib/common',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/lib/decompress',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/lib/compress',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
 end
 
 cmodules = {
@@ -57,7 +66,6 @@ build_lib = {
 		}
 		includedirs{
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
-			'include/llae-private',
 			'include',
 		}
 		files {

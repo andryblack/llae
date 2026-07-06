@@ -14,16 +14,20 @@ function install()
 	unpack_tgz(archive)
 	
 	move_files{
-		['build/include/pugixml/pugixml.hpp'] = 		dir..'/src/pugixml.hpp',
+		['build/include/llae-private/pugixml.hpp'] = 		dir..'/src/pugixml.hpp',
 	}
 
 	preprocess{
 		src =  dir .. '/src/pugiconfig.hpp',
-		dst = 'build/include/pugixml/pugiconfig.hpp',
+		dst = 'build/include/llae-private/pugiconfig.hpp',
 		uncomment = uncomment,
 		comment = {},
 		remove_src = true
 	}
+
+	isolate(dir .. '/src',{'*.cpp'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
 end
 
 
@@ -31,7 +35,7 @@ end
 build_lib = {
 	project = [[
 		includedirs{
-			'include/pugixml'
+			'include'
 		}
 		files {
 			<%= format_file(module.dir,'src','pugixml.cpp') %>

@@ -1,7 +1,7 @@
 #include "random.h"
 #include "crypto.h"
 #include "llae/buffer.h"
-#include "mbedtls/entropy.h"
+#include "llae-private/mbedtls/entropy.h"
 
 META_OBJECT_INFO(crypto::random,meta::object)
 META_OBJECT_INFO(crypto::entropy,meta::object)

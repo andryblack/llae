@@ -1,7 +1,7 @@
 #include "lua/bind.h"
 #include "llae/async_bind.h"
 
-#include "../.././src/uv/os.h"
+#include "uv/os.h"
 
 
 

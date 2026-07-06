@@ -19,8 +19,8 @@ function _M.lib( root )
 	end
 	project( 'llae-'.._M.name )
 		kind 'StaticLib'
-		targetdir 'lib'
-		location 'build/project'
+		targetdir 'build/bootstrap/lib'
+		location 'build/bootstrap/project'
 		
 		local fls = {}
 		for _,c in ipairs(components) do

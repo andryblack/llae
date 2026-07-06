@@ -28,14 +28,14 @@ local comment = {
 
 function _M.lib( root )
 	_M.root = path.join(root,'build','extlibs','mbedtls-'.._M.version)
-	os.mkdir(path.join(root,'build','include','mbedtls'))
+	os.mkdir(path.join(root,'build','bootstrap','include','llae-private','mbedtls'))
 	for _,f in ipairs(os.matchfiles(path.join(_M.root,'include','mbedtls','*'))) do
 		local n = path.getname(f)
 		if n ~= 'mbedtls_config.h' then
 			utils.install_header(f,path.join('mbedtls',n))
 		end
 	end
-	os.mkdir(path.join(root,'build','include','psa'))
+	os.mkdir(path.join(root,'build','bootstrap','include','llae-private','psa'))
 	for _,f in ipairs(os.matchfiles(path.join(_M.root,'include','psa','*'))) do
 		local n = path.getname(f)
 		--if n ~= 'mbedtls_config.h' then
@@ -45,7 +45,7 @@ function _M.lib( root )
 
 	utils.preprocess(
 		path.join(_M.root,'include','mbedtls','mbedtls_config.h'),
-		path.join(root,'build','include','mbedtls','mbedtls_config.h'),
+		path.join(root,'build','bootstrap','include','llae-private','mbedtls','mbedtls_config.h'),
 		{uncomment = uncomment, comment = comment })
 
 	-- for _,f in ipairs{'lua.h','luaconf.h','lauxlib.h','lualib.h'} do
@@ -54,11 +54,12 @@ function _M.lib( root )
 	-- end
 	project('llae-'.._M.name)
 		kind 'StaticLib'
-		targetdir 'lib'
-		location 'build/project'
+		targetdir 'build/bootstrap/lib'
+		location 'build/bootstrap/project'
 
 		includedirs{
-			path.join(root,'build','include'),
+			path.join(root,'build','bootstrap','include'),
+			path.join(root,'build','bootstrap','include','llae-private'),
 			path.join(_M.root,'library')
 		}
 		files{

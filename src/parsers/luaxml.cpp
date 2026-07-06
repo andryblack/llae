@@ -1,4 +1,4 @@
-#include "pugixml/pugixml.hpp"
+#include "llae-private/pugixml.hpp"
 #include "lua/bind.h"
 #include "llae/buffer.h"
 

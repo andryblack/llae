@@ -60,8 +60,15 @@ function install()
 	for fn in foreach_file(dir .. '/include/psa') do
 		includes['build/include/llae-private/psa/' .. fn] = dir .. '/include/psa/' .. fn
 	end
+
+	isolate(dir .. '/include/mbedtls',{'*.h'},{
+		['build/modules/mbedtls/' ..dir .. '/include'] = 'llae-private/'
+	})
+	isolate(dir .. '/include/psa',{'*.h'},{
+		['build/modules/mbedtls/' ..dir .. '/include'] = 'llae-private/'
+	})
+
 	install_files(includes)
--- 
 
 	for _,v in ipairs(project:get_config_value(name,'uncomment') or {}) do
 		uncomment[v]=true
@@ -75,6 +82,11 @@ function install()
 		comment = comment,
 		replace_line = replace_line
 	}
+
+	
+	isolate(dir .. '/library',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
 end
 
 project_config = {
@@ -85,11 +97,11 @@ project_config = {
 build_lib = {
 	project = [[
 		includedirs{
-			'include/llae-private',
-			<%= format_file(module.dir,'library') %>
+			'include',
 		}
 		
 		files {
+			<%= format_file(module.dir,'library','*.h') %>,
 			<%= format_file(module.dir,'library','*.c') %>
 		}
 ]]

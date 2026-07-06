@@ -11,11 +11,31 @@ hash = 'f018c6871abed96e7a1d4d8491c2be18'
 function install()
 	download(url,archive,hash)
 	unpack_tgz(archive)
+
+	
 	install_files{ 
 		['build/include/llae-private/yajl/yajl_common.h'] = 		dir..'/src/api/yajl_common.h',
-		['build/include/llae-private/yajl/yajl_gen.h'] = 		dir..'/src/api/yajl_gen.h',
-		['build/include/llae-private/yajl/yajl_parse.h'] = 		dir..'/src/api/yajl_parse.h',
-		['build/include/llae-private/yajl/yajl_tree.h'] = 		dir..'/src/api/yajl_tree.h',
+	}
+	preprocess{
+		src = dir .. '/src/api/yajl_gen.h',
+		dst = 'build/include/llae-private/yajl/yajl_gen.h',
+		replace_line = {
+			['#include <yajl/yajl_common.h>'] = '#include <llae-private/yajl/yajl_common.h>',
+		}
+	}
+	preprocess{
+		src = dir .. '/src/api/yajl_parse.h',
+		dst = 'build/include/llae-private/yajl/yajl_parse.h',
+		replace_line = {
+			['#include <yajl/yajl_common.h>'] = '#include <llae-private/yajl/yajl_common.h>',
+		}
+	}
+	preprocess{
+		src = dir .. '/src/api/yajl_tree.h',
+		dst = 'build/include/llae-private/yajl/yajl_tree.h',
+		replace_line = {
+			['#include <yajl/yajl_common.h>'] = '#include <llae-private/yajl/yajl_common.h>',
+		}
 	}
 	-- https://github.com/lloyd/yajl/pull/232/commits/ae1fa8f58491901f071339ced9896ca3ecad0703
 	preprocess{
@@ -35,6 +55,12 @@ function install()
 [ [=[                        end++;]=] ] = true
 		}
 	}
+	isolate(dir .. '/src',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/api',{'*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
 end
 
 
@@ -48,7 +74,7 @@ build_lib = {
 	},
 	project = [[
 		includedirs{
-			'include/llae-private'
+			'include'
 		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>

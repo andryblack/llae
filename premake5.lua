@@ -28,8 +28,8 @@ newaction {
 
 if _ACTION ~= 'download' and _ACTION ~= 'unpack' then
 	solution 'llae'
-		objdir 'build' 
-		location 'build'
+		objdir 'build/bootstrap' 
+		location 'build/bootstrap'
 		llae.solution()
 
 		

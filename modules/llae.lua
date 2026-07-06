@@ -197,7 +197,6 @@ build_lib = {
 		}
 		includedirs{
 			'include',
-			'include/llae-private',
 			<%= format_file(module.dir,'src') %>
 		}
 	]] 

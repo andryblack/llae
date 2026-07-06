@@ -30,7 +30,7 @@ function _M.preprocess( src_file, dst_file, config )
 end
 
 function _M.install_header( src, dst_fn )
-	local dst = path.join('build','include','llae-private',dst_fn)
+	local dst = path.join('build','bootstrap','include','llae-private',dst_fn)
 	if not os.comparefiles(src,dst) then
 		os.mkdir(path.getdirectory(dst))
 	

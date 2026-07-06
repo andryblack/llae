@@ -13,6 +13,10 @@ function install()
 		['build/include/llae-private/zlib.h'] = 		dir..'/zlib.h',
 		['build/include/llae-private/zconf.h'] = 	dir..'/zconf.h',
 	}
+
+	isolate(dir,{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
 end
 
 
@@ -24,7 +28,7 @@ build_lib = {
 	},
 	project = [[
 		includedirs{
-			'include/llae-private'
+			'include'
 		}
 		files {
 			<% for _,f in ipairs(lib.components) do %>

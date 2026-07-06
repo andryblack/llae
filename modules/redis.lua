@@ -16,7 +16,6 @@ build_lib = {
 	project = [[
 		includedirs{
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
-			'include/llae-private',
 			'include',
 		}
 		

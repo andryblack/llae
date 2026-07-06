@@ -10,7 +10,7 @@
 #include "uv/handle.h"
 #include "logger.h"
 #include <cstdint>
-#include <psa/crypto.h>
+#include <llae-private/psa/crypto.h>
 #include "lua/bind.h"
 #include "uv/luv.h"
 #include "uv/work.h"

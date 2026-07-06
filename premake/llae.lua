@@ -105,8 +105,7 @@ function _M.solution(  )
    	filter{}
 
 	includedirs{
-		path.join(_M.root,'build','include'),
-		path.join(_M.root,'build','include','llae-private')
+		path.join(_M.root,'build','bootstrap','include'),
 	}	
 end
 
@@ -119,8 +118,8 @@ end
 function _M.lib(  )
 	project 'llae-lib'
 		kind 'StaticLib'
-		targetdir 'lib'
-		location 'build/project'
+		targetdir 'build/bootstrap/lib'
+		location 'build/bootstrap/project'
 
 		_M.compile()
 		
@@ -139,7 +138,8 @@ end
 
 function _M.compile(  )
 	includedirs{
-		path.join(_M.root, 'build','include'),
+		path.join(_M.root, 'build','bootstrap','include'),
+		path.join(_M.root, 'build','bootstrap','include','llae-private'),
 		path.join(_M.root, 'src') 
 	}
 end

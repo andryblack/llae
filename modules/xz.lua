@@ -32,9 +32,30 @@ function install()
 		['build/include/llae-private/lzma/hardware.h'] = 	dir..'/src/liblzma/api/lzma/hardware.h',
 	}
 
-	move_files{
-		
-	}
+	isolate(dir .. '/src/liblzma',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/liblzma/check',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/liblzma/common',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/liblzma/delta',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/liblzma/lz',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/liblzma/lzma',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/liblzma/rangecoder',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
+	isolate(dir .. '/src/liblzma/simple',{'*.c','*.h'},{
+		['build/include/llae-private'] = 'llae-private/'
+	})
 end
 
 cmodules = {
@@ -106,7 +127,6 @@ build_lib = {
 			<%= format_mod_file(project:get_module('llae'),'src')%>,
 			<% for _,f in ipairs(lib.components) do %>
 				<%= format_file(module.dir,'src','liblzma',f) %>,<% end %>
-			'include/llae-private',
 			'include',
 		}
 		defines{

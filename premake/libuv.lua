@@ -12,7 +12,7 @@ function _M.lib( root )
 	
 	utils.preprocess(
 		path.join(_M.root,'include','uv.h'),
-		path.join(root,'build','include','llae-private','uv.h'),
+		path.join(root,'build','bootstrap','include','llae-private','uv.h'),
 		{replace={
 			['UV_EXTERN'] = '',
 		}})
@@ -21,11 +21,12 @@ function _M.lib( root )
 	end
 	project('llae-'.._M.name)
 		kind 'StaticLib'
-		targetdir 'lib'
-		location 'build/project'
+		targetdir 'build/bootstrap/lib'
+		location 'build/bootstrap/project'
 		
 		includedirs {
-			path.join(root,'build','include'),
+			path.join(root,'build','bootstrap','include'),
+			path.join(root,'build','bootstrap','include','llae-private'),
 			path.join(_M.root,'src'),
 		}
 		files{
