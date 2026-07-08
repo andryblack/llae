@@ -38,14 +38,14 @@ steps:
   commands:
     - premake5 unpack
     - premake5 gmake2
-- name: build
+- name: build-bootstrap
   image: build-llae
   pull: never
   environment:
   commands:
-    - make -C build verbose=1 config=debug
-    - make -C build verbose=1 clean
-    - make -C build verbose=1 config=release 
+    - make -C build/bootstrap verbose=1 config=debug
+    - make -C build/bootstrap verbose=1 clean
+    - make -C build/bootstrap verbose=1 config=release 
 - name: build-final
   image: build-llae
   pull: never
@@ -87,7 +87,7 @@ steps:
     - premake5 unpack
     - premake5 --os=windows gmake2
 
-- name: build-windows
+- name: build-windows-bootstrap
   image: build-llae-windows
   pull: never
   environment:
@@ -97,9 +97,9 @@ steps:
      AR: x86_64-w64-mingw32-ar
      LD: x86_64-w64-mingw32-ld
   commands:
-   - make -C build verbose=1 config=debug 
-   - make -C build verbose=1 clean
-   - make -C build verbose=1 config=release 
+   - make -C build/bootstrap verbose=1 config=debug 
+   - make -C build/bootstrap verbose=1 clean
+   - make -C build/bootstrap verbose=1 config=release 
 
 # - name: build-windows-final
 #   image: build-llae-windows
