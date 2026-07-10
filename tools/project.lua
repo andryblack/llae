@@ -276,7 +276,7 @@ function Project:add_self_module( name, install )
 		return
 	end
 	local sm = require 'modules.self'
-	local m = sm.load(self,name)
+	local m = assert(sm.load(self,name))
 	m:set_root(self:get_root())
 	m:set_project(self)
 		

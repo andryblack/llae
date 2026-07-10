@@ -1,7 +1,11 @@
 project 'llae'
 version = '1.0'
 
-self_module 'llae'
+if cmdargs and cmdargs.inplace then
+	self_module 'llae'
+else
+	module 'llae'
+end
 module 'bzip2'
 module 'xz'
 module 'zstd'
