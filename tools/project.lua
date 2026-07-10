@@ -505,6 +505,7 @@ function Project:generate_bindings( )
 		local source_filename = path.join(root,filename)
 		local result = processor:process_file(source_filename)
 		if not next(result.classes) and not next(result.modules) then
+			log.debug('no classes or modules found in',source_filename)
 			return
 		end
 		
@@ -528,13 +529,17 @@ function Project:generate_bindings( )
 		table.insert(all_bind_headers,conf)
 	end
 	for _,m in ipairs(self._modules_list) do
+		log.debug('process bind headers for module',m:get_name())
 		for _,conf in ipairs(m:get_bind_headers()) do
 			conf.root = m:get_location() or self:get_root()
 			if conf.filename then
 				conf.filename = utils.replace_tokens(conf.filename,m:get_env())
-			end
-			if conf.dir then
+				log.debug('bind header filename',conf.filename)
+			elseif conf.dir then
 				conf.dir = utils.replace_tokens(conf.dir,m:get_env())
+				log.debug('bind header dir',conf.dir)
+			else
+				log.error('bind header config is invalid',m:get_name())
 			end
 			table.insert(all_bind_headers,conf)
 		end

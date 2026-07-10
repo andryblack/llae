@@ -5,6 +5,7 @@ local preprocessor = require 'cparse.preprocessor'
 local parser = require 'cparse.parser'
 local ast = require 'cparse.ast'
 local tags = require 'cparse.tags'
+local dump_ast = require 'cparse.dump_ast'
 
 local function replace_cpp_identifiers(type_str, replacements)
     if not next(replacements) then
@@ -49,6 +50,8 @@ function resolve_collector:resolve(type_str)
 end
 
 local bind_module = class(nil, 'bind_module')
+
+bind_module.debug = os.getenv('LUABIND_DEBUG') == '1'
 
 function bind_module:_init(name)
     self._name = name
@@ -1020,7 +1023,15 @@ function processor:process_content(data)
         pp:define(token, value)
     end
     local data_pp = pp:process(data)
+    if self.debug then
+        log.debug('processed content: ', data_pp)
+    end
     local ast = parser.parse(data_pp)
+    if self.debug then
+        local dump_ast = dump_ast.new(log.debug)
+        log.debug('ast: ')
+        dump_ast:traverse(ast)
+    end
     local traverser = traverser.new(self)
     traverser:traverse(ast)
     return traverser:get_result(),ast

@@ -463,6 +463,25 @@ function TestParserUsing:test_using_template_alias()
   lu.assertNotNil(n.type)
 end
 
+function TestParserUsing:test_using_nested_template_alias()
+  local src = [[
+namespace ns {
+  using Path = std::vector<Point64>;
+  using Paths = std::vector<std::vector<Point64>>;
+  enum E { A, B };
+}
+  ]]
+  local ns = first(src)
+  lu.assertEquals(ns.kind, "namespace")
+  lu.assertEquals(#ns.children, 3)
+  lu.assertEquals(ns.children[1].kind, "using")
+  lu.assertEquals(ns.children[1].name, "Path")
+  lu.assertEquals(ns.children[2].kind, "using")
+  lu.assertEquals(ns.children[2].name, "Paths")
+  lu.assertEquals(ns.children[3].kind, "enum")
+  lu.assertEquals(ns.children[3].name, "E")
+end
+
 -- ============================================================
 TestParserTemplate = {}
 

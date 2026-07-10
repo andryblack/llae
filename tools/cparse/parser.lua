@@ -395,7 +395,9 @@ function parser:_parse_using()
       if t:is_eof() then break end
       if depth == 0 and t:is_punct(";") then break end
       if t:is_punct("(") or t:is_punct("<") or t:is_punct("[") then depth = depth + 1 end
-      if t:is_punct(")") or t:is_punct(">") or t:is_punct("]") then
+      if t:is_punct(">>") then
+        depth = math.max(0, depth - 2)
+      elseif t:is_punct(")") or t:is_punct(">") or t:is_punct("]") then
         if depth == 0 then break else depth = depth - 1 end
       end
       table.insert(tp, self._lex:next())
@@ -517,6 +519,7 @@ function parser:_parse_params()
       if     t:is_punct("(") then depth_p = depth_p + 1
       elseif t:is_punct(")") then if depth_p > 0 then depth_p = depth_p - 1 end
       elseif t:is_punct("<") then depth_a = depth_a + 1
+      elseif t:is_punct(">>") then depth_a = math.max(0, depth_a - 2)
       elseif t:is_punct(">") then if depth_a > 0 then depth_a = depth_a - 1 end
       end
       table.insert(remaining_toks, self._lex:next())
