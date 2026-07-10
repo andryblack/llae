@@ -10,8 +10,8 @@ local install = class(tool)
 install.descr = 'bootstrap llae installation'
 
 local embedded_modules = {
-	'premake',
 	'llae',
+	'premake',
 }
 
 function install:exec( args )

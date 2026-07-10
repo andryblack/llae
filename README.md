@@ -17,8 +17,8 @@ build-in modules:
 ```bash
 $ premake5 download
 $ premake5 unpack
-$ premake5 gmake2
-$ make -C build/bootstrap
+$ premake5 gmake
+$ make -C build/bootstrap -j
 $ LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap bootstrap
 ```
 
@@ -36,7 +36,7 @@ $ llae run examples/info.lua
 ```bash
 LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap --root=. --inplace=true install --development
 LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap --root=. --inplace=true init --development
-premake5 --file=build/premake5.lua gmake2
+premake5 --file=build/premake5.lua gmake
 premake5 --file=build/premake5.lua ecc
 # build
 make -C build -j
