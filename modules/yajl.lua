@@ -20,21 +20,21 @@ function install()
 		src = dir .. '/src/api/yajl_gen.h',
 		dst = 'build/include/llae-private/yajl/yajl_gen.h',
 		replace_line = {
-			['#include <yajl/yajl_common.h>'] = '#include <llae-private/yajl/yajl_common.h>',
+			['#include <yajl/yajl_common.h>'] = '#include "llae-private/yajl/yajl_common.h"',
 		}
 	}
 	preprocess{
 		src = dir .. '/src/api/yajl_parse.h',
 		dst = 'build/include/llae-private/yajl/yajl_parse.h',
 		replace_line = {
-			['#include <yajl/yajl_common.h>'] = '#include <llae-private/yajl/yajl_common.h>',
+			['#include <yajl/yajl_common.h>'] = '#include "llae-private/yajl/yajl_common.h"',
 		}
 	}
 	preprocess{
 		src = dir .. '/src/api/yajl_tree.h',
 		dst = 'build/include/llae-private/yajl/yajl_tree.h',
 		replace_line = {
-			['#include <yajl/yajl_common.h>'] = '#include <llae-private/yajl/yajl_common.h>',
+			['#include <yajl/yajl_common.h>'] = '#include "llae-private/yajl/yajl_common.h"',
 		}
 	}
 	-- https://github.com/lloyd/yajl/pull/232/commits/ae1fa8f58491901f071339ced9896ca3ecad0703

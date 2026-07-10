@@ -6,11 +6,12 @@
 #include "meta/object.h"
 #include "lua/metatable.h"
 #include "lua/bind.h"
+#include "lua/debug.h"
 #include "error.h"
 #include "uv/handle.h"
 #include "logger.h"
 #include <cstdint>
-#include <llae-private/psa/crypto.h>
+#include "llae-private/psa/crypto.h"
 #include "lua/bind.h"
 #include "uv/luv.h"
 #include "uv/work.h"
@@ -64,7 +65,7 @@ namespace llae {
         uv_loop_set_data(m_loop.native(),this);
         m_lua.open_libs();
         lua_atpanic(lua().native(),&app::at_panic);
-
+        lua::debug::set_main_state(lua().native());
         lua::register_meta_object_metatable(lua());
 
         lua::state& l{lua()};
@@ -133,6 +134,7 @@ namespace llae {
         }
     }
     void app::close() {
+        lua::debug::set_current_state(nullptr);
         m_lua.close();
         if (m_stop_sig) {
             m_stop_sig->close();

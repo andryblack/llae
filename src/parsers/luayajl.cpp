@@ -1,7 +1,7 @@
 #include <cstdio>
 extern "C" {
-#include <llae-private/yajl/yajl_parse.h>
-#include <llae-private/yajl/yajl_gen.h>
+#include "llae-private/yajl/yajl_parse.h"
+#include "llae-private/yajl/yajl_gen.h"
 }
 
 #include <cinttypes>

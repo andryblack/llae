@@ -1,5 +1,5 @@
 #include "extern_autobind_tests.h"
-#include <lua/bind.h>
+#include "lua/bind.h"
 
 META_INFO(extern_autobind_tests::test_bind_struct,void)
 META_INFO(extern_autobind_tests::test_bind_fields,void)

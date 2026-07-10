@@ -4,13 +4,23 @@
 #include "types.h"
 #include <vector>
 #include <string>
-
+#include "debug.h"
 
 namespace lua {
 
 	class state {
 	protected:
 		lua_State* m_L;
+
+		struct debug_state_marker {
+			lua_State* m_L;
+			debug_state_marker(lua_State* L) : m_L(L) {
+				debug::set_current_state(L);
+			}
+			~debug_state_marker() {
+				debug::set_current_state(nullptr);
+			}
+		};
 	public:
 		explicit state(lua_State* L) : m_L(L) {}
 		state(const state& st) : m_L(st.m_L) {}
@@ -97,6 +107,7 @@ namespace lua {
 			lua_yield(m_L,nresult);
 		}
 		status resume(state& from,int nargs) {
+			debug_state_marker marker(m_L);
 			return static_cast<status>(lua_resume(m_L,from.native(),nargs));
 		}
 		state tothread(int idx) const {
