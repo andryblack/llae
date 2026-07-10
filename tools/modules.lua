@@ -77,13 +77,12 @@ function _M.get( project, modname, install )
 			log.debug('not found module at',fn)
 		end
 	end
+
 	if not mod then
-		local fn = tool.get_llae_path('modules',modname .. '.lua') 
-		if fs.isfile(fn) then
-			mod =  _M.loadfile(fn , project)
-			mod.source = fn
-		end
+		local embedded = require 'modules.embedded'
+		mod = embedded.get(project,modname,install)
 	end
+	
 
 	if mod then
 		return mod
@@ -92,7 +91,7 @@ function _M.get( project, modname, install )
 	for _,v in ipairs(locations) do
 		log.error('\t','at',v)
 	end
-	log.error('\t','at',tool.get_llae_path('modules'))
+	--log.error('\t','at',tool.get_llae_path('modules'))
 	error('not found module ' .. modname)
 end
 

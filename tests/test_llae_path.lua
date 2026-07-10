@@ -96,3 +96,8 @@ function testPath:test_remove_leading_dirs()
 	lu.assertEquals(path.remove_leading_dirs('C:/Windows/System32/drivers', 2), 'System32/drivers')
 	lu.assertEquals(path.remove_leading_dirs('Users/Administrator/Desktop', 1), 'Administrator/Desktop')
 end
+
+function testPath:test_normalize()
+	lu.assertEquals(path.normalize('/a/b/c'), '/a/b/c')
+	lu.assertEquals(path.normalize('a/b/c'), 'a/b/c')
+end

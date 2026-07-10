@@ -1,7 +1,7 @@
 project 'llae'
 version = '1.0'
 
-module 'llae'
+self_module 'llae'
 module 'bzip2'
 module 'xz'
 module 'zstd'

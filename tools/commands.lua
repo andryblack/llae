@@ -5,7 +5,7 @@ commands.map = {}
 
 local function register( modname )
 	--print('register',modname)
-	local mod = require( modname )
+	local mod = require( 'commands.' .. modname )
 	if not mod.name then
 		mod.name = modname
 	end
@@ -22,5 +22,7 @@ register('run')
 register('http_server')
 register('upgrade')
 register('download')
+register('lock')
+register('update')
 
 return commands

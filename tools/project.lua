@@ -41,6 +41,16 @@ function Project.env:module( name )
 	table.insert(self.modules,name)
 end
 
+function Project.env:self_module( name )
+	if type(name) ~= 'string' then
+		error('module must be string')
+	end
+	if self.self_module then
+		error('self_module already set')
+	end
+	self.self_module = name
+end
+
 function Project.env:premake( data )
 	if type(data) ~= 'table' then
 		error('premake must be table')
@@ -242,7 +252,31 @@ function Project:add_module( name , install)
 	if self._modules[name] then
 		return
 	end
+	log.debug('add module',name)
 	local m = modules.get(self,name, install)
+	m:set_root(self:get_root())
+	m:set_project(self)
+		
+	self._modules[name] = m
+	
+	if m:get_dependencies() then
+		for _,v in ipairs(m:get_dependencies()) do
+			self:add_module(v, install)
+		end
+	end
+	table.insert(self._modules_list,m)
+	add_cmodules(self._cmodules,m:get_cmodules())
+	m:load_configs(self._module_config)
+end
+
+function Project:add_self_module( name, install )
+	log.debug('add self module',name)
+	if self._modules[name] then
+		log.error('self module already added',name)
+		return
+	end
+	local sm = require 'modules.self'
+	local m = sm.load(self,name)
 	m:set_root(self:get_root())
 	m:set_project(self)
 		
@@ -271,6 +305,9 @@ function Project:load_modules( install )
 	end
 	self._modules = {}
 	self._modules_list = {}
+	if self._env.self_module then
+		self:add_self_module(self._env.self_module,install)
+	end
 	for _,n in ipairs(self._env.modules) do
 		self:add_module(n,install)
 	end
@@ -406,7 +443,7 @@ function Project:get_config_value( module_name, config_name )
 end
 
 function Project:write_premake(  )
-	local template_source_filename = tool.get_llae_path('data','premake5-template.lua')
+	local template_source_filename = self:get_llae_path('data','premake5-template.lua')
 	local build_root = path.getabsolute(path.join(self:get_root(),'build'))
 	local filename = path.join(build_root,'premake5.lua')
 	log.info('generate premake5.lua',path.getrelative(template_source_filename,self:get_root()))
@@ -427,6 +464,14 @@ function Project:write_premake(  )
 		end
 	}))
 	f:close()
+end
+
+function Project:get_llae_path( ... )
+	local m = self:get_module('llae')
+	if m then
+		return path.join(m:get_location(),...)
+	end
+	return tool.get_llae_path(self,...)
 end
 
 function Project:generate_bindings( )
@@ -497,7 +542,7 @@ function Project:generate_bindings( )
 	end
 	for name,module in pairs(processor:get_modules()) do
 		local dst_filename = path.join(self:get_root(),'build','src','gen_module_' .. name .. '.cpp')
-		local template_source_filename = tool.get_llae_path('data','binding-module-template.cpp')
+		local template_source_filename = self:get_llae_path('data','binding-module-template.cpp')
 
 		fs.mkdir_r(path.dirname(dst_filename))
 		fs.unlink(dst_filename)
@@ -520,7 +565,7 @@ function Project:generate_bindings( )
 		add_cmodules(self._project_cmodules,{module:get_name()})
 
 		local meta_filename = path.join(self:get_root(),'build','lua-meta', name .. '.lua')
-		local template_source_filename = tool.get_llae_path('data','binding-meta-template.lua')
+		local template_source_filename = self:get_llae_path('data','binding-meta-template.lua')
 		fs.mkdir_r(path.dirname(meta_filename))
 		fs.unlink(meta_filename)
 		local f = assert(fs.open(meta_filename,fs.O_WRONLY|fs.O_CREAT))
@@ -613,6 +658,31 @@ function Project:write_generated( )
 	end
 	
 
+end
+
+function Project:lock_modules( modules_dir )
+	if not modules_dir then
+		modules_dir = path.join(self:get_root(),'modules')
+	end
+	if not fs.isdir(modules_dir) then
+		error('modules dir not found ' .. tostring(modules_dir))
+	end
+	log.debug('lock modules to ',modules_dir)
+	local locked = {}
+	for name,module in pairs(self._modules) do
+		local lock_config = module:lock(modules_dir)
+		if lock_config then
+			table.insert(locked,{name=name,config=lock_config})
+		else
+			log.debug('module',name,'is not locked')
+		end
+	end
+	table.sort(locked,function(a,b)
+		return a.name < b.name
+	end)
+	for _,lock in ipairs(locked) do
+		log.info('locked module',lock.name)
+	end
 end
 
 local function create_env( cmdargs  )

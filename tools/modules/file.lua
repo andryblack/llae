@@ -9,6 +9,7 @@ function file:_init(name, location)
 	self._location = location
 end
 
+
 function file.load(project,url,install)
 
 	local host,rpath,options = string.match(url,'^(.+)/([^;]+);(.*)$')
@@ -60,5 +61,6 @@ function file:on_root_set()
 	--self._env.location = self._location
 	--self._location = self._env.location
 end
+
 
 return file

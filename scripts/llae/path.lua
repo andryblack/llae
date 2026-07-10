@@ -1,11 +1,38 @@
 local path = {}
 
+local function split(p)
+	local parts = {}
+	for part in p:gmatch('[^/\\]+') do
+		table.insert(parts, part)
+	end
+	return parts
+end
+
 ---@param p string
 ---@return string
 function path.normalize(p)
+	if #p == 0 then
+		return ''
+	end
 	local res = p:gsub("[/\\]+", "/")
 	res = res:gsub("^%./", "")
 	res = res:gsub("/%./", "/")
+	local parts = split(res)
+	local res = {}
+	for _,part in ipairs(parts) do
+		if part == '..' then
+			table.remove(res)
+		else
+			table.insert(res,part)
+		end
+	end
+	local res = path.join(table.unpack(res))
+	if path.isabsolute(p) and not path.isabsolute(res) then
+		res = '/' .. res
+	end
+	if p:sub(#p) == '/' or p:sub(#p) == '\\' then
+		res = res .. '/'
+	end
 	return res
 end
 
@@ -44,11 +71,7 @@ end
 ---@param p string
 ---@return string[]
 function path.split(p)
-	local parts = {}
-	for part in path.normalize(p):gmatch('[^/\\]+') do
-		table.insert(parts, part)
-	end
-	return parts
+	return split(path.normalize(p))
 end
 
 ---@param ... string

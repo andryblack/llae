@@ -1,7 +1,7 @@
 local class = require 'llae.class'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
-
+local log = require 'llae.log'
 local git = class(require 'modules.base')
 
 
@@ -24,7 +24,7 @@ function git.load(project,url,install)
 	local config = {}
 	if options then
 		for w in string.gmatch(options,'[^;]+') do
-			local k,v = string.match(w, "(%w+)=(%w+)")
+			local k,v = string.match(w, "(%w+)=(.+)")
 			config[k]=v
 		end
 	end
@@ -61,6 +61,7 @@ function git.load(project,url,install)
 		mod:set_env('dir',config.dir)
 		return mod
 	else
+		log.error('not found git module file',fn)
 		return false, 'not found module file ' .. tostring(fn)
 	end
 end

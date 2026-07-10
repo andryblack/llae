@@ -74,7 +74,25 @@ local function exec_git(args,logfile)
 	return exec_cmd('git',args,logfile)
 end
 
+function m:git_source(config)
+	self._git_source = config
+end
+
+---@param url string?
+---@param config table?
 function m:download_git(url,config)
+	if not url then
+		if not self._git_source then
+			error('need url or git_source')
+		end
+		url = self._git_source.url
+	end
+	if not config then
+		if not self._git_source then
+			error('need config or git_source')
+		end
+		config = self._git_source
+	end
 	local dst = path.join(self.location,config.dir or 'src')
 	log.info('download_git',self.name,url,dst)
 	local tag = config.tag or config.branch or 'master'
@@ -100,6 +118,16 @@ function m:download_git(url,config)
 	logfile:close()
 end
 
+function m:get_git_revision(config)
+	local dst = path.join(self.location,config.dir or 'src')
+	local logfilename = path.join(self.location,'getrev_git_log.txt')
+	fs.unlink(logfilename)
+	local logfile = assert(fs.open_write(logfilename))
+	exec_git({'-C',dst,'rev-parse','HEAD'},logfile)
+	logfile:close()
+	local content = fs.load_file(logfilename)
+	return tostring(content)
+end
 
 
 
