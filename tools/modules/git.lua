@@ -57,8 +57,9 @@ function git.load(project,url,install)
 
 		local mod = git.new( name )
 		mod:set_root(root)
-		mod:loadfile(fn,project)
+		mod:create_env(project)
 		mod:set_env('dir',config.dir)
+		mod:loadfile(fn,project)
 		return mod
 	else
 		log.error('not found git module file',fn)
