@@ -9,6 +9,7 @@ local log = require 'llae.log'
 ---@field _len    integer
 ---@field _line   integer
 ---@field _peeked token|nil
+---@field _peeked_pos integer|nil
 local lexer = class(nil, 'lexer')
 
 local KEYWORDS = {
@@ -87,6 +88,7 @@ function lexer:_init(source, opts)
   self._len    = #source
   self._line   = 1
   self._peeked = nil
+  self._peeked_pos = nil
 end
 
 ---Read and return the next token from source. Updates self._pos and self._line.
@@ -313,6 +315,7 @@ function lexer:next()
   if self._peeked then
     local tok = self._peeked
     self._peeked = nil
+    self._peeked_pos = nil
     return tok
   end
   return self:_read_token()
@@ -322,9 +325,19 @@ end
 ---@return token
 function lexer:peek()
   if not self._peeked then
+    self._peeked_pos = self._pos
     self._peeked = self:_read_token()
   end
   return self._peeked
+end
+
+---Logical parse position: start of the next unconsumed token.
+---@return integer
+function lexer:get_pos()
+  if self._peeked then
+    return self._peeked_pos
+  end
+  return self._pos
 end
 
 ---Consume the next token, asserting its kind (and optionally its value).

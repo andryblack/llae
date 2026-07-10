@@ -135,6 +135,27 @@ function TestParserClass:test_class_with_field()
   lu.assertEquals(n.children[1].name, "x")
 end
 
+function TestParserClass:test_class_with_comma_separated_fields()
+  local n = first("class C { double delta_, sin_a_, sin_; };")
+  lu.assertEquals(#n.children, 3)
+  lu.assertEquals(n.children[1].kind, "field")
+  lu.assertEquals(n.children[1].name, "delta_")
+  lu.assertEquals(n.children[1].type, "double")
+  lu.assertEquals(n.children[2].kind, "field")
+  lu.assertEquals(n.children[2].name, "sin_a_")
+  lu.assertEquals(n.children[2].type, "double")
+  lu.assertEquals(n.children[3].kind, "field")
+  lu.assertEquals(n.children[3].name, "sin_")
+  lu.assertEquals(n.children[3].type, "double")
+end
+
+function TestParserClass:test_class_with_comma_separated_fields_no_trailing_semi()
+  local n = first("class C { double a_, b_ }")
+  lu.assertEquals(#n.children, 2)
+  lu.assertEquals(n.children[1].name, "a_")
+  lu.assertEquals(n.children[2].name, "b_")
+end
+
 function TestParserClass:test_class_with_method()
   local n = first("class C { void foo(); };")
   lu.assertEquals(n.children[1].kind, "function")

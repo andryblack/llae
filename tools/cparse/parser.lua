@@ -742,26 +742,62 @@ function parser:_parse_type_and_name_decl(extra_specs,class_name)
   end
 
   -- ── FIELD / VARIABLE ──────────────────────────────────────────────────────
-  if self._lex:accept("punct", "=") then
-    local depth = 0
-    while true do
-      local t = self._lex:peek()
-      if t:is_eof() then break end
-      if depth == 0 and t:is_punct(";") then break end
-      if t:is_punct("(") or t:is_punct("{") or t:is_punct("[") then depth = depth + 1 end
-      if t:is_punct(")") or t:is_punct("}") or t:is_punct("]") then
-        if depth == 0 then break else depth = depth - 1 end
+  local fields = {}
+
+  local function finish_field(field_name)
+    if self._lex:accept("punct", "=") then
+      local depth = 0
+      while true do
+        local t = self._lex:peek()
+        if t:is_eof() then break end
+        if depth == 0 and (t:is_punct(",") or t:is_punct(";")) then break end
+        if t:is_punct("(") or t:is_punct("{") or t:is_punct("[") then depth = depth + 1 end
+        if t:is_punct(")") or t:is_punct("}") or t:is_punct("]") then
+          if depth == 0 then break else depth = depth - 1 end
+        end
+        self._lex:next()
+        parser._yield()
       end
+    end
+    if self._lex:peek():is_punct("{") then self:_skip_braces(false) end
+
+    local n = ast.field.new(field_name or "?", type_str, qualifiers)
+    n.tags = node_tags
+    table.insert(fields, n)
+  end
+
+  finish_field(name)
+  while self._lex:accept("punct", ",") do
+    local t = self._lex:peek()
+    if not t:is_ident() then
+      error(string.format('parser: expected field name after ",", got %s at line %d', tostring(t), t.line))
+    end
+    local field_name = self._lex:next().value
+
+    while self._lex:peek():is_punct("[") do
       self._lex:next()
-      parser._yield()
+      local depth = 1
+      while depth > 0 do
+        local tok = self._lex:next()
+        if tok:is_eof() then break end
+        if     tok:is_punct("[") then depth = depth + 1
+        elseif tok:is_punct("]") then depth = depth - 1
+        end
+        parser._yield()
+      end
+    end
+
+    finish_field(field_name)
+  end
+  if not self._lex:accept("punct", ";") then
+    local t = self._lex:peek()
+    if not t:is_punct("}") and not t:is_eof() then
+      self._lex:expect("punct", ";")
     end
   end
-  if self._lex:peek():is_punct("{") then self:_skip_braces(false) end
-  self._lex:accept("punct", ";")
 
-  local n = ast.field.new(name or "?", type_str, qualifiers)
-  n.tags = node_tags
-  return n
+  if #fields == 1 then return fields[1] end
+  return fields
 end
 
 -- ── Declaration dispatcher ───────────────────────────────────────────────────
@@ -878,12 +914,16 @@ function parser:_parse_decl_list(class_name)
       local v = self._lex:next().value
       self._pending_tag_text = self._pending_tag_text and (self._pending_tag_text .. "\n" .. v) or v
     else
-      local stale = self._lex:peek()
+      local pos_before = self._lex:get_pos()
       local result = self:_parse_decl(class_name)
       if result then
-        table.insert(decls, result)
-      elseif self._lex:peek() == stale then
-        -- _parse_decl consumed nothing: skip the unknown token to avoid infinite spin
+        if result.kind then
+          table.insert(decls, result)
+        else
+          for _, n in ipairs(result) do table.insert(decls, n) end
+        end
+      elseif self._lex:get_pos() == pos_before then
+        local stale = self._lex:peek()
         error(string.format('parser: unexpected token %s at line %d', tostring(stale), stale.line))
       end
     end

@@ -58,6 +58,22 @@ function TestLexerConstructor:test_eof_has_line()
   lu.assertEquals(tok.line, 1)
 end
 
+function TestLexerConstructor:test_get_pos_advances_with_tokens()
+  local l = lexer.new("int x;")
+  lu.assertEquals(l:get_pos(), 1)
+  l:next()
+  lu.assertTrue(l:get_pos() > 1)
+end
+
+function TestLexerConstructor:test_get_pos_unchanged_by_peek()
+  local l = lexer.new("int x;")
+  local pos = l:get_pos()
+  l:peek()
+  lu.assertEquals(l:get_pos(), pos)
+  l:next()
+  lu.assertTrue(l:get_pos() > pos)
+end
+
 -- ============================================================
 TestLexerKeywords = {}
 
