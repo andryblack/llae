@@ -41,6 +41,17 @@ function Project.env:module( name )
 	table.insert(self.modules,name)
 end
 
+function Project.env:lock_module( config )
+	if (type(config) ~= 'table') or (not config[1]) or (not config[2]) then
+		error('need config {name,revision}')
+	end
+	self.lock_modules = self.lock_modules or {}
+	if self.lock_modules[config[1]] then
+		error('module ' .. tostring(config[1]) .. ' already locked')
+	end
+	self.lock_modules[config[1]] = config[2]
+end
+
 function Project.env:self_module( name )
 	if type(name) ~= 'string' then
 		error('module must be string')
@@ -167,9 +178,10 @@ local function add_cmodules(dst,src)
 	end
 end
 
-function Project:_init( env  )
+function Project:_init( env , filename )
 	log.debug('Project:_init')
-	self._env = env
+	self._env = env or error('env is required')
+	self._filename = filename
 	self._env.project = self
 	self._scripts = {}
 	self._metas = {}
@@ -214,6 +226,13 @@ end
 
 function Project:get_cmdargs(  )
 	return self._env.cmdargs or {}
+end
+
+function Project:get_module_lock_revision( name )
+	if self._env.lock_modules then
+		return self._env.lock_modules[name]
+	end
+	return nil
 end
 
 function Project:get_commands( )
@@ -660,6 +679,31 @@ function Project:write_generated( )
 
 end
 
+function Project:patch_project( section_begin, section_end, replace_content )
+	if not self._filename then
+		error('project is not loaded from file')
+	end
+	local content = tostring(fs.load_file(self._filename))
+	local begin_pos = string.find(content,section_begin,1,true)
+	if not begin_pos then
+		error('not found start marker ' .. tostring(section_begin) .. ' in ' .. self._filename)
+	end
+	begin_pos = begin_pos + #section_begin
+	local end_pos = content:find(section_end,begin_pos,true)
+	if not end_pos then
+		error('not found end marker ' .. tostring(section_end) .. ' in ' .. self._filename)
+	end
+	while end_pos > begin_pos do
+		if content:sub(end_pos-1,end_pos-1) ~= '\n' then
+			end_pos = end_pos - 1
+		else
+			break
+		end
+	end
+	local new_content = string.sub(content,1,begin_pos-1) ..'\n' .. replace_content .. '\n' .. string.sub(content,end_pos)
+	fs.write_file(self._filename,new_content)
+end
+
 function Project:lock_modules( modules_dir )
 	if not modules_dir then
 		modules_dir = path.join(self:get_root(),'modules')
@@ -672,7 +716,8 @@ function Project:lock_modules( modules_dir )
 	for name,module in pairs(self._modules) do
 		local lock_config = module:lock(modules_dir)
 		if lock_config then
-			table.insert(locked,{name=name,config=lock_config})
+			assert(lock_config.name == name,'invalid module name ' .. tostring(name) .. ' expected ' .. tostring(lock_config.name))
+			table.insert(locked,lock_config)
 		else
 			log.debug('module',name,'is not locked')
 		end
@@ -680,9 +725,19 @@ function Project:lock_modules( modules_dir )
 	table.sort(locked,function(a,b)
 		return a.name < b.name
 	end)
+	local content = {}
+	self._env.lock_modules = {}
 	for _,lock in ipairs(locked) do
-		log.info('locked module',lock.name)
+		log.info('locked module',lock.name,lock.revision,lock.url)
+		table.insert(content,string.format('lock_module{%q,%q}',lock.name,lock.revision))
+		self._env.lock_modules[lock.name] = lock.revision
 	end
+	self:patch_project('@lock@','@endlock@',table.concat(content,'\n'))
+end
+
+function Project:unlock_modules()
+	self._env.lock_modules = nil
+	self:patch_project('@lock@','@endlock@','')
 end
 
 local function create_env( cmdargs  )
@@ -716,7 +771,8 @@ function Project.load( root_dir , cmdargs )
 	env.config = {}
 	env.__write_env = write_env
 	env.__load_env = load_env
-	local res,err = loadfile(path.join(root_dir,'llae-project.lua'),'bt',load_env)
+	local filename = path.join(root_dir,'llae-project.lua')
+	local res,err = loadfile(filename,'bt',load_env)
 	if not res then
 		--log.error('failed to load llae-project.lua',err)
 		return res,err
@@ -733,7 +789,7 @@ function Project.load( root_dir , cmdargs )
 	end
 
 	log.debug('loaded project at',root_dir)
-	return Project.new(env)
+	return Project.new(env,filename)
 end
 
 return Project

@@ -62,6 +62,8 @@ function cmd:exec( args )
 project '${proj_name}'
 -- @modules@
 module 'llae'
+-- @lock@
+-- @endlock@
 	]],{
 			proj_name = proj_name,
 	}))

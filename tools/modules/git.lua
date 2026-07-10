@@ -2,8 +2,20 @@ local class = require 'llae.class'
 local path = require 'llae.path'
 local fs = require 'llae.fs'
 local log = require 'llae.log'
+
+---@class modules.git : modules.base
+---@field new fun(name: string): modules.git
+---@field baseclass modules.base
 local git = class(require 'modules.base')
 
+function git:_init(name)
+	git.baseclass._init(self,name)
+end
+
+function git:set_git_source(config)
+	assert(not self._env._git_source,'git source already set')
+	self._env._git_source = config
+end
 
 function git.load(project,url,install)
 
@@ -38,15 +50,19 @@ function git.load(project,url,install)
 	end
 	local fm = {
 		location = path.join(root,'build','modules',name),
+		_project = project,
+		name = name,
 	}
 	fs.mkdir_r(fm.location)
+	if proto ~= 'git' then
+		proto = proto .. '://'
+	else
+		proto = ''
+	end
+	local url = proto .. host .. '/' .. rpath
+	config.url = url
 	if install then
-		if proto ~= 'git' then
-			proto = proto .. '://'
-		else
-			proto = ''
-		end
-		m.download_git(fm,proto .. host .. '/' .. rpath,config)
+		m.download_git(fm,url,config)
 	end
 	local fn = path.join(fm.location,config.dir,'llae-module.lua')
 	local dir = path.join(fm.location,config.dir,'modules')
@@ -54,12 +70,13 @@ function git.load(project,url,install)
 		project:add_modules_location(dir)
 	end
 	if fs.isfile(fn) then
-
+		log.debug('load git module',name,fn)
 		local mod = git.new( name )
 		mod:set_root(root)
 		mod:create_env(project)
 		mod:set_env('dir',config.dir)
 		mod:loadfile(fn,project)
+		mod:set_git_source(config)
 		return mod
 	else
 		log.error('not found git module file',fn)

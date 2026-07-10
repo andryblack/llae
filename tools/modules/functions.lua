@@ -93,6 +93,7 @@ function m:download_git(url,config)
 		end
 		config = self._git_source
 	end
+	local lock_revision = self._project:get_module_lock_revision(self.name)
 	local dst = path.join(self.location,config.dir or 'src')
 	log.info('download_git',self.name,url,dst)
 	local tag = config.tag or config.branch or 'master'
@@ -103,8 +104,11 @@ function m:download_git(url,config)
 	if fs.isdir(dst) and fs.isdir(path.join(dst,'.git')) then
 		exec_git({'-C',dst,'reset','--hard'},logfile)
 		
-			
-		if config.tag then
+		if lock_revision then
+			exec_git({'-C',dst,'fetch','origin',lock_revision},logfile)
+			exec_git({'-C',dst,'checkout',lock_revision},logfile)
+			exec_git({'-C',dst,'reset','--hard',lock_revision},logfile)
+		elseif config.tag then
 			exec_git({'-C',dst,'fetch','origin','tags/' .. config.tag},logfile)
 			exec_git({'-C',dst,'reset','--hard',config.tag},logfile)
 		else
@@ -114,21 +118,13 @@ function m:download_git(url,config)
 		return
 	end
 	fs.rmdir_r(dst)
-	exec_git({'clone','--depth','1','--branch',tag,'--single-branch',url,dst},logfile)
+	if lock_revision then
+		exec_git({'clone','--depth','1','--revision',lock_revision,url,dst},logfile)
+	else
+		exec_git({'clone','--depth','1','--branch',tag,'--single-branch',url,dst},logfile)
+	end
 	logfile:close()
 end
-
-function m:get_git_revision(config)
-	local dst = path.join(self.location,config.dir or 'src')
-	local logfilename = path.join(self.location,'getrev_git_log.txt')
-	fs.unlink(logfilename)
-	local logfile = assert(fs.open_write(logfilename))
-	exec_git({'-C',dst,'rev-parse','HEAD'},logfile)
-	logfile:close()
-	local content = fs.load_file(logfilename)
-	return tostring(content)
-end
-
 
 
 function m:download(url,file,hash)
@@ -142,7 +138,7 @@ function m:download(url,file,hash)
 			htype = string.upper(hash:sub(1,sep-1))
 			hval = hash:sub(sep+1)
 		end
-	end
+	end 
 	local res,err = netutils.download_file(url,dst,{
 		hash=hval,
 		hash_type=htype,

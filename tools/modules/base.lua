@@ -183,26 +183,34 @@ function base:loadfile(filename,project)
 end
 
 function base:lock(modules_dir)
-	local lock_config = {
-		source = self._source or error('module from unknown source ' .. self:get_name())
-	}
-	local source = path.normalize(path.getabsolute(self._source))
-	local dst = path.normalize(path.getabsolute((path.join(modules_dir,self._name .. '.lua'))))
-	if source ~= dst then
-		log.info('install module file: ' .. source .. ' to ' .. dst)
-		fs.copyfile(source,dst)
-	end
+	
 	if self._env._git_source then
 		local root = self._project:get_root()
 		local fm = {
 			location = path.join(root,'build','modules',self._name),
+			root = root,
 		}
 		local m = require 'modules.functions'
-		local rev = m.get_git_revision(fm,self._env._git_source)
+		local dst = path.join(fm.location,self._env._git_source.dir or 'src')
+		local rev = m.exec_res(fm,{
+			bin = 'git',
+			args = {'-C',dst,'rev-parse','HEAD'},
+		})
+		rev = string.match(rev,'([0-9a-f]+)')
+		if not rev or #rev ~= 40 then
+			error('invalid git revision ' .. tostring(rev))
+		end
+		local lock_config = {
+			source = self._source or error('module from unknown source ' .. self:get_name())
+		}
 		lock_config.revision = rev
 		lock_config.url = self._env._git_source.url
+		lock_config.name = self._name
+		return lock_config
 	end
-	return lock_config
+	
+	return nil
 end
+
 
 return base

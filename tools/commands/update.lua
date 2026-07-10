@@ -24,7 +24,11 @@ function install:exec( args )
 		prj:add_modules_location(args.modules)
 	end
 	async.run(function()
-		prj:update_modules()
+        prj:load_modules()
+		prj:unlock_modules()
+        prj:install()
+        prj:lock_modules(args['project-dir'])
+		prj:write_premake()
 	end)
 end
 
