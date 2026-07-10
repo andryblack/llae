@@ -469,7 +469,7 @@ end
 function Project:get_llae_path( ... )
 	local m = self:get_module('llae')
 	if m then
-		return path.join(m:get_location(),...)
+		return path.join(m:get_location(),m:get_env().dir,...)
 	end
 	return tool.get_llae_path(self,...)
 end
