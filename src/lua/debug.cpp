@@ -1,6 +1,9 @@
 #include "debug.h"
 #include "headers.h"
 #include "llae/logger.h"
+#include <cstring>
+#include <cstdio>
+
 
 namespace lua::debug {
 
