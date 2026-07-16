@@ -105,7 +105,7 @@ function m:download_git(url,config)
 		exec_git({'-C',dst,'reset','--hard'},logfile)
 		
 		if lock_revision then
-			exec_git({'-C',dst,'fetch','origin',lock_revision},logfile)
+			exec_git({'-C',dst,'fetch','--depth','1','origin',lock_revision},logfile)
 			exec_git({'-C',dst,'checkout',lock_revision},logfile)
 			exec_git({'-C',dst,'reset','--hard',lock_revision},logfile)
 		elseif config.tag then
@@ -118,10 +118,11 @@ function m:download_git(url,config)
 		return
 	end
 	fs.rmdir_r(dst)
+	exec_git({'clone','--depth','1','--branch',tag,'--single-branch',url,dst},logfile)
 	if lock_revision then
-		exec_git({'clone','--depth','1','--revision',lock_revision,url,dst},logfile)
-	else
-		exec_git({'clone','--depth','1','--branch',tag,'--single-branch',url,dst},logfile)
+		exec_git({'-C',dst,'fetch','--depth','1','origin',lock_revision},logfile)
+		exec_git({'-C',dst,'checkout',lock_revision},logfile)
+		exec_git({'-C',dst,'reset','--hard',lock_revision},logfile)
 	end
 	logfile:close()
 end
