@@ -105,20 +105,19 @@ namespace uv {
         return {2};
     }
 
-	lua::multiret tcp_connection::keepalive(lua::state& l) {
-		int enable = l.toboolean(2);
-		int delay = 0;
+	llae::result<> tcp_connection::keepalive(std::optional<int> delay) {
+		int enable = delay.has_value();
+		int delay_value = 0;
 		if (enable) {
-			delay = int(l.checkinteger(3));
+			delay_value = delay.value();
 		}
-		auto r = uv_tcp_keepalive(&m_tcp,enable,delay);
-		return return_status_error(l,r);
+		auto r = uv_tcp_keepalive(&m_tcp,enable,delay_value);
+		return return_status(r);
 	}
 
-	lua::multiret tcp_connection::nodelay(lua::state& l) {
-		int enable = l.toboolean(2);
-		auto r = uv_tcp_nodelay(&m_tcp,enable);
-		return return_status_error(l,r);
+	llae::result<> tcp_connection::nodelay(bool enable) {
+		auto r = uv_tcp_nodelay(&m_tcp,enable ? 1 : 0);
+		return return_status(r);
 	}
 
 }

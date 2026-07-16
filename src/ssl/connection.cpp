@@ -5,7 +5,6 @@
 #include "lua/bind.h"
 #include "llae/logger.h"
 #include "crypto/crypto.h"
-#include <iostream>
 #include "llae-private/mbedtls/debug.h"
 
 

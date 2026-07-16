@@ -178,8 +178,7 @@ namespace uv {
     
 
 	void stream::on_closed() {
-		//LLAE_DIAG(std::cout << "stream::on_closed" << std::endl;)
-        readable_stream::on_closed();
+		readable_stream::on_closed();
         handle::on_closed();
 	}
 
@@ -266,6 +265,7 @@ namespace uv {
         void start(lua::ref&& cont) {
             assert(!m_read_cont.valid());
             m_read_cont = std::move(cont);
+            READ_DEBUG("start read wait");
             m_read_status_consumed = false;
         }
         bool try_read(lua::state& l) {
@@ -304,6 +304,7 @@ namespace uv {
                 return true;
             }
             if (m_read_cont.valid()) {
+                assert(m_readed.empty());
                 READ_DEBUG("on_read: resume");
                 l.checkstack(2);
                 m_read_cont.push(l);
@@ -327,20 +328,17 @@ namespace uv {
                 buffer->set_len(nread);
                 m_readed_size += nread;
                 if (m_readed.empty()) {
-                    //std::cout << this << " push buffer " << buffer->get_base() << " " << buffer->get_len() << std::endl;
                     m_readed.emplace_back(std::move(buffer));
                     
                 } else {
                     auto& last{m_readed.back()};
                     size_t last_tail = last->get_capacity() - last->get_len();
                     if (last_tail >= nread) {
-                        //std::cout << this << " add buffer " << buffer->get_base() << " " << buffer->get_len() << std::endl;
                         ::memcpy(last->get_end(),buffer->get_base(),nread);
                         last->set_len(last->get_len()+buffer->get_len());
                         buffer->set_len(buffer->get_capacity());
                         s->add_read_buffer(std::move(buffer));
                     } else {
-                        //std::cout << this << " push buffer " << buffer->get_base() << " " << buffer->get_len() << std::endl;
                         m_readed.emplace_back(std::move(buffer));
                     }
                 }
@@ -428,7 +426,7 @@ namespace uv {
     }
         
     void stream::stop_read() {
-        READ_DEBUG("stop read");
+        READ_DEBUG("stream::stop read");
         uv_read_stop(get_stream());
         readable_stream::stop_read();
     }
@@ -501,8 +499,6 @@ namespace uv {
         if (res < 0) {
             return res;
         }
-        //std::cout << "stream start_read add_ref" << std::endl;
-        //std::cout << "start read " << this << std::endl;
         READ_DEBUG("stream::start_read");
         res = uv_read_start(get_stream(), &stream::alloc_cb, &stream::read_cb);
         if (res < 0) {

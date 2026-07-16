@@ -35,9 +35,9 @@ namespace uv {
         /// @luabind
         lua::multiret getpeername(lua::state& l);
         /// @luabind
-        lua::multiret keepalive(lua::state& l);
+        llae::result<> keepalive(std::optional<int> delay);
         /// @luabind
-        lua::multiret nodelay(lua::state& l);
+        llae::result<> nodelay(bool enable);
 	};
 	typedef common::intrusive_ptr<tcp_connection> tcp_connection_ptr;
 

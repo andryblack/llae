@@ -58,6 +58,12 @@ namespace uv {
     	s.pushinteger(r);
     	return {1};
     }
+    llae::result<> return_status(int r) {
+    	if (r < 0) {
+    		return status_error::create(r);
+    	}
+    	return llae::result<>{};
+    }
     void print_error(int e) {
         const char* err = uv_strerror_r(e, uv_error_buf, sizeof(uv_error_buf));
         if (!err) err = "unknown";
@@ -112,10 +118,7 @@ llae::result<std::string> uv::get_cwd() {
 
 llae::result<> uv::lchdir(std::string_view dir) {
 	auto r = uv_chdir(dir.data());
-	if (r < 0) {
-		return status_error::create(r);
-	}
-	return llae::result<>();
+	return return_status(r);
 }
 
 int uv::linterface_addresses(lua_State* L) {
@@ -164,10 +167,7 @@ int uv::linterface_addresses(lua_State* L) {
 
 llae::result<> uv::lset_process_title(std::string_view title) {
 	int r = uv_set_process_title(title.data());
-	if (r < 0) {
-		return status_error::create(r);
-	}
-	return llae::result<>();
+	return return_status(r);
 }
 
 
