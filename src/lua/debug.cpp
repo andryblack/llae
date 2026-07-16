@@ -107,7 +107,6 @@ namespace lua::debug {
 		
        
         lua_Debug ar;
-        int top = lua_gettop(L);
         int last = lastlevel(L1);
         int n1 = (last - level > LEVELS1 + LEVELS2) ? LEVELS1 : -1;
 
@@ -144,6 +143,12 @@ namespace lua::debug {
             LOG_INFO(str);
         });
     }
+}
+
+extern "C"
+[[gnu::used, gnu::visibility("default")]]
+void debug_print_stack() {
+    lua::debug::print_stack();
 }
 
 
