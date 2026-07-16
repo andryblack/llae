@@ -273,10 +273,20 @@ function Project:add_module( name , install)
 	end
 	log.debug('add module',name)
 	local m = modules.get(self,name, install)
+	if not m then
+		log.error('module not found',name)
+		error('module not found: ' .. name)
+		return
+	end
+	local module_name = m:get_name()
+	if self._modules[module_name] then
+		log.debug('module already added',module_name,name)
+		return
+	end
 	m:set_root(self:get_root())
 	m:set_project(self)
 		
-	self._modules[name] = m
+	self._modules[module_name] = m
 	
 	if m:get_dependencies() then
 		for _,v in ipairs(m:get_dependencies()) do
