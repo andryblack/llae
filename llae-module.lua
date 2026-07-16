@@ -173,7 +173,13 @@ function bootstrap( config )
 	for fn in foreach_file(dir .. '/data') do
 		all_files['data/' .. fn] = dir .. '/data/' .. fn
 	end
-	all_files['llae-project.lua'] = dir .. '/llae-project.lua' 
+	preprocess{
+		src = dir .. '/llae-project.lua',
+		dst = 'llae-project.lua',
+		replace_line = {
+			["self_module 'llae'"] = "module 'llae'"
+		}
+	}
 	install_files(all_files)
 	local env = {
 		LLAE_DL_DIR=project:get_dl_dir()
@@ -221,9 +227,15 @@ function upgrade( data )
 	for fn in foreach_file(dir .. '/data') do
 		all_files['data/' .. fn] = dir .. '/data/' .. fn
 	end
-	all_files['llae-project.lua'] = dir .. '/llae-project.lua' 
 	install_files(all_files)
 
+	preprocess{
+		src = dir .. '/llae-project.lua',
+		dst = 'llae-project.lua',
+		replace_line = {
+			["self_module 'llae'"] = "module 'llae'"
+		}
+	}
 	local env = {
 		LLAE_DL_DIR=project:get_dl_dir()
 	}

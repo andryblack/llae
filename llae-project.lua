@@ -1,34 +1,21 @@
 project 'llae'
 version = '1.0'
 
-if cmdargs and cmdargs.inplace then
-	self_module 'llae'
-else
-	module 'llae'
-end
+self_module 'llae'
 module 'bzip2'
 module 'xz'
 module 'zstd'
-
-if cmdargs and (cmdargs.development or cmdargs.inplace) then
-	module 'lz4'
-	module 'luaunit'
-	module 'premake-ecc'
-end
+module 'lz4'
+module 'luaunit'
+module 'premake-ecc'
+module 'redis'
 
 if cmdargs and (cmdargs.debug or cmdargs.development) then
 	config('lua','apicheck',true)
 end
 
-if cmdargs and cmdargs.inplace then
-	config('llae','embed_scripts','scripts')
-	config('llae','embed_scripts','tools')
-	module 'redis'
-	module 'luaunit'
-else
-	config('llae','embed_scripts','build/scripts')
-	config('llae','embed_scripts','build/modules/llae/llae-src/tools')
-end
+config('llae','embed_scripts','scripts')
+config('llae','embed_scripts','tools')
 
 if cmdargs and cmdargs.development then
 	cmodule 'bind_tests'
