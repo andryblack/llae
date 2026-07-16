@@ -32,10 +32,10 @@ function self_module:on_root_set()
 	self._location = path.join(self._root)
 end
 
-function self_module:install(tosystem)
+function self_module:install()
 	log.info('install self module',self:get_name(),self._env.version)
 	if self._env.self_install then
-		self._env.self_install(tosystem)
+		self._env.self_install()
 	end
 end
 

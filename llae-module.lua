@@ -1,6 +1,6 @@
 name = 'llae'
 
-function install(tosystem)
+function install()
     install_scripts(dir .. '/scripts')
     install_metas(dir .. '/lua-meta')
 end

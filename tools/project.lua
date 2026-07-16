@@ -342,7 +342,7 @@ function Project:load_modules( install )
 	end
 	self:init_modules()
 end
-function Project:install_modules( tosystem )
+function Project:install_modules( )
 	self:load_modules(true)
 	self._scripts = {}
 	local root = self:get_root()
@@ -351,7 +351,7 @@ function Project:install_modules( tosystem )
 	fs.mkdir(path.join(root,'build','premake'))
 	fs.mkdir(self:get_dl_dir())
 	for _,m in ipairs(self._modules_list) do
-		m:install(tosystem)
+		m:install()
 	end
 	
 end
@@ -365,8 +365,8 @@ local function apply_functions( super_env, env )
 	end
 end
 
-function Project:install(tosystem)
-	self:install_modules(tosystem)
+function Project:install()
+	self:install_modules()
 	if self._env.__write_env and self._env.__write_env.install then
 		local funcs = {
 			print = function(...)

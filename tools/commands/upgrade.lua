@@ -31,7 +31,7 @@ function upgrade:exec( args )
 		}
 		p:add_module('llae')
 		p:init_modules()
-		p:install_modules(true)
+		p:install_modules()
 		p = project.new{
 			location=install_dir,
 			cmdargs = args

@@ -42,7 +42,7 @@ function install:exec( args )
 			p:add_module(v,true)
 		end
 		p:init_modules()
-		p:install_modules(true)
+		p:install_modules()
 		for _,m in p:foreach_module() do
 			if m.bootstrap then
 				m.bootstrap{

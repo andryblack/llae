@@ -100,13 +100,11 @@ function base:set_env(name,val)
 	self._env[name] = val
 end
 
-function base:install(tosystem)
+function base:install()
 	log.info('install module',self:get_name(),self._env.version)
 	os.setenv('LLAE_PROJECT_ROOT',self._root)
-	self._env.tosystem = tosystem
-	--fs.rmdir_r(env.location)
 	fs.mkdir_r(self._env.location)
-	self._env.install(tosystem)
+	self._env.install()
 end
 
 function base:get_location()
