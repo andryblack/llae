@@ -7,6 +7,12 @@
 #include "lua/bind.h"
 #include <cstdio>
 
+#ifdef _WIN32
+    #include <winsock2.h>
+#else
+    #include <arpa/inet.h>
+#endif
+
 META_OBJECT_INFO(net::socks5::tcp_connection,uv::tcp_connection)
 
 
@@ -225,20 +231,32 @@ namespace {
             req->write(0x05); // VER
             req->write(0x01); // CMD
             req->write(0x00); // RSV
-            auto addr = (const struct sockaddr *)&m_connect_addr;
-            
-            if (addr->sa_family == AF_INET) {
+            if (!m_connect_domain.empty()) {
+                req->write(0x03); // ATYP
+                req->write(m_connect_domain.length());
+                req->write(m_connect_domain.data(),m_connect_domain.length());
                 auto addr4 = (const struct sockaddr_in *)&m_connect_addr;
-                req->write(0x01); // ATYP
-                req->write(&addr4->sin_addr,4);
                 req->write(addr4->sin_port);
                 req->write(addr4->sin_port >> 8);
-            } else if (addr->sa_family == AF_INET6) {
-                auto addr6 = (const struct sockaddr_in6 *)&m_connect_addr;
-                req->write(0x04); // ATYP
-                req->write(&addr6->sin6_addr,16);
-                req->write(addr6->sin6_port);
-                req->write(addr6->sin6_port >> 8);
+            } else {
+                auto addr = (const struct sockaddr *)&m_connect_addr;
+                
+                if (addr->sa_family == AF_INET) {
+                    auto addr4 = (const struct sockaddr_in *)&m_connect_addr;
+                    req->write(0x01); // ATYP
+                    req->write(&addr4->sin_addr,4);
+                    req->write(addr4->sin_port);
+                    req->write(addr4->sin_port >> 8);
+                } else if (addr->sa_family == AF_INET6) {
+                    auto addr6 = (const struct sockaddr_in6 *)&m_connect_addr;
+                    req->write(0x04); // ATYP
+                    req->write(&addr6->sin6_addr,16);
+                    req->write(addr6->sin6_port);
+                    req->write(addr6->sin6_port >> 8);
+                } else {
+                    report_connect_error(socks5_msg("SOCKS5: invalid addr"));
+                    return true;
+                }
             }
             
             int status = req->start();
@@ -311,11 +329,12 @@ namespace {
 
 		if (uv_ip4_addr(host.data(), port, (struct sockaddr_in*)&m_connect_addr) &&
 	      	uv_ip6_addr(host.data(), port, (struct sockaddr_in6*)&m_connect_addr)) {
-			char msg[256];
-			snprintf(msg, sizeof(msg), "invalid IP address or port [%.*s:%d]",
-				int(host.size()), host.data(), port);
-			return llae::make_result_promise_string_error<void>(msg);
-	   	}
+            m_connect_domain = host;
+            auto addr4 = (struct sockaddr_in *)&m_connect_addr;
+            addr4->sin_port = htons(port);
+	   	} else {
+            m_connect_domain.clear();
+        }
 
 		auto promise = common::make_intrusive<llae::result_promise<void>>();
 		m_connect_promise = promise;

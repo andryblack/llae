@@ -22,6 +22,7 @@ namespace net {
 			llae::result_promise_ptr<void> m_connect_promise;
 			class connect_req;
 			struct sockaddr_storage m_connect_addr;
+			std::string m_connect_domain;
 			void on_connected(int status);
 			void report_connect_error(llae::error_ptr err);
 			void report_connect_success();
