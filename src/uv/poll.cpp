@@ -1,68 +1,15 @@
 #include "poll.h"
 
-#include "lua/stack.h"
 #include "llae/app.h"
 #include "luv.h"
 
-#include <iostream>
 
 META_OBJECT_INFO(uv::poll,uv::handle)
 
 
 namespace uv {
 
-	class lua_poll_consumer : public poll_consumer {
-    private:
-        lua::ref m_cont;
-    public:
-        lua_poll_consumer(lua::ref && cont) : m_cont(std::move(cont)) {}
-        virtual bool on_poll(poll* p, int status,int events) override final {
-            auto& l = llae::app::get(p->get_handle()->loop).lua();
-            if (m_cont.valid()) {
-                m_cont.push(l);
-                auto toth = l.tothread(-1);
-                l.pop(1);// thread
-                int args;
-				if (status < 0) {
-                    toth.pushnil();
-                    uv::push_error(toth,status);
-                    args = 2;
-                } else { 
-                    toth.pushinteger(events);
-                    args = 1;
-                }
-                lua::ref ref(std::move(m_cont));
-                p->stop_poll();
-                auto s = toth.resume(l,args);
-                if (s != lua::status::ok && s != lua::status::yield) {
-                    llae::app::show_error(toth,s);
-                }
-                ref.reset(l);
-            } else {
-                p->stop_poll();
-            }
-            return true;
-        }
-        void on_poll_closed(poll* p) override final {
-        	auto& l = llae::app::get(p->get_handle()->loop).lua();
-            if (!l.native()) {
-                m_cont.release();
-            }
-        	if (m_cont.valid()) {
-        		m_cont.push(l);
-                auto toth = l.tothread(-1);
-                l.pop(1);// thread
-                toth.pushnil();
-                toth.pushnil();
-                lua::ref ref(std::move(m_cont));
-                auto s = toth.resume(l,2);
-                if (s != lua::status::ok && s != lua::status::yield) {
-                    llae::app::show_error(toth,s);
-                }
-                ref.reset(l);
-        	}
-        }
-    };
+	
 
 	poll::poll(loop& l,int fd) {
 		int r = uv_poll_init(l.native(),&m_poll,fd);
@@ -75,117 +22,71 @@ namespace uv {
 		attach();
 	}
 	poll::~poll() {
+        reject(llae::string_error::create("poll destroyed"));
 	}
 
-	lua::multiret poll::lpoll(lua::state& l, int events) {
-		if (!l.isyieldable()) {
-			l.pushnil();
-			l.pushstring("poll::lpoll is async");
-			return {2};
-		}
-		if (m_consumer) {
-			l.pushnil();
-			l.pushstring("poll::lpoll already poll");
-			return {2};
-		}
-		{
-			l.pushthread();
-            lua::ref poll_cont;
-			poll_cont.set(l);
-
-            common::intrusive_ptr<lua_poll_consumer> consume(new lua_poll_consumer(std::move(poll_cont)));
-            int res = start_poll(events,consume);
-            if (res < 0) {
-                l.pushnil();
-                uv::push_error(l,res);
-                return {2};
-            }
-			
-		}
-		l.yield(0);
-		return {0};
-	}
-
-	lua::multiret poll::lstop(lua::state& l) {
-		if (m_consumer) {
-			if (m_consumer) {
-	            m_consumer->on_poll_closed(this);
-	            m_consumer.reset();
-	        }
-		}
-		auto res = stop_poll();
-		if (res < 0) {
-			l.pushnil();
-	        uv::push_error(l,res);
-	        return {2};
-	    }
-	    l.pushboolean(true);
-		return {1};
-	}
-
-	int poll::start_poll(int events, const poll_consumer_ptr& consumer) {
-		if (m_consumer) {
-            return -1;
+    void poll::resolve(int events) {
+        auto p = std::move(m_poll_promise);
+        if (p) {
+            p->set_result(llae::result<int>(events));
         }
-        m_consumer = consumer;
-        add_ref();
+    }
+
+    void poll::reject(llae::error_ptr&& error) {
+        auto p = std::move(m_poll_promise);
+        if (p) {
+            p->set_result(llae::result<int>(std::move(error)));
+        }
+    }
+
+    llae::result_promise_ptr<int> poll::poll_async(int events) {
+        if (m_poll_promise) {
+            return llae::result_promise_forward_error<int>(llae::string_error::create("already polling"));
+        }
+        m_poll_promise = common::make_intrusive<llae::result_promise<int>>();
         int res = uv_poll_start(&m_poll, events, &poll::on_poll_cb);
         if (res < 0) {
-            m_consumer.reset();
-            //std::cout << "stream start_read error remove_ref" << std::endl;
-            remove_ref();
+            m_poll_promise.reset();
+            return llae::result_promise_forward_error<int>(status_error::create(res));
         }
-        return res;
-	}
-	int poll::stop_poll() {
-		if (m_consumer) {
-            m_consumer.reset();
-        }
-		return uv_poll_stop(&m_poll);
+        add_ref();
+        return m_poll_promise;
+    }
+
+	llae::result<void> poll::stop_poll() {
+        auto res = uv_poll_stop(&m_poll);
+        reject(llae::string_error::create("stop"));
+        return make_result(res);
 	}
 
-	bool poll::on_poll(int status, int events) {
-		if (m_consumer) {
-            auto consumer = std::move(m_consumer);
-            bool res = consumer->on_poll(this,status,events);
-            if (!res) {
-                m_consumer = std::move(consumer);
-            }
-            return res;
+	void poll::on_poll(int status, int events) {
+        if (status) {
+            reject(status_error::create(status));
         } else {
-            LLAE_DIAG(std::cout << "poll callback without consumer" << std::endl;)
-            stop_poll();
+            resolve(events);
         }
-        return true;
 	}
 	void poll::on_poll_cb(uv_poll_t *handle, int status, int events) {
 		poll* self = static_cast<poll*>(handle->data);
-        if (self->on_poll(status,events)) {
-            //std::cout << "stream read_cb remove_ref" << std::endl;
-            self->remove_ref();
-		}
+        uv_poll_stop(handle);
+        self->on_poll(status,events);
+        self->remove_ref();
 	}
 	void poll::on_closed() {
-		//LLAE_DIAG(std::cout << "stream::on_closed" << std::endl;)
-		//m_closed = true;
-        if (m_consumer) {
-            m_consumer->on_poll_closed(this);
-            m_consumer.reset();
-        }
+		reject(llae::string_error::create("poll closed"));
         handle::on_closed();
 	}
 
-	lua::multiret poll::lnew(lua::state& l) {
+	poll_ptr poll::lnew(lua::state& l) {
 		posix::fd_ptr fdp = lua::stack<posix::fd_ptr>::get(l,1);
 		if (!fdp) {
 			uv_file fd = uv_file(l.checkinteger(1));
 			common::intrusive_ptr<poll> res{new poll(llae::app::get(l).loop(),fd)};
-			lua::push(l,std::move(res));
+			return res;
 		} else {
 			common::intrusive_ptr<poll> res{new poll(llae::app::get(l).loop(),std::move(fdp))};
-			lua::push(l,std::move(res));
+			return res;
 		}
-		return {1};
 	}
 		
 }

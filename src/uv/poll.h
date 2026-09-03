@@ -2,8 +2,7 @@
 #define __LLAE_UV_POLL_H_INCLUDED__
 
 #include "handle.h"
-#include "lua/state.h"
-#include "lua/ref.h"
+#include "llae/promise.h"
 #include "common/intrusive_ptr.h"
 #include "posix/fd.h"
 
@@ -13,12 +12,7 @@ namespace uv {
 	class loop;
 
 	class poll;
-	class poll_consumer : public meta::object {
-    public:
-        virtual bool on_poll(poll* p,int status,int events) = 0;
-        virtual void on_poll_closed(poll* s) {}
-    };
-    typedef common::intrusive_ptr<poll_consumer> poll_consumer_ptr;
+	typedef common::intrusive_ptr<poll> poll_ptr;
 	
 	/// @luabind
 	class poll : public handle {
@@ -26,27 +20,27 @@ namespace uv {
 	private:
 		uv_poll_t m_poll;
 		posix::fd_ptr m_fd;
-		poll_consumer_ptr m_consumer;
+		llae::result_promise_ptr<int> m_poll_promise;
 		static void on_poll_cb(uv_poll_t *handle, int status, int events);
-		bool on_poll(int status, int events);
+		void on_poll(int status, int events);
 	public:
 		virtual uv_handle_t* get_handle() override final { return reinterpret_cast<uv_handle_t*>(&m_poll); }
 	protected:
 		virtual ~poll() override;
 		virtual void on_closed() override;
 		
+		void resolve(int status);
+		void reject(llae::error_ptr&& error);
 	public:
 		explicit poll(uv::loop& loop,int fd );
 		explicit poll(uv::loop& loop,posix::fd_ptr && fd );
 		/// @luabind(name=new)
-		static lua::multiret lnew(lua::state& l);
+		static poll_ptr lnew(lua::state& l);
 
-		int start_poll(int events,const poll_consumer_ptr& poll);
-		int stop_poll();
-		/// @luabind(name=poll)
-		lua::multiret lpoll(lua::state& l, int events);
+		/// @luabind(async=true,name=poll)
+		llae::result_promise_ptr<int> poll_async(int events);
 		/// @luabind(name=stop)
-		lua::multiret lstop(lua::state& l);
+		llae::result<void> stop_poll();
 
 		/// @luabind(ltype=integer)
 		static constexpr auto READABLE = UV_READABLE;
@@ -57,7 +51,7 @@ namespace uv {
 		/// @luabind(ltype=integer)
 		static constexpr auto DISCONNECT = UV_DISCONNECT;
 	};
-	typedef common::intrusive_ptr<poll> poll_ptr;
+	
 
 }
 

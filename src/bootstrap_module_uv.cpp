@@ -103,8 +103,8 @@ static void luabind_uv_poll(lua::state& l) {
     
     
     lua::bind::function(l,"new",&uv::poll::lnew);
-    lua::bind::function(l,"poll",&uv::poll::lpoll);
-    lua::bind::function(l,"stop",&uv::poll::lstop);
+    llae::async_function(l,"poll",&uv::poll::poll_async);
+    lua::bind::function(l,"stop",&uv::poll::stop_poll);
     
     
     
