@@ -115,14 +115,11 @@ namespace crypto {
 	}
 
 	
-	lua::multiret hmac::lnew(lua::state& l) {
+	llae::result<hmac_ptr> hmac::lnew(lua::state& l) {
 		auto info = md::get_info(l,1);
 		if (!info) {
-			l.pushnil();
-			l.pushfstring("unknown hmac algorithm");
-			return {2};
+			return llae::string_error::create("unknown hmac algorithm");
 		}
-		lua::push(l,common::intrusive_ptr<hmac>(new hmac(info)));
-		return {1};
+		return common::make_intrusive<hmac>(info);
 	}
 }

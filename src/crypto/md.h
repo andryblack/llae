@@ -20,6 +20,9 @@ namespace llae {
 
 namespace crypto {
 
+	class md;
+	using md_ptr = common::intrusive_ptr<md>;
+
 	/**
 	* Message digest functionality for hashing data using various algorithms.
 	* Supported algorithms: 'NONE', 'MD5', 'SHA1', 'SHA224', 'SHA256', 'SHA384', 'SHA512', 'RIPEMD160'
@@ -61,14 +64,14 @@ namespace crypto {
 		
 		static const mbedtls_md_info_t* get_info(lua::state& l, int idx);
 		/// @luabind
-		static lua::multiret get_length(lua::state& l);
+		static llae::result<size_t> get_length(lua::state& l);
 		/// Creates a new message digest instance with the specified algorithm.
-		/// @lparam(algorithm,string) The hash algorithm to use (e.g., 'MD5', 'SHA256', 'SHA1')
+		/// @lparam(algorithm,string|integer) The hash algorithm to use (e.g., 'MD5', 'SHA256', 'SHA1')
 		/// @lreturn(instance,crypto.md?)
 		/// @lreturn(error,string?)
 		/// @luabind(name=new)
-		static lua::multiret lnew(lua::state& l);
-		};
+		static llae::result<md_ptr> lnew(lua::state& l);
+	};
 
 }
 

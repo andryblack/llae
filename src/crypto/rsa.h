@@ -2,7 +2,8 @@
 
 #include "llae-private/mbedtls/rsa.h"
 #include "meta/object.h"
-#include "lua/state.h"
+#include "llae/result.h"
+#include <optional>
 
 namespace crypto {
 
@@ -23,7 +24,7 @@ namespace crypto {
 		/// @lreturn(result,boolean?)
 		/// @lreturn(error,string?)
 		/// @luabind
-		lua::multiret set_padding(lua::state& l);
+		llae::result<> set_padding(int padding,std::optional<mbedtls_md_type_t> hash_id);
 	};
 
 }

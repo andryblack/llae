@@ -6,12 +6,14 @@
 #include "llae/result.h"
 #include "llae/write_buffers.h"
 #include "meta/object.h"
-#include "lua/state.h"
 #include "llae/promise.h"
 #include "llae/sequental.h"
 
 
 namespace crypto {
+
+	class hmac;
+	using hmac_ptr = common::intrusive_ptr<hmac>;
 
 	/**
 	* HMAC (Hash-based Message Authentication Code) functionality for message authentication.
@@ -20,6 +22,7 @@ namespace crypto {
 	class hmac : public meta::object {
 		META_OBJECT
 	private:
+		friend common::intrusive_maker;
 		const mbedtls_md_info_t* m_info;
 		mbedtls_md_context_t m_ctx;
 		llae::sequental m_seq;
@@ -50,11 +53,11 @@ namespace crypto {
 		llae::result_promise_ptr<llae::buffer_base_ptr> async_finish(llae::loop& a);
 		
 		/// Creates a new HMAC instance with the specified hash algorithm.
-		/// @lparam(algorithm,string) The hash algorithm to use (e.g., 'SHA256', 'MD5', 'SHA1')
+		/// @lparam(algorithm,string|integer) The hash algorithm to use (e.g., 'SHA256', 'MD5', 'SHA1')
 		/// @lreturn(instance,crypto.hmac?)
 		/// @lreturn(error,string?)
 		/// @luabind(name=new)
-		static lua::multiret lnew(lua::state& l);
+		static llae::result<hmac_ptr> lnew(lua::state& l);
 	};
 
 }

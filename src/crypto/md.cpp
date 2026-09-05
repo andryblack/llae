@@ -56,15 +56,12 @@ namespace crypto {
 		return nullptr;
 	}
 
-	lua::multiret md::get_length(lua::state& l) {
+	llae::result<size_t> md::get_length(lua::state& l) {
 		auto info = get_info(l,1);
 		if (!info) {
-			l.pushnil();
-			l.pushfstring("unknown md algorithm");
-			return {2};
+			return llae::string_error::create("unknown md algorithm");
 		}
-		l.pushinteger(mbedtls_md_get_size(info));
-		return {1};
+		return mbedtls_md_get_size(info);
 	}
 
 	llae::result<void> md::update_impl(const llae::buffer_base_ptr& data) {
@@ -181,14 +178,11 @@ namespace crypto {
 		return {};
 	}
 
-	lua::multiret md::lnew(lua::state& l) {
+	llae::result<md_ptr> md::lnew(lua::state& l) {
 		auto info = get_info(l,1);
 		if (!info) {
-			l.pushnil();
-			l.pushfstring("unknown md algorithm");
-			return {2};
+			return llae::string_error::create("unknown md algorithm");
 		}
-		lua::push(l,common::intrusive_ptr<md>(new md(info)));
-		return {1};
+		return common::make_intrusive<md>(info);
 	}
 }

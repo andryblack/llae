@@ -8,14 +8,44 @@ testCrypto = {}
 -- Test RSA public key (RSA 2048-bit)
 -- Note: PEM format requires final newline and null terminator for mbedtls
 local rsa_public_key_pem = [[-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtFjhy++uZG5ea9ETEeik
-bM7r+E8XZaK7ffaKfYLMEledKwBpxbTaxNKJr8eM00mtfkzRDRhk0v5zMUBKM6pt
-tHl2EbYfuMESNhuZSh7sg564127HOh2Z0AToAYYU2NksWmg0Xu+L5qzT9iXQXabZ
-KC3UokhciHIrd+dtTmYFYmNIafkpasS651Tamv9pdrgjI3pX7lQwQwiQ/vxwNvlP
-U5wrMlfy1ozsiEx5iM7K1fxEW9HsD23jc5OB+thktTzsAq4fPoJUVDlt3Hd8Tsol
-iwefBCyoA5zFYIBhVTY2HbRCZ+7NuMOm3MjsuVgDAMcUSj3heuNB/JVXXWEA84Eq
-oQIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArlbH4gVJbEDN+3HSIA5v
+3ZmciKjoqku/CRsCO1eSehgrdkNGM5CsmSBOvXi2EgpJkDXlHmVLA6A7hK8NN+WZ
+LY9ZmBv79tD54yGcUUQNWbC/HM/mnRAS3nZ4VOjuITLZj5aXjxVd9T0SEDon8oc9
+4aGVknQrHPC34ieJv33taQ6/Aeh1DHXCNTz+ASdPZfE+mYiQL1F2rbJSLalo3rUy
+QjJ7g428qoxn/gF7eU9v0G38leV72Y5Jbno7CgCNx09xkXmGDsEhioOozudFSTHv
+IcmsUMC3NQMmI4qDtns9UuWAy+xMMSvtHbYD/j07eOkzPsMYGvxOHeKoklIICCIS
+HQIDAQAB
 -----END PUBLIC KEY-----
+]] .. '\0'
+
+-- Test RSA private key (2048-bit), matches rsa_public_key_pem
+local rsa_private_key_pem = [[-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEArlbH4gVJbEDN+3HSIA5v3ZmciKjoqku/CRsCO1eSehgrdkNG
+M5CsmSBOvXi2EgpJkDXlHmVLA6A7hK8NN+WZLY9ZmBv79tD54yGcUUQNWbC/HM/m
+nRAS3nZ4VOjuITLZj5aXjxVd9T0SEDon8oc94aGVknQrHPC34ieJv33taQ6/Aeh1
+DHXCNTz+ASdPZfE+mYiQL1F2rbJSLalo3rUyQjJ7g428qoxn/gF7eU9v0G38leV7
+2Y5Jbno7CgCNx09xkXmGDsEhioOozudFSTHvIcmsUMC3NQMmI4qDtns9UuWAy+xM
+MSvtHbYD/j07eOkzPsMYGvxOHeKoklIICCISHQIDAQABAoIBAH5CXRpkp8sdl8/9
+m6cZrYx4nnQel/oVR3IpvFEL2ApSjM9mY2Ye5dE0I7J2xK2GA8bMMXX0+AHVPqWW
+PWV5A5mKUuGlirIyoHcNNW9pcJ2/MnmEW8juBixU8krUMvmaIRQrhPHcEKL2KqnT
+5HBx37AT3QYm2b5o21OPPOSRJ6pIEIGMODgVt5IMLCxqMfJc4BCOgixlIH7W/I4J
+1KnYGUAMpPzTN+ndAl5qoZqG78lL3P9V0m0uqRpoTv0Mcc6t8JpTZNCMDt91LNrx
+K4HZwU2DjNcXT+P7p7jyU/WzifzcCjfEbnFEp9bB39fDKfFaVlOm3B/MShFdLZbI
+P24oHiECgYEA2pP3dFaV3YYF8uEWsoL2/D7rLGj2ZYgd5/qL886W5SGZri5yuwIb
+CqwVQM3C0RNPtFBlANflbpux6YK0bvKa9W8kXY1wkBzH7wvIQUrxYtL8gyETr7bq
+Rne0JG0b6nZLY4E1SYPMbZF1RBRvRxlO67SWZzvB2hTz2qvMfEzqcgUCgYEAzC/d
++aNAJTGtuYVrvK3pAKVYsoXjj1ZfrGFC4rZ16QUZuhXUyECuAn+/V8jJFj1gWm5R
+GS0NHcOPL8BazYPh1Vl2H6TF/zVvEaxORye03gPg8AVGgEFfSivnj/bg+R6e1V5E
+00H2flvpNQMOwtyzuSANkhNxOKsoNZ2cYEh4IzkCgYEA2A59Aw13dBI/nRYrxma4
+VxymgC58qF4FGcJKRsRF2dX9v/P/yqTJMCJrm7QIR3xsQ9NYE55VFqFmGmjti+HZ
+lJO5AZSG2JzqcHtYBlpbApGFsuSmPgFz0BYRBhSoDHnECWa10qYqE4A9xv7gBAqb
+PVgzd3XVJ4mghd1d8txgvjUCgYBW5OAARtsbeQLHeuIYj6Ii5jrS7mujKkzY3SNL
+u/59xe/m4zeEaRIkeh0BzK7WyhPhKCVXI3b7fafH2IJMB53p34KHgOXJ8AFucfd2
+DI3KFbh6LKSOHEPjGsAW4idnnQJXJyD/DolJyO974es8PhQ16lAcJC4AwcYA2ywb
+RXvq8QKBgQCxqsLVppYpyHOjC3IIXA59BioAjx9aDQiVhcPouV7GCio5axAIw1qu
+UmAghVC8pIoA0ur8Cr9w01HC/azKsvrOYPNVk2t+BLhrXEGdH++uwTt/UdOfmpCn
+gCphNhI6InBMv1YDbESHcNXAEKqQOxJFNstTOISjgdIk4derLPShlw==
+-----END RSA PRIVATE KEY-----
 ]] .. '\0'
 
 local function test_md(data,expected,func)
@@ -685,6 +715,53 @@ function testCrypto:test_pk_encrypt()
 	
 	-- For RSA 2048, encrypted output should be 256 bytes
 	lu.assertEquals(#tostring(encrypted), 256)
+end
+
+function testCrypto:test_pk_parse_private_key()
+	-- Test parsing RSA private key from PEM format
+	local pk = assert(crypto.pk.new())
+	assert(pk:parse_private_key(rsa_private_key_pem))
+
+	local name = assert(pk:get_name())
+	lu.assertEquals(name, "RSA")
+end
+
+function testCrypto:test_pk_decrypt_roundtrip()
+	-- Test RSA encrypt/decrypt round-trip
+	local enc = assert(crypto.pk.new())
+	assert(enc:parse_public_key(rsa_public_key_pem))
+
+	local dec = assert(crypto.pk.new())
+	assert(dec:parse_private_key(rsa_private_key_pem))
+
+	local plaintext = "Secret message!"
+	local encrypted = assert(enc:encrypt(plaintext))
+
+	-- Encrypted output should be 256 bytes for RSA 2048
+	lu.assertEquals(#tostring(encrypted), 256)
+
+	-- Decrypt with the matching private key
+	local decrypted = assert(dec:decrypt(encrypted))
+	lu.assertEquals(tostring(decrypted), plaintext)
+end
+
+function testCrypto:test_pk_decrypt_tampered()
+	-- Decrypting tampered ciphertext should fail
+	local enc = assert(crypto.pk.new())
+	assert(enc:parse_public_key(rsa_public_key_pem))
+	local dec = assert(crypto.pk.new())
+	assert(dec:parse_private_key(rsa_private_key_pem))
+
+	local encrypted = assert(enc:encrypt("Secret message!"))
+	local tampered = tostring(encrypted)
+
+	-- Tamper the first byte of the ciphertext
+	local first = string.byte(tampered, 1)
+	tampered = string.char(first % 255 + 1) .. string.sub(tampered, 2)
+
+	local res, err = dec:decrypt(tampered)
+	lu.assertNil(res)
+	lu.assertNotNil(err)
 end
 
 function testCrypto:test_pk_parse_invalid()

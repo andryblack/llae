@@ -118,12 +118,20 @@ local pk = crypto.pk.new()
 -- Parse public key
 pk:parse_public_key(key_data)
 
+-- Parse private key (with optional password for encrypted keys)
+pk:parse_private_key(key_data, password)
+
 -- Get RSA context (if the key is RSA)
 local rsa = pk:get_rsa()
 
--- Encrypt data
+-- Encrypt data with the public key
 local encrypted = pk:encrypt(data, random_generator)
+
+-- Decrypt data with the private key
+local decrypted = pk:decrypt(encrypted, random_generator)
 ```
+
+Encryption uses the public key; decryption requires a private key loaded with `parse_private_key`. Both `encrypt` and `decrypt` are asynchronous and need a yielding context. The optional `random_generator` is a `crypto.random` instance; if omitted, a default RNG is used.
 
 Supported padding types:
 - `RSA_PKCS_V15`

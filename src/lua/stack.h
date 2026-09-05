@@ -251,7 +251,11 @@ namespace lua {
     		if (s.isnoneornil(idx)) {
     			return {};
     		}
-    		return stack<const T&>::get(s,idx);
+			if constexpr (std::is_enum_v<T> || std::is_pointer_v<T>) {
+				return stack<T>::get(s,idx);
+			} else {
+    			return stack<const T&>::get(s,idx);
+			}
     	}
     	static int push(state& s,const std::optional<T>& v) {
             if (!v) {
