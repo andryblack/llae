@@ -500,7 +500,8 @@ function Project:get_llae_path( ... )
 	if m then
 		return path.join(m:get_location(),m:get_env().dir,...)
 	end
-	return tool.get_llae_path(self,...)
+	log.debug('llae module not found, use built-in')
+	return tool.get_llae_path(...)
 end
 
 function Project:generate_bindings( )
