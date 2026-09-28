@@ -489,7 +489,7 @@ function Project:get_target_modules_rev( target )
 	local modules = {}
 	for _,m in ipairs(self._modules_list) do
 		if target.default or needed[m:get_name()] then
-			table.insert(modules,1,m)
+			table.insert(modules,1,m:get_env())
 		end
 	end
 	return modules
