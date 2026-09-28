@@ -62,11 +62,40 @@ function Project.env:self_module( name )
 	self.self_module = name
 end
 
+local function _add_target( project, data )
+	if type(data) ~= 'table' then
+		error('target must be table')
+	end
+	assert(data.name,'target need name')
+	local targets = project._targets or {}
+	for _,target in ipairs(targets) do
+		if target.name == data.name then
+			error('target ' .. tostring(data.name) .. ' already exists')
+		end
+		if data.default and target.default then
+			error('multiple default targets: ' .. tostring(data.name) .. ' and ' .. tostring(target.name))
+		end
+	end
+	table.insert(targets,data)
+	project._targets = targets
+end
+
 function Project.env:premake( data )
 	if type(data) ~= 'table' then
 		error('premake must be table')
 	end
-	self.premake = data
+	log.warning('premake is deprecated, use target instead')
+	_add_target(self, {
+		name = self.project_name,
+		default = true,
+		kind = data.kind,
+		premake = data
+	})
+end
+
+function Project.env:target( data )
+	_add_target(self, data)
+	return data
 end
 
 function Project.env:cmodule( data )
@@ -200,6 +229,14 @@ function Project:_init( env , filename )
 	local cmdargs = self._env.cmdargs
 	self._dl_dir = (cmdargs and cmdargs['dl-dir']) or os.getenv('LLAE_DL_DIR') or tool.get_llae_path('dl')
 	self._target = get_target( cmdargs )
+	if not self._env._targets or not next(self._env._targets) then
+		self._env._targets = {
+			{
+				name = self._env.project_name,
+				default = true,
+			}
+		}
+	end
 end
 
 function Project:get_dl_dir()
@@ -216,8 +253,8 @@ function Project:name(  )
 	return self._env.project_name
 end
 
-function Project:get_premake( )
-	return self._env.premake
+function Project:get_targets( )
+	return self._env._targets or {}
 end
 
 function Project:get_root( )
@@ -430,15 +467,32 @@ function Project:foreach_module( )
 	return mod_next,self._modules_list,0
 end
 
-local function reversed_mod_next(t, i)
-    i = i - 1
-    if i ~= 0 then
-        return i, t[i]:get_env()
-    end
-end
-
-function Project:foreach_module_rev( )
-	return reversed_mod_next,self._modules_list,#self._modules_list + 1
+function Project:get_target_modules_rev( target )
+	local needed = {}
+	local function mark_needed(name)
+		if needed[name] then
+			return
+		end
+		needed[name] = true
+		local m = self:get_module(name)
+		if m and m:get_dependencies() then
+			for _,d in ipairs(m:get_dependencies()) do
+				mark_needed(d)
+			end
+		end
+	end
+	if not target.default then
+		for _,d in ipairs(target.deps or {}) do
+			mark_needed(d)
+		end
+	end
+	local modules = {}
+	for _,m in ipairs(self._modules_list) do
+		if target.default or needed[m:get_name()] then
+			table.insert(modules,1,m)
+		end
+	end
+	return modules
 end
 
 function Project:get_module( name )

@@ -57,11 +57,11 @@ solution '<%= project:name() %>'
 	end
 %>
 
-<% if project:get_premake() and project:get_premake().solution then %>
+<% for _,target in ipairs(project:get_targets()) do if target.premake and target.premake.solution then %>
 	-- project premake solution
-	<%= template.compile(project:get_premake().solution,{env=...})() %>
+	<%= template.compile(target.premake.solution,{env=...})() %>
 	----------------------
-<% end %>
+<% end end %>
 
 	<% for _,mod in project:foreach_module() do %>
 	-- module <%= mod.name %> / <%= get_relative(mod.location) %>
@@ -89,15 +89,15 @@ solution '<%= project:name() %>'
 	-- end module <%= mod.name %>
 	<% end %>
 
-
-	project '<%= project:name() %>'
-<% if project:get_premake() and project:get_premake().kind then %>
-		kind '<%= project:get_premake().kind %>'
+<% for _,target in ipairs(project:get_targets()) do %>
+	project '<%= target.name %>'
+<% if target.kind and target.kind then %>
+		kind '<%= target.kind %>'
 <% else %>
 		kind 'ConsoleApp'
 <% end %>
 		targetdir '../bin'
-		targetname '<%= project:name() %>'
+		targetname '<%= target.name %>'
 		filter{'action:gmake or gmake2'}
 			location 'project'
 		filter{}
@@ -110,12 +110,11 @@ solution '<%= project:name() %>'
 		libdirs {
 			'lib'
 		}
-
+<% if target.default or target.include_generated then %>
 		files {
 			'src/*.cpp',--generated
 		}
-
-
+<% end %>
 
 		includedirs {
 			<% for _,mod in project:foreach_module() do if mod.includedir then %>
@@ -126,24 +125,24 @@ solution '<%= project:name() %>'
 			end %>
 		}
 		
-		<% for _,mod in project:foreach_module() do if mod.project_main then %>
+		<% if target.default then for _,mod in project:foreach_module() do if mod.project_main then %>
 				<%= template.compile(mod.project_main,{env=...}){
 					module = mod,
 					format_file = function (...)
 						return make_path(mod,...)
 					end  
-				} %> <% end end %>
+				} %> <% end end end %>
 
 		links {
-		<% for _,mod in project:foreach_module_rev() do %>
+		<% for _,mod in ipairs(project:get_target_modules_rev(target)) do %>
 			<% if mod.build_lib and not mod.build_lib.noautolink then %>"module-<%= mod.name %>",<%end%>
 			<% if mod.libs then for __,l in ipairs(mod.libs) do %>"<%= l %>",<%end end%>
 		<% end %>
 		}
 
-<% if project:get_premake() and project:get_premake().project then %>
+<% if target.premake and target.premake.project then %>
 	-- project premake project
-	<%= template.compile(project:get_premake().project,{env=...}){
+	<%= template.compile(target.premake.project,{env=...}){
 		format_file = function (first,...)
 			assert(not path.isabsolute(first))
 			local t = {
@@ -159,4 +158,4 @@ solution '<%= project:name() %>'
 	------
 <% end %>
 		
-
+<% end %>
