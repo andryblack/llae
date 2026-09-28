@@ -259,8 +259,28 @@ function zip_file:_raw_read( size )
 	return ch
 end
 
+function zip_file:_skip_remaining_compressed(  )
+	-- Empty files are often packed as a tiny deflate block (typically 2 bytes).
+	-- When uncompressed size is already 0, read() never enters the inflate loop,
+	-- so remaining compressed bytes must be discarded explicitly.
+	while self._compressed_available > 0 do
+		local ch,err = self:_raw_read(1024*4)
+		if not ch then
+			return nil,err
+		end
+	end
+	return true
+end
+
 function zip_file:read( size )
 	local s = math.min(size,self._uncompressed_available)
+	if s == 0 then
+		local ok,err = self:_skip_remaining_compressed()
+		if not ok then
+			return nil,err
+		end
+		return nil
+	end
 	local r = {}
 	--log.info('start read',size,s,self._uncompressed_available,self._compressed_available )
 	while s > 0 do
@@ -319,6 +339,13 @@ function zip_file:read( size )
 	end
 	if not next(r) then
 		return nil
+	end
+	-- after the last uncompressed byte, drop any unused compressed tail
+	if self._uncompressed_available == 0 and self._compressed_available > 0 then
+		local ok,err = self:_skip_remaining_compressed()
+		if not ok then
+			return nil,err
+		end
 	end
 	--log.info('read finished')
 	return table.concat(r)
@@ -399,6 +426,7 @@ function zip.unpack_zip( filename , dst )
 		while true do
 			local d,e = cf:read(1024*4)
 			if not d then
+				assert(not e,e)
 				break
 			end
 			f:write(d)
