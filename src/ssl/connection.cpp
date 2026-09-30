@@ -600,7 +600,23 @@ namespace ssl {
     
     lua::multiret connection::close(lua::state& l) {
         SSL_DEBUG("close");
+        // Abort pending handshake/write/shutdown: otherwise m_write_cont is never
+        // resumed when the peer is closed while waiting for WANT_READ (e.g. request timeout).
+        if (m_write_cont.valid()) {
+            if (!is_error()) {
+                m_uv_error = UV_ECANCELED;
+            }
+            if (m_active_op) {
+                finish_status(m_active_op);
+            } else {
+                m_write_cont.release();
+                m_write_buffers.release();
+            }
+        }
         stop_read();
+        set_closed();
+        m_state = S_CLOSED;
+        m_read_state = RS_NONE;
         if (m_stream) {
             m_stream->close();
         }

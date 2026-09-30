@@ -108,6 +108,19 @@ function request:exec(  )
 		return nil,err
 	end
 	local tmr
+	local function stop_timer()
+		if tmr then
+			tmr:stop()
+			tmr = nil
+		end
+	end
+	local function finish_error(e)
+		stop_timer()
+		if self._timeout_error then
+			return nil,'timeout'
+		end
+		return nil,e
+	end
 	if self._timeout then
 		--log.debug('start wait request response for',self._timeout)
 		tmr = uv.timer.new()
@@ -118,11 +131,8 @@ function request:exec(  )
 	---@type integer
 	local port = self._url.port or url.services[self._url.scheme] or 80
 	res,err = self:_connect(port)
-	if not res then
-		if self._timeout_error then	
-			return nil,'timeout'
-		end
-		return nil,err
+	if not res or self._timeout_error then
+		return finish_error(err)
 	end
 	
 	--log.debug('connected')
@@ -149,17 +159,17 @@ function request:exec(  )
 		self._ssl = ssl.connection.new( request.get_ssl_ctx(), self._connection)
 		self._connection = self._ssl
 		local res,err = self._ssl:configure()
-		if not res then
-			return nil,err
+		if not res or self._timeout_error then
+			return finish_error(err)
 		end
 		res,err = self._ssl:set_host(self._url.host)
-		if not res then
-			return nil,err
+		if not res or self._timeout_error then
+			return finish_error(err)
 		end
 		--log.debug('handshake')
 		res,err = self._ssl:handshake()
-		if not res then
-			return nil,err
+		if not res or self._timeout_error then
+			return finish_error(err)
 		end
 		--log.debug('handshake success')
 	end
@@ -176,16 +186,14 @@ function request:exec(  )
 		table.insert(send_data,self._body)
 	end
 	local res,err = self._connection:write(send_data)
-	if not res then
-		return nil,err
+	if not res or self._timeout_error then
+		return finish_error(err)
 	end
 	local p = self.parser.new(self.response)
 	
 	while true do
 		local resp,err = p:load(self._connection) 
-		if tmr then
-			tmr:stop()
-		end
+		stop_timer()
 		if resp then
 			if resp:get_code() == 302 or resp:get_code() == 301 then
 				resp:close()
