@@ -74,6 +74,12 @@ function dns.resolve( host )
 	return ip_list
 end
 
+---@param host string
+---@return uv.getaddrinfo.item[]?
+function dns.get_override(host)
+	return dns._override[host]
+end
+
 function dns.override(host,addr)
 	local over = dns._override[host] or {}
 	dns._override[host] = over

@@ -5,7 +5,6 @@ local ssl = require 'ssl'
 local class = require 'llae.class'
 local log = require 'llae.log'
 local fs = require 'llae.fs'
-local dns = require 'net.dns'
 local connection = require 'net.connection'
 
 ---@class net.http.request_args
@@ -15,6 +14,8 @@ local connection = require 'net.connection'
 ---@field timeout integer?
 ---@field version string?
 ---@field body string|userdata?
+---@field proxy string? socks5:// proxy URL
+---@field remote_dns boolean? resolve the target host on the proxy side
 
 ---@class net.http.request : net.http.headers
 ---@field baseclass net.http.headers
@@ -26,6 +27,8 @@ request.response = require 'net.http.request_response'
 
 request._create_connection = connection._create_connection
 request._configure_connection = connection._configure_connection
+request._resolve_host = connection._resolve_host
+request._resolve_on_proxy = connection._resolve_on_proxy
 
 function request.get_ssl_ctx() 
 	local http = require 'net.http'
@@ -82,7 +85,7 @@ end
 
 function request:resolve()
 	local err
-	self._ip_list,err = dns.resolve(self._url.host)
+	self._ip_list,err = self:_resolve_host(self._url.host)
 	if not self._ip_list then
 		return nil,err
 	end

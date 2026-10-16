@@ -142,6 +142,38 @@ local request = http.createRequest({
 - `body` (string): Request body
 - `timeout` (number): Request timeout in seconds
 - `version` (string): HTTP version (default: "1.1")
+- `proxy` (string, optional): SOCKS5 proxy URL, see [SOCKS5 proxy](#socks5-proxy)
+- `remote_dns` (boolean, optional): resolve the target host on the proxy side
+
+## SOCKS5 proxy
+
+Both HTTP and HTTPS requests can be sent through a SOCKS5 proxy:
+
+```lua
+local request = http.createRequest({
+    url = "https://api.example.com/data",
+    proxy = "socks5://user:password@127.0.0.1:1080"
+})
+```
+
+By default the target host name is resolved locally and the proxy receives an
+IP address (SOCKS5 `ATYP 0x01`/`0x04`). Set `remote_dns = true` to send the host
+name to the proxy as a domain name (SOCKS5 `ATYP 0x03`) and let the proxy
+resolve it. Use it when local DNS is unavailable or must not leak the target
+host name:
+
+```lua
+-- DNS resolution happens on the proxy
+local request = http.createRequest({
+    url = "https://internal.example.com/",
+    proxy = "socks5://127.0.0.1:1080",
+    remote_dns = true
+})
+```
+
+`remote_dns` has no effect without a proxy. Local `dns.override(host, addr)`
+entries always take precedence, which keeps it possible to redirect a host name
+to a fixed address even in remote resolution mode.
 
 ### Request Methods
 

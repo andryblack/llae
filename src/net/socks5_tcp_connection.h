@@ -38,6 +38,7 @@ namespace net {
             class write_connect_req;
             class connect_read_consumer;
             void on_connect_writed(int status);
+            void send_connect_request();
             bool on_connect_read(ssize_t nread, llae::buffer_ptr& buffer);
             void on_connect_stop_read();
             virtual void destroy() override final;

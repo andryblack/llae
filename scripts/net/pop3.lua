@@ -111,9 +111,8 @@ function pop3:connect( data )
 	self._cmd_con = self:_create_connection()
 
 
-	log.debug('resolve',addr)
 	local err
-	self._ip_list,err = uv.getaddrinfo(addr)
+	self._ip_list,err = self:_resolve_host(addr)
 	if not self._ip_list then
 		return nil,err
 	end
