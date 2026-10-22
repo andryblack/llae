@@ -583,7 +583,7 @@ function _M.offsetof( s , f )
 			local d = data_types[v[1]] or error('undefined type:' .. tostring(v[1]))
 			fs = d.size
 		end
-		r = r + s * (v[3] or 1)
+		r = r + fs * (v[3] or 1)
 	end
 	return nil
 end
