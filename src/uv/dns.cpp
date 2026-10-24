@@ -69,42 +69,47 @@ namespace uv {
 	}
 
 	void getaddrinfo_req::on_end(int status,struct addrinfo* res) {
+		std::vector<addrinfo_item> items;
+		if (status >= 0) {
+			struct addrinfo* ai = res;
+			while (ai) {
+				addrinfo_item item;
+				if (ai->ai_family == AF_INET) {
+					item.family = addrinfo_item::family_t::ipv4;
+				} else if (ai->ai_family == AF_INET6) {
+					item.family = addrinfo_item::family_t::ipv6;
+				} 
+				if (ai->ai_socktype == SOCK_STREAM) {
+					item.socktype = addrinfo_item::socktype_t::tcp;
+				} else if (ai->ai_socktype == SOCK_DGRAM) {
+					item.socktype = addrinfo_item::socktype_t::udp;
+				} else if (ai->ai_socktype == 0) {
+					item.socktype = addrinfo_item::socktype_t::any;
+				}
+				if (ai->ai_addr->sa_family == AF_INET) {
+					struct sockaddr_in *addr_in = (struct sockaddr_in *)ai->ai_addr;
+					char buf[INET_ADDRSTRLEN];
+					uv_inet_ntop(AF_INET, &(addr_in->sin_addr), buf, INET_ADDRSTRLEN);
+					item.addr = buf;
+				} else if (ai->ai_addr->sa_family == AF_INET6) {
+					struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)ai->ai_addr;
+					char buf[INET6_ADDRSTRLEN];
+					uv_inet_ntop(AF_INET6, &(addr_in6->sin6_addr), buf, INET6_ADDRSTRLEN);
+					item.addr = buf;
+				}
+				items.emplace_back(std::move(item));
+				ai = ai->ai_next;
+			}
+		}
+		// res is owned by libuv and must be released on any path, including the
+		// case when there is no waiting promise; uv_freeaddrinfo(NULL) is safe
+		uv_freeaddrinfo(res);
 		if (!m_promise) {
 			return;
 		}
 		if (status < 0) {
 			m_promise->set_result(uv::status_error::create(status));
 			return;
-		}
-		std::vector<addrinfo_item> items;
-		struct addrinfo* ai = res;
-		while (ai) {
-			addrinfo_item item;
-			if (ai->ai_family == AF_INET) {
-				item.family = addrinfo_item::family_t::ipv4;
-			} else if (ai->ai_family == AF_INET6) {
-				item.family = addrinfo_item::family_t::ipv6;
-			} 
-			if (ai->ai_socktype == SOCK_STREAM) {
-				item.socktype = addrinfo_item::socktype_t::tcp;
-			} else if (ai->ai_socktype == SOCK_DGRAM) {
-				item.socktype = addrinfo_item::socktype_t::udp;
-			} else if (ai->ai_socktype == 0) {
-				item.socktype = addrinfo_item::socktype_t::any;
-			}
-			if (ai->ai_addr->sa_family == AF_INET) {
-				struct sockaddr_in *addr_in = (struct sockaddr_in *)ai->ai_addr;
-				char buf[INET_ADDRSTRLEN];
-				uv_inet_ntop(AF_INET, &(addr_in->sin_addr), buf, INET_ADDRSTRLEN);
-				item.addr = buf;
-			} else if (ai->ai_addr->sa_family == AF_INET6) {
-				struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)ai->ai_addr;
-				char buf[INET6_ADDRSTRLEN];
-				uv_inet_ntop(AF_INET6, &(addr_in6->sin6_addr), buf, INET6_ADDRSTRLEN);
-				item.addr = buf;
-			}
-			items.emplace_back(std::move(item));
-			ai = ai->ai_next;
 		}
 		m_promise->set_result(std::move(items));
 	}
