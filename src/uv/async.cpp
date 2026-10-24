@@ -29,8 +29,10 @@ namespace uv {
     public:
         promise(async_wait* async) : llae::result_promise<void>(), m_async(async) {}
         ~promise() override {
-            m_async->release();
-            m_async.reset();
+            if (m_async) {
+                m_async->release();
+                m_async.reset();
+            }
         }
         void resolve() {
             if (m_async) {
@@ -58,6 +60,9 @@ namespace uv {
     void async_wait::on_async() {
         auto hold = common::intrusive_ptr<async_wait>(this);
         if (m_promise) {
+            // resolve() resumes the awaiting coroutine, which releases the last
+            // promise reference: keep it alive until we return
+            common::intrusive_ptr<promise> p(m_promise);
             m_promise->resolve();
         }
     }

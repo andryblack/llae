@@ -31,7 +31,7 @@ namespace llae {
             if (!p) {
                 l.error("async failed");
             }
-            return p->lawait(l).val;
+            return llae::await_promise(l,std::move(p));
         }
         static int async_function(lua_State* L) {
             auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -65,7 +65,7 @@ namespace llae {
             if (!p) {
                 l.error("async failed");
             }
-            return p->lawait(l).val;
+            return llae::await_promise(l,std::move(p));
         }
         static int async_function(lua_State* L) {
             auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -98,7 +98,7 @@ namespace llae {
             if (!p) {
                 l.error("async failed");
             }
-            return p->lawait(l).val;
+            return llae::await_promise(l,std::move(p));
         }
         static int async_function(lua_State* L) {
             auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -131,7 +131,7 @@ namespace llae {
             if (!p) {
                 l.error("async failed");
             }
-            return p->lawait(l).val;
+            return llae::await_promise(l,std::move(p));
         }
         static int async_function(lua_State* L) {
             auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
@@ -164,7 +164,7 @@ namespace llae {
             if (!p) {
                 l.error("async failed");
             }
-            return p->lawait(l).val;
+            return llae::await_promise(l,std::move(p));
         }
         static int async_function(lua_State* L) {
             auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));

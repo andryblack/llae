@@ -38,6 +38,9 @@ namespace llae {
         bool is_pending() const { return !m_resolved; }
         bool is_resolved() const { return m_resolved; }
         
+        /// Pushes the resolved result onto the stack and returns values count.
+        int push_result(lua::state& l) { return push(l); }
+
         lua::multiret lawait(lua::state& l);
 
         template <typename F>
@@ -51,6 +54,15 @@ namespace llae {
         static void lbind(lua::state& l);
     };
     using promise_base_ptr = common::intrusive_ptr<promise_base>;
+
+    /// Suspends the current coroutine until the promise is resolved and pushes
+    /// its result. Returns the values count when the promise is already
+    /// resolved; otherwise never returns: the coroutine is suspended and the
+    /// result is pushed later by the yield continuation. The C++ frame of the
+    /// caller is discarded on yield (lua_yieldk), so nothing there may own the
+    /// promise — its reference is handed over to the continuation, which
+    /// releases it on resume.
+    int await_promise(lua::state& l,promise_base_ptr promise);
 
     template <typename R>
     class promise : public promise_base {

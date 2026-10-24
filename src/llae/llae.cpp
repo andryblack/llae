@@ -73,6 +73,14 @@ namespace llae {
         return {1};
     }
 
+    /// live meta objects count, for leak regression tests
+    static lua::multiret lua_debug_object_count(lua::state& l) {
+        size_t count = 0;
+        LLAE_DIAG(count = meta::object::get_total_count();)
+        l.pushinteger(static_cast<lua_Integer>(count));
+        return {1};
+    }
+
     static int lua_get_host_platform(lua_State* L) {
     	lua::state l(L);
 #if defined(__linux__)
@@ -120,6 +128,7 @@ int luaopen_llae(lua_State* L) {
     lua::bind::function(l, "get_host_platform", llae::lua_get_host_platform );
     lua::bind::function(l, "set_error_handler", set_error_handler );
     lua::bind::function(l, "get_stack", llae::lua_get_stack );
+    lua::bind::function(l, "debug_object_count", llae::lua_debug_object_count );
 
     lua::bind::object<llae::buffer>::get_metatable(l);
 	l.setfield(-2,"buffer");

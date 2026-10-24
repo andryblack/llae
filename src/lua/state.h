@@ -138,6 +138,11 @@ namespace lua {
         bool isinteger(int idx) { return lua_isinteger(m_L,idx); }
 
         bool isyieldable() const { return lua_isyieldable(m_L); }
+        /// Yields with a continuation: `k` is called on resume and its return
+        /// value is the number of results it has pushed.
+        int yieldk(int nresults,lua_KContext ctx,lua_KFunction k) {
+            return lua_yieldk(m_L,nresults,ctx,k);
+        }
         
         bool next(int idx) const { return lua_next(m_L,idx) != 0; }
 
