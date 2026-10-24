@@ -49,7 +49,10 @@ namespace uv {
             m_poll_promise.reset();
             return llae::result_promise_forward_error<int>(status_error::create(res));
         }
-        add_ref();
+        // no extra reference is taken for the pending poll: the object lives
+        // while someone references it, and when the last reference goes away
+        // handle::destroy() closes the poll handle (no callback after that)
+        // and on_closed() rejects the promise
         return m_poll_promise;
     }
 
@@ -70,7 +73,6 @@ namespace uv {
 		poll* self = static_cast<poll*>(handle->data);
         uv_poll_stop(handle);
         self->on_poll(status,events);
-        self->remove_ref();
 	}
 	void poll::on_closed() {
 		reject(llae::string_error::create("poll closed"));
