@@ -188,7 +188,7 @@ namespace ssl {
     }
 
     bool connection::do_write() {
-        SSL_DEBUG("do_write " << m_write_buffers.get_write_size());
+        SSL_DEBUG("do_write " << m_write_buffers.get_total_size());
         
         m_state = S_WRITE;
         auto& l = llae::app::get(m_stream->get_stream()->loop).lua();
@@ -295,6 +295,10 @@ namespace ssl {
             m_write_buffers.release();
             return;
         }
+        // the operation is finished (success, uv/ssl error or abort from close):
+        // write buffers are not needed anymore. Release Lua string refs before
+        // the resume, so the resumed code can start a new write immediately
+        m_write_buffers.reset(l);
         if (m_write_cont.valid()) {
             m_write_cont.push(l);
 			auto toth = l.tothread(-1);
@@ -609,8 +613,10 @@ namespace ssl {
             if (m_active_op) {
                 finish_status(m_active_op);
             } else {
-                m_write_cont.release();
-                m_write_buffers.release();
+                // the lua state is alive here, so release refs via reset() and
+                // not release(): otherwise the registry entry leaks forever
+                m_write_cont.reset(l);
+                m_write_buffers.reset(l);
             }
         }
         stop_read();
