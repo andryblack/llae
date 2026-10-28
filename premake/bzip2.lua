@@ -2,7 +2,7 @@ local utils = require 'utils'
 local _M = {
 	name = 'bzip2',
 	version = '1.0.8',
-	url = 'https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz',
+	url = 'https://mirrors.kernel.org/sourceware/bzip2/bzip2-1.0.8.tar.gz',
 	archive = 'tar.gz',
 }
 

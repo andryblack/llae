@@ -1,7 +1,7 @@
 name = 'xz'
 version = '5.4.1'
 archive = name .. '-' .. version .. '.tar.gz'
-url = 'https://tukaani.org/xz/' .. archive 
+url = 'https://github.com/tukaani-project/xz/releases/download/v' .. version .. '/' .. archive
 hash = '7e7454778b4cfae238a7660521b29b38'
 dir = name .. '-' .. version
 

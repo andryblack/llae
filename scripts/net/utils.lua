@@ -6,8 +6,9 @@ local log = require 'llae.log'
 ---@param dst string
 ---@param h crypto.md?
 ---@param p llae.log.progress?
+---@param timeout integer? connect/handshake/headers timeout in seconds
 ---@return boolean,string?
-local function download_file_impl(url,dst,headers,h,p)
+local function download_file_impl(url,dst,headers,h,p,timeout)
 	local uri = (require 'net.url').parse(url)
 	fs.unlink(dst)
 	if uri.scheme == 'ftp' then
@@ -33,10 +34,14 @@ local function download_file_impl(url,dst,headers,h,p)
 		local req = http.createRequest{
 			method = 'GET',
 			url = url,
-			headers = headers
+			headers = headers,
+			timeout = timeout
 		}
 
-		local resp = assert(req:exec())
+		local resp,reqerr = req:exec()
+		if not resp then
+			return false, reqerr
+		end
 		local code = resp:get_code()
 		if code ~= 200 then
 			resp:close()
@@ -81,6 +86,7 @@ end
 ---@field log llae.log?
 ---@field progress_func fun():llae.log.progress?
 ---@field headers table<string,string>?
+---@field timeout integer? connect/handshake/headers timeout in seconds (default 60)
 
 ---@param url string
 ---@param dst string
@@ -126,7 +132,7 @@ function utils.download_file(url,dst,options)
             headers[name] = value
         end
     end
-    local ok,err = download_file_impl(url,dst,headers,h,p)
+    local ok,err = download_file_impl(url,dst,headers,h,p,(options and options.timeout) or 60)
     if h then
         local fhash = tostring(assert(h:finish()):hex_encode())
         ---@diagnostic disable-next-line: need-check-nil

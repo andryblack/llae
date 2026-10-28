@@ -1,7 +1,7 @@
 name = 'bzip2'
 version = '1.0.8'
 archive = 'bzip2-' .. version .. '.tar.gz'
-url = 'https://sourceware.org/pub/bzip2/' .. archive
+url = 'https://mirrors.kernel.org/sourceware/bzip2/' .. archive
 hash = '67e051268d0c475ea773822f7500d0e5'
 dir = name .. '-' .. version
 

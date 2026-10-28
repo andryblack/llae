@@ -9,11 +9,14 @@ RUN cp premake-core/bin/release/premake5 /bin/premake5
 RUN rm -rf premake-core
 ARG CACHE_BREAKER
 RUN git clone https://github.com/andryblack/llae.git
-RUN cd llae && premake5 download
-RUN cd llae && premake5 unpack
+RUN --mount=type=bind,from=dl,target=/root/.llae/dl,rw \
+    cd llae \
+ && LLAE_DL_DIR=/root/.llae/dl premake5 download \
+ && LLAE_DL_DIR=/root/.llae/dl premake5 unpack
 RUN cd llae && premake5 gmake2
 RUN make -C llae/build/bootstrap verbose=1 config=release 
-RUN cd llae && LUA_PATH="tools/?.lua;scripts/?.lua" ./bin/llae-bootstrap bootstrap --development
+RUN --mount=type=bind,from=dl,target=/root/.llae/dl,rw \
+    cd llae && LUA_PATH="tools/?.lua;scripts/?.lua" LLAE_DL_DIR=/root/.llae/dl ./bin/llae-bootstrap bootstrap --development
 RUN ln -s $HOME/.llae/bin/llae /bin/llae
 RUN rm /bin/premake5
 RUN ln -s $HOME/.llae/bin/premake5 /bin/premake5

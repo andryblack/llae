@@ -128,6 +128,8 @@ steps:
   volumes:
     - name: docker_sock
       path: /var/run/docker.sock
+    - name: dl_cache
+      path: /tmp/llae-dl
   commands:
     - 'echo "commit: ${DRONE_COMMIT_SHA}"'
-    - docker build -f docker/llae.dockerfile -t llae:latest --build-arg CACHE_BREAKER=$DRONE_COMMIT_SHA .
+    - docker build -f docker/llae.dockerfile -t llae:latest --build-arg CACHE_BREAKER=$DRONE_COMMIT_SHA --build-context dl=/tmp/llae-dl .
