@@ -146,6 +146,17 @@ namespace {
 	   	}
 	   	std::string name(l.optstring(3,""));
 	   	std::string pass(l.optstring(4,""));
+		// RFC 1929: ULEN and PLEN are one octet each, and the whole auth
+		// request (01 ULEN USER PLEN PASS) must fit the request buffer
+		if (name.length() > 255) {
+			l.argerror(3, "socks5 user name too long");
+		}
+		if (pass.length() > 255) {
+			l.argerror(4, "socks5 password too long");
+		}
+		if (name.length() + pass.length() > 509) {
+			l.argerror(3, "socks5 user name and password are too long");
+		}
 
 		common::intrusive_ptr<tcp_connection> connection{new tcp_connection(llae::app::get(l).loop(),addr,
 			std::move(name),std::move(pass))};
@@ -338,6 +349,10 @@ namespace {
 
 		if (uv_ip4_addr(host.data(), port, (struct sockaddr_in*)&m_connect_addr) &&
 	      	uv_ip6_addr(host.data(), port, (struct sockaddr_in6*)&m_connect_addr)) {
+            // domain name is sent as ATYP=0x03 with one octet length
+            if (host.size() > 255) {
+                return llae::make_result_promise_string_error<void>("SOCKS5: host name too long");
+            }
             m_connect_domain = host;
             auto addr4 = (struct sockaddr_in *)&m_connect_addr;
             addr4->sin_port = htons(port);
