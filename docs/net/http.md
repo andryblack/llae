@@ -146,6 +146,9 @@ local request = http.createRequest({
 - `remote_dns` (boolean, optional): resolve the target host on the proxy side
 - `ssl_ctx` (`ssl.ctx`, optional): SSL context for HTTPS; defaults to the shared
   context returned by `http.get_ssl_ctx()`
+- `skip_default_headers` (table, optional): default headers the client must not
+  add. Keys are header names, case-insensitive: `connection`, `host`,
+  `accept-encoding`, `content-length`. Explicitly passed `headers` are always sent.
 
 ## SOCKS5 proxy
 

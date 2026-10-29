@@ -6,6 +6,7 @@ local class = require 'llae.class'
 local log = require 'llae.log'
 local fs = require 'llae.fs'
 local connection = require 'net.connection'
+local http_headers = require 'net.http.headers'
 
 ---@class net.http.request_args
 ---@field url string
@@ -17,11 +18,12 @@ local connection = require 'net.connection'
 ---@field proxy string? socks5:// proxy URL
 ---@field remote_dns boolean? resolve the target host on the proxy side
 ---@field ssl_ctx ssl.ctx? SSL context for HTTPS, defaults to the shared context
+---@field skip_default_headers table<string,boolean>? default headers to omit: connection, host, accept-encoding, content-length
 
 ---@class net.http.request : net.http.headers
 ---@field baseclass net.http.headers
 ---@field new fun(args: net.http.request_args):net.http.request
-local request = class(require 'net.http.headers','net.http.request')
+local request = class(http_headers,'net.http.request')
 
 request.parser = require 'net.http.request_parser'
 request.response = require 'net.http.request_response'
@@ -55,6 +57,7 @@ function request:_init( args )
 	self._body = args.body or ''
 	self._timeout = args.timeout
 	self._ssl_ctx = args.ssl_ctx
+	self._skip_default_headers = http_headers.new(args.skip_default_headers)
 end
 
 
@@ -148,18 +151,18 @@ function request:exec(  )
 	
 	--log.debug('connected')
 
-	if self._body and self._body ~= '' then
+	if self._body and self._body ~= '' and not self._skip_default_headers:get_header('Content-Length') then
 		self:set_header('Content-Length',tostring(#self._body))
 	end
-	if not self:get_header('Connection') then
+	if not self._skip_default_headers:get_header('Connection') and not self:get_header('Connection') then
 		self:set_header('Connection', 'close')
 	end
 
 	local headers = {}
-	if not self:get_header('Host') then
+	if not self._skip_default_headers:get_header('Host') and not self:get_header('Host') then
 		table.insert(headers,'Host: ' .. self._url.host .. (self._url.port and (':'..self._url.port) or ''))
 	end
-	if not self:get_header('Accept-Encoding') then
+	if not self._skip_default_headers:get_header('Accept-Encoding') and not self:get_header('Accept-Encoding') then
 		table.insert(headers,'Accept-Encoding: deflate, gzip')
 	end
 	self:_write_headers(headers)

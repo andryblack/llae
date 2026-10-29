@@ -211,3 +211,44 @@ Connection: close
 
 ]])
 end
+
+function TestHttpRequest:test_request_skip_default_headers()
+  local req
+  local mock_connection
+  request._create_connection = function()
+    mock_connection = MockConnection.new(req)
+    return mock_connection
+  end
+
+  req = request.new{
+    url = "http://example.com",
+    method = "POST",
+    body = "abc",
+    headers = {
+      ['X-Test'] = 'test'
+    },
+    skip_default_headers = {
+      Connection = true,
+      HOST = true,
+      ['accept-encoding'] = true,
+      ['content-length'] = true
+    },
+    timeout = 1
+  }
+
+  -- Override resolve at instance level, not class level
+  function req.resolve(self)
+    self._ip_list = {{addr = "127.0.0.1", socktype = "tcp"}}
+    return true
+  end
+
+  local response, err = req:exec()
+  lu.assertNil(response)
+  lu.assertEquals(err, "timeout")
+
+  mock_connection:check_write([[
+POST / HTTP/1.1
+X-Test: test
+
+abc]])
+end
