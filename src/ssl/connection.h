@@ -3,12 +3,15 @@
 
 #include "meta/object.h"
 #include "llae-private/mbedtls/ssl.h"
+#include "llae/result.h"
 #include "uv/stream.h"
 #include "ctx.h"
 #include <deque>
 
 namespace ssl {
 
+	/// SSL connection for secure communication over TCP streams.
+	/// @luabind
 	class connection : public uv::stream_read_consumer, public uv::readable_stream {
 		META_OBJECT
 	private:
@@ -112,18 +115,62 @@ namespace ssl {
         common::intrusive_ptr<connection> m_active_op_lock;
         
    public:
-		explicit connection( ctx_ptr&& ctx, uv::stream_ptr&& stream );
+		/// Creates a new SSL connection with a context and underlying stream.
+		/// @lparam(ctx,ssl.ctx) The SSL context
+		/// @lparam(stream,uv.stream) The underlying stream
+		/// @lreturn(instance,ssl.connection)
+		/// @luabind(name=new)
+		explicit connection( ssl::ctx_ptr&& ctx, uv::stream_ptr&& stream );
 		~connection();
-		static void lbind(lua::state& l);
-		lua::multiret configure(lua::state& l);
-		lua::multiret set_host(lua::state& l,const char* host);
+		/// Configures the SSL connection with default settings.
+		/// @lreturn(result,boolean?)
+		/// @lreturn(error,string?)
+		/// @luabind
+		llae::result<void> configure();
+		/// Sets the hostname for SSL certificate verification.
+		/// @lparam(host,string) The hostname to verify against
+		/// @lreturn(result,boolean?)
+		/// @lreturn(error,string?)
+		/// @luabind
+		llae::result<void> set_host(const char* host);
+		/// Performs the SSL handshake with the remote peer.
+		/// @lreturn(result,boolean?)
+		/// @lreturn(error,string?)
+		/// @luabind
 		lua::multiret handshake(lua::state& l);
+		/// Writes data to the SSL connection.
+		/// @lparam(data,string|llae.buffer_base) The data to write
+		/// @lreturn(result,boolean?)
+		/// @lreturn(error,string?)
+		/// @luabind
         lua::multiret write(lua::state& l);
+		/// Reads data from the SSL connection.
+		/// @lreturn(data,llae.buffer?)
+		/// @lreturn(error,string?)
+		/// @luabind
         lua::multiret read(lua::state& l);
+		/// Closes the SSL connection.
+		/// @lreturn(result,boolean?)
+		/// @lreturn(error,string?)
+		/// @luabind
         lua::multiret close(lua::state& l);
+		/// Initiates the SSL shutdown sequence.
+		/// @lreturn(result,boolean?)
+		/// @lreturn(error,string?)
+		/// @luabind
         lua::multiret shutdown(lua::state& l);
+		/// Adds a read buffer to the SSL connection.
+		/// @lparam(buffer,llae.buffer) The buffer to add
+		/// @luabind
         void add_read_buffer(llae::buffer_ptr&& b) { readable_stream::add_read_buffer(std::move(b)); }
+		/// Starts reading from the SSL connection.
+		/// @lparam(consumer,uv.stream_read_consumer) The read consumer
+		/// @lreturn(result,integer?)
+		/// @lreturn(error,string?)
+		/// @luabind
         int start_read( const uv::stream_read_consumer_ptr& consumer ) override;
+		/// Stops reading from the SSL connection.
+		/// @luabind
         void stop_read() override;
 	};
 

@@ -22,7 +22,7 @@ function ctx.new(random) end
 function ctx:init(pers) end
 
 --- Loads a certificate from buffer data (PEM or DER format).
----@param cert_data llae.buffer_base The certificate data
+---@param cert_data llae.buffer_base|string The certificate data
 ---@return boolean? True on success
 ---@return string? Error message if loading fails
 function ctx:load_cert(cert_data) end

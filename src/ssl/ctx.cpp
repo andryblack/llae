@@ -8,6 +8,8 @@
 #include "llae-private/mbedtls/error.h"
 #include <iostream>
 #include <cstring>
+#include <string>
+#include <string_view>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -18,16 +20,19 @@ META_OBJECT_INFO(ssl::ctx,meta::object)
 
 namespace ssl {
 
-	
 #if defined(__linux__)
-	static const char* default_cafile = "/etc/ssl/certs/ca-certificates.crt";
+	const char* ctx::default_cafile = "/etc/ssl/certs/ca-certificates.crt";
 #elif defined(_WIN32)
-	static const char* default_cafile = nullptr;
+	const char* ctx::default_cafile = nullptr;
 #else
-	static const char* default_cafile = "/etc/ssl/cert.pem";
+	const char* ctx::default_cafile = "/etc/ssl/cert.pem";
 #endif
-	using crypto::push_error;
-	
+
+	static std::string ssl_error_string(const char* what,int code) {
+		char buffer[128] = {0};
+		mbedtls_strerror(code,buffer,sizeof(buffer));
+		return std::string(what) + ", code:" + std::to_string(code) + ", " + buffer;
+	}
 
 	ctx::ctx( crypto::random_ptr&& r) : m_random(std::move(r)) {
         if (!m_random) {
@@ -60,36 +65,30 @@ namespace ssl {
    		mbedtls_debug_set_threshold(v);
    	}
 
-	lua::multiret ctx::init(lua::state& l) {
-		return m_random->lseed(l);
+	llae::result<void> ctx::init(const llae::buffer_view& pers) {
+		return crypto::make_result(m_random->seed(pers));
 	}
 
-	lua::multiret ctx::load_cert(lua::state& l) {
-		auto data = lua::stack<llae::buffer_base_ptr>::get(l,2);
-		if (!data) {
-			l.pushnil();
-			l.pushstring("need buffer with cert");
-			return {2};
+	llae::result<void> ctx::load_cert(const llae::buffer_view& data) {
+		if (data.empty()) {
+			return llae::string_error::create("need buffer with cert");
 		}
 
-        if (data->find("-----BEGIN ")) {
-			auto new_data = llae::buffer::alloc(data->get_len()+1);
-			std::memcpy(new_data->get_base(),data->get_base(),data->get_len());
-        	static_cast<unsigned char*>(new_data->get_base())[data->get_len()]=0;
-        	new_data->set_len(data->get_len()+1);
-			data = new_data;
-        }
-		
-
-		int ret;
-		if( ( ret = mbedtls_x509_crt_parse( &m_cacert, static_cast<const unsigned char*>(data->get_base()), data->get_len() ) ) != 0 ) {
-		    l.pushnil();
-			push_error(l,"mbedtls_x509_crt_parse failed, code:%d, %s",ret);
-			return {2};
+		const void* base = data.get_base();
+		size_t len = data.get_len();
+		std::string pem;
+		if (std::string_view(static_cast<const char*>(base),len).find("-----BEGIN ") != std::string_view::npos) {
+			pem.assign(static_cast<const char*>(base),len);
+			pem.push_back('\0');
+			base = pem.data();
+			len = pem.size();
 		}
 
-		l.pushboolean(true);
-		return {1};
+		int ret = mbedtls_x509_crt_parse(&m_cacert,static_cast<const unsigned char*>(base),len);
+		if (ret != 0) {
+			return llae::string_error::create(ssl_error_string("mbedtls_x509_crt_parse failed",ret));
+		}
+		return llae::result<void>{};
 	}
 
 #ifdef _WIN32
@@ -181,15 +180,6 @@ namespace ssl {
 #else
 		return {0};
 #endif
-	}
-
-	void ctx::lbind(lua::state& l) {
-		lua::bind::value(l,"default_cafile",default_cafile);
-        lua::bind::constructor<ctx,crypto::random_ptr&&>(l);
-		lua::bind::function(l,"init",&ctx::init);
-		lua::bind::function(l,"set_debug_threshold",&ctx::set_debug_threshold);
-		lua::bind::function(l,"load_cert",&ctx::load_cert);
-		lua::bind::function(l,"load_system_certs",&ctx::load_system_certs);
 	}
 
 }

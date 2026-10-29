@@ -48,6 +48,9 @@ bind_headers = {
 	},
 	{
 		dir = '${dir}/src/net',
+	},
+	{
+		dir = '${dir}/src/ssl',
 	}
 }
 

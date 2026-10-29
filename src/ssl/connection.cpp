@@ -6,6 +6,8 @@
 #include "llae/logger.h"
 #include "crypto/crypto.h"
 #include "llae-private/mbedtls/debug.h"
+#include "llae-private/mbedtls/error.h"
+#include <string>
 
 
 META_OBJECT_INFO(ssl::connection,meta::object)
@@ -20,6 +22,12 @@ META_OBJECT_INFO(ssl::connection,meta::object)
 
 namespace ssl {
     using crypto::push_error;
+
+    static llae::error_ptr ssl_error(const char* what,int code) {
+        char buffer[128] = {0};
+        mbedtls_strerror(code,buffer,sizeof(buffer));
+        return llae::string_error::create(std::string(what) + ", code:" + std::to_string(code) + ", " + buffer);
+    }
 
 	connection::connection( ctx_ptr&& ctx, uv::stream_ptr&& stream ) : m_ctx(std::move(ctx)), m_stream(std::move(stream)) {
         
@@ -63,43 +71,33 @@ namespace ssl {
 		self->on_write_complete(status);
 	}
 
-	lua::multiret connection::configure(lua::state& l) {
+	llae::result<void> connection::configure() {
         int ret = mbedtls_ssl_config_defaults( &m_conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT );
 		if (ret != 0) {
-			l.pushnil();
-            ::ssl::push_error(l,"mbedtls_ssl_config_defaults failed, code:%d, %s",ret);
-			return {2};
+			return ssl_error("mbedtls_ssl_config_defaults failed",ret);
 		}
 		mbedtls_ssl_conf_dbg( &m_conf, &connection::dbg_cb, this );
 
 		ret = m_ctx->configure(&m_conf);
 		if (ret != 0) {
-			l.pushnil();
-            ::ssl::push_error(l,"configure failed, code:%d, %s",ret);
-			return {2};
+			return ssl_error("configure failed",ret);
 		}
 
 		ret = mbedtls_ssl_setup( &m_ssl, &m_conf );
 		if (ret != 0) {
-			l.pushnil();
-            ::ssl::push_error(l,"mbedtls_ssl_setup failed, code:%d, %s",ret);
-			return {2};
+			return ssl_error("mbedtls_ssl_setup failed",ret);
 		}
 
 		mbedtls_ssl_set_bio( &m_ssl, this, &connection::send_cb, &connection::recv_cb, NULL );
-		l.pushboolean(true);
-		return {1};
+		return llae::result<void>{};
 	}
 
-	lua::multiret connection::set_host(lua::state& l,const char* host) {
+	llae::result<void> connection::set_host(const char* host) {
 		int ret = mbedtls_ssl_set_hostname( &m_ssl, host );
 		if (ret != 0) {
-			l.pushnil();
-            ::ssl::push_error(l,"mbedtls_ssl_set_hostname failed, code:%d, %s",ret);
-			return {2};
+			return ssl_error("mbedtls_ssl_set_hostname failed",ret);
 		}
-		l.pushboolean(true);
-		return {1};
+		return llae::result<void>{};
 	}
 
 	void connection::push_error(lua::state& l) {
@@ -713,18 +711,4 @@ namespace ssl {
         SSL_DEBUG("stop_read");
         uv::readable_stream::stop_read();
     }
-	void connection::lbind(lua::state& l) {
-        
-        lua::bind::constructor<connection, lua::check<ctx_ptr>, lua::check<uv::stream_ptr> >(l);
-		lua::bind::function(l,"configure",&connection::configure);
-		lua::bind::function(l,"set_host",&connection::set_host);
-		lua::bind::function(l,"handshake",&connection::handshake);
-        lua::bind::function(l,"write",&connection::write);
-        lua::bind::function(l,"read",&connection::read);
-        lua::bind::function(l,"close",&connection::close);
-        lua::bind::function(l,"shutdown",&connection::shutdown);
-        lua::bind::function(l,"start_read",&connection::start_read);
-        lua::bind::function(l,"stop_read",&connection::stop_read);
-        lua::bind::function(l,"add_read_buffer",&connection::add_read_buffer);
-	}
 }

@@ -144,6 +144,8 @@ local request = http.createRequest({
 - `version` (string): HTTP version (default: "1.1")
 - `proxy` (string, optional): SOCKS5 proxy URL, see [SOCKS5 proxy](#socks5-proxy)
 - `remote_dns` (boolean, optional): resolve the target host on the proxy side
+- `ssl_ctx` (`ssl.ctx`, optional): SSL context for HTTPS; defaults to the shared
+  context returned by `http.get_ssl_ctx()`
 
 ## SOCKS5 proxy
 
@@ -174,6 +176,49 @@ local request = http.createRequest({
 `remote_dns` has no effect without a proxy. Local `dns.override(host, addr)`
 entries always take precedence, which keeps it possible to redirect a host name
 to a fixed address even in remote resolution mode.
+
+## Custom CA certificates
+
+HTTPS certificates are verified against the platform CA bundle. Additional CA
+certificates can be added to the shared client SSL context; already loaded
+certificates are kept:
+
+```lua
+local http = require 'net.http'
+local fs = require 'llae.fs'
+
+local cert = assert(fs.load_file(fs.home() .. '/.mitmproxy/mitmproxy-ca-cert.pem'))
+assert(http.get_ssl_ctx():load_cert(cert))
+```
+
+Alternatively, create a separate context with
+`http.create_ssl_ctx(load_default_cert)` and pass it to the request via the
+optional `ssl_ctx` argument. `load_default_cert` is a required boolean: `true`
+loads the platform CA bundle, `false` starts with an empty CA chain:
+
+```lua
+local ctx = http.create_ssl_ctx(true)  -- platform CAs
+assert(ctx:load_cert(cert))
+
+local isolated = http.create_ssl_ctx(false) -- only explicitly loaded certs
+assert(isolated:load_cert(cert))
+
+local response = http.createRequest({
+    url = "https://api.example.com/data",
+    ssl_ctx = ctx,
+}):exec()
+```
+
+For `mitmproxy`, trust its CA this way and run it in SOCKS5 mode (the HTTP
+client supports SOCKS5 proxies):
+
+```lua
+local response = http.createRequest({
+    url = "https://api.example.com/data",
+    proxy = "socks5://127.0.0.1:1080",
+    remote_dns = true,
+}):exec()
+```
 
 ### Request Methods
 

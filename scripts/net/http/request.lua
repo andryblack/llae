@@ -16,6 +16,7 @@ local connection = require 'net.connection'
 ---@field body string|userdata?
 ---@field proxy string? socks5:// proxy URL
 ---@field remote_dns boolean? resolve the target host on the proxy side
+---@field ssl_ctx ssl.ctx? SSL context for HTTPS, defaults to the shared context
 
 ---@class net.http.request : net.http.headers
 ---@field baseclass net.http.headers
@@ -30,7 +31,13 @@ request._configure_connection = connection._configure_connection
 request._resolve_host = connection._resolve_host
 request._resolve_on_proxy = connection._resolve_on_proxy
 
-function request.get_ssl_ctx() 
+--- Returns the SSL context used by this request for HTTPS.
+--- When no custom `ssl_ctx` was passed, returns the shared HTTP context.
+---@return ssl.ctx
+function request:get_ssl_ctx()
+	if self and self._ssl_ctx then
+		return self._ssl_ctx
+	end
 	local http = require 'net.http'
 	return http.get_ssl_ctx()
 end
@@ -47,6 +54,7 @@ function request:_init( args )
 	self._version = args.version or '1.1'
 	self._body = args.body or ''
 	self._timeout = args.timeout
+	self._ssl_ctx = args.ssl_ctx
 end
 
 
@@ -159,7 +167,7 @@ function request:exec(  )
 	if self._url.scheme == 'https' then
 		--log.debug('open ssl connection')
 		self._tcp = self._connection
-		self._ssl = ssl.connection.new( request.get_ssl_ctx(), self._connection)
+		self._ssl = ssl.connection.new( self:get_ssl_ctx(), self._connection)
 		self._connection = self._ssl
 		local res,err = self._ssl:configure()
 		if not res or self._timeout_error then
