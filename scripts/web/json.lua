@@ -1,5 +1,6 @@
 local class = require 'llae.class'
 local json = require 'json'
+local media_type = require 'web.media_type'
 
 ---@class web.json : web.middle
 ---@field new fun(): web.json
@@ -12,7 +13,7 @@ function middle:use( app )
 	self._app = app
 	app:register_handler( function (request, resp )
 		local t = request:get_header('Content-Type')
-		if t == 'application/json' then
+		if media_type.is(t, 'application/json') then
 			request.body = request.body or request:read_body()
 			request.json,request.json_error = json.decode(request.body,true)
 		end
