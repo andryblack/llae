@@ -141,6 +141,10 @@ local request = http.createRequest({
 - `headers` (table): Request headers
 - `body` (string): Request body
 - `timeout` (number): Request timeout in seconds
+- `connect_timeout` (number, optional): Timeout in seconds for a single
+  connection attempt. When an address does not connect within this timeout,
+  its connection is closed and the next resolved address is tried. This is
+  independent of `timeout`, which still bounds the whole request.
 - `version` (string): HTTP version (default: "1.1")
 - `proxy` (string, optional): SOCKS5 proxy URL, see [SOCKS5 proxy](#socks5-proxy)
 - `remote_dns` (boolean, optional): resolve the target host on the proxy side

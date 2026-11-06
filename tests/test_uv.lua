@@ -38,6 +38,30 @@ function TestUV:test_ip6_addr_binary()
     lu.assertEquals(ip, '\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10')
 end
 
+function TestUV:test_getaddrinfo_ip6_scope()
+    local uname = assert(uv.os.uname())
+    if uname.sysname:find('Windows') then
+        lu.skip('numeric IPv6 scope ids are platform specific on Windows')
+    end
+    local ifname = uv.if_indextoname(1)
+    if not ifname then
+        lu.skip('no interface with index 1')
+    end
+    local host = 'fe80::1%' .. ifname
+    local list = assert(uv.getaddrinfo(host))
+    lu.assertNotEquals(#list, 0)
+    local found = false
+    for _,v in ipairs(list) do
+        if v.family == 'ip6' then
+            found = true
+            lu.assertEquals(v.addr, host)
+            -- the textual address with the zone must be accepted back
+            assert(uv.ip6_addr(v.addr))
+        end
+    end
+    lu.assertTrue(found)
+end
+
 function TestUV:test_funcs()
     uv.exepath()
     uv.cwd()

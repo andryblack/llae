@@ -27,6 +27,9 @@ namespace uv {
 			unknown
 		};
 		socktype_t socktype = socktype_t::any;
+		/// Numeric address. IPv6 link-local addresses keep their zone as
+		/// `%<ifname>` (POSIX) or `%<scope id>` (Windows), so the value can be
+		/// passed directly to uv_ip6_addr() when connecting.
 		std::string addr;
 	};
 

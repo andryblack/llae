@@ -12,7 +12,8 @@ local http_headers = require 'net.http.headers'
 ---@field url string
 ---@field headers table<string,string|string[]>?
 ---@field method string?
----@field timeout integer?
+---@field timeout number?
+---@field connect_timeout number? timeout for a single connect attempt
 ---@field version string?
 ---@field body string|userdata?
 ---@field proxy string? socks5:// proxy URL
@@ -56,6 +57,7 @@ function request:_init( args )
 	self._version = args.version or '1.1'
 	self._body = args.body or ''
 	self._timeout = args.timeout
+	self._connect_timeout = args.connect_timeout
 	self._ssl_ctx = args.ssl_ctx
 	self._skip_default_headers = http_headers.new(args.skip_default_headers)
 end
@@ -75,21 +77,62 @@ function request:get_path(  )
 	return p
 end
 
+--- Try resolved addresses one by one. When connect_timeout is set, every
+--- attempt has its own timeout, so a blackholed address does not abort the
+--- whole request: it is closed and the next address is tried.
+--- The request-wide timeout is not affected by this and still bounds the whole
+--- request (including all connect attempts).
+---@param port integer
+---@return boolean?
+---@return string?
 function request:_connect( port )
-	local ip = nil
+	local attempts = 0
+	local timed_out = 0
 	for _,v in ipairs(self._ip_list) do
 		if v.addr and (v.socktype=='tcp' or v.socktype=='any') and not self._timeout_error then
 			local ip = v.addr
+			attempts = attempts + 1
 			--log.debug('connect to',ip,port)
-			self._connection = self:_create_connection()
-			local res,err = self._connection:connect(ip,port)
-			if not res then
-				log.debug('failed connect to',ip,port,err)
-				self._connection:close()
-			else
+			local connection = self:_create_connection()
+			self._connection = connection
+			local attempt = { done = false, timed_out = false }
+			local tmr
+			if self._connect_timeout then
+				tmr = uv.timer.new()
+				tmr:start(function()
+					if attempt.done then
+						return
+					end
+					attempt.done = true
+					attempt.timed_out = true
+					log.debug('connect timeout to',ip,port)
+					connection:close()
+				end,math.floor(self._connect_timeout*1000))
+			end
+			local res,err = connection:connect(ip,port)
+			attempt.done = true
+			if tmr then
+				tmr:stop()
+			end
+			if res and not attempt.timed_out then
 				return res
 			end
+			if attempt.timed_out then
+				timed_out = timed_out + 1
+			else
+				log.debug('failed connect to',ip,port,err)
+			end
+			connection:close()
+			-- The request-wide timeout (for example one set by the caller
+			-- while a connect was already in flight) still cancels all
+			-- remaining attempts.
+			if self._timeout_error then
+				return nil,'timeout'
+			end
 		end
+	end
+	if attempts > 0 and timed_out == attempts then
+		return nil,'timeout'
 	end
 	return nil,'failed connect to ' .. self._url.host
 end

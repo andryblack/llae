@@ -96,6 +96,25 @@ namespace uv {
 					char buf[INET6_ADDRSTRLEN];
 					uv_inet_ntop(AF_INET6, &(addr_in6->sin6_addr), buf, INET6_ADDRSTRLEN);
 					item.addr = buf;
+					// Link-local IPv6 addresses are only usable together with
+					// their zone. Keep it in the textual address, so the same
+					// string can be passed back to uv_ip6_addr() when
+					// connecting. On POSIX the zone is an interface name
+					// (uv_ip6_addr() calls if_nametoindex()), on Windows it is
+					// a numeric scope id.
+					if (addr_in6->sin6_scope_id != 0) {
+#ifdef _WIN32
+						item.addr += '%';
+						item.addr += std::to_string(addr_in6->sin6_scope_id);
+#else
+						char ifname[UV_IF_NAMESIZE];
+						size_t ifname_len = sizeof(ifname);
+						if (uv_if_indextoname(addr_in6->sin6_scope_id, ifname, &ifname_len) == 0) {
+							item.addr += '%';
+							item.addr.append(ifname, ifname_len);
+						}
+#endif
+					}
 				}
 				items.emplace_back(std::move(item));
 				ai = ai->ai_next;
