@@ -836,8 +836,8 @@ function Project.load( root_dir , cmdargs )
 	env.location = root_dir
 	env.root = env.location
 	env.cmdargs = cmdargs
-	env.target = get_target( cmdargs )
-	env.host = llae.get_host_platform()
+	env.target_platform = get_target( cmdargs )
+	env.host_platform = llae.get_host_platform()
 	env.config = {}
 	env.__write_env = write_env
 	env.__load_env = load_env
