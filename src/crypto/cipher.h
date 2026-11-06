@@ -11,6 +11,8 @@
 #include "llae/promise.h"
 #include "llae/sequental.h"
 
+#include <string_view>
+
 namespace llae {
 	class buffer;
 	using buffer_ptr = common::intrusive_ptr<buffer>;
@@ -21,6 +23,9 @@ namespace llae {
 }
 
 namespace crypto {
+
+	class cipher;
+	using cipher_ptr = common::intrusive_ptr<cipher>;
 
 	/**
 	* Symmetric encryption/decryption functionality using various cipher algorithms.
@@ -52,7 +57,7 @@ namespace crypto {
 		llae::result<void> set_padding(mbedtls_cipher_padding_t padding);
 		/// Resets the cipher for reuse.
 		/// @luabind
-		llae::result<void> reset(lua::state& l);
+		llae::result<void> reset();
 		llae::result<llae::buffer_base_ptr> sync_update(const llae::write_buffers& buffers);
 		/// Processes data through the cipher (encrypt/decrypt).
 		/// @lparam(data,string|llae.buffer_base) The data to process
@@ -81,6 +86,8 @@ namespace crypto {
 		/// @luabind(name=auth_encrypt,async=true)
 		llae::result_promise_ptr<llae::buffer_base_ptr> async_auth_encrypt(llae::loop& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len);
 		llae::result<llae::buffer_base_ptr> sync_auth_decrypt(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& ad, const llae::buffer_base_ptr& buffer, size_t tag_len);
+		/// Decrypts a buffer containing ciphertext followed by the tag in place.
+		llae::result<size_t> sync_auth_decrypt_inplace(llae::buffer_view iv, llae::buffer_view ad, llae::buffer_ptr buffer, size_t tag_len);
 		/// Authenticates and decrypts data through the cipher.
 		/// @luabind(name=auth_decrypt,async=true)
 		llae::result_promise_ptr<llae::buffer_base_ptr> async_auth_decrypt(llae::loop& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len);
@@ -88,14 +95,16 @@ namespace crypto {
 		int get_block_size() const;
 		/// @luabind
 		int get_iv_size() const;
+		/// Returns the authentication tag size for AEAD ciphers (16 for AES-GCM and ChaCha20-Poly1305), or 0.
+		/// @luabind
+		int get_tag_size() const;
 		
 		/// Creates a new cipher instance with the specified algorithm.
 		/// @lparam(algorithm,string) The cipher algorithm to use (e.g., 'AES-256-CBC')
 		/// @lreturn(instance,crypto.cipher?)
 		/// @lreturn(error,string?)
 		/// @luabind(name=new)
-		static lua::multiret lnew(lua::state& l);
+		static llae::result<cipher_ptr> create(std::string_view algo);
 	};
-	using cipher_ptr = common::intrusive_ptr<cipher>;
 
 }

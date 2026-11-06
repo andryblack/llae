@@ -10,6 +10,8 @@
 #include "llae/write_buffers.h"
 #include "llae/async_bind.h"
 
+#include <string>
+
 META_OBJECT_INFO(crypto::cipher,meta::object)
 
 namespace crypto {
@@ -52,7 +54,7 @@ namespace crypto {
 		return make_result(ret);
 	}
 
-	llae::result<void> cipher::reset(lua::state& l) {
+	llae::result<void> cipher::reset() {
 		llae::sequental_scope s{m_seq};
 		if (auto e = s.start("reset")) {
 			return llae::result<void>(std::move(e));
@@ -267,6 +269,31 @@ namespace crypto {
 		}
 		return auth_decrypt_impl(iv, ad, buffer, tag_len);
 	}
+	llae::result<size_t> cipher::sync_auth_decrypt_inplace(llae::buffer_view iv, llae::buffer_view ad, llae::buffer_ptr buffer, size_t tag_len) {
+		if (!buffer) {
+			return llae::string_error::create("need data");
+		}
+		if (buffer->get_len() < tag_len) {
+			return llae::string_error::create("invalid data");
+		}
+		llae::sequental_scope s{m_seq};
+		if (auto e = s.start("auth_decrypt")) {
+			return std::move(e);
+		}
+		size_t plain_len = buffer->get_len() - tag_len;
+		size_t olen = 0;
+		auto status = mbedtls_cipher_auth_decrypt_ext(&m_ctx,
+			static_cast<const unsigned char*>(iv.get_base()), iv.get_len(),
+			static_cast<const unsigned char*>(ad.get_base()), ad.get_len(),
+			static_cast<const unsigned char*>(buffer->get_base()), buffer->get_len(),
+			static_cast<unsigned char*>(buffer->get_base()), plain_len,
+			&olen, tag_len);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		buffer->set_len(olen);
+		return olen;
+	}
 	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_auth_decrypt(llae::loop& a, llae::buffer_base_ptr iv, llae::buffer_base_ptr ad, llae::buffer_base_ptr buffer, size_t tag_len) {
 		if (!buffer) {
 			return llae::make_result_promise_string_error<llae::buffer_base_ptr> ("need data");
@@ -284,6 +311,15 @@ namespace crypto {
 	}
 	int cipher::get_iv_size() const {
 		return mbedtls_cipher_get_iv_size(&m_ctx);
+	}
+	int cipher::get_tag_size() const {
+		switch (mbedtls_cipher_get_cipher_mode(&m_ctx)) {
+			case MBEDTLS_MODE_GCM:
+			case MBEDTLS_MODE_CHACHAPOLY:
+				return 16;
+			default:
+				return 0;
+		}
 	}
 	llae::result<llae::buffer_base_ptr> cipher::write_tag(size_t tag_len) {
 		llae::sequental_scope s{m_seq};
@@ -309,16 +345,13 @@ namespace crypto {
 		return make_result(ret);
 	}
 
-	lua::multiret cipher::lnew(lua::state& l) {
-		const char* alg = l.checkstring(1);
-		auto info = mbedtls_cipher_info_from_string(alg);
+	llae::result<cipher_ptr> cipher::create(std::string_view algo) {
+		std::string name(algo);
+		auto info = mbedtls_cipher_info_from_string(name.c_str());
 		if (!info) {
-			l.pushnil();
-			l.pushfstring("unknown cipher algorithm '%s'",alg);
-			return {2};
+			return llae::string_error::create("unknown cipher algorithm '" + name + "'");
 		}
-		lua::push(l,cipher_ptr(new cipher(info)));
-		return {1};
+		return cipher_ptr(new cipher(info));
 	}
 
 }

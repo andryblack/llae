@@ -268,6 +268,12 @@ end
 
 -- Cipher tests
 
+function testCrypto:test_cipher_new_unknown_algorithm()
+	local cipher, err = crypto.cipher.new('NOT-A-CIPHER')
+	lu.assertNil(cipher)
+	lu.assertStrContains(err, 'unknown cipher algorithm')
+end
+
 function testCrypto:test_aes_256_cbc_encrypt()
 	-- Test AES-256-CBC encryption with PKCS7 padding
 	-- Key: 603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4
@@ -408,6 +414,17 @@ function testCrypto:test_aes_256_gcm_auth_decrypt()
 
 	-- Decrypted text should match original plaintext
 	lu.assertEquals(tostring(decrypted), plaintext)
+end
+
+function testCrypto:test_cipher_tag_size()
+	local gcm = assert(crypto.cipher.new('AES-256-GCM'))
+	lu.assertEquals(gcm:get_tag_size(), 16)
+
+	local chacha = assert(crypto.cipher.new('CHACHA20-POLY1305'))
+	lu.assertEquals(chacha:get_tag_size(), 16)
+
+	local cbc = assert(crypto.cipher.new('AES-256-CBC'))
+	lu.assertEquals(cbc:get_tag_size(), 0)
 end
 
 function testCrypto:test_cipher_reset()
