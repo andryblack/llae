@@ -229,8 +229,7 @@ namespace lua {
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
-				stack<R>::push(l,apply(l,*f,std::index_sequence_for<Args...>()));
-				return 1;
+				return policy_t::push_result(l,apply(l,*f,std::index_sequence_for<Args...>()));
 			}
 		};
     
