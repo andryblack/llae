@@ -95,8 +95,9 @@ namespace lua {
 		struct helper<P,void,T,state&,Args...> {
 			using policy_t = P;
 			using func_t = void (T::*)(state&,Args ... args);
-			template <size_t... Is>
-			static void apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
+			using cfunc_t = void (T::*)(state&,Args ... args) const;
+			template <typename O,typename F,size_t... Is>
+			static void apply(state&l,O* obj,F func,const std::index_sequence<Is...>) {
 				(obj->*func)(l,policy_t::template arg_policy<Is>::template type<Args>::get(l,2+Is)...);
 			}
             template <size_t... Is>
@@ -107,6 +108,13 @@ namespace lua {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
 				auto obj = get_self_object<T>(l,1);
+				apply(l,obj,*f,std::index_sequence_for<Args...>());
+				return 0;
+			}
+			static int cfunction(lua_State* L) {
+				auto f = static_cast<cfunc_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				auto obj = get_self_object<const T>(l,1);
 				apply(l,obj,*f,std::index_sequence_for<Args...>());
 				return 0;
 			}
@@ -191,14 +199,21 @@ namespace lua {
 		struct helper<P,R,T,state&,Args...> {
 			using policy_t = P;
 			typedef R (T::*func_t)(state&,Args ... args);
-			template <size_t... Is>
-			static R apply(state&l,T* obj,func_t func,const std::index_sequence<Is...>) {
+			typedef R (T::*cfunc_t)(state&,Args ... args) const;
+			template <typename O,typename F,size_t... Is>
+			static R apply(state&l,O* obj,F func,const std::index_sequence<Is...>) {
 				return (obj->*func)(l,policy_t::template arg_policy<Is>::template type<Args>::get(l,2+Is)...);
 			}
 			static int function(lua_State* L) {
 				auto f = static_cast<func_t*>(lua_touserdata(L,lua_upvalueindex(1)));
 				state l(L);
 				auto obj = get_self_object<T>(l,1);
+				return policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
+			}
+			static int cfunction(lua_State* L) {
+				auto f = static_cast<cfunc_t*>(lua_touserdata(L,lua_upvalueindex(1)));
+				state l(L);
+				auto obj = get_self_object<const T>(l,1);
 				return policy_t::push_result(l,apply(l,obj,*f,std::index_sequence_for<Args...>()));
 			}
 		};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lua/state.h"
+#include "llae/result.h"
 #include <string>
 #include <cstdint>
 
@@ -31,6 +32,9 @@ namespace tests {
         test_bind_fields* get_self2(int) { return this; }
         const test_bind_fields* get_const() const { return this; }
         void func1(int) const {}
+        llae::result<int> get_result(lua::state& l) const;
+        llae::result<void> check_result(lua::state& l) const;
+        void noop_state(lua::state& l) const;
         static void bind(lua::state& l);
     };
 

@@ -46,6 +46,29 @@ function TestBindings:test_get_const()
     )
 end
 
+function TestBindings:test_const_method_with_state()
+    local b = bind_tests.test_bind_fields.new()
+    b.field1 = 42
+
+    lu.assertEquals(b:get_result(), 42)
+    lu.assertTrue(b:check_result())
+    b:noop_state()
+
+    local c = b:get_const()
+    lu.assertEquals(c:get_result(), 42)
+    lu.assertTrue(c:check_result())
+    c:noop_state()
+
+    b.field1 = -1
+    local r, e = c:get_result()
+    lu.assertIsNil(r)
+    lu.assertEquals(tostring(e), '[llae]:negative field1')
+
+    local ok, err = c:check_result()
+    lu.assertIsNil(ok)
+    lu.assertEquals(tostring(err), '[llae]:negative field1')
+end
+
 function TestBindings:test_return_ref()
     do 
         collectgarbage()

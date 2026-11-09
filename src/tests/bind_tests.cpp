@@ -37,9 +37,29 @@ namespace tests {
         lua::bind::function(l,"get_self2",&test_bind_fields::get_self2,lua::bind::return_ref_policy<1>{});
         lua::bind::function(l,"get_count",&test_bind_fields::get_count);
         lua::bind::function(l,"func1",&test_bind_fields::func1);
+        lua::bind::function(l,"get_result",&test_bind_fields::get_result);
+        lua::bind::function(l,"check_result",&test_bind_fields::check_result);
+        lua::bind::function(l,"noop_state",&test_bind_fields::noop_state);
     }
     void test_bind_fields::method1() {
         field3 = field3 + " method1";
+    }
+    llae::result<int> test_bind_fields::get_result(lua::state& l) const {
+        (void)l;
+        if (field1 < 0) {
+            return llae::string_error::create("negative field1");
+        }
+        return llae::result<int>(int(field1));
+    }
+    llae::result<void> test_bind_fields::check_result(lua::state& l) const {
+        (void)l;
+        if (field1 < 0) {
+            return llae::string_error::create("negative field1");
+        }
+        return llae::result<void>();
+    }
+    void test_bind_fields::noop_state(lua::state& l) const {
+        (void)l;
     }
 }
 
