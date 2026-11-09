@@ -521,6 +521,7 @@ end
 local param_lua_skip_types = {
     ['llae::app&'] = true,
     ['lua::state&'] = true,
+    ['llae::loop&'] = true,
 }
 local function skip_param_for_lua(param)
     if param_lua_skip_types[param.type] then

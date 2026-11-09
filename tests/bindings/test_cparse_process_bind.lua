@@ -281,3 +281,24 @@ LUABIND_FIELD(baz)
     lu.assertEquals(module:get_values()[1]:get_name(), 'bar')
     lu.assertEquals(module:get_values()[2]:get_name(), 'baz')
 end
+
+function TestProcessBind:test_loop_param_not_emitted_in_meta()
+    local processor = process_bind.new()
+    local result = processor:process_content[[
+namespace loop_meta {
+    /// @luabind
+    class adapter {
+        /// @luabind
+        void start(llae::loop& l, llae::buffer_base_ptr key);
+    };
+}
+]]
+    local module = result.modules['loop_meta']
+    local method = module:get_classes()[1]:get_methods()[1]
+    local params = method:get_lua_parameters()
+    lu.assertEquals(#params, 1)
+    lu.assertEquals(params[1], 'key')
+    local args = method:get_lua_args()
+    lu.assertEquals(#args, 1)
+    lu.assertEquals(args[1].name, 'key')
+end

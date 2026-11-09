@@ -167,7 +167,7 @@ Positional: `name`, then EmmyLua type.
 
 If **any** `@lparam` is present, the inferred parameter list is discarded and only the tags are used, in order.
 
-Use `@lparam` whenever inference would be wrong or leak C++ types: `lua::multiret`, `lua::state&`, `llae::loop&`, buffers, class pointers, overloads implemented in Lua.
+Use `@lparam` whenever inference would be wrong or leak C++ types: `lua::multiret`, buffers, class pointers, overloads implemented in Lua.
 
 ### `@lreturn(name,lua_type)`
 
@@ -305,16 +305,14 @@ Registration uses `llae::async_function`, which installs:
 - `name` — yield until the promise resolves (`error("is async")` if the caller is not yieldable)
 - `async_name` — return the promise object
 
-`llae::loop&` is filled from `llae::loop::get(l)` in the async helper; it is **not** a Lua argument. `lua::state&` is likewise not a Lua argument.
-
-Meta inference does **not** drop `llae::loop&`. For accurate meta, add `@lparam` / `@lreturn` on async APIs that take `loop&`.
+`llae::loop&` is filled from `llae::loop::get(l)` in the async helper; it is **not** a Lua argument. `lua::state&` is likewise not a Lua argument. Meta inference drops both, so the inferred `---@param` list matches the Lua call.
 
 ```cpp
 /// @luabind(name=start,async=true)
 llae::result_promise_ptr<void> async_start(llae::loop& a, llae::buffer_base_ptr key);
 ```
 
-Inferred Lua params would wrongly include `a`. Prefer:
+Inferred Lua params do not include `a`. `@lparam` is only needed to override the inferred name/type or add a description:
 
 ```cpp
 /// @lparam(key,string|llae.buffer_base?)
@@ -442,9 +440,8 @@ Used when `@lparam` / `@lreturn` are absent.
 Skipped C++ parameters (not emitted in Lua meta):
 
 - `lua::state&`
+- `llae::loop&`
 - `llae::app&`
-
-Not skipped (must override with `@lparam` if they are not Lua args): `llae::loop&`.
 
 Built-in C++ → Lua:
 
@@ -561,7 +558,7 @@ When adding or changing a Lua-visible C++ API:
 5. Set `async=true` iff the return type is `llae::result_promise_ptr<T>`.
 6. Set `hidden=true` on bases that must not appear as `require` fields.
 7. Set `raw=true` on value-type constructors; never on `meta::object` factories.
-8. Add `@lparam` / `@lreturn` whenever the Lua types are not in the inference table, or a C++ parameter (`loop&`, `lua::state&` already skipped, `lua::multiret`) would leak into meta.
+8. Add `@lparam` / `@lreturn` whenever the Lua types are not in the inference table, or a C++-only type (`lua::multiret`, buffers, pointers) would leak into meta. `llae::loop&` and `lua::state&` are skipped automatically.
 9. Do not tag private methods, destructors, or overloads that are not the Lua entry point.
 10. One constructor per class; extra Lua constructors are static methods with `name=new`.
 11. One Lua module per header; use `module=` if namespaces would split.
