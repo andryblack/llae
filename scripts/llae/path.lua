@@ -8,29 +8,88 @@ local function split(p)
 	return parts
 end
 
+--- Returns the absolute prefix of `p` (`/`, `//` or `C:/`),
+--- or nil for relative and drive-relative paths.
+---@param p string
+---@return string?
+local function get_absolute_prefix(p)
+	if p:sub(1,1) == '\\' then
+		if p:sub(1,2) == '\\\\' then
+			return '//'
+		end
+		return '/'
+	end
+	if p:sub(1,2) == '//' then
+		return p:sub(1,3) == '///' and '/' or '//'
+	end
+	local drive = p:match('^(%a:)[/\\]')
+	if drive then
+		return drive:upper() .. '/'
+	end
+	if p:sub(1,1) == '/' then
+		return '/'
+	end
+	return nil
+end
+
 ---@param p string
 ---@return string
 function path.normalize(p)
 	if #p == 0 then
 		return ''
 	end
-	local res = p:gsub("[/\\]+", "/")
-	res = res:gsub("^%./", "")
-	res = res:gsub("/%./", "/")
-	local parts = split(res)
-	local res = {}
-	for _,part in ipairs(parts) do
-		if part == '..' then
-			table.remove(res)
+
+	local trailing = p:sub(-1) == '/' or p:sub(-1) == '\\'
+	local prefix = get_absolute_prefix(p)
+	local rest
+
+	if prefix then
+		rest = p:sub(#prefix + 1)
+	else
+		local drive, after = p:match('^(%a:)(.*)$')
+		if drive then
+			-- Drive-relative path such as `C:foo`; keep `C:` as prefix.
+			prefix = drive:upper()
+			rest = after
 		else
-			table.insert(res,part)
+			prefix = ''
+			rest = p
 		end
 	end
-	local res = path.join(table.unpack(res))
-	if path.isabsolute(p) and not path.isabsolute(res) then
-		res = '/' .. res
+
+	rest = rest:gsub('\\','/'):gsub('/+','/')
+
+	local out = {}
+	for part in rest:gmatch('[^/]+') do
+		if part == '.' then
+			-- current directory: skip
+		elseif part == '..' then
+			if #out > 0 and out[#out] ~= '..' then
+				table.remove(out)
+			elseif prefix == '' then
+				-- keep leading `..` for relative paths
+				table.insert(out,'..')
+			end
+			-- absolute paths cannot go above their root
+		else
+			table.insert(out,part)
+		end
 	end
-	if p:sub(#p) == '/' or p:sub(#p) == '\\' then
+
+	local body = table.concat(out,'/')
+	local res
+	if prefix == '' then
+		res = body ~= '' and body or '.'
+	elseif prefix == '//' then
+		res = '//' .. body
+	elseif prefix == '/' then
+		res = '/' .. body
+	else
+		-- Windows drive prefix, absolute (`C:/`) or relative (`C:`)
+		res = prefix .. body
+	end
+
+	if trailing and res:sub(-1) ~= '/' then
 		res = res .. '/'
 	end
 	return res
@@ -39,18 +98,7 @@ end
 ---@param p string
 ---@return boolean
 function path.isabsolute(p)
-	if string.sub(p,1,1) == '/' then
-		return true
-	end
-	-- Check for Windows drive letter path (e.g. C:/ or C:\)
-	if string.match(p, '^%a%:[\\/]') then
-		return true
-	end
-	-- Windows UNC path
-	if string.sub(p,1,1) == '\\' then
-		return true
-	end
-	return false
+	return get_absolute_prefix(p) ~= nil
 end
 
 ---@param s string
