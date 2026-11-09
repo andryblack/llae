@@ -49,7 +49,7 @@ end
 
 `init()` is optional and runs once when the module is initialized, after the module’s `project_config` values are resolved. `llae init` calls it before headers are scanned, so it can use module configs (`project:get_config_value(name, ...)`), the host/target platform (`project:get_host_platform()`, `project:get_target_platform()`), command-line arguments (`project:get_cmdargs()`), and environment variables (`os.getenv(...)`).
 
-`${dir}` is the module location. Tokens are expanded from the module/project env.
+`${dir}` is the module location. `Project:replace_tokens` also injects `${project_root}` (absolute project root), `${project_name}`, `${project_version}` (when `version` is set), `${build_root}` (`<project_root>/build`), `${target_platform}`, and `${host_platform}` in both project and module scope, e.g. `bind_header('${build_root}/include/mylib.h')`. Tokens are expanded from the module/project env; absolute paths are used as-is.
 
 Generation runs as part of `llae init`. After changing tags, run `llae init` again so `build/src/gen_module_*.cpp` and `build/lua-meta/*.lua` update.
 

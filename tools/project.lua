@@ -261,6 +261,25 @@ function Project:get_root( )
 	return self._env.location or fs.pwd()
 end
 
+--- Expands `${...}` tokens from `env` plus the synthetic `project_root` token.
+---@param str string
+---@param env table?
+---@return string
+function Project:replace_tokens( str, env )
+	if not str then
+		return str
+	end
+	local full_env = setmetatable({
+		project_root = self:get_root(),
+		project_name = self:name(),
+		project_version = self:get_var('version'),
+		build_root = path.join(self:get_root(),'build'),
+		target_platform = self:get_target_platform(),
+		host_platform = self:get_host_platform(),
+	},{ __index = env or self._env })
+	return utils.replace_tokens(str, full_env)
+end
+
 function Project:get_cmdargs(  )
 	return self._env.cmdargs or {}
 end
@@ -570,7 +589,7 @@ function Project:generate_bindings( )
 	local dst_dir = path.join(self:get_root(),'build','src')
 
 	local function generate_binding(filename,root)
-		local source_filename = path.join(root,filename)
+		local source_filename = path.isabsolute(filename) and filename or path.join(root,filename)
 		local result = processor:process_file(source_filename)
 		if not next(result.classes) and not next(result.modules) then
 			log.debug('no classes or modules found in',source_filename)
@@ -589,10 +608,10 @@ function Project:generate_bindings( )
 	for _,conf in ipairs(self._env.bind_headers or {}) do
 		conf.root = self:get_root()
 		if conf.filename then
-			conf.filename = utils.replace_tokens(conf.filename,self._env)
+			conf.filename = self:replace_tokens(conf.filename,self._env)
 		end
 		if conf.dir then
-			conf.dir = utils.replace_tokens(conf.dir,self._env)
+			conf.dir = self:replace_tokens(conf.dir,self._env)
 		end
 		table.insert(all_bind_headers,conf)
 	end
@@ -601,10 +620,10 @@ function Project:generate_bindings( )
 		for _,conf in ipairs(m:get_bind_headers()) do
 			conf.root = m:get_location() or self:get_root()
 			if conf.filename then
-				conf.filename = utils.replace_tokens(conf.filename,m:get_env())
+				conf.filename = self:replace_tokens(conf.filename,m:get_env())
 				log.debug('bind header filename',conf.filename)
 			elseif conf.dir then
-				conf.dir = utils.replace_tokens(conf.dir,m:get_env())
+				conf.dir = self:replace_tokens(conf.dir,m:get_env())
 				log.debug('bind header dir',conf.dir)
 			else
 				log.error('bind header config is invalid',m:get_name())
@@ -619,7 +638,7 @@ function Project:generate_bindings( )
 			generate_binding(conf.filename,conf.root)
 		elseif conf.dir then
 			log.info('process bind headers dir',conf.dir)
-			local dir = path.join(conf.root,conf.dir)
+			local dir = path.isabsolute(conf.dir) and conf.dir or path.join(conf.root,conf.dir)
 			if not fs.isdir(dir) then
 				log.error('bind header dir not found',dir)
 			else
