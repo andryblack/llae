@@ -18,6 +18,7 @@ local base = class(nil,'modules.base')
 function base:_init(name)
 	self._name = name
 	self._source = nil
+	self._initialized = false
 end
 
 function base:get_env()
@@ -49,7 +50,13 @@ function base:create_env(project)
 	}
 	local super_env = {}
 	apply_functions(super_env,env)
-	setmetatable( env, {__index=setmetatable(super_env,{__index=_G})} )
+	super_env.bind_header = function( filename )
+		return self:bind_header(filename)
+	end
+	super_env.bind_headers = function( dir )
+		return self:bind_headers(dir)
+	end
+	setmetatable( env, {__index = setmetatable(super_env,{__index=_G})} )
 	self._env = env
 end
 
@@ -169,8 +176,50 @@ function base:get_dependencies()
 	return self._env.dependencies 
 end
 
+--- Adds a single header to the module binding set.
+---@param filename string
+function base:bind_header( filename )
+	if type(filename) ~= 'string' then
+		error('bind_header: filename must be a string')
+	end
+	self._bind_headers = self._bind_headers or {}
+	table.insert(self._bind_headers,{ filename = filename })
+end
+
+--- Adds all headers from a directory to the module binding set.
+---@param dir string
+function base:bind_headers( dir )
+	if type(dir) ~= 'string' then
+		error('bind_headers: dir must be a string')
+	end
+	self._bind_headers = self._bind_headers or {}
+	table.insert(self._bind_headers,{ dir = dir })
+end
+
+--- Runs the optional module init() function.
+--- Called after module configs are resolved and before binding generation.
+function base:init()
+	if self._initialized then
+		return
+	end
+	self._initialized = true
+	local init = rawget(self._env,'init')
+	local bind_headers = rawget(self._env,'bind_headers')
+	if bind_headers then
+		if type(init) == 'function' then
+			error('module ' .. self:get_name() ..
+				': init() and declarative bind_headers cannot be used together')
+		end
+		log.warning('module ' .. self:get_name() ..
+			': declarative bind_headers is deprecated, use init() with bind_header()/bind_headers()')
+	end
+	if type(init) == 'function' then
+		init(self._env)
+	end
+end
+
 function base:get_bind_headers()
-	return self._env.bind_headers or {}
+	return self._bind_headers or rawget(self._env,'bind_headers') or {}
 end
 
 function base:loadfile(filename,project)

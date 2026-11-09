@@ -362,6 +362,9 @@ function Project:init_modules()
 	for _,m in ipairs(self._modules_list) do
 		m:resolve_configs(self._module_config)
 	end
+	for _,m in ipairs(self._modules_list) do
+		m:init()
+	end
 end
 
 

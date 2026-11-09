@@ -39,20 +39,12 @@ dependencies = {
 	'pugixml',
 }
 
-bind_headers = {
-	{
-		dir = '${dir}/src/crypto',
-	},
-	{
-		dir = '${dir}/src/uv',
-	},
-	{
-		dir = '${dir}/src/net',
-	},
-	{
-		dir = '${dir}/src/ssl',
-	}
-}
+function init()
+	bind_headers('${dir}/src/crypto')
+	bind_headers('${dir}/src/uv')
+	bind_headers('${dir}/src/net')
+	bind_headers('${dir}/src/ssl')
+end
 
 solution = [[
 ]]

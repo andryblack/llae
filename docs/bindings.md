@@ -10,7 +10,7 @@ Do not invent tags, attributes, or macros that are not listed here. If a declara
 
 On `llae init` the project tool:
 
-1. Reads headers listed in `bind_headers` / `bind_header` (project and installed modules).
+1. Reads headers registered by the project (`bind_headers` / `bind_header`) and by each installed module from its optional `init()`.
 2. Preprocesses them with extra macros (see [Preprocessor defines](#preprocessor-defines)).
 3. Parses a C++ subset and collects declarations whose doc comments contain `@luabind` (or that sit under `@luabind(all=true)`).
 4. Writes, per Lua module:
@@ -33,14 +33,21 @@ bind_headers('src')
 bind_header('src/mylib/api.h')
 ```
 
-In a module’s `llae-module.lua`:
+In a module’s `llae-module.lua`, register headers from the optional `init()` function:
 
 ```lua
-bind_headers = {
-  { dir = '${dir}/src/mylib' },
-  { filename = '${dir}/src/mylib/extra.h' },
-}
+function init()
+  -- `${dir}` is the module location, as in the rest of llae-module.lua
+  bind_headers('${dir}/src/mylib')
+  bind_header('${dir}/src/mylib/extra.h')
+
+  if project:get_config_value(name,'extra_bindings') then
+    bind_header('${dir}/src/mylib/extra.h')
+  end
+end
 ```
+
+`init()` is optional and runs once when the module is initialized, after the module’s `project_config` values are resolved. `llae init` calls it before headers are scanned, so it can use module configs (`project:get_config_value(name, ...)`), the host/target platform (`project:get_host_platform()`, `project:get_target_platform()`), command-line arguments (`project:get_cmdargs()`), and environment variables (`os.getenv(...)`).
 
 `${dir}` is the module location. Tokens are expanded from the module/project env.
 
@@ -505,7 +512,7 @@ LUABIND_FUNC(version)
 
 `all=true` binds every stub. Add a local `@luabind(...)` on a stub only to set options (`readonly`, `policy`, `wrapper`, `raw`, `prefix`, …).
 
-Put the bind header on `bind_headers`. Keep the real types in a header the parser does not need to understand.
+Register the bind header on `bind_headers` (project) or from the module’s `init()` via `bind_header` / `bind_headers`. Keep the real types in a header the parser does not need to understand.
 
 ## Generated C++ (contract)
 
@@ -528,7 +535,7 @@ Hand-written `lua-meta/*.lua` in a module (installed via `install_metas`) can be
 
 When adding or changing a Lua-visible C++ API:
 
-1. Put the declaration in a header covered by `bind_headers` / `bind_header`.
+1. Put the declaration in a header covered by `bind_headers` / `bind_header` (in the project) or registered from a module’s `init()`.
 2. Place `///` or `/** */` **immediately above** that declaration.
 3. Add `@luabind` (or rely on ancestor `all=true`).
 4. Set `name=` if the C++ identifier is not the Lua name (`lnew` → `new`, `async_close` → `close`, `less` → `__lt`).
