@@ -101,6 +101,25 @@ function utils.list_concat( a,b )
 	return r
 end
 
+---Appends a string or a list of strings to `list`.
+---@param list string[]
+---@param value string|string[]
+function utils.append_strings( list, value )
+	local t = type(value)
+	if t == 'string' then
+		if value == '' then
+			error('append_strings: string must be non-empty')
+		end
+		table.insert(list,value)
+	elseif t == 'table' then
+		for _,v in ipairs(value) do
+			utils.append_strings(list,v)
+		end
+	else
+		error('append_strings: string or list of strings expected')
+	end
+end
+
 ---@param t any[]
 ---@param i integer
 local function reversedipairsiter(t, i)

@@ -51,6 +51,25 @@ end
 
 `${dir}` is the module location. `Project:replace_tokens` also injects `${project_root}` (absolute project root), `${project_name}`, `${project_version}` (when `version` is set), `${build_root}` (`<project_root>/build`), `${target_platform}`, and `${host_platform}` in both project and module scope, e.g. `bind_header('${build_root}/include/mylib.h')`. Tokens are expanded from the module/project env; absolute paths are used as-is.
 
+Include search directories for binding generation are registered with `bind_includes` from the project or a module:
+
+```lua
+bind_includes('build/include')
+bind_includes({'vendor/include', '${build_root}/include'})
+```
+
+Paths are token-expanded, resolved relative to the caller root (project root for the project, module location for a module), normalized, and deduplicated into one global ordered list. The list is passed to every per-header preprocessor. Plain `#include` directives are not followed.
+
+To let binding generation follow an include, mark it on the same line:
+
+```cpp
+#include "some_module_config.h" // @luabind_allow
+```
+
+The generator resolves the file relative to the including header first, then through `bind_includes`. The included file is processed by the same preprocessor: its `#define`s affect the rest of the header, and its declarations / `@luabind` tags are parsed as if they were part of the including header. Unmarked includes are skipped. A marked include that cannot be resolved aborts `llae init`.
+
+Do not mark a header that is also registered with `bind_header` / `bind_headers` unless it contains only defines: its declarations would be parsed twice.
+
 Generation runs as part of `llae init`. After changing tags, run `llae init` again so `build/src/gen_module_*.cpp` and `build/lua-meta/*.lua` update.
 
 ## Where tags go

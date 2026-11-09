@@ -95,6 +95,17 @@ function path.normalize(p)
 	return res
 end
 
+---Normalize a directory path, dropping a trailing separator except at roots.
+---@param p string
+---@return string
+function path.normalize_dir(p)
+	local res = path.normalize(p)
+	if res == '/' or res == '//' or res:match('^%a:/$') then
+		return res
+	end
+	return (res:gsub('/+$',''))
+end
+
 ---@param p string
 ---@return boolean
 function path.isabsolute(p)

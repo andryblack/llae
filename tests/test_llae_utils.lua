@@ -52,6 +52,17 @@ function TestUtils:test_list_concat()
     lu.assertEquals(result, {})
 end
 
+function TestUtils:test_append_strings()
+    local list = {}
+    utils.append_strings(list, 'a')
+    utils.append_strings(list, {'b', 'c'})
+    utils.append_strings(list, {{'d'}, 'e'})
+    lu.assertEquals(list, {'a', 'b', 'c', 'd', 'e'})
+
+    lu.assertError(function() utils.append_strings(list, '') end)
+    lu.assertError(function() utils.append_strings(list, 1) end)
+end
+
 function TestUtils:test_reversedipairs()
     local t = {1, 2, 3, 4, 5}
     local expected = {5, 4, 3, 2, 1}

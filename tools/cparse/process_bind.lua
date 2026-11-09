@@ -1,11 +1,67 @@
 local class = require 'llae.class'
 local fs = require 'llae.fs'
+local path = require 'llae.path'
 local log = require 'llae.log'
 local preprocessor = require 'cparse.preprocessor'
 local parser = require 'cparse.parser'
 local ast = require 'cparse.ast'
 local tags = require 'cparse.tags'
 local dump_ast = require 'cparse.dump_ast'
+
+local bind_preprocessor = class(preprocessor)
+
+---@param dirs string[]
+function bind_preprocessor:set_include_dirs(dirs)
+    self._include_dirs = dirs or {}
+end
+
+---@return string[]
+function bind_preprocessor:get_include_dirs()
+    return self._include_dirs or {}
+end
+
+function bind_preprocessor:resolve_include(filename, source_file)
+    local candidates = {}
+    if path.isabsolute(filename) then
+        table.insert(candidates,filename)
+    else
+        if source_file then
+            local source_dir = path.dirname(source_file)
+            if source_dir ~= '' then
+                table.insert(candidates,path.join(source_dir,filename))
+            end
+        end
+        for _,dir in ipairs(self._include_dirs or {}) do
+            table.insert(candidates,path.join(dir,filename))
+        end
+    end
+    for _,candidate in ipairs(candidates) do
+        candidate = path.normalize(candidate)
+        if fs.isfile(candidate) then
+            return tostring(fs.load_file(candidate)), candidate
+        end
+    end
+    return nil
+end
+
+function bind_preprocessor:handle_include(filename, source_file, comment)
+    if not comment or not comment:find('@luabind_allow',1,true) then
+        return nil
+    end
+    local content, resolved = self:resolve_include(filename, source_file)
+    if not content then
+        local msg = string.format('binding include not found: "%s"', filename)
+        if source_file then
+            msg = msg .. ' from ' .. source_file
+        end
+        local dirs = self:get_include_dirs()
+        if #dirs > 0 then
+            msg = msg .. '; search: ' .. table.concat(dirs, ', ')
+        end
+        error(msg)
+    end
+    return content, resolved
+end
 
 local function replace_cpp_identifiers(type_str, replacements)
     if not next(replacements) then
@@ -986,6 +1042,7 @@ end
 function processor:_init()
     self._defines = {}
     self._modules = {}
+    self._include_dirs = {}
     self:define('LUABIND_PARSE', '1')
     self:define('LUABIND_FIELD(Name)', '::luabind_autobind_type Name;')
     self:define('LUABIND_FUNC(Name)', '::luabind_autobind_type Name();')
@@ -993,6 +1050,16 @@ end
 
 function processor:define(token, value)
     self._defines[token] = value
+end
+
+---@param dirs string[]
+function processor:set_include_dirs(dirs)
+    self._include_dirs = dirs or {}
+end
+
+---@return string[]
+function processor:get_include_dirs()
+    return self._include_dirs
 end
 
 function processor:begin_header(filename)
@@ -1017,12 +1084,18 @@ function processor:get_modules()
     return self._modules
 end
 
-function processor:process_content(data)
-    local pp = preprocessor.new()
+function processor:create_preprocessor()
+    local pp = bind_preprocessor.new()
+    pp:set_include_dirs(self._include_dirs)
+    return pp
+end
+
+function processor:process_content(data, source_file)
+    local pp = self:create_preprocessor()
     for token, value in pairs(self._defines) do
         pp:define(token, value)
     end
-    local data_pp = pp:process(data)
+    local data_pp = pp:process(data, source_file)
     if self.debug then
         log.debug('processed content: ', data_pp)
     end
@@ -1040,7 +1113,7 @@ end
 function processor:process_file(filename)
     self:begin_header(filename)
     local data = tostring(fs.load_file(filename))
-    return self:process_content(data)
+    return self:process_content(data, filename)
 end
 
 return processor

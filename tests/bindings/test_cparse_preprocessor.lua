@@ -1,4 +1,5 @@
 local lu = require('luaunit')
+local class = require('llae.class')
 local store_path = package.path
 package.path = store_path .. ';tools/?.lua'
 local preprocessor = require('cparse.preprocessor')
@@ -8,14 +9,21 @@ TestPreprocessor = {}
 
 -- Helper to create a preprocessor with a simple include handler
 local function create_pp(inc_handler)
-    return preprocessor.new(inc_handler)
+    if not inc_handler then
+        return preprocessor.new()
+    end
+    local custom = class(preprocessor)
+    function custom:handle_include(filename, source_file, comment)
+        return inc_handler(filename, source_file, comment)
+    end
+    return custom.new()
 end
 
 function TestPreprocessor:test_constructor()
     local pp = create_pp()
     lu.assertNotNil(pp)
     lu.assertNotNil(pp._defines)
-    lu.assertNotNil(pp._inc_handler)
+    lu.assertNotNil(pp.handle_include)
 end
 
 function TestPreprocessor:test_define_basic()
@@ -352,7 +360,7 @@ function TestPreprocessor:test_include_directive()
         return nil
     end)
     
-    local input = '#include "test.h"'
+    local input = '#include "test.h" // @luabind_allow'
     local result = pp:process(input)
     lu.assertStrContains(result, '// Begin include: test.h')
     lu.assertStrContains(result, 'included content')
@@ -367,7 +375,7 @@ function TestPreprocessor:test_include_angle_brackets()
         return nil
     end)
     
-    local input = '#include <stdio.h>'
+    local input = '#include <stdio.h> // @luabind_allow'
     local result = pp:process(input)
     lu.assertStrContains(result, 'stdio content')
 end
@@ -379,22 +387,75 @@ function TestPreprocessor:test_include_not_found()
     
     local input = '#include "missing.h"'
     local result = pp:process(input)
-    lu.assertStrContains(result, '// Include not found: missing.h')
+    lu.assertStrContains(result, '// Include skipped: missing.h')
+end
+
+function TestPreprocessor:test_include_comment_is_passed()
+    local comments = {}
+    local pp = create_pp(function(filename, source_file, comment)
+        table.insert(comments,comment)
+        return nil
+    end)
+
+    pp:process('#include "a.h" // @luabind_allow\n#include "b.h"')
+    lu.assertEquals(comments[1], '@luabind_allow')
+    lu.assertEquals(comments[2], nil)
+end
+
+function TestPreprocessor:test_include_passes_source_file()
+    local received_source
+    local received_comment
+    local pp = create_pp(function(filename, source_file, comment)
+        received_source = source_file
+        received_comment = comment
+        return 'content'
+    end)
+
+    pp:process('#include "test.h" // @luabind_allow', '/tmp/foo.h')
+    lu.assertEquals(received_source, '/tmp/foo.h')
+    lu.assertEquals(received_comment, '@luabind_allow')
+end
+
+function TestPreprocessor:test_allowed_include_defines_and_declarations()
+    local includes = {
+        ['config.h'] = '#define SOME_MODULE_FEATURE_ENABLED 1\n',
+        ['extra.h'] = '/// @luabind\nvoid extra_method();\n',
+    }
+    local pp = create_pp(function(filename)
+        return includes[filename]
+    end)
+
+    local result = pp:process([[
+#include "config.h" // @luabind_allow
+#include "extra.h" // @luabind_allow
+
+#ifdef SOME_MODULE_FEATURE_ENABLED
+/// @luabind
+void wtf_method();
+#endif
+]])
+    lu.assertStrContains(result, 'void wtf_method')
+    lu.assertStrContains(result, 'void extra_method')
 end
 
 function TestPreprocessor:test_include_circular()
     local pp = create_pp(function(filename)
         if filename == 'a.h' then
-            return '#include "b.h"'
+            return '#include "b.h" // @luabind_allow'
         elseif filename == 'b.h' then
-            return '#include "a.h"'
+            return '#include "a.h" // @luabind_allow'
         end
         return nil
     end)
     
-    local input = '#include "a.h"'
-    local result = pp:process(input)
-    lu.assertStrContains(result, 'Circular include detected')
+    local input = '#include "a.h" // @luabind_allow'
+    local ok, err = pcall(function()
+        pp:process(input)
+    end)
+    lu.assertFalse(ok)
+    lu.assertStrContains(tostring(err), 'circular include detected')
+    lu.assertStrContains(tostring(err), 'a.h')
+    lu.assertStrContains(tostring(err), 'b.h')
 end
 
 function TestPreprocessor:test_error_directive()
@@ -473,7 +534,7 @@ function TestPreprocessor:test_include_with_define()
     includes['config.h'] = '#define CONFIG_VALUE 42'
     
     local input = [[
-#include "config.h"
+#include "config.h" // @luabind_allow
 int value = CONFIG_VALUE;
 ]]
     local result = pp:process(input)
@@ -661,7 +722,7 @@ function TestPreprocessor:test_include_handler_receives_filename()
         return 'content'
     end)
     
-    pp:process('#include "myheader.h"')
+    pp:process('#include "myheader.h" // @luabind_allow')
     lu.assertEquals(received_filename, 'myheader.h')
 end
 

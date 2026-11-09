@@ -1,17 +1,27 @@
 local class = require 'llae.class'
 
 ---@class preprocessor
----@field new fun(inc_handler: fun(filename: string): string | nil): preprocessor
+---@field new fun(): preprocessor
 ---@field _defines table<string, string>
 local preprocessor = class(nil,'preprocessor')
 
 ---Constructor
----@param inc_handler fun(filename: string): string | nil Handler for #include directive
-function preprocessor:_init(inc_handler)
+function preprocessor:_init()
     self._defines = {}
     self._func_defines = {}
-    self._inc_handler = inc_handler or function() return nil end
     self._include_stack = {}
+end
+
+---Returns content and resolved filename for an allowed `#include`.
+---Default: includes are not available. Override on a subclass to enable
+---include processing.
+---@param filename string
+---@param source_file string?
+---@param comment string? Trailing single-line comment text, without `//`
+---@return string? content
+---@return string? resolved
+function preprocessor:handle_include(filename, source_file, comment)
+    return nil
 end
 
 ---Define a macro
@@ -382,8 +392,9 @@ end
 
 ---Process source code
 ---@param data string
+---@param source_file string?
 ---@return string
-function preprocessor:process(data)
+function preprocessor:process(data, source_file)
     local lines = {}
     local output = {}
     
@@ -530,26 +541,34 @@ function preprocessor:process(data)
                     if not filename then
                         filename = trimmed:match('^#include%s*"([^"]+)"')
                     end
-                    
-                    if filename and self._inc_handler then
-                        -- Check for circular includes
-                        for _, f in ipairs(self._include_stack) do
-                            if f == filename then
-                                table.insert(output, "// Circular include detected: " .. filename)
-                                goto continue
-                            end
-                        end
-                        
-                        table.insert(self._include_stack, filename)
-                        local content = self._inc_handler(filename)
+                    local comment = trimmed:match('//%s*(.-)%s*$')
+
+                    if filename then
+                        local content, resolved = self:handle_include(filename, source_file, comment)
                         if content then
+                            local key = resolved or filename
+                            for _, f in ipairs(self._include_stack) do
+                                if f == key then
+                                    local msg = string.format('circular include detected: "%s"', filename)
+                                    if source_file then
+                                        msg = msg .. ' from ' .. source_file
+                                    end
+                                    local chain = table.concat(self._include_stack, ' -> ')
+                                    if chain ~= '' then
+                                        msg = msg .. ' (' .. chain .. ' -> ' .. key .. ')'
+                                    end
+                                    error(msg)
+                                end
+                            end
+
+                            table.insert(self._include_stack, key)
                             table.insert(output, "// Begin include: " .. filename)
-                            table.insert(output, self:process(content))
+                            table.insert(output, self:process(content, key))
                             table.insert(output, "// End include: " .. filename)
+                            table.remove(self._include_stack)
                         else
-                            table.insert(output, "// Include not found: " .. filename)
+                            table.insert(output, "// Include skipped: " .. filename)
                         end
-                        table.remove(self._include_stack)
                     end
                 end
                 ::continue::

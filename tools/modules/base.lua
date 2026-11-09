@@ -56,6 +56,9 @@ function base:create_env(project)
 	super_env.bind_headers = function( dir )
 		return self:bind_headers(dir)
 	end
+	super_env.bind_includes = function( dirs )
+		return self:bind_includes(dirs)
+	end
 	setmetatable( env, {__index = setmetatable(super_env,{__index=_G})} )
 	self._env = env
 end
@@ -194,6 +197,17 @@ function base:bind_headers( dir )
 	end
 	self._bind_headers = self._bind_headers or {}
 	table.insert(self._bind_headers,{ dir = dir })
+end
+
+--- Adds include directories used by binding generation.
+---@param dirs string|string[]
+function base:bind_includes( dirs )
+	self._bind_includes = self._bind_includes or {}
+	utils.append_strings(self._bind_includes,dirs)
+end
+
+function base:get_bind_includes()
+	return self._bind_includes or rawget(self._env,'bind_includes') or {}
 end
 
 --- Runs the optional module init() function.

@@ -186,6 +186,13 @@ function Project.env:bind_headers( headers )
 	table.insert(self.bind_headers, { dir = headers })
 end
 
+function Project.env:bind_includes( dirs )
+	if not self.bind_includes then
+		self.bind_includes = {}
+	end
+	utils.append_strings(self.bind_includes,dirs)
+end
+
 local function get_target(cmdargs)
 	return  (cmdargs and cmdargs['target-platform']) or os.getenv('LLAE_TARGET_PLATFORM') or llae.get_host_platform()
 end
@@ -278,6 +285,43 @@ function Project:replace_tokens( str, env )
 		host_platform = self:get_host_platform(),
 	},{ __index = env or self._env })
 	return utils.replace_tokens(str, full_env)
+end
+
+--- Returns the global ordered, normalized and deduplicated list of
+--- include directories used by binding generation.
+---@return string[]
+function Project:get_bind_include_dirs()
+	local result = {}
+	local seen = {}
+	local function add( dir, root, env )
+		if type(dir) ~= 'string' or dir == '' then
+			error('bind_includes: path must be a non-empty string')
+		end
+		local resolved = self:replace_tokens(dir,env)
+		if resolved == '' then
+			error('bind_includes: path resolved to an empty string')
+		end
+		if not path.isabsolute(resolved) then
+			resolved = path.join(root,resolved)
+		end
+		resolved = path.normalize_dir(resolved)
+		if not seen[resolved] then
+			seen[resolved] = true
+			table.insert(result,resolved)
+		end
+	end
+	local root = self:get_root()
+	for _,dir in ipairs(self._env.bind_includes or {}) do
+		add(dir,root,self._env)
+	end
+	for _,m in ipairs(self._modules_list) do
+		local env = m:get_env()
+		local module_root = m:get_location() or root
+		for _,dir in ipairs(m:get_bind_includes()) do
+			add(dir,module_root,env)
+		end
+	end
+	return result
 end
 
 function Project:get_cmdargs(  )
@@ -585,6 +629,7 @@ function Project:generate_bindings( )
 	local processor = process_bind.new()
 	processor:define('LLAE_BINDING_GENERATION')
 	processor:define('META_OBJECT')
+	processor:set_include_dirs(self:get_bind_include_dirs())
 
 	local dst_dir = path.join(self:get_root(),'build','src')
 
