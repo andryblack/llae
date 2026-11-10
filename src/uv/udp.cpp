@@ -475,6 +475,14 @@ namespace uv {
         m_recv_consumer.reset();
     }
 
+    void udp::close() {
+        if (is_closing()) {
+            return;
+        }
+        stop_recv();
+        handle::close();
+    }
+
     lua::multiret udp::lnew(lua::state& l) {
         auto af = l.optinteger(1,AF_UNSPEC);
         common::intrusive_ptr<udp> server{new udp(llae::app::get(l).loop(),af)};

@@ -121,6 +121,8 @@ namespace uv {
         int start_recv( const udp_recv_consumer_ptr& consumer );
         /// @luabind(name=stop_recv)
         void stop_recv();
+        /// @luabind
+        void close();
 
         /// @luabind(ltype=integer)
         static constexpr auto IPV6ONLY = UV_UDP_IPV6ONLY;
