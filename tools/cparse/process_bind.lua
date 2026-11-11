@@ -1050,7 +1050,8 @@ function processor:_init()
 end
 
 function processor:define(token, value)
-    self._defines[token] = value
+    -- A macro defined without a value is still defined: it expands to nothing.
+    self._defines[token] = value or ''
 end
 
 ---@param dirs string[]

@@ -282,6 +282,73 @@ LUABIND_FIELD(baz)
     lu.assertEquals(module:get_values()[2]:get_name(), 'baz')
 end
 
+function TestProcessBind:test_define_without_value_is_an_empty_macro()
+    -- processor:define('X') must register X as defined with an empty body.
+    -- LLAE_BINDING_GENERATION and META_OBJECT are always defined this way.
+    local processor = process_bind.new()
+    processor:define('LLAE_BINDING_GENERATION')
+    processor:define('META_OBJECT')
+    local result = processor:process_content[[
+namespace empty_macro {
+#ifdef LLAE_BINDING_GENERATION
+    /// @luabind
+    class sample {
+        META_OBJECT
+        /// @luabind
+        int value;
+    };
+#endif
+}
+]]
+    lu.assertNotNil(result.modules['empty_macro'], 'LLAE_BINDING_GENERATION is not defined')
+    local module = result.modules['empty_macro']
+    lu.assertEquals(#module:get_classes(), 1)
+    local cls = module:get_classes()[1]
+    lu.assertEquals(cls:get_name(), 'sample')
+    lu.assertEquals(#cls:get_fields(), 1, 'META_OBJECT leaked into the next declaration')
+    lu.assertEquals(cls:get_fields()[1]:get_name(), 'value')
+    lu.assertEquals(cls:get_fields()[1]:get_type(), 'int')
+end
+
+function TestProcessBind:test_constructor_directly_after_meta_object()
+    -- META_OBJECT is defined empty by the binding generator (see docs/bindings.md).
+    -- If the definition is lost, the macro stays in the class body and the
+    -- declaration that follows it loses its doc comment, so the constructor is dropped.
+    local processor = process_bind.new()
+    processor:define('META_OBJECT')
+    local result = processor:process_content[[
+namespace meta_object_ctor {
+    /// @luabind
+    class thing : public meta::object {
+        META_OBJECT
+        /// @luabind(name=new)
+        thing(int value);
+        /// @luabind
+        void run();
+    };
+}
+]]
+    lu.assertNotNil(result.modules['meta_object_ctor'])
+    local module = result.modules['meta_object_ctor']
+    lu.assertEquals(#module:get_classes(), 1)
+    local cls = module:get_classes()[1]
+    lu.assertEquals(cls:get_name(), 'thing')
+
+    local ctor = cls:get_constructor()
+    lu.assertNotNil(ctor, 'constructor directly after META_OBJECT was dropped')
+    lu.assertEquals(ctor:get_name(), 'thing')
+    lu.assertEquals(ctor:get_lua_name(), 'new')
+    lu.assertEquals(#ctor:get_lua_args(), 1)
+    lu.assertEquals(ctor:get_lua_args()[1].name, 'value')
+
+    local methods = {}
+    for _, method in ipairs(cls:get_methods()) do
+        methods[method:get_name()] = true
+    end
+    lu.assertTrue(methods['run'])
+    lu.assertNil(methods['thing'])
+end
+
 function TestProcessBind:test_loop_param_not_emitted_in_meta()
     local processor = process_bind.new()
     local result = processor:process_content[[
