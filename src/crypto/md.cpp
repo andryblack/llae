@@ -1,19 +1,15 @@
 #include "md.h"
-#include <memory>
+#include <string>
 #include "common/intrusive_ptr.h"
 #include "crypto.h"
 #include "llae/error.h"
 #include "llae/promise.h"
 #include "llae/result.h"
 #include "llae/sequental.h"
-#include "lua/state.h"
 #include "llae/buffer.h"
 #include "llae/loop.h"
-#include "lua/bind.h"
-#include "lua/stack.h"
 #include "llae/write_buffers.h"
 #include "llae/work.h"
-#include "llae/async_bind.h"
 
 META_OBJECT_INFO(crypto::md,meta::object)
 
@@ -25,20 +21,29 @@ namespace crypto {
 		mbedtls_md_setup(&m_ctx,m_info,0);
 	}
 
-	common::intrusive_ptr<md> md::create(mbedtls_md_type_t type) {
-		auto info = mbedtls_md_info_from_type(type);
-		if (!info) {
-			return {};
-		}
-		return common::make_intrusive<md>(info);
+	const mbedtls_md_info_t* md::find_info(std::string_view algorithm) {
+		std::string name(algorithm);
+		return mbedtls_md_info_from_string(name.c_str());
 	}
-	
-	common::intrusive_ptr<md> md::create(const char* type) {
-		auto info = mbedtls_md_info_from_string(type);
+
+	const mbedtls_md_info_t* md::find_info(mbedtls_md_type_t type) {
+		return mbedtls_md_info_from_type(type);
+	}
+
+	md_ptr md::create(mbedtls_md_type_t type) {
+		auto info = find_info(type);
 		if (!info) {
-			return {};
+			return md_ptr{};
 		}
-		return common::make_intrusive<md>(info);
+		return md_ptr(new md(info));
+	}
+
+	md_ptr md::create(const char* type) {
+		auto info = find_info(type ? std::string_view(type) : std::string_view{});
+		if (!info) {
+			return md_ptr{};
+		}
+		return md_ptr(new md(info));
 	}
 
 	md::~md() {
@@ -46,22 +51,33 @@ namespace crypto {
 	}
 	
 
-	const mbedtls_md_info_t* md::get_info(lua::state& l, int idx) {
-		if (l.get_type(idx) == lua::value_type::string) {
-			return mbedtls_md_info_from_string(l.tostring(idx));
-		}
-		if (l.get_type(idx) == lua::value_type::number) {
-			return mbedtls_md_info_from_type(static_cast<mbedtls_md_type_t>(l.tointeger(idx)));
-		}
-		return nullptr;
-	}
-
-	llae::result<size_t> md::get_length(lua::state& l) {
-		auto info = get_info(l,1);
+	llae::result<size_t> md::get_length(std::string_view algorithm) {
+		auto info = find_info(algorithm);
 		if (!info) {
 			return llae::string_error::create("unknown md algorithm");
 		}
 		return mbedtls_md_get_size(info);
+	}
+
+	llae::result<size_t> md::get_length(mbedtls_md_type_t type) {
+		auto info = find_info(type);
+		if (!info) {
+			return llae::string_error::create("unknown md algorithm");
+		}
+		return mbedtls_md_get_size(info);
+	}
+
+	llae::result<void> md::update_impl(const llae::write_buffers& data) {
+		for (auto& b:data.get_buffers()) {
+			if (b.get_len() == 0)
+				continue;
+			auto status = mbedtls_md_update(&m_ctx, 
+				reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len() );
+			if (status != 0) {
+				return status_error::create(status);
+			}
+		}
+		return llae::result<void>{};
 	}
 
 	llae::result<void> md::update_impl(const llae::buffer_base_ptr& data) {
@@ -79,28 +95,6 @@ namespace crypto {
 		if (!data) {
 			return llae::string_error::create("need data");
 		}
-		if (auto e = try_start()) {
-			return std::move(e);
-		}
-		llae::sequental_scope l{m_seq};
-		if (auto e = l.start("update")) {
-			return std::move(e);
-		}
-		return update_impl(data);
-	}
-	llae::result<void> md::update_impl(const llae::write_buffers& data) {
-		for (auto& b:data.get_buffers()) {
-			if (b.get_len() == 0)
-				continue;
-			auto status = mbedtls_md_update(&m_ctx, 
-				reinterpret_cast<const unsigned char*>(b.get_base()), b.get_len() );
-			if (status != 0) {
-				return status_error::create(status);
-			}
-		}
-		return llae::result<void>{};
-	}
-	llae::result<void> md::sync_update(const llae::write_buffers& data) {
 		if (auto e = try_start()) {
 			return std::move(e);
 		}
@@ -142,25 +136,21 @@ namespace crypto {
 		});
 	}
 
+	llae::result_promise_ptr<void> md::async_update_buffers(llae::loop& a,llae::write_buffers&& buffers) {
+		auto e = try_start();
+		if (e) {
+			return llae::result_promise_forward_error<void>(std::move(e));
+		}
+		using work_t = llae::sequental_method_write_buffers_work<void,md>;
+		return work_t::start(a, std::move(buffers), this, &md::m_seq, "update",
+			static_cast<llae::result<void>(md::*)(const llae::write_buffers&)>(&md::update_impl));
+	}
+
 	llae::result_promise_ptr<llae::buffer_base_ptr> md::async_finish(llae::loop& a) {
 		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,md>;
 		return work_t::start(a,this,&md::m_seq,"finish",[](md& self){
 			return self.finish_impl();
 		});
-	}
-
-	llae::result_promise_ptr<void> md::lasync_update(lua::state& l) {
-		auto e = try_start();
-		if (e) {
-			return llae::result_promise_forward_error<void>(std::move(e));
-		}
-		llae::write_buffers buffers;
-		if (!buffers.putm(l, 2)) {
-			buffers.reset(l);
-			return llae::make_result_promise_string_error<void>("invalid data");
-		}
-		using work_t = llae::sequental_method_write_buffers_work<void,md>;
-		return work_t::start(llae::loop::get(l), std::move(buffers), this,&md::m_seq,"update", static_cast<llae::result<void>(md::*)(const llae::write_buffers&)>(&md::update_impl));
 	}
 
 	llae::error_ptr md::try_start() {
@@ -176,13 +166,5 @@ namespace crypto {
 			m_stated = true;
 		}
 		return {};
-	}
-
-	llae::result<md_ptr> md::lnew(lua::state& l) {
-		auto info = get_info(l,1);
-		if (!info) {
-			return llae::string_error::create("unknown md algorithm");
-		}
-		return common::make_intrusive<md>(info);
 	}
 }

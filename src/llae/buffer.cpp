@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "llae-private/mbedtls/base64.h"
-#include "crypto/crypto.h"
+#include "llae-private/mbedtls/error.h"
 
 
 META_OBJECT_INFO(llae::buffer_base,meta::object)
@@ -17,6 +17,14 @@ META_OBJECT_INFO(llae::buffer,llae::buffer_base)
 META_OBJECT_INFO(llae::writable_buffer,llae::buffer)
 
 namespace llae {
+
+    static lua::multiret push_mbedtls_error(lua::state& l,const char* what,int error) {
+        char buffer[128] = {0};
+        mbedtls_strerror(error,buffer,sizeof(buffer));
+        l.pushnil();
+        l.pushfstring("%s, code:%d, %s",what,error,buffer);
+        return {2};
+    }
 
      static const char hex_char[] = "0123456789abcdef";
     using uchar = unsigned char;
@@ -358,16 +366,12 @@ namespace llae {
         }
         auto res = mbedtls_base64_decode(nullptr,0,&osize,src,src_size);
         if (MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL!=res) {
-            l.pushnil();
-            crypto::push_error(l,"failed decode %d: %s",res);
-            return {2};
+            return push_mbedtls_error(l,"failed decode",res);
         }
         buffer_ptr buf(buffer::alloc(osize));
         res = mbedtls_base64_decode(static_cast<unsigned char*>(buf->get_base()),osize,&osize,src,src_size);
         if (res!=0) {
-            l.pushnil();
-            crypto::push_error(l,"failed decode %d: %s",res);
-            return {2};
+            return push_mbedtls_error(l,"failed decode",res);
         }
         buf->set_len(osize);
         lua::push(l,std::move(buf));

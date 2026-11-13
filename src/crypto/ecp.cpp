@@ -2,11 +2,14 @@
 #include "crypto.h"
 #include "bignum.h"
 #include "llae/buffer.h"
-#include "lua/stack.h"
 #include "random.h"
 
 #include "llae-private/mbedtls/ecdsa.h"
 #include "llae-private/mbedtls/ecdh.h"
+
+#include <algorithm>
+#include <cstring>
+#include <string>
 
 
 META_OBJECT_INFO(crypto::ecp,meta::object)
@@ -34,23 +37,13 @@ namespace crypto {
 		return pnt && (mbedtls_ecp_point_cmp(&m_point,pnt->get())) == 0;
 	}
 
-	lua::multiret ecp_point::read_string(lua::state& l) {
-		const char* x = l.checkstring(2);
-		const char* y = l.checkstring(3);
-		int radix = static_cast<int>(l.optinteger(4,10));
-		auto r = mbedtls_ecp_point_read_string(&m_point,radix,x,y);
-		if (r == 0) {
-			l.pushboolean(1);
-			return {1};
-		}
-		l.pushnil();
-        push_error(l,"read_string failed, code:%d, %s",r);
-        return {2};
-	}
-
-	lua::multiret ecp_point::lnew(lua::state& l) {
-		lua::push(l,ecp_point_ptr(new ecp_point()));
-		return {1};
+	llae::result<void> ecp_point::read_string(std::string_view x, std::string_view y,
+			std::optional<int> radix) {
+		std::string xs(x);
+		std::string ys(y);
+		auto status = mbedtls_ecp_point_read_string(&m_point,radix.value_or(10),
+			xs.c_str(),ys.c_str());
+		return make_result(status);
 	}
 
 	ecp::ecp() {
@@ -64,270 +57,225 @@ namespace crypto {
 		return mbedtls_ecp_group_load(&m_group,grp_id);
 	}
 
+	llae::result<ecp_ptr> ecp::create(std::string_view group_id) {
+		std::string name(group_id);
+		auto info = mbedtls_ecp_curve_info_from_name(name.c_str());
+		if (!info) {
+			return llae::string_error::create("unknown ecp '" + name + "'");
+		}
+		ecp_ptr res(new ecp());
+		auto status = res->load_group(info->grp_id);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<ecp_ptr>(std::move(res));
+	}
+
 	bool ecp::check_pubkey(const ecp_point_ptr& pnt) const {
 		return pnt && mbedtls_ecp_check_pubkey(&m_group,pnt->get()) == 0;
 	}
 
-    bool ecp::check_privkey(const bignum_ptr& d) const {
-        return d && mbedtls_ecp_check_privkey(&m_group,d->get()) == 0;
-    }
+	bool ecp::check_privkey(const bignum_ptr& d) const {
+		return d && mbedtls_ecp_check_privkey(&m_group,d->get()) == 0;
+	}
 
-    lua::multiret ecp::point_read_binary(lua::state& l) {
-        ecp_point_ptr pnt(new ecp_point());
-        const unsigned char* data = nullptr;
-        size_t size = 0;
-        if (l.isstring(2)) {
-            data = reinterpret_cast<const unsigned char*>(l.tolstring(2, size));
-        } else {
-            llae::buffer_base_ptr b = lua::stack<llae::buffer_base_ptr>::get(l,2);
-            if (!b) {
-                l.argerror(2, "need data");
-            } else {
-                data = static_cast<const unsigned char*>(b->get_base());
-                size = b->get_len();
-            }
-        }
-        auto r = mbedtls_ecp_point_read_binary(&m_group,pnt->get(),data,size);
-        if (r == 0) {
-            lua::push(l, std::move(pnt));
-            return {1};
-        }
-        l.pushnil();
-        push_error(l,"point_read_binary failed, code:%d, %s",r);
-        return {2};
-    }
+	llae::result<ecp_point_ptr> ecp::point_read_binary(const llae::buffer_view& data) {
+		ecp_point_ptr pnt = common::make_intrusive<ecp_point>();
+		auto status = mbedtls_ecp_point_read_binary(&m_group,pnt->get(),
+			static_cast<const unsigned char*>(data.get_base()),data.get_len());
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<ecp_point_ptr>(std::move(pnt));
+	}
 
-    lua::multiret ecp::point_write_binary(lua::state& l) {
-        ecp_point_ptr point = lua::stack<ecp_point_ptr>::get(l, 2);
-        if (!point) {
-            l.argerror(2, "need point");
-        }
-        int fmt = static_cast<int>(l.optinteger(3, MBEDTLS_ECP_PF_COMPRESSED));
-        unsigned char buf[2];
-        size_t need_len = 0;
-        auto res = mbedtls_ecp_point_write_binary(&m_group,point->get(),fmt,&need_len,buf,0);
-        if (res == MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL) {
-            auto b = llae::buffer::alloc(need_len);
-            res = mbedtls_ecp_point_write_binary(&m_group,point->get(),fmt,&need_len,
-                                                 static_cast<unsigned char *>(b->get_base()),need_len);
-            if (res == 0) {
-                b->set_len(need_len);
-                lua::push(l, std::move(b));
-                return {1};
-            }
-        }
-        l.pushnil();
-        push_error(l,"point_write_binary failed, code:%d, %s",res);
-        return {2};
-    }
+	llae::result<llae::buffer_base_ptr> ecp::point_write_binary(const ecp_point_ptr& point,
+			std::optional<int> format) {
+		if (!point) {
+			return llae::string_error::create("need point");
+		}
+		int fmt = format.value_or(MBEDTLS_ECP_PF_COMPRESSED);
+		unsigned char buf[2];
+		size_t need_len = 0;
+		auto status = mbedtls_ecp_point_write_binary(&m_group,point->get(),fmt,&need_len,buf,0);
+		if (status != MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL) {
+			return status_error::create(status);
+		}
+		auto b = llae::buffer::alloc(need_len);
+		status = mbedtls_ecp_point_write_binary(&m_group,point->get(),fmt,&need_len,
+			static_cast<unsigned char *>(b->get_base()),need_len);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		b->set_len(need_len);
+		return llae::result<llae::buffer_base_ptr>(llae::buffer_base_ptr(std::move(b)));
+	}
 
-    lua::multiret ecp::gen_privkey(lua::state& l) {
-        bignum_ptr d(new bignum());
-        auto r = mbedtls_ecp_gen_privkey(&m_group, d->get(), rng_func, this);
-        if (r == 0) {
-            lua::push(l, std::move(d));
-            return {1};
-        }
-        l.pushnil();
-        push_error(l,"gen_privkey failed, code:%d, %s",r);
-        return {2};
-    }
+	llae::result<bignum_ptr> ecp::gen_privkey() {
+		bignum_ptr d = common::make_intrusive<bignum>();
+		auto status = mbedtls_ecp_gen_privkey(&m_group, d->get(), rng_func, this);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(d));
+	}
 
-    lua::multiret ecp::gen_pubkey(lua::state& l) {
-        bignum_ptr d = lua::stack<bignum_ptr>::get(l,2);
-        if (!d) {
-            l.argerror(2, "need privkey");
-        }
-        ecp_point_ptr Q(new ecp_point());
-        auto r = mbedtls_ecp_mul( &m_group, Q->get(), d->get(), &m_group.G, &ecp::rng_func, this);
-        if (r == 0) {
-            lua::push(l, std::move(Q));
-            return {1};
-        }
-        l.pushnil();
-        push_error(l,"gen_pubkey failed, code:%d, %s",r);
-        return {2};
-    }
+	llae::result<ecp_point_ptr> ecp::gen_pubkey(const bignum_ptr& d) {
+		if (!d) {
+			return llae::string_error::create("need privkey");
+		}
+		ecp_point_ptr Q = common::make_intrusive<ecp_point>();
+		auto status = mbedtls_ecp_mul( &m_group, Q->get(), d->get(), &m_group.G,
+			&ecp::rng_func, this);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<ecp_point_ptr>(std::move(Q));
+	}
 
-    lua::multiret ecp::gen_keypair(lua::state& l) {
-        bignum_ptr d(new bignum());
-        ecp_point_ptr Q(new ecp_point());
-        auto r = mbedtls_ecp_gen_keypair(&m_group,d->get(),Q->get(),&ecp::rng_func,this);
-        if (r == 0) {
-            lua::push(l, std::move(d));
-            lua::push(l, std::move(Q));
-            return {2};
-        }
-        l.pushnil();
-        push_error(l,"gen_keypair failed, code:%d, %s",r);
-        return {2};
-    }
+	llae::result<ecp_keypair> ecp::gen_keypair() {
+		ecp_keypair keypair{common::make_intrusive<bignum>(), common::make_intrusive<ecp_point>()};
+		auto status = mbedtls_ecp_gen_keypair(&m_group,keypair.private_key->get(),
+			keypair.public_key->get(),&ecp::rng_func,this);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<ecp_keypair>(std::move(keypair));
+	}
 
-    lua::multiret ecp::ecdsa_verify(lua::state& l) {
-        auto b = llae::buffer_view::get(l,2,true);
-        ecp_point_ptr Q = lua::stack<ecp_point_ptr>::get(l,3);
-        if (!Q) {
-            l.argerror(3, "need pubkey");
-        }
-        bignum_ptr r = lua::stack<bignum_ptr>::get(l,4);
-        if (!r) {
-            l.argerror(4, "need r");
-        }
-        bignum_ptr s = lua::stack<bignum_ptr>::get(l,5);
-        if (!s) {
-            l.argerror(4, "need s");
-        }
-        auto res = mbedtls_ecdsa_verify(&m_group,
-                                        static_cast<const unsigned char*>(b.get_base()),
-                                        b.get_len(),Q->get(),r->get(),s->get());
-        if (res == 0) {
-            l.pushboolean(true);
-            return {1};
-        }
-        l.pushnil();
-        push_error(l,"ecdsa_verify failed, code:%d, %s",res);
-        return {2};
-    }
+	llae::result<bool> ecp::ecdsa_verify(const llae::buffer_view& hash, const ecp_point_ptr& Q,
+			const bignum_ptr& r, const bignum_ptr& s) {
+		if (!Q) {
+			return llae::string_error::create("need pubkey");
+		}
+		if (!r) {
+			return llae::string_error::create("need r");
+		}
+		if (!s) {
+			return llae::string_error::create("need s");
+		}
+		auto res = mbedtls_ecdsa_verify(&m_group,
+										static_cast<const unsigned char*>(hash.get_base()),
+										hash.get_len(),Q->get(),r->get(),s->get());
+		if (res != 0) {
+			return status_error::create(res);
+		}
+		return true;
+	}
 
-    int ecp::rng_func(void *ctx, unsigned char * buf, size_t len) {
-        return static_cast<ecp*>(ctx)->rng_gen(buf,len);
-    }
-    int ecp::rng_gen(unsigned char * buffer, size_t size) {
-        if (m_random_data && size) {
-            size_t len = std::min(size,m_random_data->get_len());
-            memcpy(buffer,static_cast<const char*>(m_random_data->get_base())+m_random_data->get_len()-len,len);
-            buffer += len;
-            size -= len;
-            m_random_data->set_len(m_random_data->get_len()-len);
-            if (m_random_data->get_len() == 0) {
-                m_random_data.reset();
-            }
-        }
-        if (size) {
-            if (!m_random) {
-                m_random.reset(new random(entropy_ptr{}));
-                m_random->seed({});
-            }
-            return m_random->read(buffer,size);
-        }
-        return 0;
-    }
+	int ecp::rng_func(void *ctx, unsigned char * buf, size_t len) {
+		return static_cast<ecp*>(ctx)->rng_gen(buf,len);
+	}
+	int ecp::rng_gen(unsigned char * buffer, size_t size) {
+		if (m_random_data && size) {
+			size_t len = std::min(size,m_random_data->get_len());
+			memcpy(buffer,static_cast<const char*>(m_random_data->get_base())+m_random_data->get_len()-len,len);
+			buffer += len;
+			size -= len;
+			m_random_data->set_len(m_random_data->get_len()-len);
+			if (m_random_data->get_len() == 0) {
+				m_random_data.reset();
+			}
+		}
+		if (size) {
+			if (!m_random) {
+				m_random = common::make_intrusive<random>(entropy_ptr{});
+				auto r = m_random->seed(llae::buffer_view{});
+				if (r.get_error()) {
+					return -1;
+				}
+			}
+			return m_random->read(buffer,size);
+		}
+		return 0;
+	}
 
-    void ecp::set_random_data(const llae::buffer_view& data) {
-        if (data.empty()) {
-            m_random_data.reset();
-        } else {
-            m_random_data = llae::buffer::hold(data.get_base(),data.get_len());
-        }
-    }
+	void ecp::set_random_data(const llae::buffer_view& data) {
+		if (data.empty()) {
+			m_random_data.reset();
+		} else {
+			m_random_data = llae::buffer::hold(data.get_base(),data.get_len());
+		}
+	}
 
-    lua::multiret ecp::ecdsa_sign(lua::state& l) {
-        auto b = llae::buffer_view::get(l,2,true);
-        bignum_ptr d = lua::stack<bignum_ptr>::get(l,3);
-        if (!d) {
-            l.argerror(3, "need privkey");
-        }
-        
-        bignum_ptr r(new bignum());
-        bignum_ptr s(new bignum());
-        
-        int res;
-        
+	llae::result<ecdsa_signature> ecp::ecdsa_sign(const llae::buffer_view& hash, const bignum_ptr& d,
+			std::optional<std::string_view> hash_alg) {
+		if (!d) {
+			return llae::string_error::create("need privkey");
+		}
+
+		ecdsa_signature sig{common::make_intrusive<bignum>(), common::make_intrusive<bignum>()};
+
+		int res;
+
 #ifdef MBEDTLS_ECDSA_DETERMINISTIC
-        const char* hash_alg = l.optstring(4, nullptr);
-        if (hash_alg) {
-            auto info = mbedtls_md_info_from_string(hash_alg);
-            if (!info) {
-                l.pushnil();
-                l.pushfstring("unknown alg %s", hash_alg);
-                return {2};
-            }
-            
-            res = mbedtls_ecdsa_sign_det_ext(&m_group,r->get(),s->get(),d->get(),
-                                      static_cast<const unsigned char*>(b.get_base()),
-                                      b.get_len(),
-                                      mbedtls_md_get_type(info),
-                                      &ecp::rng_func,this);
-        } else
+		if (hash_alg && !hash_alg->empty()) {
+			std::string alg(*hash_alg);
+			auto info = mbedtls_md_info_from_string(alg.c_str());
+			if (!info) {
+				return llae::string_error::create("unknown alg " + alg);
+			}
+
+			res = mbedtls_ecdsa_sign_det_ext(&m_group,sig.r->get(),sig.s->get(),d->get(),
+									  static_cast<const unsigned char*>(hash.get_base()),
+									  hash.get_len(),
+									  mbedtls_md_get_type(info),
+									  &ecp::rng_func,this);
+		} else
 #endif
-        {
-            res = mbedtls_ecdsa_sign(&m_group,r->get(),s->get(),d->get(),
-                                      static_cast<const unsigned char*>(b.get_base()),
-                                      b.get_len(),&ecp::rng_func,this);
-        }
-        if (res == 0) {
-            lua::push(l, std::move(r));
-            lua::push(l, std::move(s));
-            return {2};
-        }
-        l.pushnil();
-        push_error(l,"ecdsa_sign failed, code:%d, %s",res);
-        return {2};
-    }
-
-
-    lua::multiret ecp::ecdh_gen_public(lua::state& l) {
-        bignum_ptr p{new bignum()};
-        ecp_point_ptr Q{new ecp_point()};
-        int res = mbedtls_ecdh_gen_public(&m_group,p->get(),Q->get(),&ecp::rng_func,this);
-        if (res == 0) {
-            lua::push(l, std::move(p));
-            lua::push(l, std::move(Q));
-            return {2};
-        }
-        l.pushnil();
-        push_error(l,"ecdh_gen_public failed, code:%d, %s",res);
-        return {2};
-    }
-
-    lua::multiret ecp::ecdh_compute_shared(lua::state& l) {
-        bignum_ptr z{new bignum()};
-        auto Q = lua::stack<lua::check<ecp_point_ptr>>::get(l,2);
-        auto d = lua::stack<lua::check<bignum_ptr>>::get(l,3);
-        int res = mbedtls_ecdh_compute_shared(&m_group, z->get(), Q->get(), d->get(), &ecp::rng_func,this);
-        if (res == 0) {
-            lua::push(l, std::move(z));
-            return {1};
-        }
-        l.pushnil();
-        push_error(l,"ecdh_compute_shared failed, code:%d, %s",res);
-        return {2};
-    }
-
-
-    lua::multiret ecp::scalar_mul(lua::state& l) {
-        auto P = lua::stack<ecp_point_ptr>::get(l,2);
-        if (!P) {
-            l.argerror(2, "need point");
-        }
-        auto d = lua::stack<lua::check<bignum_ptr>>::get(l,3);
-        ecp_point_ptr R(new ecp_point());
-        int res = mbedtls_ecp_mul(&m_group, R->get(), d->get(), P->get(), &ecp::rng_func,this);
-        if (res == 0) {
-            lua::push(l, std::move(R));
-            return {1};
-        }
-        l.pushnil();
-        push_error(l,"scalar_mul failed, code:%d, %s",res);
-        return {2};
-    }
-	lua::multiret ecp::lnew(lua::state& l) {
-		const char* name = l.checkstring(1);
-		auto info = mbedtls_ecp_curve_info_from_name(name);
-		if (!info) {
-			l.pushnil();
-			l.pushfstring("unknown ecp '%s'",name);
-			return {2};
+		{
+			res = mbedtls_ecdsa_sign(&m_group,sig.r->get(),sig.s->get(),d->get(),
+									  static_cast<const unsigned char*>(hash.get_base()),
+									  hash.get_len(),&ecp::rng_func,this);
 		}
-		ecp_ptr res(new ecp());
-		auto mbedlsstatus = res->load_group(info->grp_id);
-		if (mbedlsstatus!=0) {
-			l.pushnil();
-            push_error(l,"group load failed, code:%d, %s",mbedlsstatus);
-            return {2};
+		if (res != 0) {
+			return status_error::create(res);
 		}
-		lua::push(l,std::move(res));
-		return {1};
+		return llae::result<ecdsa_signature>(std::move(sig));
+	}
+
+
+	llae::result<ecp_keypair> ecp::ecdh_gen_public() {
+		ecp_keypair keypair{common::make_intrusive<bignum>(), common::make_intrusive<ecp_point>()};
+		int status = mbedtls_ecdh_gen_public(&m_group,keypair.private_key->get(),
+			keypair.public_key->get(),&ecp::rng_func,this);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<ecp_keypair>(std::move(keypair));
+	}
+
+	llae::result<bignum_ptr> ecp::ecdh_compute_shared(const ecp_point_ptr& Q, const bignum_ptr& d) {
+		if (!Q) {
+			return llae::string_error::create("need pubkey");
+		}
+		if (!d) {
+			return llae::string_error::create("need privkey");
+		}
+		bignum_ptr z = common::make_intrusive<bignum>();
+		int status = mbedtls_ecdh_compute_shared(&m_group, z->get(), Q->get(), d->get(),
+			&ecp::rng_func,this);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(z));
+	}
+
+
+	llae::result<ecp_point_ptr> ecp::scalar_mul(const ecp_point_ptr& point, const bignum_ptr& d) {
+		if (!point) {
+			return llae::string_error::create("need point");
+		}
+		if (!d) {
+			return llae::string_error::create("need scalar");
+		}
+		ecp_point_ptr R = common::make_intrusive<ecp_point>();
+		int status = mbedtls_ecp_mul(&m_group, R->get(), d->get(), point->get(),
+			&ecp::rng_func,this);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<ecp_point_ptr>(std::move(R));
 	}
 
 }

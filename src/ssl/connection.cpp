@@ -21,7 +21,12 @@ META_OBJECT_INFO(ssl::connection,meta::object)
 #define SSL_ERROR(MSG) LOG_ERROR("SSL:" << MSG)
 
 namespace ssl {
-    using crypto::push_error;
+
+    static void push_error(lua::state& l,const char* what,int error) {
+        char buffer[128] = {0};
+        mbedtls_strerror(error,buffer,sizeof(buffer));
+        l.pushfstring("%s, code:%d, %s",what,error,buffer);
+    }
 
     static llae::error_ptr ssl_error(const char* what,int code) {
         char buffer[128] = {0};
@@ -104,7 +109,7 @@ namespace ssl {
 		if (m_uv_error) {
 			uv::push_error(l,m_uv_error);
 		} else if (m_ssl_error) {
-            ::ssl::push_error(l,"ssl error code:%d, %s",m_ssl_error);
+            ::ssl::push_error(l,"ssl error",m_ssl_error);
 		} else {
 			l.pushstring("unknown");
 		}

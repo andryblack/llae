@@ -1,300 +1,342 @@
 #include "bignum.h"
-#include "lua/stack.h"
+#include "crypto.h"
+#include "random.h"
 #include "llae/buffer.h"
-#include <memory>
-#include "llae-private/mbedtls/error.h"
-#include "crypto/random.h"
+#include <cstring>
+#include <string>
 
 META_OBJECT_INFO(crypto::bignum,meta::object)
 
 namespace crypto {
 
-    
-    static void check_error(lua::state& l,int err) {
-        if (err != 0) {
-            char buffer[128] = {0};
-            mbedtls_strerror(err,buffer,sizeof(buffer));
-            l.pushstring(buffer);
-            l.error();
-        }
-    }
+	namespace {
+		/// Multiplies an MPI by a signed integer without a temporary bignum.
+		llae::error_ptr mul_int(mbedtls_mpi& x,const mbedtls_mpi& a,int64_t b) {
+			if (b >= 0) {
+				auto status = mbedtls_mpi_mul_int(&x,&a,static_cast<mbedtls_mpi_uint>(b));
+				return status != 0 ? status_error::create(status) : llae::error_ptr{};
+			}
+			mbedtls_mpi abs_value;
+			mbedtls_mpi_init(&abs_value);
+			mbedtls_mpi zero;
+			mbedtls_mpi_init(&zero);
+			auto status = mbedtls_mpi_mul_int(&abs_value,&a,
+				static_cast<mbedtls_mpi_uint>(-(b+1))+1);
+			if (status == 0) {
+				status = mbedtls_mpi_sub_mpi(&x,&zero,&abs_value);
+			}
+			mbedtls_mpi_free(&abs_value);
+			mbedtls_mpi_free(&zero);
+			return status != 0 ? status_error::create(status) : llae::error_ptr{};
+		}
+	}
 
-    bignum::bignum() {
-        mbedtls_mpi_init(&m_mpi);
-    }
+	bignum::bignum() {
+		mbedtls_mpi_init(&m_mpi);
+	}
 
-    bignum::~bignum() {
-        mbedtls_mpi_free(&m_mpi);
-    }
+	bignum::~bignum() {
+		mbedtls_mpi_free(&m_mpi);
+	}
 
-    void bignum::set(mbedtls_mpi_sint val) {
-        mbedtls_mpi_lset(&m_mpi, val);
-    }
-    void bignum::set(const bignum& val) {
-        mbedtls_mpi_copy(&m_mpi, &val.m_mpi);
-    }
+	void bignum::set(mbedtls_mpi_sint val) {
+		mbedtls_mpi_lset(&m_mpi, val);
+	}
+	void bignum::set(const bignum& val) {
+		mbedtls_mpi_copy(&m_mpi, &val.m_mpi);
+	}
 
-    void bignum::self_add(lua::state& l) {
-        if (l.gettop()<2) {
-            l.argerror(2, "need value");
-        }
-        if (l.isnumber(2)) {
-            check_error(l,mbedtls_mpi_add_int(&m_mpi, &m_mpi, l.tointeger(2)));
-        } else {
-            auto ptr = lua::stack<const bignum*>::get(l, 2);
-            if (!ptr) l.argerror(2, "need number");
-            check_error(l,mbedtls_mpi_add_mpi(&m_mpi, &m_mpi, &ptr->m_mpi));
-        }
-    }
+	llae::result<bignum_ptr> bignum::create(std::optional<int64_t> value) {
+		bignum_ptr ptr = common::make_intrusive<bignum>();
+		if (value) {
+			std::string str(std::to_string(*value));
+			auto status = mbedtls_mpi_read_string(&ptr->m_mpi, 10, str.c_str());
+			if (status != 0) {
+				return status_error::create(status);
+			}
+		}
+		return llae::result<bignum_ptr>(std::move(ptr));
+	}
 
-    bignum_ptr bignum::add(lua::state& l) {
-        if (l.gettop()<2) {
-            l.argerror(2, "need value");
-        }
-        bignum_ptr res(new bignum());
-        if (l.isnumber(2)) {
-            check_error(l,mbedtls_mpi_add_int(&res->m_mpi, &m_mpi, l.tointeger(2)));
-        } else {
-            auto ptr = lua::stack<const bignum*>::get(l, 2);
-            if (!ptr) l.argerror(2, "need number");
-            check_error(l,mbedtls_mpi_add_mpi(&res->m_mpi, &m_mpi, &ptr->m_mpi));
-        }
-        return res;
-    }
+	llae::result<bignum_ptr> bignum::from_string(std::string_view value, std::optional<int> radix) {
+		std::string str(value);
+		bignum_ptr ptr = common::make_intrusive<bignum>();
+		auto status = mbedtls_mpi_read_string(&ptr->m_mpi, radix.value_or(16), str.c_str());
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(ptr));
+	}
 
-    void bignum::self_mul(lua::state& l) {
-        if (l.gettop()<2) {
-            l.argerror(2, "need value");
-        }
-        if (l.isnumber(2)) {
-            check_error(l,mbedtls_mpi_mul_int(&m_mpi, &m_mpi, l.tointeger(2)));
-        } else {
-            auto ptr = lua::stack<const bignum*>::get(l, 2);
-            if (!ptr) l.argerror(2, "need number");
-            check_error(l,mbedtls_mpi_mul_mpi(&m_mpi, &m_mpi, &ptr->m_mpi));
-        }
-    }
+	llae::result<bignum_ptr> bignum::create_random(const random_ptr& rng, size_t len) {
+		if (!rng) {
+			return llae::string_error::create("need random");
+		}
+		bignum_ptr ptr = common::make_intrusive<bignum>();
+		auto status = mbedtls_mpi_fill_random(&ptr->m_mpi, len, crypto::random::read_func, rng.get());
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(ptr));
+	}
 
-    bignum_ptr bignum::mul(lua::state& l) {
-        bignum_ptr res(new bignum());
-        if (l.gettop()<2) {
-            l.argerror(2, "need value");
-        }
-        if (l.isnumber(2)) {
-            check_error(l,mbedtls_mpi_mul_int(&res->m_mpi, &m_mpi, l.tointeger(2)));
-        } else {
-            auto ptr = lua::stack<const bignum*>::get(l, 2);
-            if (!ptr) l.argerror(2, "need number");
-            check_error(l,mbedtls_mpi_mul_mpi(&res->m_mpi, &m_mpi, &ptr->m_mpi));
-        }
-        return res;
-    }
+	bool bignum::is0() const {
+		return mbedtls_mpi_cmp_int(&m_mpi,0) == 0;
+	}
 
-    lua::multiret bignum::div(lua::state& l) {
-        bignum_ptr res(new bignum());
-        bignum_ptr rem(new bignum());
-        if (l.gettop()<2) {
-            l.argerror(2, "need value");
-        }
-        if (l.isnumber(2)) {
-            check_error(l,mbedtls_mpi_div_int(&res->m_mpi, &rem->m_mpi, &m_mpi, l.tointeger(2)));
-        } else {
-            auto ptr = lua::stack<const bignum*>::get(l, 2);
-            if (!ptr) l.argerror(2, "need number");
-            check_error(l,mbedtls_mpi_div_mpi(&res->m_mpi, &rem->m_mpi, &m_mpi, &ptr->m_mpi));
-        }
-        lua::push(l,std::move(res));
-        lua::push(l,std::move(rem));
-        return {2};
-    }
+	bool bignum::get_bit(size_t bit) const {
+		return mbedtls_mpi_get_bit(&m_mpi,bit);
+	}
 
-    void bignum::self_sub(lua::state& l) {
-        if (l.gettop()<2) {
-            l.argerror(2, "need value");
-        }
-        if (l.isnumber(2)) {
-            check_error(l,mbedtls_mpi_sub_int(&m_mpi, &m_mpi, l.tointeger(2)));
-        } else {
-            auto ptr = lua::stack<const bignum*>::get(l, 2);
-            if (!ptr) l.argerror(2, "need number");
-            check_error(l,mbedtls_mpi_sub_mpi(&m_mpi, &m_mpi, &ptr->m_mpi));
-        }
-    }
+	llae::result<void> bignum::set_bit(size_t bit, bool value) {
+		return make_result(mbedtls_mpi_set_bit(&m_mpi,bit,value ? 1 : 0));
+	}
 
-    bignum_ptr bignum::sub(lua::state& l) {
-        bignum_ptr res(new bignum());
-        if (l.gettop()<2) {
-            l.argerror(2, "need value");
-        }
-        if (l.isnumber(2)) {
-            check_error(l,mbedtls_mpi_sub_int(&res->m_mpi, &m_mpi, l.tointeger(2)));
-        } else {
-            auto ptr = lua::stack<const bignum*>::get(l, 2);
-            if (!ptr) l.argerror(2, "need number");
-            check_error(l,mbedtls_mpi_sub_mpi(&res->m_mpi, &m_mpi, &ptr->m_mpi));
-        }
-        return res;
-    }
+	llae::result<void> bignum::self_add(const bignum_ptr& other) {
+		if (!other) {
+			return llae::string_error::create("need value");
+		}
+		return make_result(mbedtls_mpi_add_mpi(&m_mpi, &m_mpi, &other->m_mpi));
+	}
 
-    bignum_ptr bignum::mod(lua::state& l) {
-        bignum_ptr res(new bignum());
-        if (l.gettop()<2) {
-            l.argerror(2, "need value");
-        }
-        if (l.isnumber(2)) {
-            mbedtls_mpi_uint result = 0;
-            check_error(l,mbedtls_mpi_mod_int(&result, &m_mpi, l.tointeger(2)));
-            res->set(result);
-        } else {
-            auto ptr = lua::stack<const bignum*>::get(l, 2);
-            if (!ptr) l.argerror(2, "need number");
-            check_error(l,mbedtls_mpi_mod_mpi(&res->m_mpi, &m_mpi, &ptr->m_mpi));
-        }
-        return res;
-    }
+	llae::result<void> bignum::self_add(int64_t other) {
+		return make_result(mbedtls_mpi_add_int(&m_mpi,&m_mpi,other));
+	}
 
-    bignum_ptr bignum::exp_mod(lua::state& l) {
-        bignum_ptr res(new bignum());
-        auto E = lua::stack<const bignum*>::get(l, 2);
-        if (!E) l.argerror(3, "need E value");
-        auto N = lua::stack<const bignum*>::get(l, 3);
-        if (!N) l.argerror(4, "need N value");
-        auto supp = lua::stack<bignum*>::get(l, 4);
-        // X = A^E mod N
-        check_error(l,mbedtls_mpi_exp_mod(res->get(),&m_mpi,E->get(),N->get(),supp ? supp->get() : nullptr));
-        return res;
-    }
+	llae::result<void> bignum::self_mul(const bignum_ptr& other) {
+		if (!other) {
+			return llae::string_error::create("need value");
+		}
+		return make_result(mbedtls_mpi_mul_mpi(&m_mpi, &m_mpi, &other->m_mpi));
+	}
 
-    lua::multiret bignum::tostring(lua::state& l) {
-        auto radix = static_cast<int>(l.optinteger(2, 16));
-        char dummy;
-        size_t len = 0;
-        int r = mbedtls_mpi_write_string(&m_mpi,radix,&dummy,0,&len);
-        if (r != MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL)
-            check_error(l, r);
-        std::unique_ptr<char[]> buffer(new char[len]);
-        check_error(l, mbedtls_mpi_write_string(&m_mpi,radix,buffer.get(),len,&len));
-        l.pushstring(buffer.get());
-        return {1};
-    }
+	llae::result<void> bignum::self_mul(int64_t other) {
+		if (auto e = mul_int(m_mpi,m_mpi,other)) {
+			return std::move(e);
+		}
+		return llae::result<void>{};
+	}
 
-    lua::multiret bignum::write(lua::state& l) {
-        size_t len = l.optinteger(2,mbedtls_mpi_size(&m_mpi));
-        auto buffer = llae::buffer::alloc(len);
-        int r = mbedtls_mpi_write_binary(&m_mpi,static_cast<unsigned char*>(buffer->get_base()),len);
-        check_error(l,r);
-        lua::push(l,std::move(buffer));
-        return {1};
-    }
+	llae::result<void> bignum::self_sub(const bignum_ptr& other) {
+		if (!other) {
+			return llae::string_error::create("need value");
+		}
+		return make_result(mbedtls_mpi_sub_mpi(&m_mpi, &m_mpi, &other->m_mpi));
+	}
 
-    lua::multiret bignum::write_le(lua::state& l) {
-        size_t len = l.optinteger(2,mbedtls_mpi_size(&m_mpi));
-        auto buffer = llae::buffer::alloc(len);
-        int r = mbedtls_mpi_write_binary_le(&m_mpi,static_cast<unsigned char*>(buffer->get_base()),len);
-        check_error(l,r);
-        lua::push(l,std::move(buffer));
-        return {1};
-    }
+	llae::result<void> bignum::self_sub(int64_t other) {
+		return make_result(mbedtls_mpi_sub_int(&m_mpi,&m_mpi,other));
+	}
 
-    lua::multiret bignum::read(lua::state& l) {
-        auto data = llae::buffer_view::get(l,2,true);
-        int r = mbedtls_mpi_read_binary(&m_mpi,static_cast<const unsigned char*>(data.get_base()),data.get_len());
-        check_error(l,r);
-        return {0};
-    }
+	llae::result<void> bignum::self_lshift(size_t shift) {
+		return make_result(mbedtls_mpi_shift_l(&m_mpi,shift));
+	}
 
-    lua::multiret bignum::read_le(lua::state& l) {
-        auto data = llae::buffer_view::get(l,2,true);
-        int r = mbedtls_mpi_read_binary_le(&m_mpi,static_cast<const unsigned char*>(data.get_base()),data.get_len());
-        check_error(l,r);
-        return {0};
-    }
+	llae::result<void> bignum::self_rshift(size_t shift) {
+		return make_result(mbedtls_mpi_shift_r(&m_mpi,shift));
+	}
 
-    lua::multiret bignum::less(lua::state& l) {
-        if (l.isnumber(2)) {
-            l.pushboolean(mbedtls_mpi_cmp_int(&m_mpi,l.tointeger(2)) == -1);
-            return {1};
-        }
-        auto b = lua::stack<bignum_ptr>::get(l,2);
-        if (!b) l.argerror(2,"need value");
-        l.pushboolean(mbedtls_mpi_cmp_mpi(&m_mpi,&b->m_mpi) == -1);
-        return {1};
-    }
-    lua::multiret bignum::lequal(lua::state& l) {
-        if (l.isnumber(2)) {
-            auto v = mbedtls_mpi_cmp_int(&m_mpi,l.tointeger(2));
-            l.pushboolean(v == -1 || v == 0);
-            return {1};
-        }
-        auto b = lua::stack<bignum_ptr>::get(l,2);
-        if (!b) l.argerror(2,"need value");
-        auto v = mbedtls_mpi_cmp_mpi(&m_mpi,&b->m_mpi);
-        l.pushboolean(v == -1 || v == 0);
-        return {1};
-    }
+	llae::result<bignum_ptr> bignum::mul(const bignum_ptr& other) {
+		if (!other) {
+			return llae::string_error::create("need value");
+		}
+		bignum_ptr res = common::make_intrusive<bignum>();
+		auto status = mbedtls_mpi_mul_mpi(&res->m_mpi, &m_mpi, &other->m_mpi);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(res));
+	}
 
-    lua::multiret bignum::equal(lua::state& l) {
-        if (l.isnumber(2)) {
-            l.pushboolean(mbedtls_mpi_cmp_int(&m_mpi,l.tointeger(2)) == 0);
-            return {1};
-        }
-        auto b = lua::stack<bignum_ptr>::get(l,2);
-        if (!b) l.argerror(2,"need value");
-        l.pushboolean(mbedtls_mpi_cmp_mpi(&m_mpi,&b->m_mpi) == 0);
-        return {1};
-    }
+	llae::result<bignum_ptr> bignum::mul(int64_t other) {
+		bignum_ptr res = common::make_intrusive<bignum>();
+		if (auto e = mul_int(res->m_mpi,m_mpi,other)) {
+			return std::move(e);
+		}
+		return llae::result<bignum_ptr>(std::move(res));
+	}
 
-    void bignum::self_lshift(lua::state& l) {
-        auto shift = l.checkinteger(2);
-        check_error(l,mbedtls_mpi_shift_l(&m_mpi,shift));
-    }
-    void bignum::self_rshift(lua::state& l) {
-        auto shift = l.checkinteger(2);
-        check_error(l,mbedtls_mpi_shift_r(&m_mpi,shift));
-    }
+	llae::result<bignum_div_result> bignum::div(const bignum_ptr& other) {
+		if (!other) {
+			return llae::string_error::create("need value");
+		}
+		bignum_div_result res{common::make_intrusive<bignum>(), common::make_intrusive<bignum>()};
+		auto status = mbedtls_mpi_div_mpi(&res.quotient->m_mpi, &res.remainder->m_mpi,
+			&m_mpi, &other->m_mpi);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_div_result>(std::move(res));
+	}
 
-    bool bignum::is0() const {
-        return mbedtls_mpi_cmp_int(&m_mpi,0) == 0;
-    }
+	llae::result<bignum_div_result> bignum::div(int64_t other) {
+		bignum_div_result res{common::make_intrusive<bignum>(), common::make_intrusive<bignum>()};
+		auto status = mbedtls_mpi_div_int(&res.quotient->m_mpi, &res.remainder->m_mpi,
+			&m_mpi, other);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_div_result>(std::move(res));
+	}
 
-    bool bignum::get_bit(size_t bit) const {
-        return mbedtls_mpi_get_bit(&m_mpi,bit);
-    }
+	llae::result<bignum_ptr> bignum::add(const bignum_ptr& other) {
+		if (!other) {
+			return llae::string_error::create("need value");
+		}
+		bignum_ptr res = common::make_intrusive<bignum>();
+		auto status = mbedtls_mpi_add_mpi(&res->m_mpi, &m_mpi, &other->m_mpi);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(res));
+	}
 
-    void bignum::set_bit(size_t bit, bool value) {
-        mbedtls_mpi_set_bit(&m_mpi,bit,value ? 1 : 0);
-    }
+	llae::result<bignum_ptr> bignum::add(int64_t other) {
+		bignum_ptr res = common::make_intrusive<bignum>();
+		auto status = mbedtls_mpi_add_int(&res->m_mpi, &m_mpi, other);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(res));
+	}
 
-    void bignum::lset_bit(lua::state& l) {
-        auto bit = l.checkinteger(2);
-        auto value = l.toboolean(3);
-        check_error(l,mbedtls_mpi_set_bit(&m_mpi,bit,value ? 1 : 0));
-    }
+	llae::result<bignum_ptr> bignum::sub(const bignum_ptr& other) {
+		if (!other) {
+			return llae::string_error::create("need value");
+		}
+		bignum_ptr res = common::make_intrusive<bignum>();
+		auto status = mbedtls_mpi_sub_mpi(&res->m_mpi, &m_mpi, &other->m_mpi);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(res));
+	}
 
-    lua::multiret bignum::lnew(lua::state& l) {
-        bignum_ptr ptr(new bignum());
-        if (l.gettop()>0) {
-            if (l.isnumber(1)) {
-                ptr->set(l.tointeger(1));
-            } else if (l.isstring(1)) {
-                auto radix = static_cast<int>(l.optinteger(2, 16));
-                check_error(l, mbedtls_mpi_read_string(&ptr->m_mpi, radix, l.tostring(1)));
-            } else {
-                auto optr = lua::stack<const bignum*>::get(l, 1);
-                if (!optr) l.argerror(1, "need number");
-                else ptr->set(*optr);
-            }
-        }
-        lua::push(l,std::move(ptr));
-        return {1};
-    }
+	llae::result<bignum_ptr> bignum::sub(int64_t other) {
+		bignum_ptr res = common::make_intrusive<bignum>();
+		auto status = mbedtls_mpi_sub_int(&res->m_mpi, &m_mpi, other);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(res));
+	}
 
-    lua::multiret bignum::lrandom(lua::state& l) {
-        bignum_ptr ptr(new bignum());
-        auto r = lua::stack<lua::check<crypto::random_ptr>>::get(l,1);
-        auto len = l.checkinteger(2);
-        check_error(l,mbedtls_mpi_fill_random(&ptr->m_mpi,len,random::read_func,r.get()));
-        lua::push(l,std::move(ptr));
-        return {1};
-    }
+	llae::result<bignum_ptr> bignum::mod(const bignum_ptr& other) {
+		if (!other) {
+			return llae::string_error::create("need value");
+		}
+		bignum_ptr res = common::make_intrusive<bignum>();
+		auto status = mbedtls_mpi_mod_mpi(&res->m_mpi, &m_mpi, &other->m_mpi);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(res));
+	}
+
+	llae::result<bignum_ptr> bignum::mod(int64_t other) {
+		mbedtls_mpi_uint remainder = 0;
+		auto status = mbedtls_mpi_mod_int(&remainder, &m_mpi, other);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		bignum_ptr res = common::make_intrusive<bignum>();
+		res->set(static_cast<mbedtls_mpi_sint>(remainder));
+		return llae::result<bignum_ptr>(std::move(res));
+	}
+
+	llae::result<bignum_ptr> bignum::exp_mod(const bignum_ptr& e, const bignum_ptr& n, const bignum_ptr& supp) {
+		if (!e) {
+			return llae::string_error::create("need E value");
+		}
+		if (!n) {
+			return llae::string_error::create("need N value");
+		}
+		bignum_ptr res = common::make_intrusive<bignum>();
+		auto status = mbedtls_mpi_exp_mod(res->get(), &m_mpi, e->get(), n->get(),
+			supp ? supp->get() : nullptr);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<bignum_ptr>(std::move(res));
+	}
+
+	llae::result<std::string> bignum::to_string(std::optional<int> radix) const {
+		int base = radix.value_or(16);
+		char dummy = 0;
+		size_t len = 0;
+		auto status = mbedtls_mpi_write_string(&m_mpi,base,&dummy,0,&len);
+		if (status != MBEDTLS_ERR_MPI_BUFFER_TOO_SMALL) {
+			return status_error::create(status);
+		}
+		std::string buffer(len,'\0');
+		status = mbedtls_mpi_write_string(&m_mpi,base,buffer.data(),buffer.size(),&len);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		buffer.resize(std::strlen(buffer.c_str()));
+		return buffer;
+	}
+
+	llae::result<llae::buffer_base_ptr> bignum::write(std::optional<size_t> length) const {
+		size_t len = length.value_or(mbedtls_mpi_size(&m_mpi));
+		auto buffer = llae::buffer::alloc(len);
+		auto status = mbedtls_mpi_write_binary(&m_mpi,
+			static_cast<unsigned char*>(buffer->get_base()),len);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<llae::buffer_base_ptr>(llae::buffer_base_ptr(std::move(buffer)));
+	}
+
+	llae::result<llae::buffer_base_ptr> bignum::write_le(std::optional<size_t> length) const {
+		size_t len = length.value_or(mbedtls_mpi_size(&m_mpi));
+		auto buffer = llae::buffer::alloc(len);
+		auto status = mbedtls_mpi_write_binary_le(&m_mpi,
+			static_cast<unsigned char*>(buffer->get_base()),len);
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		return llae::result<llae::buffer_base_ptr>(llae::buffer_base_ptr(std::move(buffer)));
+	}
+
+	llae::result<void> bignum::read(const llae::buffer_view& data) {
+		auto status = mbedtls_mpi_read_binary(&m_mpi,
+			static_cast<const unsigned char*>(data.get_base()),data.get_len());
+		return make_result(status);
+	}
+
+	llae::result<void> bignum::read_le(const llae::buffer_view& data) {
+		auto status = mbedtls_mpi_read_binary_le(&m_mpi,
+			static_cast<const unsigned char*>(data.get_base()),data.get_len());
+		return make_result(status);
+	}
+
+	bool bignum::less(const bignum_ptr& other) const {
+		return other && mbedtls_mpi_cmp_mpi(&m_mpi,&other->m_mpi) == -1;
+	}
+
+	bool bignum::less(int64_t other) const {
+		return mbedtls_mpi_cmp_int(&m_mpi,other) == -1;
+	}
+
+	bool bignum::lequal(const bignum_ptr& other) const {
+		if (!other) {
+			return false;
+		}
+		auto v = mbedtls_mpi_cmp_mpi(&m_mpi,&other->m_mpi);
+		return v == -1 || v == 0;
+	}
+
+	bool bignum::lequal(int64_t other) const {
+		auto v = mbedtls_mpi_cmp_int(&m_mpi,other);
+		return v == -1 || v == 0;
+	}
+
+	bool bignum::equal(const bignum_ptr& other) const {
+		return other && mbedtls_mpi_cmp_mpi(&m_mpi,&other->m_mpi) == 0;
+	}
+
+	bool bignum::equal(int64_t other) const {
+		return mbedtls_mpi_cmp_int(&m_mpi,other) == 0;
+	}
 }

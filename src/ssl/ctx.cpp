@@ -66,7 +66,7 @@ namespace ssl {
    	}
 
 	llae::result<void> ctx::init(const llae::buffer_view& pers) {
-		return crypto::make_result(m_random->seed(pers));
+		return m_random->seed(pers);
 	}
 
 	llae::result<void> ctx::load_cert(const llae::buffer_view& data) {

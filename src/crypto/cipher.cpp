@@ -8,7 +8,6 @@
 #include "llae/work.h"
 #include "crypto.h"
 #include "llae/write_buffers.h"
-#include "llae/async_bind.h"
 
 #include <string>
 
@@ -95,22 +94,39 @@ namespace crypto {
 		llae::buffer_base_ptr r = std::move(data);
 		return llae::result<llae::buffer_base_ptr>(std::move(r));
 	}
-	llae::result<llae::buffer_base_ptr> cipher::sync_update(const llae::write_buffers& buffers) {
-		llae::sequental_scope s{m_seq};
-		if (auto e = s.start("update")) {
-			return llae::result<llae::buffer_base_ptr>(std::move(e));
+
+	llae::result<llae::buffer_base_ptr> cipher::update_impl(const llae::buffer_base_ptr& data) {
+		if (!data) {
+			return llae::string_error::create("need data");
 		}
-		return update_impl(buffers);
+		size_t size = data->get_len() + mbedtls_cipher_get_block_size(&m_ctx);
+		auto enc_buffer = llae::buffer::alloc(size);
+		size_t osize = size;
+		auto status = mbedtls_cipher_update( &m_ctx,
+			static_cast<const unsigned char*>(data->get_base()), data->get_len(),
+			static_cast<unsigned char*>(enc_buffer->get_base()),&osize );
+		if (status != 0) {
+			return status_error::create(status);
+		}
+		enc_buffer->set_len(osize);
+		llae::buffer_base_ptr r = std::move(enc_buffer);
+		return llae::result<llae::buffer_base_ptr>(std::move(r));
 	}
 
-	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::lasync_update(lua::state& l) {
-		
-		llae::write_buffers buffers;
-		if (!buffers.putm(l, 2)) {
-			return llae::make_result_promise_string_error<llae::buffer_base_ptr>("invalid data");
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_update(llae::loop& a,llae::buffer_base_ptr data) {
+		if (!data) {
+			return llae::make_result_promise_string_error<llae::buffer_base_ptr>("need data");
 		}
+		using work_t = llae::sequental_method_work<llae::buffer_base_ptr,cipher>;
+		return work_t::start(a, this, &cipher::m_seq, "update", [d = std::move(data)](cipher& self){
+			return self.update_impl(d);
+		});
+	}
+
+	llae::result_promise_ptr<llae::buffer_base_ptr> cipher::async_update_buffers(llae::loop& a,llae::write_buffers&& buffers) {
 		using work_t = llae::sequental_method_write_buffers_work<llae::buffer_base_ptr,cipher>;
-		return work_t::start(llae::loop::get(l), std::move(buffers), this,&cipher::m_seq,"update", static_cast<llae::result<llae::buffer_base_ptr>(cipher::*)(const llae::write_buffers&)>(&cipher::update_impl));
+		return work_t::start(a, std::move(buffers), this, &cipher::m_seq, "update",
+			static_cast<llae::result<llae::buffer_base_ptr>(cipher::*)(const llae::write_buffers&)>(&cipher::update_impl));
 	}
 
 	llae::result<void> cipher::update_ad_impl(const llae::buffer_base_ptr& data) {

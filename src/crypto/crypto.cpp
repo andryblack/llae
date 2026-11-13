@@ -8,16 +8,11 @@
 #include "llae/buffer.h"
 #include "llae/loop.h"
 #include <cstdint>
+#include <string>
 
 META_OBJECT_INFO(crypto::status_error, llae::error)
 
 namespace crypto {
-
-	void push_error(lua::state& l,const char* fmt, int error) {
-		char buffer[128] = {0};
-		mbedtls_strerror(error,buffer,sizeof(buffer));
-		l.pushfstring(fmt,error,buffer);
-	}
 
 	const std::string status_error::category = "crypto";
 	std::string status_error::to_string() const {
@@ -77,20 +72,27 @@ namespace crypto {
 	}
 
 
-	llae::result_promise_ptr<llae::buffer_base_ptr> lua_lhkdf(lua::state& l) {
-		auto md_info = md::get_info(l,1);
+	static llae::result_promise_ptr<llae::buffer_base_ptr> start_hkdf(llae::loop& a, const mbedtls_md_info_t* md_info,
+			llae::buffer_base_ptr salt, llae::buffer_base_ptr info, llae::buffer_base_ptr key, size_t osize) {
 		if (!md_info) {
 			return llae::make_result_promise_string_error<llae::buffer_base_ptr>("unknown md algorithm");
 		}
-		auto salt = llae::buffer_base::get(l,2);
-		auto info = llae::buffer_base::get(l,3);
-		auto key = llae::buffer_base::get(l,4);
-		auto osize = l.checkinteger(5);
 		constexpr size_t hold_size = sizeof(void*) == 4 ? 8 : 6;
 		using work_t = llae::function_work<llae::buffer_base_ptr,llae::default_function_work_hold<llae::buffer_base_ptr,hold_size>>;
-		return work_t::start(llae::loop::get(l), [md_info,lsalt = std::move(salt),linfo=std::move(info),lkey=std::move(key),osize]{
+		return work_t::start(a, [md_info,lsalt = std::move(salt),linfo=std::move(info),lkey=std::move(key),osize]{
 			return sync_hkdf(md_info, lsalt, linfo, lkey, osize);
 		});
 	}
-}
 
+	llae::result_promise_ptr<llae::buffer_base_ptr> async_hkdf(llae::loop& a, std::string_view md_name,
+			llae::buffer_base_ptr salt, llae::buffer_base_ptr info, llae::buffer_base_ptr key, size_t osize) {
+		return start_hkdf(a, md::find_info(md_name),
+			std::move(salt), std::move(info), std::move(key), osize);
+	}
+
+	llae::result_promise_ptr<llae::buffer_base_ptr> async_hkdf(llae::loop& a, mbedtls_md_type_t type,
+			llae::buffer_base_ptr salt, llae::buffer_base_ptr info, llae::buffer_base_ptr key, size_t osize) {
+		return start_hkdf(a, md::find_info(type),
+			std::move(salt), std::move(info), std::move(key), osize);
+	}
+}

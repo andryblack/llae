@@ -6,9 +6,7 @@
 #include "llae/buffer.h"
 #include "llae/loop.h"
 #include "common/intrusive_ptr.h"
-#include "lua/stack.h"
 #include "llae/write_buffers.h"
-#include "llae/async_bind.h"
 #include "md.h"
 
 META_OBJECT_INFO(crypto::hmac,meta::object)
@@ -23,6 +21,22 @@ namespace crypto {
 
 	hmac::~hmac() {
 		mbedtls_md_free(&m_ctx);
+	}
+
+	hmac_ptr hmac::create(mbedtls_md_type_t type) {
+		auto info = md::find_info(type);
+		if (!info) {
+			return hmac_ptr{};
+		}
+		return hmac_ptr(new hmac(info));
+	}
+
+	hmac_ptr hmac::create(const char* algorithm) {
+		auto info = md::find_info(algorithm ? std::string_view(algorithm) : std::string_view{});
+		if (!info) {
+			return hmac_ptr{};
+		}
+		return hmac_ptr(new hmac(info));
 	}
 
 	llae::result<void> hmac::start_impl(const llae::buffer_view& key) {
@@ -62,21 +76,29 @@ namespace crypto {
 		return make_result(status);
 	}
 
-	llae::result<void> hmac::sync_update(const llae::write_buffers& buffers) {
-		llae::sequental_scope s{m_seq};
-		if (auto e = s.start("update")) {
-			return std::move(e);
+	llae::result<void> hmac::update_impl(const llae::buffer_base_ptr& data) {
+		if (!data) {
+			return llae::string_error::create("need data");
 		}
-		return update_impl(buffers);
+		auto status = mbedtls_md_hmac_update(&m_ctx,
+			reinterpret_cast<const unsigned char*>(data->get_base()), data->get_len());
+		return make_result(status);
 	}
-	llae::result_promise_ptr<void> hmac::lasync_update(lua::state& l) {
-		llae::write_buffers buffers;
-		if (!buffers.putm(l, 2)) {
-			buffers.reset(l);
-			return llae::make_result_promise_string_error<void>("invalid data");
+
+	llae::result_promise_ptr<void> hmac::async_update(llae::loop& a,llae::buffer_base_ptr data) {
+		if (!data) {
+			return llae::make_result_promise_string_error<void>("need data");
 		}
+		using work_t = llae::sequental_method_work<void,hmac>;
+		return work_t::start(a, this, &hmac::m_seq, "update", [d = std::move(data)](hmac& self){
+			return self.update_impl(d);
+		});
+	}
+
+	llae::result_promise_ptr<void> hmac::async_update_buffers(llae::loop& a,llae::write_buffers&& buffers) {
 		using work_t = llae::sequental_method_write_buffers_work<void,hmac>;
-		return work_t::start(llae::loop::get(l), std::move(buffers), this,&hmac::m_seq,"update", static_cast<llae::result<void>(hmac::*)(const llae::write_buffers&)>(&hmac::update_impl));
+		return work_t::start(a, std::move(buffers), this, &hmac::m_seq, "update",
+			static_cast<llae::result<void>(hmac::*)(const llae::write_buffers&)>(&hmac::update_impl));
 	}
 
 	llae::result<llae::buffer_base_ptr> hmac::finish_impl() {
@@ -112,14 +134,5 @@ namespace crypto {
 		}
 		auto status = mbedtls_md_hmac_reset(&m_ctx);
 		return make_result(status);
-	}
-
-	
-	llae::result<hmac_ptr> hmac::lnew(lua::state& l) {
-		auto info = md::get_info(l,1);
-		if (!info) {
-			return llae::string_error::create("unknown hmac algorithm");
-		}
-		return common::make_intrusive<hmac>(info);
 	}
 }

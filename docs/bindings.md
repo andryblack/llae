@@ -371,10 +371,10 @@ The generated code takes `&<wrapper>`. The declaration still exists so the parse
 
 ```cpp
 /// @luabind(alias=__mul)
-bignum_ptr mul(lua::state& l);   // Lua: mul and __mul
+llae::result<bignum_ptr> mul(const bignum_ptr& other);   // Lua: mul and __mul
 
 /// @luabind(name=__lt)
-lua::multiret less(lua::state& l); // Lua: only __lt
+bool less(const bignum_ptr& other) const; // Lua: only __lt
 ```
 
 ### `policy=`
@@ -612,19 +612,34 @@ using bignum_ptr = common::intrusive_ptr<bignum>;
 class bignum : public meta::object {
     META_OBJECT
 public:
-    /// @lparam(other,crypto.bignum)
-    /// @luabind(alias=__add)
-    bignum_ptr add(lua::state& l);
-
-    /// @lreturn(result,crypto.bignum)
+    /// @lparam(value,integer?) The initial value
+    /// @lreturn(result,crypto.bignum?)
+    /// @lreturn(error,string?)
     /// @luabind(name=new)
-    static lua::multiret lnew(lua::state& l);
+    static llae::result<bignum_ptr> create(std::optional<int64_t> value);
+
+    /// @lparam(other,crypto.bignum)
+    /// @lreturn(result,crypto.bignum?)
+    /// @lreturn(error,string?)
+    /// @luabind(alias=__add)
+    llae::result<bignum_ptr> add(const bignum_ptr& other);
 };
 
 }
 ```
 
 Lua: `require 'crypto'`, `crypto.bignum.new()`, `a:add(b)` and `a + b`.
+
+Note the new style: the C++ API takes and returns C++ types only (`int`, `llae::result`,
+`llae::buffer_base_ptr`, `llae::result_promise_ptr`, …). Lua-visible types are produced by the
+generator from the `@luabind` tags, not by `lua::state&` arguments in the API.
+
+When a C++-only API must still expose a legacy Lua form (a union argument, a multi-value
+result, varargs), keep the Lua glue out of the C++ headers: put it in a separate header and add
+it with `@luabind_include`, then bind the declaration through `wrapper=`. See
+[Bindings-only includes](#luabind_include-bindings-only-include) and the `src/crypto/luabind.h`
+implementation (`wrapper=crypto::lua_md_create`, `wrapper=crypto::lua_bignum_add`,
+`lua::stack` push specializations for the multi-value results).
 
 ### Async method
 

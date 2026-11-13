@@ -6,8 +6,6 @@
 #include "llae/result.h"
 #include "meta/object.h"
 #include "common/intrusive_ptr.h"
-#include "lua/state.h"
-#include "lua/ref.h"
 #include "llae/promise.h"
 #include "llae/sequental.h"
 
@@ -39,6 +37,7 @@ namespace crypto {
 		llae::sequental	m_seq;
 		explicit cipher(const mbedtls_cipher_info_t* info);
 		llae::result<llae::buffer_base_ptr> update_impl(const llae::write_buffers& buffers);
+		llae::result<llae::buffer_base_ptr> update_impl(const llae::buffer_base_ptr& data);
 		llae::result<void> update_ad_impl(const llae::buffer_base_ptr& data);
 		llae::result<llae::buffer_base_ptr> finish_impl();
 		llae::result<llae::buffer_base_ptr> crypt_impl(const llae::buffer_base_ptr& iv, const llae::buffer_base_ptr& data);
@@ -50,19 +49,21 @@ namespace crypto {
 		/// @luabind
 		llae::result<void> set_iv(const llae::buffer_view& iv);
 		/// Sets the encryption/decryption key for the cipher.
+		/// @lparam(key,string|llae.buffer_base) The key data
+		/// @lparam(op,integer) The operation (crypto.ENCRYPT or crypto.DECRYPT)
 		/// @luabind
 		llae::result<void> set_key(const llae::buffer_view& key,mbedtls_operation_t op);
 		/// Sets the padding mode for the cipher.
+		/// @lparam(padding,integer) The padding mode (crypto.PADDING_*)
 		/// @luabind
 		llae::result<void> set_padding(mbedtls_cipher_padding_t padding);
 		/// Resets the cipher for reuse.
 		/// @luabind
 		llae::result<void> reset();
-		llae::result<llae::buffer_base_ptr> sync_update(const llae::write_buffers& buffers);
 		/// Processes data through the cipher (encrypt/decrypt).
-		/// @lparam(data,string|llae.buffer_base) The data to process
-		/// @luabind(name=update,async=true)
-		llae::result_promise_ptr<llae::buffer_base_ptr> lasync_update(lua::state& l);
+		/// @lparam(data,string|llae.buffer_base|string[]) The data to process
+		/// @luabind(name=update,async=true,wrapper=crypto::lua_cipher_update)
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_update(llae::loop& a,llae::buffer_base_ptr data);
 		llae::result<void> sync_update_ad(const llae::buffer_base_ptr& data);
 		/// Processes additional data through the cipher (encrypt/decrypt).
 		/// @luabind(name=update_ad,async=true)
@@ -99,6 +100,9 @@ namespace crypto {
 		/// @luabind
 		int get_tag_size() const;
 		
+		/// Async update for a bundle of Lua buffers (used by the Lua bindings).
+		llae::result_promise_ptr<llae::buffer_base_ptr> async_update_buffers(llae::loop& a,llae::write_buffers&& buffers);
+
 		/// Creates a new cipher instance with the specified algorithm.
 		/// @lparam(algorithm,string) The cipher algorithm to use (e.g., 'AES-256-CBC')
 		/// @lreturn(instance,crypto.cipher?)
