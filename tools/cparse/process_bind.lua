@@ -115,12 +115,30 @@ function bind_module:_init(name)
     self._functions = {}
     self._enums = {}
     self._headers = {}
+    self._cpp_includes = {}
     self._values = {}
     self._resolve = resolve_collector.new()
 end
 
 function bind_module:add_header(header)
     table.insert(self._headers, header)
+end
+
+---Adds an include emitted only into the generated module .cpp.
+---The value is the whole include operand: `"path/to/header.h"` or `<header>`.
+---@param include string
+function bind_module:add_cpp_include(include)
+    for _,existing in ipairs(self._cpp_includes) do
+        if existing == include then
+            return
+        end
+    end
+    table.insert(self._cpp_includes, include)
+end
+
+---@return string[]
+function bind_module:get_cpp_includes()
+    return self._cpp_includes
 end
 
 function bind_module:add_using(node)
@@ -930,6 +948,85 @@ function traverser:_resolve_node_bind(node_tags)
     return nil
 end
 
+---Describe where a binding tag was found, for error messages.
+---@return string
+function traverser:_tags_location()
+    local header = self._processor:get_current_header() or 'bind content'
+    local name = self:get_full_name()
+    if name ~= '' then
+        return header .. ' (' .. name .. ')'
+    end
+    return header
+end
+
+---Formats one @luabind_include value into the operand emitted into the module .cpp.
+---`<...>` is a system include and is not validated. `"path"` and bare paths are resolved
+---the same way @luabind_allow does (including header first, then bind_includes) and emitted
+---relative to the generated module .cpp directory, like parsed headers.
+---@param value string
+---@return string
+function traverser:_format_cpp_include(value)
+    local include = (value or ''):match('^%s*(.-)%s*$')
+    local where = self:_tags_location()
+    if include == '' then
+        error('@luabind_include requires a header path at ' .. where)
+    end
+    if include:sub(1,1) == '<' then
+        if include:sub(-1) ~= '>' or include:len() < 3 then
+            error('@luabind_include: invalid system include ' .. include .. ' at ' .. where)
+        end
+        return include
+    end
+    local quote = include:sub(1,1)
+    if quote == '"' or quote == "'" then
+        if include:sub(-1) ~= quote then
+            error('@luabind_include: unterminated include path ' .. include .. ' at ' .. where)
+        end
+        include = include:sub(2,-2)
+        if include:match('^%s*$') then
+            error('@luabind_include requires a header path at ' .. where)
+        end
+    end
+    local resolved = self._processor:resolve_include_path(include, self._processor:get_current_header())
+    if not resolved then
+        local msg = string.format('binding include not found: "%s" at %s', include, where)
+        local dirs = self._processor:get_include_dirs()
+        if #dirs > 0 then
+            msg = msg .. '; search: ' .. table.concat(dirs, ', ')
+        end
+        error(msg)
+    end
+    local dst_dir = self._processor:get_bind_src_dir()
+    if not dst_dir then
+        error('@luabind_include: binding output dir is not set at ' .. where)
+    end
+    return '"' .. path.getrelative(path.getabsolute(resolved),path.getabsolute(dst_dir)) .. '"'
+end
+
+---Adds bindings-only includes declared on the current scope stack (namespaces, classes)
+---and on the node itself into the module that owns the declaration.
+---@param module bind_module
+---@param node_tags tags
+function traverser:_attach_cpp_includes(module, node_tags)
+    local scopes = {}
+    for _,node in ipairs(self._stack) do
+        if node.tags then
+            table.insert(scopes, node.tags)
+        end
+    end
+    table.insert(scopes, node_tags)
+    for _,scope_tags in ipairs(scopes) do
+        for _,entry in ipairs(scope_tags:get('luabind_include')) do
+            if not entry.value[1] then
+                error('@luabind_include requires a header path at ' .. self:_tags_location())
+            end
+            for _,value in ipairs(entry.value) do
+                module:add_cpp_include(self:_format_cpp_include(value))
+            end
+        end
+    end
+end
+
 function traverser:traverse_class(node)
     local node_tags = node.tags or tags.new()
     local bind = self:_resolve_node_bind(node_tags)
@@ -938,6 +1035,7 @@ function traverser:traverse_class(node)
         local class = bind_class.new(node, self:get_full_name(), bind)
         local module = self._processor:get_module(current_bind and current_bind:get_module_name() or class:get_module_name())
         module:add_class(class)
+        self:_attach_cpp_includes(module, node_tags)
         self._result.modules[module:get_name()] = module
         table.insert(self._result.classes, class)
         table.insert(self._bind_stack, class)
@@ -985,10 +1083,14 @@ function traverser:traverse_func(node)
             current_bind:add_method(method)
             method:set_tags(node_tags)
             method:set_class(current_bind)
+            if current_bind:get_module() then
+                self:_attach_cpp_includes(current_bind:get_module(), node_tags)
+            end
         else
             local func = bind_func.new(node, self:get_full_name(), bind)
             local module = self._processor:get_module(func:get_module_name())
             module:add_function(func)
+            self:_attach_cpp_includes(module, node_tags)
             self._result.modules[module:get_name()] = module
             func:set_tags(node_tags)
         end
@@ -1002,6 +1104,7 @@ function traverser:traverse_field(node)
     if bind then
         local current_bind = self:_get_current_bind()
         if current_bind then
+            local module = current_bind:get_module()
             if node:is_constexpr() or (node:is_static() and node:is_const()) then
                 local value = bind_value.new(node, self:get_full_name(), bind)
                 current_bind:add_value(value)
@@ -1011,10 +1114,14 @@ function traverser:traverse_field(node)
                 current_bind:add_field(field)
                 field:set_tags(node_tags)
             end
+            if module then
+                self:_attach_cpp_includes(module, node_tags)
+            end
         else
             local value = bind_value.new(node, self:get_full_name(), bind)
             local module = self._processor:get_module(value:get_module_name())
             module:add_value(value)
+            self:_attach_cpp_includes(module, node_tags)
             self._result.modules[module:get_name()] = module
             value:set_tags(node_tags)
         end
@@ -1031,9 +1138,13 @@ function traverser:traverse_enum(node)
         local enum = bind_enum.new(node, self:get_full_name(), bind, node.values, node.is_scoped)
         if current_bind then
             current_bind:add_enum(enum)
+            if current_bind:get_module() then
+                self:_attach_cpp_includes(current_bind:get_module(), node_tags)
+            end
         else
             local module = self._processor:get_module(enum:get_module_name())
             module:add_enum(enum)
+            self:_attach_cpp_includes(module, node_tags)
             self._result.modules[module:get_name()] = module
         end
         enum:set_tags(node_tags)
@@ -1067,6 +1178,51 @@ end
 function processor:begin_header(filename)
     self._current_header = filename
     self._current_header_module = nil
+end
+
+function processor:get_current_header()
+    return self._current_header
+end
+
+---Directory the generated module .cpp files are written to. Bindings-only includes
+---are emitted relative to it, like parsed headers are.
+---@param dir string
+function processor:set_bind_src_dir(dir)
+    self._bind_src_dir = dir
+end
+
+---@return string?
+function processor:get_bind_src_dir()
+    return self._bind_src_dir
+end
+
+---Resolves a bindings-only include the same way @luabind_allow does: relative to the
+---including header first, then through bind_includes. Returns the normalized path or nil.
+---@param filename string
+---@param source_file string?
+---@return string?
+function processor:resolve_include_path(filename, source_file)
+    local candidates = {}
+    if path.isabsolute(filename) then
+        table.insert(candidates,filename)
+    else
+        if source_file then
+            local source_dir = path.dirname(source_file)
+            if source_dir ~= '' then
+                table.insert(candidates,path.join(source_dir,filename))
+            end
+        end
+        for _,dir in ipairs(self._include_dirs) do
+            table.insert(candidates,path.join(dir,filename))
+        end
+    end
+    for _,candidate in ipairs(candidates) do
+        candidate = path.normalize(candidate)
+        if fs.isfile(candidate) then
+            return candidate
+        end
+    end
+    return nil
 end
 
 function processor:get_module(name)

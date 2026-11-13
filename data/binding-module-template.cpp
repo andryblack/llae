@@ -1,7 +1,8 @@
 #include "lua/bind.h"
 #include "llae/async_bind.h"
 <% for _,header in ipairs(module:get_headers()) do %>
-#include "<%= header %>"<% end %>
+#include "<%= header %>"<% end %><% for _,include in ipairs(module:get_cpp_includes()) do %>
+#include <%= include %><% end %>
 
 <% for _,class in ipairs(module:get_classes()) do %>
 /* class <%= class:get_prefix()%>::<%= class:get_name() %> */

@@ -70,6 +70,8 @@ The generator resolves the file relative to the including header first, then thr
 
 Do not mark a header that is also registered with `bind_header` / `bind_headers` unless it contains only defines: its declarations would be parsed twice.
 
+An include that is needed only by the generated `build/src/gen_module_<module>.cpp` (not by the parsed headers) is declared with the `@luabind_include` tag, see [Bindings-only includes](#luabind_include-bindings-only-include).
+
 Generation runs as part of `llae init`. After changing tags, run `llae init` again so `build/src/gen_module_*.cpp` and `build/lua-meta/*.lua` update.
 
 ## Where tags go
@@ -133,6 +135,7 @@ Unknown tag names are stored but ignored by the binder. Do not use them.
 | `@lparam` | function/method | yes | Lua parameter list for meta (replaces inference) |
 | `@lreturn` | function/method | yes | Lua return list for meta (replaces inference) |
 | `@loverload` | function/method | yes | Extra EmmyLua `@overload` line |
+| `@luabind_include` | bound declaration, namespace, class | yes | Adds an `#include` to the generated module `.cpp` only. See [Bindings-only includes](#luabind_include-bindings-only-include). |
 
 `@luabind` is required to generate C++ registration, unless an ancestor namespace/class has `@luabind(all=true)`.
 
@@ -178,6 +181,33 @@ If **any** `@lreturn` is present, inferred returns are discarded.
 ### `@loverload(signature)`
 
 One positional argument: the rest of an EmmyLua overload, e.g. `fun(a:string,b:integer):boolean`. Emitted as `---@overload fun(...)`.
+
+### `@luabind_include` (bindings-only include)
+
+Adds an `#include` to the generated `build/src/gen_module_<module>.cpp` without changing the parsed headers and without affecting the normal build of the project.
+
+```cpp
+/// @luabind_include("mylib/real_api.h")
+/// @luabind_include(<string>)
+namespace mylib {
+    #ifdef LUABIND_PARSE
+    /// @luabind(wrapper=mylib_real_open, name=open)
+    LUABIND_FUNC(open)
+    #endif
+}
+```
+
+Use it when the generated registration needs something the parsed header does not provide: a `wrapper=` function declared in another header, the real API header of a bind stub that must stay out of the parse, or a C++ helper used by bindings only.
+
+Rules:
+
+- The tag may sit on a bound declaration (class, function, field, enum, module value), a `namespace`, or a `class`. It applies to every module that owns a declaration in that scope (nested scopes included). A `namespace` needs no `@luabind` for this tag to work; a tag on a declaration that is not bound (no `@luabind`, no ancestor `all=true`) is ignored, and `using` aliases are not scanned for it.
+- Repeatable. One tag may list several values: `@luabind_include("a.h","b.h")`.
+- `"path"` and bare `path` are resolved the same way `@luabind_allow` resolves includes: relative to the header first, then through `bind_includes`. The operand is emitted relative to `build/src`, exactly like parsed headers, so the generated file does not depend on the project include paths. A path that cannot be resolved aborts `llae init`.
+- `<path>` is a system/compiler include: emitted as-is and not resolved by the generator.
+- Includes are deduplicated per module and keep the order of their first appearance while headers are processed. They are emitted after the module's parsed headers.
+- `build/lua-meta/*.lua` is not affected. The normal build (`.cpp`/`.h` of the project) is not affected either.
+- This tag does not make the preprocessor follow the include. For that, use `#include "..." // @luabind_allow`.
 
 ## What can be bound
 
@@ -543,6 +573,8 @@ Per class, a static `luabind_<prefix>_<class>(lua::state&)` that registers const
 
 Methods with `async=true` call `llae::async_function`; others `lua::bind::function`. Fields use `field` / `field_ro`.
 
+The file starts with `lua/bind.h`, `llae/async_bind.h`, then the module's parsed headers, then its bindings-only includes (`@luabind_include`), then the registration code.
+
 Do not hand-edit `build/src/gen_module_*.cpp`. Change tags and regenerate.
 
 Hand-written `lua-meta/*.lua` in a module (installed via `install_metas`) can be richer than generated meta. Generated files go to the **project** `build/lua-meta/`. Prefer `@lparam`/`@lreturn` so generated meta stays usable; keep hand-written meta only when the Lua API is not a straight C++ wrap.
@@ -562,7 +594,8 @@ When adding or changing a Lua-visible C++ API:
 9. Do not tag private methods, destructors, or overloads that are not the Lua entry point.
 10. One constructor per class; extra Lua constructors are static methods with `name=new`.
 11. One Lua module per header; use `module=` if namespaces would split.
-12. After edits, tell the user to run `llae init` (do not run it unless they asked).
+12. If the generated registration needs a header the parsed header does not provide, add `@luabind_include(...)` instead of making the header include it.
+13. After edits, tell the user to run `llae init` (do not run it unless they asked).
 
 ## Complete examples
 

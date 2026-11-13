@@ -632,6 +632,7 @@ function Project:generate_bindings( )
 	processor:set_include_dirs(self:get_bind_include_dirs())
 
 	local dst_dir = path.join(self:get_root(),'build','src')
+	processor:set_bind_src_dir(dst_dir)
 
 	local function generate_binding(filename,root)
 		local source_filename = path.isabsolute(filename) and filename or path.join(root,filename)

@@ -129,4 +129,11 @@ namespace autobind_tests {
 
     /// @luabind(wrapper=autobind_tests::test_bind_struct_wrapper)
     static inline void test_free_wrapped() {}
+
+    #ifdef LUABIND_PARSE
+    /// Bindings-only include: the declaration below is compiled only because of this tag.
+    /// @luabind_include("autobind_cpp_include.h")
+    /// @luabind(wrapper=autobind_tests::test_cpp_include_wrapper)
+    LUABIND_FUNC(test_cpp_include)
+    #endif
 }

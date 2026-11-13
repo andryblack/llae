@@ -332,6 +332,11 @@ function TestAutoBindings:test_wrapped()
     lu.assertEquals(bind_tests.test_free_wrapped(4,7), 11)
 end
 
+function TestAutoBindings:test_cpp_include()
+    -- test_cpp_include_wrapper comes from a header included only into the generated module cpp
+    lu.assertEquals(bind_tests.test_cpp_include(2,3), 203)
+end
+
 function TestAutoBindings:test_class_values()
     lu.assertEquals(bind_tests.test_bind_fields.constexpr_value, 123)
     lu.assertEquals(bind_tests.test_bind_fields.static_const_value, 456)
