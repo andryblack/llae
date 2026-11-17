@@ -5,6 +5,8 @@
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
 #include "lua/bind.h"
+#include "address_lua.h"
+#include "llae/app.h"
 #include <cstdio>
 
 #ifdef _WIN32
@@ -52,9 +54,14 @@ namespace {
 			self->remove_ref();
 		}
         int connect() {
+            struct sockaddr_storage addr;
+            auto res = m_conn->m_socks_addr.to_sockaddr(addr);
+            if (res.get_error()) {
+                return UV_EINVAL;
+            }
             add_ref();
             int r = uv_tcp_connect(&m_req,m_conn->get_tcp(),
-                                   (struct sockaddr *)&m_conn->m_socks_addr,&connect_req::connect_cb);
+                                   (struct sockaddr *)&addr,&connect_req::connect_cb);
             if (r < 0) {
                 remove_ref();
             }
@@ -116,7 +123,7 @@ namespace {
         }
     };
 
-	tcp_connection::tcp_connection(uv::loop& loop,const struct sockaddr_storage& addr,
+	tcp_connection::tcp_connection(uv::loop& loop,const net::address& addr,
 				std::string&& user, std::string&& pass) : uv::tcp_connection(loop),
 				m_socks_addr(addr),m_socks_user(std::move(user)),
 				m_socks_pass(std::move(pass)) {
@@ -136,26 +143,22 @@ namespace {
     }
 
 	lua::multiret tcp_connection::lnew(lua::state& l) {
-		
-		const char* host = l.checkstring(1);
-		int port = static_cast<int>(l.checkinteger(2));
-		struct sockaddr_storage addr;
-		if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
-	      	uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
-	    	l.error("invalid sock IP address or port [%s:%d]", host, port);
-	   	}
-	   	std::string name(l.optstring(3,""));
-	   	std::string pass(l.optstring(4,""));
+		auto addr = lua::stack<net::address>::get(l, 1);
+		bool address_object = l.isuserdata(1);
+		int user_idx = address_object ? 2 : 3;
+		int pass_idx = address_object ? 3 : 4;
+		std::string name(l.optstring(user_idx,""));
+		std::string pass(l.optstring(pass_idx,""));
 		// RFC 1929: ULEN and PLEN are one octet each, and the whole auth
 		// request (01 ULEN USER PLEN PASS) must fit the request buffer
 		if (name.length() > 255) {
-			l.argerror(3, "socks5 user name too long");
+			l.argerror(user_idx, "socks5 user name too long");
 		}
 		if (pass.length() > 255) {
-			l.argerror(4, "socks5 password too long");
+			l.argerror(pass_idx, "socks5 password too long");
 		}
 		if (name.length() + pass.length() > 509) {
-			l.argerror(3, "socks5 user name and password are too long");
+			l.argerror(user_idx, "socks5 user name and password are too long");
 		}
 
 		common::intrusive_ptr<tcp_connection> connection{new tcp_connection(llae::app::get(l).loop(),addr,
@@ -271,29 +274,23 @@ namespace {
             req->write(0x03); // ATYP: domain name, resolved by the proxy
             req->write(static_cast<uint8_t>(m_connect_domain.length()));
             req->write(m_connect_domain.data(),m_connect_domain.length());
-            auto addr4 = (const struct sockaddr_in *)&m_connect_addr;
-            req->write(addr4->sin_port);
-            req->write(addr4->sin_port >> 8);
         } else {
-            auto addr = (const struct sockaddr *)&m_connect_addr;
-
-            if (addr->sa_family == AF_INET) {
-                auto addr4 = (const struct sockaddr_in *)&m_connect_addr;
+            switch (m_connect_addr.type) {
+            case net::address::ip_type::ipv4:
                 req->write(0x01); // ATYP
-                req->write(&addr4->sin_addr,4);
-                req->write(addr4->sin_port);
-                req->write(addr4->sin_port >> 8);
-            } else if (addr->sa_family == AF_INET6) {
-                auto addr6 = (const struct sockaddr_in6 *)&m_connect_addr;
+                req->write(m_connect_addr.ip.ipv4,4);
+                break;
+            case net::address::ip_type::ipv6:
                 req->write(0x04); // ATYP
-                req->write(&addr6->sin6_addr,16);
-                req->write(addr6->sin6_port);
-                req->write(addr6->sin6_port >> 8);
-            } else {
+                req->write(m_connect_addr.ip.ipv6,16);
+                break;
+            default:
                 report_connect_error(socks5_msg("SOCKS5: invalid addr"));
                 return;
             }
         }
+        req->write(static_cast<uint8_t>(m_connect_addr.port >> 8));
+        req->write(static_cast<uint8_t>(m_connect_addr.port & 0xff));
 
         int status = req->start();
         if (status < 0) {
@@ -334,7 +331,25 @@ namespace {
 		}
 	}
 
-	llae::result_promise_ptr<void> tcp_connection::connect(llae::loop& /*l*/, std::string_view host, int port) {
+	llae::result_promise_ptr<void> tcp_connection::connect_address(llae::loop& /*l*/, const net::address& address) {
+		return start_connect(address, std::string_view());
+	}
+
+	llae::result_promise_ptr<void> tcp_connection::connect(llae::loop& l, std::string_view host, int port) {
+		auto address = net::address::from_string(host, port);
+		if (address.has_result()) {
+			return start_connect(address.get_result(), std::string_view());
+		}
+		// A domain name is sent as ATYP=0x03 with one octet length.
+		if (host.size() > 255) {
+			return llae::make_result_promise_string_error<void>("SOCKS5: host name too long");
+		}
+		net::address target;
+		target.port = static_cast<uint16_t>(port);
+		return start_connect(target, host);
+	}
+
+	llae::result_promise_ptr<void> tcp_connection::start_connect(const net::address& target, std::string_view domain) {
         if (is_closed() || is_closing()) {
             return llae::make_result_promise_string_error<void>("tcp_connection::connect is closed");
         }
@@ -347,18 +362,8 @@ namespace {
 			return llae::make_result_promise_string_error<void>("tcp_connection::connect already at connect");
 		}
 
-		if (uv_ip4_addr(host.data(), port, (struct sockaddr_in*)&m_connect_addr) &&
-	      	uv_ip6_addr(host.data(), port, (struct sockaddr_in6*)&m_connect_addr)) {
-            // domain name is sent as ATYP=0x03 with one octet length
-            if (host.size() > 255) {
-                return llae::make_result_promise_string_error<void>("SOCKS5: host name too long");
-            }
-            m_connect_domain = host;
-            auto addr4 = (struct sockaddr_in *)&m_connect_addr;
-            addr4->sin_port = htons(port);
-	   	} else {
-            m_connect_domain.clear();
-        }
+		m_connect_addr = target;
+		m_connect_domain = domain;
 
 		auto promise = common::make_intrusive<llae::result_promise<void>>();
 		m_connect_promise = promise;

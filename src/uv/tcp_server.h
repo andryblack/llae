@@ -2,6 +2,7 @@
 #define __LLAE_UV_TCP_SERVER_H_INCLUDED__
 
 #include "server.h"
+#include "net/address.h"
 #include "lua/state.h"
 #include "stream.h"
 
@@ -9,6 +10,7 @@ namespace uv {
 
 	class loop;
 	/// @luabind
+	/// @luabind_include("../net/address_lua.h")
 	class tcp_server : public server {
 		META_OBJECT
 	private:
@@ -20,12 +22,21 @@ namespace uv {
 		virtual ~tcp_server() override;
 	public:
 		explicit tcp_server(loop& l);
-		
+
 		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
-	
+
 		/// @luabind
-		lua::multiret bind(lua::state& l);
+		/// @lparam(address,string|net.address)
+		/// @lparam(port,integer?)
+		/// @lreturn(result,boolean?)
+		/// @lreturn(error,string?)
+		llae::result<void> bind(const net::address& addr);
+
+		/// @luabind
+		/// @lreturn(address,net.address?)
+		/// @lreturn(error,string?)
+		llae::result<net::address> getsockname() const;
 	};
 	using tcp_server_ptr = common::intrusive_ptr<tcp_server>;
 

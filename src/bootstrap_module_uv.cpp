@@ -18,6 +18,7 @@
 #include "uv/timer.h"
 #include "uv/tty.h"
 #include "uv/udp.h"
+#include "net/address_lua.h"
 
 
 /* class uv::async */
@@ -190,6 +191,7 @@ static void luabind_uv_tcp_connection(lua::state& l) {
     lua::bind::function(l,"new",&uv::tcp_connection::lnew);
     llae::async_function(l,"connect",&uv::tcp_connection::connect);
     lua::bind::function(l,"getpeername",&uv::tcp_connection::getpeername);
+    lua::bind::function(l,"getsockname",&uv::tcp_connection::getsockname);
     lua::bind::function(l,"keepalive",&uv::tcp_connection::keepalive);
     lua::bind::function(l,"nodelay",&uv::tcp_connection::nodelay);
     
@@ -262,8 +264,8 @@ static void luabind_uv_udp(lua::state& l) {
     
     
     lua::bind::function(l,"new",&uv::udp::lnew);
-    lua::bind::function(l,"bind",&uv::udp::bind);
-    lua::bind::function(l,"send",&uv::udp::send);
+    lua::bind::function(l,"bind",&uv::lua_udp_bind);
+    llae::async_function(l,"send",&uv::lua_udp_send);
     lua::bind::function(l,"try_send",&uv::udp::try_send);
     lua::bind::function(l,"connect",&uv::udp::connect);
     lua::bind::function(l,"set_ttl",&uv::udp::set_ttl);
@@ -277,7 +279,7 @@ static void luabind_uv_udp(lua::state& l) {
     lua::bind::function(l,"getsockname",&uv::udp::getsockname);
     lua::bind::function(l,"add_buffer",&uv::udp::add_buffer);
     lua::bind::function(l,"disconnect",&uv::udp::disconnect);
-    lua::bind::function(l,"recv",&uv::udp::recv);
+    llae::async_function(l,"recv",&uv::udp::recv);
     lua::bind::function(l,"stop_recv",&uv::udp::stop_recv);
     
     

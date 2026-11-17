@@ -1,5 +1,6 @@
 #pragma once
 #include "uv/tcp_connection.h"
+#include "net/address.h"
 #include "llae/promise.h"
 #include <string>
 #include <string_view>
@@ -13,16 +14,18 @@ namespace net {
 	namespace socks5 {
 
 		/// @luabind
+		/// @luabind_include("address_lua.h")
 		class tcp_connection : public uv::tcp_connection {
 			META_OBJECT
 		protected:
-			struct sockaddr_storage m_socks_addr;
+			net::address m_socks_addr;
 			std::string m_socks_user;
 			std::string m_socks_pass;
 			llae::result_promise_ptr<void> m_connect_promise;
 			class connect_req;
-			struct sockaddr_storage m_connect_addr;
+			net::address m_connect_addr;
 			std::string m_connect_domain;
+			llae::result_promise_ptr<void> start_connect(const net::address& target, std::string_view domain);
 			void on_connected(int status);
 			void report_connect_error(llae::error_ptr err);
 			void report_connect_success();
@@ -44,12 +47,21 @@ namespace net {
             virtual void destroy() override final;
 		public:
 			explicit tcp_connection(uv::loop& loop,
-				const struct sockaddr_storage& addr,
+				const net::address& addr,
 				std::string&& user, std::string&& pass);
             ~tcp_connection();
 			/// @luabind(name=new)
 			static lua::multiret lnew(lua::state& l);
-			/// @luabind(async=true)
+			/// @luabind(name=connect_address,async=true)
+			/// @lparam(addr,net.address)
+			/// @lreturn(result,boolean?)
+			/// @lreturn(error,string?)
+			llae::result_promise_ptr<void> connect_address(llae::loop& l, const net::address& addr);
+			/// @luabind(name=connect,async=true)
+			/// @lparam(host,string)
+			/// @lparam(port,integer)
+			/// @lreturn(result,boolean?)
+			/// @lreturn(error,string?)
 			llae::result_promise_ptr<void> connect(llae::loop& l, std::string_view host, int port);
 	  	};
     

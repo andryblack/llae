@@ -23,8 +23,8 @@ function telnet:connect()
 	local connected = false
 	local errors = {}
 	for _,v in ipairs(self._ip_list) do
-		if v.addr and v.socktype=='tcp' then
-			local ip = v.addr
+		local ip = v.address and v.address:get_ip_string_with_interface() or v.addr
+		if ip and v.socktype=='tcp' then
 			log.debug('connect to',ip,self._port)
 			local res,err = self._cmd_con:connect(ip,self._port)
 			if res then

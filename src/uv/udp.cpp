@@ -1,13 +1,14 @@
 #include "udp.h"
 #include "llae/app.h"
+#include "llae/result.h"
 #include "luv.h"
+#include "net/address_lua.h"
 #include "lua/stack.h"
 #include "llae/logger.h"
 
 META_OBJECT_INFO(uv::udp,uv::handle)
 
 namespace uv {
-
 
     udp_send_req::udp_send_req(udp_ptr&& s) : m_udp(std::move(s)) {
         attach(reinterpret_cast<uv_req_t*>(&m_udp_send));
@@ -31,102 +32,81 @@ namespace uv {
         return r;
     }
 
+    namespace {
 
-    udp_send_lua_req::udp_send_lua_req(udp_ptr&& s,lua::ref&& cont,llae::write_buffers&& buffers) : udp_send_req(std::move(s)),m_cont(std::move(cont)),m_buffers(std::move(buffers)) {
-    }
-
-    void udp_send_lua_req::on_send(int status) {
-        auto& l = llae::app::get(get_loop()).lua();
-        m_buffers.reset(l);
-        if (m_cont.valid()) {
-            m_cont.push(l);
-            auto toth = l.tothread(-1);
-            l.pop(1);// thread
-            int args;
-            if (status < 0) {
-                toth.pushnil();
-                uv::push_error(toth,status);
-                args = 2;
-            } else {
-                toth.pushboolean(true);
-                args = 1;
-            }
-            auto s = toth.resume(l,args);
-            if (s != lua::status::ok && s != lua::status::yield) {
-                llae::app::show_error(toth,s);
-            }
-            m_cont.reset(l);
-        }
-    }
-
-    void udp_send_lua_req::reset(lua::state& l) {
-        m_buffers.reset(l);
-        m_cont.reset(l);
-    }
-
-    int udp_send_lua_req::send(const struct sockaddr* addr) {
-        auto buffers = get_buffers(m_buffers.get_buffers());
-        return start_send(buffers.data(),buffers.size(),addr);
-    }
-
-
-    class lua_recv_consumer : public udp_recv_consumer {
-    private:
-        lua::ref m_recv_cont;
-    public:
-        lua_recv_consumer(lua::ref && cont) : m_recv_cont(std::move(cont)) {}
-        virtual bool on_recv(udp* s,
-                             ssize_t nread,
-                             llae::buffer_ptr&& buffer,
-                             const struct sockaddr* addr, unsigned flags) override final {
-            auto& l = llae::app::get(s->get_udp()->loop).lua();
-            if (m_recv_cont.valid()) {
-                m_recv_cont.push(l);
-                auto toth = l.tothread(-1);
-                l.pop(1); // toth holded at m_recv_cont
-                int args;
-                if (nread >= 0) {
-                    buffer->set_len(nread);
-                    lua::push(toth,std::move(buffer));
-                    toth.pushnil();
-                    args = 2;
-                    if (addr) {
-                        char name[64];
-                        if (uv_ip4_name((const struct sockaddr_in*)addr,name,sizeof(name)) == 0) {
-                            toth.pushstring(name);
-                            toth.pushinteger(ntohs(((const struct sockaddr_in*)addr)->sin_port));
-                            args = 4;
-                        } else if (uv_ip6_name((const struct sockaddr_in6*)addr,name,sizeof(name))==0) {
-                            toth.pushstring(name);
-                            toth.pushinteger(ntohs(((const struct sockaddr_in6*)addr)->sin6_port));
-                            args = 4;
-                        } 
-                    }
-                } else if (nread < 0) {
-                    toth.pushnil();
-                    uv::push_error(toth,int(nread));
-                    args = 2;
-                } 
-                lua::ref ref(std::move(m_recv_cont));
-                s->stop_recv();
-                auto s = toth.resume(l,args);
-                
-                if (s != lua::status::ok && s != lua::status::yield) {
-                    llae::app::show_error(toth,s);
+        class udp_send_promise_req : public udp_send_req {
+        private:
+            llae::result_promise_ptr<void> m_promise;
+            llae::write_buffers m_buffers;
+        protected:
+            virtual void on_send(int status) override {
+                auto& l = llae::app::get(get_loop()).lua();
+                m_buffers.reset(l);
+                if (!m_promise) {
+                    return;
                 }
-                ref.reset(l);
-            } else {
+                auto promise = std::move(m_promise);
+                m_promise.reset();
+                if (status < 0) {
+                    promise->set_result(uv::status_error::create(status));
+                } else {
+                    promise->set_result(llae::result<void>());
+                }
+            }
+        public:
+            udp_send_promise_req(udp_ptr&& stream,const llae::result_promise_ptr<void>& promise,
+                                 llae::write_buffers&& buffers)
+                : udp_send_req(std::move(stream)),m_promise(promise),m_buffers(std::move(buffers)) {
+            }
+            int send(const net::address* addr) {
+                struct sockaddr_storage storage;
+                const struct sockaddr* sa = nullptr;
+                if (addr) {
+                    auto res = addr->to_sockaddr(storage);
+                    if (res.get_error()) {
+                        return UV_EINVAL;
+                    }
+                    sa = reinterpret_cast<const struct sockaddr*>(&storage);
+                }
+                auto buffers = get_buffers(m_buffers.get_buffers());
+                return start_send(buffers.data(),buffers.size(),sa);
+            }
+        };
+
+        class promise_recv_consumer : public udp_recv_consumer {
+        private:
+            llae::result_promise_ptr<datagram> m_promise;
+        public:
+            explicit promise_recv_consumer(const llae::result_promise_ptr<datagram>& promise) : m_promise(promise) {
+            }
+            virtual bool on_recv(udp* s,ssize_t nread,llae::buffer_ptr&& buffer,
+                                 const net::address& addr, unsigned /*flags*/) override final {
+                auto promise = std::move(m_promise);
+                m_promise.reset();
                 s->stop_recv();
+                if (!promise) {
+                    return true;
+                }
+                if (nread < 0) {
+                    promise->set_result(uv::status_error::create(static_cast<int>(nread)));
+                    return true;
+                }
+                buffer->set_len(nread);
+                datagram msg{std::move(buffer),addr};
+                promise->set_result(llae::result<datagram>(std::move(msg)));
+                return true;
             }
-            return true;
-        }
-        virtual void on_stop_recv(udp* s) override {
-            if (m_recv_cont.valid()) {
-                auto& l = llae::app::get(s->get_udp()->loop).lua();
-                m_recv_cont.reset(l);
+            virtual void on_stop_recv(udp* /*s*/) override final {
+                if (!m_promise) {
+                    return;
+                }
+                auto promise = std::move(m_promise);
+                m_promise.reset();
+                promise->set_result(llae::string_error::create("udp:recv stopped"));
             }
-        }
-    };
+        };
+
+    }
 
 
     udp::udp(uv::loop& loop,int af) {
@@ -141,27 +121,21 @@ namespace uv {
         
     }
 
-    lua::multiret udp::bind(lua::state& l) {
-        const char* host = l.checkstring(2);
-        int port = int(l.checkinteger(3));
-        int flags = int(l.optinteger(4,0));
+    int udp::do_bind(const net::address& address,int flags) {
         struct sockaddr_storage addr;
-        if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
-              uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
-            l.error("invalid IP address or port [%s:%d]", host, port);
-           }
-        int res = do_bind((struct sockaddr*)&addr,flags);
-        if (res < 0) {
-            l.pushnil();
-            uv::push_error(l,res);
-            return {2};
+        auto res = address.to_sockaddr(addr);
+        if (res.get_error()) {
+            return UV_EINVAL;
         }
-        l.pushboolean(true);
-        return {1};
+        return uv_udp_bind(&m_udp,reinterpret_cast<struct sockaddr*>(&addr),flags);
     }
-
-    int udp::do_bind(struct sockaddr* addr,int flags) {
-        return uv_udp_bind(&m_udp,addr,flags);
+    int udp::do_connect(const net::address& address) {
+        struct sockaddr_storage addr;
+        auto res = address.to_sockaddr(addr);
+        if (res.get_error()) {
+            return UV_EINVAL;
+        }
+        return uv_udp_connect(&m_udp,reinterpret_cast<struct sockaddr*>(&addr));
     }
     int udp::do_set_ttl(int ttl) {
         return uv_udp_set_ttl(&m_udp,ttl);
@@ -186,143 +160,121 @@ namespace uv {
         return uv_udp_set_multicast_interface(&m_udp,interface_addr);
     }
 
-    lua::multiret udp::set_ttl(lua::state& l,int ttl) {
-        auto res = do_set_ttl(ttl);
-        return return_status_error(l,res);
+    llae::result<void> udp::bind(const net::address& address, std::optional<int> flags) {
+        return return_status(do_bind(address,flags.value_or(0)));
     }
 
-    lua::multiret udp::set_broadcast(lua::state& l,bool b) {
-        auto res = do_set_broadcast(b);
-        return return_status_error(l,res);
-    }
-    
-    lua::multiret udp::set_membership(lua::state& l,const char *multicast_addr, const char *interface_addr, uv_membership membership) {
-        auto res = do_set_membership(multicast_addr,interface_addr,membership);
-        return return_status_error(l,res);
-    }
-
-    lua::multiret udp::set_source_membership(lua::state& l,const char *multicast_addr, const char *interface_addr, 
-            const char* source_addr, uv_membership membership) {
-        auto res = do_set_source_membership(multicast_addr,interface_addr,source_addr,membership);
-        return return_status_error(l,res);
-    }
-    
-    lua::multiret udp::set_multicast_loop(lua::state& l,bool on) {
-        auto res = do_set_multicast_loop(on);
-        return return_status_error(l,res);
-    }
-    
-    lua::multiret udp::set_multicast_ttl(lua::state& l,int ttl) {
-        auto res = do_set_multicast_ttl(ttl);
-        return return_status_error(l,res);
-    }
-
-    lua::multiret udp::set_multicast_interface(lua::state& l,const char* interface_addr) {
-        auto res = do_set_multicast_interface(interface_addr);
-        return return_status_error(l,res);
-    }
-
-    lua::multiret udp::send(lua::state& l) {
-        struct sockaddr_storage addr;
-        bool with_addr = false;
-        if (l.gettop()>2) {
-            const char* host = l.checkstring(3);
-            int port = int(l.checkinteger(4));
-            if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
-                  uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
-                l.error("udp::send invalid IP address or port [%s:%d]", host, port);
-            }
-            with_addr = true;
-        }
-        if (!l.isyieldable()) {
-            l.pushnil();
-            l.pushstring("udp::send is async");
-            return {2};
-        }
-        {
-            llae::write_buffers buffers;
-            l.pushvalue(2);
-            if (!buffers.put(l)) {
-                buffers.reset(l);
-                l.pushnil();
-                l.pushstring("udp::send invalid data");
-                return {2};
-            }
-            if (buffers.empty()) {
-                l.pushboolean(true);
-                return {1};
-            }
-            
-            l.pushthread();
-            lua::ref send_cont;
-            send_cont.set(l);
-
-            udp_send_lua_req_ptr req{new udp_send_lua_req(udp_ptr(this),std::move(send_cont),std::move(buffers))};
-
-            int r = req->send((struct sockaddr*)(with_addr ? &addr : nullptr));
-            if (r < 0) {
-                req->reset(l);
-                l.pushnil();
-                uv::push_error(l,r);
-                return {2};
-            }
-        }
-        l.yield(0);
-        return {0};
-    }
-
-    lua::multiret udp::connect(lua::state& l) {
-        struct sockaddr_storage addr;
-        const char* host = l.checkstring(2);
-        int port = int(l.checkinteger(3));
-        if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
-              uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
-            l.error("invalid IP address or port [%s:%d]", host, port);
-        }
-        int r = uv_udp_connect(&m_udp,(struct sockaddr*)&addr);
+    llae::result<void> udp::connect(const net::address& address) {
+        int r = do_connect(address);
         if (r < 0) {
-            l.pushnil();
-            uv::push_error(l,r);
-            return {2};
+            return uv::status_error::create(r);
         }
         m_connected = true;
-        l.pushboolean(true);
-        return {1};
+        return llae::result<void>();
     }
 
-    void udp::disconnect() {
+    llae::result<void> udp::disconnect() {
         int r = uv_udp_connect(&m_udp,nullptr);
-        UV_DIAG_CHECK(r);
+        if (r < 0) {
+            return uv::status_error::create(r);
+        }
+        m_connected = false;
+        return llae::result<void>();
     }
 
-    lua::multiret udp::recv(lua::state& l) {
-        if (!l.isyieldable()) {
-            l.pushnil();
-            l.pushstring("udp:recv is async");
-            return {2};
-        }
-        if (m_recv_consumer) {
-            l.pushnil();
-            l.pushstring("udp:recv already recv");
-            return {2};
-        }
-        
-        {
-            l.pushthread();
-            lua::ref recv_cont;
-            recv_cont.set(l);
+    llae::result<void> udp::set_ttl(int ttl) {
+        return return_status(do_set_ttl(ttl));
+    }
 
-            common::intrusive_ptr<lua_recv_consumer> consume(new lua_recv_consumer(std::move(recv_cont)));
-            int res = start_recv(consume);
-            if (res < 0) {
-                l.pushnil();
-                uv::push_error(l,res);
-                return {2};
+    llae::result<void> udp::set_broadcast(bool enable) {
+        return return_status(do_set_broadcast(enable));
+    }
+
+    llae::result<void> udp::set_membership(std::string_view multicast_addr,
+            std::optional<std::string_view> interface_addr, uv_membership membership) {
+        std::string multicast(multicast_addr);
+        std::string iface(interface_addr.value_or(std::string_view()));
+        return return_status(do_set_membership(multicast.c_str(),
+            interface_addr.has_value() ? iface.c_str() : nullptr,membership));
+    }
+
+    llae::result<void> udp::set_source_membership(std::string_view multicast_addr,
+            std::optional<std::string_view> interface_addr,std::string_view source_addr,
+            uv_membership membership) {
+        std::string multicast(multicast_addr);
+        std::string iface(interface_addr.value_or(std::string_view()));
+        std::string source(source_addr);
+        return return_status(do_set_source_membership(multicast.c_str(),
+            interface_addr.has_value() ? iface.c_str() : nullptr,source.c_str(),membership));
+    }
+
+    llae::result<void> udp::set_multicast_loop(bool enable) {
+        return return_status(do_set_multicast_loop(enable));
+    }
+
+    llae::result<void> udp::set_multicast_ttl(int ttl) {
+        return return_status(do_set_multicast_ttl(ttl));
+    }
+
+    llae::result<void> udp::set_multicast_interface(std::optional<std::string_view> interface_addr) {
+        std::string iface(interface_addr.value_or(std::string_view()));
+        return return_status(do_set_multicast_interface(interface_addr.has_value() ? iface.c_str() : nullptr));
+    }
+
+    llae::result<int> udp::try_send(llae::buffer_view data, std::optional<net::address> address) {
+        struct sockaddr_storage storage;
+        const struct sockaddr* sa = nullptr;
+        if (address) {
+            if (address->port == 0) {
+                return llae::string_error::create("udp::try_send port is required");
             }
-            
+            auto res = address->to_sockaddr(storage);
+            if (res.get_error()) {
+                return res.get_error();
+            }
+            sa = reinterpret_cast<const struct sockaddr*>(&storage);
         }
-        l.yield(0);
-        return {0};
+        uv_buf_t buf{};
+        buf.base = const_cast<char*>(static_cast<const char*>(data.get_base()));
+        buf.len = data.get_len();
+        int r = uv_udp_try_send(get_udp(),&buf,1,sa);
+        if (r < 0) {
+            return uv::status_error::create(r);
+        }
+        return llae::result<int>(r);
+    }
+
+    llae::result_promise_ptr<void> udp::async_send(llae::loop& /*l*/, llae::write_buffers&& buffers,
+            std::optional<net::address> address) {
+        if (buffers.empty()) {
+            auto promise = common::make_intrusive<llae::result_promise<void>>();
+            promise->set_result(llae::result<void>());
+            return promise;
+        }
+        if (address && address->port == 0) {
+            return llae::make_result_promise_string_error<void>("udp::send port is required");
+        }
+        auto promise = common::make_intrusive<llae::result_promise<void>>();
+        common::intrusive_ptr<udp_send_promise_req> req{
+            new udp_send_promise_req(udp_ptr(this),promise,std::move(buffers))};
+        int r = req->send(address ? &*address : nullptr);
+        if (r < 0) {
+            promise->set_result(uv::status_error::create(r));
+        }
+        return promise;
+    }
+
+    llae::result_promise_ptr<datagram> udp::recv() {
+        if (m_recv_consumer) {
+            return llae::make_result_promise_string_error<datagram>("udp:recv already recv");
+        }
+        auto promise = common::make_intrusive<llae::result_promise<datagram>>();
+        common::intrusive_ptr<promise_recv_consumer> consumer{new promise_recv_consumer(promise)};
+        int res = start_recv(consumer);
+        if (res < 0) {
+            return llae::make_result_promise_string_error<datagram>(uv::get_error(res));
+        }
+        return promise;
     }
 
     void udp::alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
@@ -350,7 +302,8 @@ namespace uv {
     void udp::recv_cb(uv_udp_t* u, ssize_t nread, const uv_buf_t* buf,const struct sockaddr* addr, unsigned flags) {
         udp* self = static_cast<udp*>(u->data);
         auto b = llae::buffer::get(buf->base);
-        if (self->on_recv(nread,llae::buffer_ptr(b),addr,flags)) {
+        auto recv_addr = net::address::from_sockaddr(addr);
+        if (self->on_recv(nread,llae::buffer_ptr(b),recv_addr,flags)) {
             //std::cout << "stream read_cb remove_ref" << std::endl;
             self->remove_ref();
         }
@@ -359,7 +312,7 @@ namespace uv {
         }
     }
 
-    bool udp::on_recv(ssize_t nread, llae::buffer_ptr&& buffer,const struct sockaddr* addr, unsigned flags) {
+    bool udp::on_recv(ssize_t nread, llae::buffer_ptr&& buffer,const net::address& addr, unsigned flags) {
         if (m_recv_consumer) {
             auto consumer = std::move(m_recv_consumer);
             bool res = consumer->on_recv(this,
@@ -390,81 +343,29 @@ namespace uv {
         }
         return res;
     }
-    int udp::do_try_send(const llae::buffer_base_ptr& buffer,const struct sockaddr *addr) {
-        auto buf = get_buffer(buffer);
-        return uv_udp_try_send(get_udp(),&buf,1,addr);
-    }
 
-    lua::multiret udp::try_send(lua::state& l) {
-        struct sockaddr_storage addr;
-        bool with_addr = false;
-        if (l.gettop()>2) {
-            const char* host = l.checkstring(3);
-            int port = int(l.checkinteger(4));
-            if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
-                  uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
-                l.error("udp::try_send invalid IP address or port [%s:%d]", host, port);
+    namespace {
+
+        llae::result<net::address> udp_socket_address(const uv_udp_t* handle, bool peer) {
+            struct sockaddr_storage addr;
+            int namelen = sizeof(addr);
+            auto h = const_cast<uv_udp_t*>(handle);
+            auto r = peer ? uv_udp_getpeername(h,reinterpret_cast<struct sockaddr*>(&addr),&namelen)
+                          : uv_udp_getsockname(h,reinterpret_cast<struct sockaddr*>(&addr),&namelen);
+            if (r < 0) {
+                return uv::status_error::create(r);
             }
-            with_addr = true;
+            return net::address::decode(reinterpret_cast<struct sockaddr*>(&addr));
         }
-        auto buf = llae::buffer_base::get(l,2, true);
-        auto r = do_try_send(buf,(struct sockaddr*)(with_addr ? &addr : nullptr));
-        if (r < 0) {
-            l.pushnil();
-            uv::push_error(l,r);
-            return {2};
-        } else {
-            l.pushinteger(r);
-            return {1};
-        }
+
     }
 
-    lua::multiret udp::getpeername(lua::state& l) {
-        struct sockaddr_storage addr;
-        int namelen = sizeof(addr);
-        auto r = uv_udp_getpeername(&m_udp,(struct sockaddr*)&addr,&namelen);
-        if (r < 0) {
-            l.pushnil();
-            uv::push_error(l,r);
-            return {2};
-        }
-        char name[64];
-        if (uv_ip4_name((const struct sockaddr_in*)&addr,name,sizeof(name)) == 0) {
-            l.pushstring(name);
-            l.pushinteger(ntohs(((const struct sockaddr_in*)&addr)->sin_port));
-        } else if (uv_ip6_name((const struct sockaddr_in6*)&addr,name,sizeof(name))==0) {
-            l.pushstring(name);
-            l.pushinteger(ntohs(((const struct sockaddr_in6*)&addr)->sin6_port));
-        } else {
-            l.pushnil();
-            l.pushstring("unknown");
-            return {2};
-        }
-        return {2};
+    llae::result<net::address> udp::getpeername() const {
+        return udp_socket_address(&m_udp, true);
     }
 
-    lua::multiret udp::getsockname(lua::state& l) {
-        struct sockaddr_storage addr;
-        int namelen = sizeof(addr);
-        auto r = uv_udp_getpeername(&m_udp,(struct sockaddr*)&addr,&namelen);
-        if (r < 0) {
-            l.pushnil();
-            uv::push_error(l,r);
-            return {2};
-        }
-        char name[64];
-        if (uv_ip4_name((const struct sockaddr_in*)&addr,name,sizeof(name)) == 0) {
-            l.pushstring(name);
-            l.pushinteger(ntohs(((const struct sockaddr_in*)&addr)->sin_port));
-        } else if (uv_ip6_name((const struct sockaddr_in6*)&addr,name,sizeof(name))==0) {
-            l.pushstring(name);
-            l.pushinteger(ntohs(((const struct sockaddr_in6*)&addr)->sin6_port));
-        } else {
-            l.pushnil();
-            l.pushstring("unknown");
-            return {2};
-        }
-        return {2};
+    llae::result<net::address> udp::getsockname() const {
+        return udp_socket_address(&m_udp, false);
     }
 
     void udp::stop_recv() {
@@ -483,10 +384,51 @@ namespace uv {
         handle::close();
     }
 
+    llae::result<void> lua_udp_bind(lua::state& l) {
+        auto self = lua::stack<udp_ptr>::get(l,1);
+        if (!self) {
+            l.argerror(1,"need udp");
+        }
+        auto address = lua::stack<net::address>::get(l,2);
+        auto flags = l.optinteger(l.isuserdata(2) ? 3 : 4,0);
+        return self->bind(address,static_cast<int>(flags));
+    }
+
+    llae::result_promise_ptr<void> lua_udp_send(lua::state& l) {
+        auto self = lua::stack<udp_ptr>::get(l,1);
+        if (!self) {
+            l.argerror(1,"need udp");
+        }
+        std::optional<net::address> address;
+        if (l.gettop() > 2) {
+            address = lua::stack<net::address>::get(l,3);
+            if (address->port == 0) {
+                return llae::make_result_promise_string_error<void>("udp::send port is required");
+            }
+        }
+        llae::write_buffers buffers;
+        l.pushvalue(2);
+        if (!buffers.put(l)) {
+            buffers.reset(l);
+            return llae::make_result_promise_string_error<void>("udp::send invalid data");
+        }
+        return self->async_send(llae::loop::get(l),std::move(buffers),address);
+    }
+
     lua::multiret udp::lnew(lua::state& l) {
         auto af = l.optinteger(1,AF_UNSPEC);
         common::intrusive_ptr<udp> server{new udp(llae::app::get(l).loop(),af)};
         lua::push(l,std::move(server));
         return {1};
     }
+}
+
+namespace lua {
+
+    int stack<uv::datagram>::push(lua::state& l, const uv::datagram& datagram) {
+        int res = lua::push(l,datagram.data);
+        res += lua::push(l,datagram.address);
+        return res;
+    }
+
 }

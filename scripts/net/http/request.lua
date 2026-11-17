@@ -89,8 +89,8 @@ function request:_connect( port )
 	local attempts = 0
 	local timed_out = 0
 	for _,v in ipairs(self._ip_list) do
-		if v.addr and (v.socktype=='tcp' or v.socktype=='any') and not self._timeout_error then
-			local ip = v.addr
+		local ip = v.address and v.address:get_ip_string_with_interface() or v.addr
+		if ip and (v.socktype=='tcp' or v.socktype=='any') and not self._timeout_error then
 			attempts = attempts + 1
 			--log.debug('connect to',ip,port)
 			local connection = self:_create_connection()

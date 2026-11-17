@@ -54,9 +54,10 @@ function TestUV:test_getaddrinfo_ip6_scope()
     for _,v in ipairs(list) do
         if v.family == 'ip6' then
             found = true
-            lu.assertEquals(v.addr, host)
+            local addr = assert(v.address)
+            lu.assertEquals(addr:get_ip_string_with_interface(), host)
             -- the textual address with the zone must be accepted back
-            assert(uv.ip6_addr(v.addr))
+            assert(uv.ip6_addr(addr:get_ip_string_with_interface()))
         end
     end
     lu.assertTrue(found)

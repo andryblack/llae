@@ -2,6 +2,7 @@
 #define __LLAE_UV_DNS_H_INCLUDED__
 
 #include "req.h"
+#include "net/address.h"
 #include "lua/ref.h"
 #include "llae/promise.h"
 
@@ -27,10 +28,10 @@ namespace uv {
 			unknown
 		};
 		socktype_t socktype = socktype_t::any;
-		/// Numeric address. IPv6 link-local addresses keep their zone as
-		/// `%<ifname>` (POSIX) or `%<scope id>` (Windows), so the value can be
-		/// passed directly to uv_ip6_addr() when connecting.
-		std::string addr;
+		/// Decoded numeric address. IPv6 link-local addresses keep their zone
+		/// in `address.interface`, so the value can be passed directly to
+		/// uv_ip6_addr() when connecting.
+		net::address address;
 	};
 
 	class getaddrinfo_req : public req {

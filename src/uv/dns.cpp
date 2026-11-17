@@ -1,6 +1,7 @@
 #include "dns.h"
 #include "llae/app.h"
 #include "luv.h"
+#include "net/address_lua.h"
 
 namespace lua {
 
@@ -33,8 +34,8 @@ namespace lua {
 				break;
 		}
 		l.setfield(-2,"socktype");
-		l.pushstring(item.addr.c_str());
-		l.setfield(-2,"addr");
+		lua::push(l, item.address);
+		l.setfield(-2,"address");
 		return 1;
 	}
 
@@ -86,35 +87,9 @@ namespace uv {
 				} else if (ai->ai_socktype == 0) {
 					item.socktype = addrinfo_item::socktype_t::any;
 				}
-				if (ai->ai_addr->sa_family == AF_INET) {
-					struct sockaddr_in *addr_in = (struct sockaddr_in *)ai->ai_addr;
-					char buf[INET_ADDRSTRLEN];
-					uv_inet_ntop(AF_INET, &(addr_in->sin_addr), buf, INET_ADDRSTRLEN);
-					item.addr = buf;
-				} else if (ai->ai_addr->sa_family == AF_INET6) {
-					struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)ai->ai_addr;
-					char buf[INET6_ADDRSTRLEN];
-					uv_inet_ntop(AF_INET6, &(addr_in6->sin6_addr), buf, INET6_ADDRSTRLEN);
-					item.addr = buf;
-					// Link-local IPv6 addresses are only usable together with
-					// their zone. Keep it in the textual address, so the same
-					// string can be passed back to uv_ip6_addr() when
-					// connecting. On POSIX the zone is an interface name
-					// (uv_ip6_addr() calls if_nametoindex()), on Windows it is
-					// a numeric scope id.
-					if (addr_in6->sin6_scope_id != 0) {
-#ifdef _WIN32
-						item.addr += '%';
-						item.addr += std::to_string(addr_in6->sin6_scope_id);
-#else
-						char ifname[UV_IF_NAMESIZE];
-						size_t ifname_len = sizeof(ifname);
-						if (uv_if_indextoname(addr_in6->sin6_scope_id, ifname, &ifname_len) == 0) {
-							item.addr += '%';
-							item.addr.append(ifname, ifname_len);
-						}
-#endif
-					}
+				auto address = net::address::from_sockaddr(ai->ai_addr);
+				if (address.valid()) {
+					item.address = address;
 				}
 				items.emplace_back(std::move(item));
 				ai = ai->ai_next;

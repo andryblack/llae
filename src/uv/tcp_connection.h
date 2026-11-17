@@ -2,6 +2,7 @@
 #define __LLAE_UV_TCP_CONNECTION_H_INCLUDED__
 
 #include "stream.h"
+#include "net/address.h"
 #include "lua/state.h"
 #include "llae/promise.h"
 #include <string_view>
@@ -15,6 +16,7 @@ namespace uv {
 	class loop;
 	
 	/// @luabind
+	/// @luabind_include("../net/address_lua.h")
 	class tcp_connection : public stream {
 		META_OBJECT
 	private:
@@ -31,9 +33,19 @@ namespace uv {
 		/// @luabind(name=new)
 		static lua::multiret lnew(lua::state& l);
 		/// @luabind(async=true)
-		llae::result_promise_ptr<void> connect(llae::loop& l, std::string_view host, int port);
-        /// @luabind
-        lua::multiret getpeername(lua::state& l);
+		/// @lparam(host,string|net.address)
+		/// @lparam(port,integer?)
+		/// @lreturn(result,boolean?)
+		/// @lreturn(error,string?)
+		llae::result_promise_ptr<void> connect(llae::loop& l, const net::address& addr);
+		/// @luabind
+		/// @lreturn(address,net.address?)
+		/// @lreturn(error,string?)
+		llae::result<net::address> getpeername() const;
+		/// @luabind
+		/// @lreturn(address,net.address?)
+		/// @lreturn(error,string?)
+		llae::result<net::address> getsockname() const;
         /// @luabind
         llae::result<> keepalive(std::optional<int> delay);
         /// @luabind

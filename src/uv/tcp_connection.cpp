@@ -1,6 +1,7 @@
 #include "tcp_connection.h"
 #include "llae/app.h"
 #include "luv.h"
+#include "net/address_lua.h"
 #include "common/intrusive_ptr.h"
 #include "lua/stack.h"
 #include <cstdio>
@@ -62,15 +63,15 @@ namespace uv {
 		return {1};
 	}
 
-	llae::result_promise_ptr<void> tcp_connection::connect(llae::loop& /*l*/, std::string_view host, int port) {
+	llae::result_promise_ptr<void> tcp_connection::connect(llae::loop& /*l*/, const net::address& address) {
+		if (address.port == 0) {
+			return llae::make_result_promise_string_error<void>("tcp_connection::connect port is required");
+		}
 		struct sockaddr_storage addr;
-		if (uv_ip4_addr(host.data(), port, (struct sockaddr_in*)&addr) &&
-	      	uv_ip6_addr(host.data(), port, (struct sockaddr_in6*)&addr)) {
-			char msg[256];
-			snprintf(msg, sizeof(msg), "invalid IP address or port [%.*s:%d]",
-				int(host.size()), host.data(), port);
-			return llae::make_result_promise_string_error<void>(msg);
-	   	}
+		auto res = address.to_sockaddr(addr);
+		if (res.get_error()) {
+			return llae::make_result_promise_string_error<void>(res.get_error()->to_string());
+		}
 
 		auto promise = common::make_intrusive<llae::result_promise<void>>();
 		common::intrusive_ptr<connect_req> req{new connect_req(tcp_connection_ptr(this),promise)};
@@ -81,29 +82,25 @@ namespace uv {
 		return promise;
 	}
 
-    lua::multiret tcp_connection::getpeername(lua::state& l) {
-        struct sockaddr_storage addr;
-        int len = sizeof(addr);
-        int r = uv_tcp_getpeername(&m_tcp,(struct sockaddr*)&addr,&len);
-        if (r < 0) {
-            l.pushnil();
-            uv::push_error(l,r);
-            return {2};
-        }
-        char name[128];
-        if (uv_ip4_name((const struct sockaddr_in*)&addr,name,sizeof(name)) == 0) {
-            l.pushstring(name);
-            l.pushinteger(ntohs(((const struct sockaddr_in*)&addr)->sin_port));
-            return {2};
-        } else if (uv_ip6_name((const struct sockaddr_in6*)&addr,name,sizeof(name))==0) {
-            l.pushstring(name);
-            l.pushinteger(ntohs(((const struct sockaddr_in6*)&addr)->sin6_port));
-            return {2};
-        }
-        l.pushnil();
-        l.pushstring("failed decode");
-        return {2};
-    }
+	llae::result<net::address> tcp_connection::getpeername() const {
+		struct sockaddr_storage addr;
+		int len = sizeof(addr);
+		int r = uv_tcp_getpeername(const_cast<uv_tcp_t*>(&m_tcp),(struct sockaddr*)&addr,&len);
+		if (r < 0) {
+			return uv::status_error::create(r);
+		}
+		return net::address::decode(reinterpret_cast<struct sockaddr*>(&addr));
+	}
+
+	llae::result<net::address> tcp_connection::getsockname() const {
+		struct sockaddr_storage addr;
+		int len = sizeof(addr);
+		int r = uv_tcp_getsockname(const_cast<uv_tcp_t*>(&m_tcp),(struct sockaddr*)&addr,&len);
+		if (r < 0) {
+			return uv::status_error::create(r);
+		}
+		return net::address::decode(reinterpret_cast<struct sockaddr*>(&addr));
+	}
 
 	llae::result<> tcp_connection::keepalive(std::optional<int> delay) {
 		int enable = delay.has_value();

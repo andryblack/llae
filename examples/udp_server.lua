@@ -13,11 +13,11 @@ log.info('start UDP echo on',8888)
 
 async.run(function()
 	while true do
-		local data,err,addr,port = udp:recv()
+		local data,from = udp:recv()
 		if not data then
-			error(err)
+			error(from)
 		end
-		log.info('recv',data,err,addr,port)
-		udp:send('echo:'..data,addr,port) 
+		log.info('recv',data,from)
+		udp:send('echo:'..data,from)
 	end
 end)

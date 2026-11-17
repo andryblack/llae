@@ -10,7 +10,8 @@ uv.exepath = function() end
 ---@class uv.getaddrinfo.item
 ---@field family string
 ---@field socktype string
----@field addr string
+---@field addr string textual address with the IPv6 zone, when present
+---@field address net.address? decoded address, available when the `net` module is loaded
 
 ---@param host string
 ---@return uv.getaddrinfo.item[]?
@@ -129,9 +130,15 @@ function server:stop() end
 local tcp_server = {}
 ---@return uv.tcp_server
 function tcp_server.new() end
----@param addr string
----@param port integer
+---@param addr string|net.address
+---@param port integer?
 function tcp_server:bind(addr,port) end
+---@return string?
+---@return integer?
+function tcp_server:getsockname() end
+---@return net.address?
+---@return string?
+function tcp_server:getsockname_address() end
 uv.tcp_server = tcp_server
 
 
@@ -139,14 +146,23 @@ uv.tcp_server = tcp_server
 local tcp_connection = {}
 ---@return uv.tcp_connection
 function tcp_connection.new() end
----@param host string
----@param port integer
+---@param host string|net.address
+---@param port integer?
 ---@return boolean?
 ---@return string?
 function tcp_connection:connect(host,port) end
 ---@return string?
----@return integer|string?
-function tcp_connection:getppername() end
+---@return integer?
+function tcp_connection:getpeername() end
+---@return string?
+---@return integer?
+function tcp_connection:getsockname() end
+---@return net.address?
+---@return string?
+function tcp_connection:getpeername_address() end
+---@return net.address?
+---@return string?
+function tcp_connection:getsockname_address() end
 ---@param enable boolean
 ---@param delay integer?
 ---@return integer?
@@ -163,29 +179,31 @@ uv.tcp_connection = tcp_connection
 local udp = {}
 ---@return uv.udp
 function udp.new() end
----@param host string?
+---@param host string|net.address?
 ---@param port integer?
 ---@param flags integer?
 ---@return boolean?
 ---@return string?
 function udp:bind(host,port,flags) end
 ---@param data any
----@param host string?
+---@param host string|net.address?
 ---@param port integer?
 ---@return boolean?
 ---@return string?
 function udp:send(data,host,port) end
 ---@param data any
----@param host string?
+---@param host string|net.address?
 ---@param port integer?
 ---@return integer?
 ---@return string?
 function udp:try_send(data, host, port) end
 ---@return llae.buffer?
 ---@return string?
+---@return string? address peer address, when known
+---@return integer? port peer port, when known
 function udp:recv() end
----@param host string
----@param port integer
+---@param host string|net.address
+---@param port integer?
 ---@return boolean?
 ---@return string?
 function udp:connect(host, port) end
@@ -228,11 +246,17 @@ function udp:set_multicast_ttl(ttl) end
 ---@return string?
 function udp:set_multicast_interface(interface_addr) end
 ---@return string?
----@return integer|string?
+---@return integer?
 function udp:getpeername() end
 ---@return string?
----@return integer|string?
+---@return integer?
 function udp:getsockname() end
+---@return net.address?
+---@return string?
+function udp:getpeername_address() end
+---@return net.address?
+---@return string?
+function udp:getsockname_address() end
 
 udp.IPV6ONLY = 0
 udp.REUSEADDR = 0

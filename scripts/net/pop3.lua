@@ -118,8 +118,9 @@ function pop3:connect( data )
 	end
 	local ip = nil
 	for _,v in ipairs(self._ip_list) do
-		if v.addr and v.socktype=='tcp' then
-			ip = v.addr
+		local addr_str = v.address and v.address:get_ip_string_with_interface() or v.addr
+		if addr_str and v.socktype=='tcp' then
+			ip = addr_str
 			break
 		end
 	end
