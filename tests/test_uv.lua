@@ -63,6 +63,35 @@ function TestUV:test_getaddrinfo_ip6_scope()
     lu.assertTrue(found)
 end
 
+function TestUV:test_interface_addresses()
+    local list = assert(uv.interface_addresses())
+    lu.assertIsTable(list)
+    lu.assertNotEquals(#list, 0)
+    local loopback = false
+    for i, interface in ipairs(list) do
+        lu.assertIsString(interface.name)
+        lu.assertIsBoolean(interface.internal)
+        lu.assertIsNumber(interface.family)
+        lu.assertIsString(interface.address)
+        lu.assertIsString(interface.netmask)
+        lu.assertEquals(interface.index, i - 1)
+        if interface.family == uv.AF_INET then
+            lu.assertNotNil(uv.ip4_addr(interface.address))
+            lu.assertNotNil(uv.ip4_addr(interface.netmask))
+        elseif interface.family == uv.AF_INET6 then
+            lu.assertNotNil(uv.ip6_addr(interface.address))
+            lu.assertNotNil(uv.ip6_addr(interface.netmask))
+        else
+            lu.fail('unexpected family ' .. tostring(interface.family))
+        end
+        if interface.address == '127.0.0.1' then
+            loopback = true
+            lu.assertIsTrue(interface.internal)
+        end
+    end
+    lu.assertIsTrue(loopback)
+end
+
 function TestUV:test_funcs()
     uv.exepath()
     uv.cwd()

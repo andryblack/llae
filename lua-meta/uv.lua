@@ -33,9 +33,10 @@ uv.resume_delayed = function(thread, delay) end
 ---@return integer
 uv.gettimeofday = function() end
 ---@class uv.interface_address
+---@field index integer 0-based position in the interface list
 ---@field name string
 ---@field internal boolean
----@field family integer
+---@field family integer AF_INET or AF_INET6
 ---@field address string
 ---@field netmask string
 

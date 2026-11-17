@@ -12,6 +12,7 @@
 #include "llae/buffer.h"
 #include "lua/types.h"
 #include "dns.h"
+#include "net/address.h"
 
 namespace llae {
 	class loop;
@@ -40,8 +41,27 @@ namespace uv {
 	llae::result<> lchdir(std::string_view dir);
 	/// @luabind(name=gettimeofday)
 	int lgettimeofday(lua_State* L);
+
+	/// One address of a network interface, as reported by
+	/// `uv.interface_addresses()`. Addresses are typed, so IPv4/IPv6 families
+	/// are decoded by `net::address` instead of being guessed at the call site.
+	struct interface_address {
+		/// 0-based position in the `uv_interface_addresses()` list.
+		int index = 0;
+		std::string name;
+		bool internal = false;
+		/// `AF_INET` or `AF_INET6`.
+		int family = 0;
+		net::address address;
+		net::address netmask;
+	};
+
+	/// Lists network interface addresses.
 	/// @luabind(name=interface_addresses)
-	int linterface_addresses(lua_State* L);
+	/// @lreturn(addresses,uv.interface_address[])
+	/// @lreturn(error,string?)
+	llae::result<std::vector<interface_address>> get_interface_addresses();
+
 	/// @luabind(name=set_process_title)
 	llae::result<> lset_process_title(std::string_view title);
 	
@@ -150,6 +170,25 @@ namespace uv {
 			this->set_result(a,result_type(common::make_intrusive<status_error>(status)));
 		}
 	};
+}
+
+namespace lua {
+	/// Pushes one interface address as a table (the historical Lua shape:
+	/// textual `address`/`netmask`, integer `family`).
+	template <>
+	struct stack<uv::interface_address> {
+		static int push(lua::state& l,const uv::interface_address& item);
+	};
+	template <>
+	struct stack<const uv::interface_address&> : stack<uv::interface_address> {};
+	/// Pushes the interface address list as an array of tables, `index` being
+	/// the 0-based position in the libuv list.
+	template <>
+	struct stack<std::vector<uv::interface_address>> {
+		static int push(lua::state& l,const std::vector<uv::interface_address>& items);
+	};
+	template <>
+	struct stack<const std::vector<uv::interface_address>&> : stack<std::vector<uv::interface_address>> {};
 }
 
 #endif /*__LLAE_UV_LUV_H_INCLUDED__*/

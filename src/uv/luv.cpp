@@ -121,47 +121,68 @@ llae::result<> uv::lchdir(std::string_view dir) {
 	return return_status(r);
 }
 
-int uv::linterface_addresses(lua_State* L) {
-	lua::state l(L);
-	uv_interface_address_t *addresses = nullptr;
-	int count = 0;
-	auto r = uv_interface_addresses(&addresses,&count);
+namespace {
+	/// Frees the libuv interface address list on any exit path.
+	struct interface_addresses_owner {
+		uv_interface_address_t* addresses = nullptr;
+		int count = 0;
+		~interface_addresses_owner() {
+			if (addresses) {
+				uv_free_interface_addresses(addresses, count);
+			}
+		}
+	};
+}
+
+llae::result<std::vector<uv::interface_address>> uv::get_interface_addresses() {
+	interface_addresses_owner owner;
+	auto r = uv_interface_addresses(&owner.addresses, &owner.count);
 	if (r < 0) {
-		l.pushnil();
-		uv::push_error(l,r);
-		return 2;
+		return status_error::create(r);
 	}
-	l.createtable(count,0);
-	char buf[64];
-	for (int i=0;i<count;++i) {
-		l.createtable(0,4);
-		l.pushinteger(i);
-		l.setfield(-2,"index");
-		l.pushstring(addresses[i].name);
-		l.setfield(-2,"name");
-		l.pushboolean(addresses[i].is_internal);
-		l.setfield(-2,"internal");
-		l.pushinteger(addresses[i].address.address4.sin_family);
-		l.setfield(-2,"family");
-		buf[0] = 0;
-		if (addresses[i].address.address4.sin_family == AF_INET) {
-			uv_ip4_name(&addresses[i].address.address4, buf, sizeof(buf));
-	    } else {
-	    	uv_ip6_name(&addresses[i].address.address6, buf, sizeof(buf));
-	    }
-	    l.pushstring(buf);
-	    l.setfield(-2,"address");
-	    buf[0] = 0;
-	    if (addresses[i].netmask.netmask4.sin_family == AF_INET) {
-	      	uv_ip4_name(&addresses[i].netmask.netmask4, buf, sizeof(buf));
-	    } else {
-	    	uv_ip6_name(&addresses[i].netmask.netmask6, buf, sizeof(buf));
-	    }
-	    l.pushstring(buf);
-	    l.setfield(-2,"netmask");
-	    l.seti(-2,i+1);
+	std::vector<interface_address> res;
+	res.reserve(static_cast<size_t>(owner.count));
+	for (int i = 0; i < owner.count; ++i) {
+		const auto& source = owner.addresses[i];
+		interface_address item;
+		item.index = i;
+		if (source.name) {
+			item.name = source.name;
+		}
+		item.internal = source.is_internal != 0;
+		item.family = reinterpret_cast<const struct sockaddr*>(&source.address)->sa_family;
+		item.address = net::address::from_sockaddr(reinterpret_cast<const struct sockaddr*>(&source.address));
+		item.netmask = net::address::from_sockaddr(reinterpret_cast<const struct sockaddr*>(&source.netmask));
+		res.emplace_back(std::move(item));
 	}
-	uv_free_interface_addresses(addresses,count);
+	return llae::result<std::vector<interface_address>>(std::move(res));
+}
+
+int lua::stack<uv::interface_address>::push(lua::state& l,const uv::interface_address& item) {
+	l.createtable(0,6);
+	l.pushinteger(item.index);
+	l.setfield(-2,"index");
+	l.pushstring(item.name.c_str());
+	l.setfield(-2,"name");
+	l.pushboolean(item.internal);
+	l.setfield(-2,"internal");
+	l.pushinteger(item.family);
+	l.setfield(-2,"family");
+	l.pushstring(item.address.get_ip_string().c_str());
+	l.setfield(-2,"address");
+	l.pushstring(item.netmask.get_ip_string().c_str());
+	l.setfield(-2,"netmask");
+	return 1;
+}
+
+int lua::stack<std::vector<uv::interface_address>>::push(lua::state& l,const std::vector<uv::interface_address>& items) {
+	l.createtable(static_cast<int>(items.size()),0);
+	lua_Integer idx = 1;
+	for (const auto& item : items) {
+		lua::stack<uv::interface_address>::push(l,item);
+		l.seti(-2,idx);
+		++idx;
+	}
 	return 1;
 }
 
